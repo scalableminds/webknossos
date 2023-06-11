@@ -191,9 +191,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getReloadDataButton = (layerName: string) => {
-    if (!this.props.dataset.isEditable) {
-      return null;
-    }
     const tooltipText = "Use this when the data on the server changed.";
     return (
       <Tooltip title={tooltipText}>
@@ -204,7 +201,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
-
+  //
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
     const tooltipText = isInEditMode
       ? "Stop editing the possible range of the histogram."
@@ -234,9 +231,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <i
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
         className="fas fa-trash"
-        style={{
-          opacity: 0.7,
-        }}
       />
     </Tooltip>
   );
@@ -281,6 +275,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
+  //
   getClipButton = (layerName: string, isInEditMode: boolean) => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
@@ -413,30 +408,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
-    const items: MenuProps["items"] = [
-      {
-        label:
-          isVolumeTracing && !isDisabled && maybeFallbackLayer != null
-            ? this.getMergeWithFallbackLayerButton(layer)
-            : null,
-        key: "mergeWithFallbackLayerButton",
-      },
-      { label: this.getReloadDataButton(layerName), key: "reloadDataButton" },
+    const possibleItems: MenuProps["items"] = [
+      isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+        ? {
+            label: this.getMergeWithFallbackLayerButton(layer),
+            key: "mergeWithFallbackLayerButton",
+          }
+        : null,
+      !this.props.dataset.isEditable
+        ? { label: this.getReloadDataButton(layerName), key: "reloadDataButton" }
+        : null,
       {
         label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
         key: "findDataButton",
       },
-      {
-        label: (
-          <div className="flex-item">
-            {isAnnotationLayer && !isOnlyAnnotationLayer
-              ? this.getDeleteAnnotationLayerDropdownOption(readableName, layer)
-              : null}
-          </div>
-        ),
-        key: "deleteAnnotationLayer",
-      },
+      isAnnotationLayer && !isOnlyAnnotationLayer
+        ? {
+            label: (
+              <div className="flex-item">
+                {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
+              </div>
+            ),
+            key: "deleteAnnotationLayer",
+          }
+        : null,
     ];
+    const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -598,17 +595,20 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
         <div className="flex-container">
           <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
-          </div>
-          <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          </div>
-          <div className="flex-item">
             <Tooltip title="More actions">
               <Dropdown menu={{ items }} trigger={["click", "contextMenu"]} placement="bottomRight">
                 <EllipsisOutlined />
               </Dropdown>
             </Tooltip>
+          </div>
+          <div className="flex-break" />
+        </div>
+        <div className="flex-container flex-grow-1">
+          <div className="flex-item">
+            {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
+          </div>
+          <div className="flex-item">
+            {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
           </div>
         </div>
       </div>

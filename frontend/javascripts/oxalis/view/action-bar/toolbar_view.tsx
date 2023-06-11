@@ -666,12 +666,12 @@ function ChangeBrushSizeButton() {
             </Row>
             <Row justify="space-between" align="middle">
               <Col>
-                <div>
+                <div style={{ textAlign: "center" }}>
                   <ButtonComponent
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(smallBrushSize)}
                   >
-                    <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
+                    <i className="fas fa-circle fa-xs fa-fw" style={{ transform: "scale(0.6)" }} />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Small</div>
@@ -681,12 +681,12 @@ function ChangeBrushSizeButton() {
                 </div>
               </Col>
               <Col>
-                <div>
+                <div style={{ textAlign: "center" }}>
                   <ButtonComponent
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(mediumBrushSize)}
                   >
-                    <i className="fas fa-circle fa-sm" />
+                    <i className="fas fa-circle fa-sm fa-fw" />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Medium</div>
@@ -696,12 +696,12 @@ function ChangeBrushSizeButton() {
                 </div>
               </Col>
               <Col>
-                <div>
+                <div style={{ textAlign: "center" }}>
                   <ButtonComponent
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(largeBrushSize)}
                   >
-                    <i className="fas fa-circle fa-lg" />
+                    <i className="fas fa-circle fa-lg fa-fw" />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Large</div>

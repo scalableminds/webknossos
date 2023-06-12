@@ -1,5 +1,5 @@
-import { Alert } from "antd";
-import { connect } from "react-redux";
+import { Alert, InputNumber } from "antd";
+import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
@@ -31,6 +31,7 @@ import {
   getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
+import { setFourthDimension } from "oxalis/model/actions/flycam_actions";
 
 const VersionRestoreWarning = (
   <Alert
@@ -58,6 +59,17 @@ type Props = OwnProps & StateProps;
 type State = {
   isNewLayoutModalOpen: boolean;
 };
+
+function FourthDimensionInputView() {
+  const fourthDimension = useSelector((state: OxalisState) => state.flycam.fourthDimension);
+  const dispatch = useDispatch();
+  const changeFourthDimension = (value: number | null) => {
+    if (value != null) {
+      dispatch(setFourthDimension(value));
+    }
+  };
+  return <InputNumber value={fourthDimension} onChange={changeFourthDimension} />;
+}
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
@@ -173,6 +185,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
+          <FourthDimensionInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

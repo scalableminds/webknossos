@@ -61,7 +61,7 @@ class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
-  cubes: Array<CubeEntry>;
+  private cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;

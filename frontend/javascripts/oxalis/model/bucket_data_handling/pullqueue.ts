@@ -128,6 +128,14 @@ class PullQueue {
     const bucket = this.cube.getBucket(bucketAddress);
 
     if (bucket.type === "data") {
+      // todo: revert
+      if (bucketData != null) {
+        const fourthDimension = Store.getState().flycam.fourthDimension;
+        for (let idx = 0; idx < bucketData?.length; idx++) {
+          bucketData[idx] += fourthDimension;
+        }
+      }
+
       bucket.receiveData(bucketData);
     }
   }

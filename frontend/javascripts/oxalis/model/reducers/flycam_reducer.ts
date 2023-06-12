@@ -237,6 +237,14 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_FOURTH_DIMENSION": {
+      return update(state, {
+        flycam: {
+          fourthDimension: { $set: action.value },
+        },
+      });
+    }
+
     case "SET_ROTATION": {
       // This action should only be dispatched when *not* being in orthogonal mode,
       // because this would lead to incorrect buckets being selected for rendering.

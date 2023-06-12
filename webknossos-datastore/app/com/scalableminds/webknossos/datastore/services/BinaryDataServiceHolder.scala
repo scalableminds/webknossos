@@ -5,6 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 
@@ -21,11 +22,13 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService,
                                         applicationHealthService: ApplicationHealthService,
                                         dataVaultService: DataVaultService,
-                                        datasetErrorLoggingService: DatasetErrorLoggingService) {
+                                        datasetErrorLoggingService: DatasetErrorLoggingService)
+    extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
     // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
-    val maxSizeKiloBytes = 1000 * 1000
+
+    val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes / 1000L).toInt
 
     def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
       arrayBox match {

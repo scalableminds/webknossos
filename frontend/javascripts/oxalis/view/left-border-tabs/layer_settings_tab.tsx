@@ -23,7 +23,6 @@ import {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
-import { AsyncIconButton } from "components/async_clickables";
 import { HoverIconButton } from "components/hover_icon_button";
 import {
   SwitchSetting,
@@ -201,20 +200,22 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
-  //
+
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
     const tooltipText = isInEditMode
       ? "Stop editing the possible range of the histogram."
       : "Manually set the possible range of the histogram.";
     return (
       <Tooltip title={tooltipText}>
-        <EditOutlined
-          onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
-          style={{
-            cursor: "pointer",
-            color: isInEditMode ? "var(--ant-primary)" : undefined,
-          }}
-        />
+        <div onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}>
+          <EditOutlined
+            style={{
+              cursor: "pointer",
+              color: isInEditMode ? "var(--ant-primary)" : undefined,
+            }}
+          />
+          {isInEditMode ? "Stop editing histogram range" : "Edit histogram range"}
+        </div>
       </Tooltip>
     );
   };
@@ -275,7 +276,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
-  //
   getClipButton = (layerName: string, isInEditMode: boolean) => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
@@ -283,14 +283,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<VerticalAlignMiddleOutlined />}
-          style={{
-            cursor: "pointer",
-            transform: "rotate(90deg)",
-          }}
-          onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}
-        />
+        <div onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}>
+          <VerticalAlignMiddleOutlined
+            style={{
+              cursor: "pointer",
+              transform: "rotate(90deg)",
+            }}
+          />
+          Clip histogram
+        </div>
       </Tooltip>
     );
   };
@@ -431,6 +432,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ),
             key: "deleteAnnotationLayer",
           }
+        : null,
+      hasHistogram && !isDisabled
+        ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
+        : null,
+      hasHistogram && !isDisabled
+        ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
     ];
     const items = possibleItems.filter((el) => el);
@@ -600,15 +607,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 <EllipsisOutlined />
               </Dropdown>
             </Tooltip>
-          </div>
-          <div className="flex-break" />
-        </div>
-        <div className="flex-container flex-grow-1">
-          <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          </div>
-          <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
           </div>
         </div>
       </div>

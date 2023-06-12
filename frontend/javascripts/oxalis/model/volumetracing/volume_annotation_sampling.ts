@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap, Vector4, BucketAddress } from "oxalis/constants";
+import type { Vector3, LabeledVoxelsMap, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";

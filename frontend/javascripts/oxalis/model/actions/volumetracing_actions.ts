@@ -1,13 +1,5 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type {
-  Vector2,
-  Vector3,
-  Vector4,
-  OrthoView,
-  ContourMode,
-  Vector5,
-  BucketAddress,
-} from "oxalis/constants";
+import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";

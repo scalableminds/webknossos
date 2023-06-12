@@ -20,7 +20,7 @@ import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import WorkerPool from "libs/worker_pool";
-import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
+import type { BucketAddress, Vector3 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";

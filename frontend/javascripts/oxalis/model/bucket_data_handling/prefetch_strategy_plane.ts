@@ -5,7 +5,7 @@ import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_co
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DimensionIndices } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
-import type { BucketAddress, OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { ResolutionInfo } from "../helpers/resolution_info";

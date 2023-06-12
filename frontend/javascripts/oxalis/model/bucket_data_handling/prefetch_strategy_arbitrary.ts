@@ -1,5 +1,5 @@
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";

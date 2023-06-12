@@ -15,8 +15,8 @@ import scala.concurrent.ExecutionContext
 import scala.util.Using
 
 object ChunkReader {
-  def create(vaultPath: VaultPath, header: DatasetHeader): ChunkReader =
-    new ChunkReader(header, vaultPath, createChunkTyper(header))
+  def create(header: DatasetHeader): ChunkReader =
+    new ChunkReader(header, createChunkTyper(header))
 
   def createChunkTyper(header: DatasetHeader): ChunkTyper =
     header.resolvedDataType match {
@@ -29,10 +29,10 @@ object ChunkReader {
     }
 }
 
-class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunkTyper: ChunkTyper) {
+class ChunkReader(val header: DatasetHeader, val chunkTyper: ChunkTyper) {
   lazy val chunkSize: Int = header.chunkSize.toList.product
 
-  def read(path: String, chunkShapeFromMetadata: Array[Int], range: Option[NumericRange[Long]])(
+  def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[MultiArray] =
     for {
       chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).futureBox
@@ -49,10 +49,10 @@ class ChunkReader(val header: DatasetHeader, val vaultPath: VaultPath, val chunk
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
-  protected def readChunkBytesAndShape(path: String, range: Option[NumericRange[Long]])(
+  protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
-      bytes <- (vaultPath / path).readBytes(range) match {
+      bytes <- path.readBytes(range) match {
         case Some(bytes) => Fox.successful(bytes)
         case None        => Fox.empty
       }

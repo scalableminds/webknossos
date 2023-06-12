@@ -9,18 +9,18 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object Zarr3ChunkReader {
-  def create(vaultPath: VaultPath, header: Zarr3ArrayHeader, array: Zarr3Array): ChunkReader =
-    new Zarr3ChunkReader(header, vaultPath, ChunkReader.createChunkTyper(header), array)
+  def create(header: Zarr3ArrayHeader, array: Zarr3Array): ChunkReader =
+    new Zarr3ChunkReader(header, ChunkReader.createChunkTyper(header), array)
 }
 
-class Zarr3ChunkReader(header: DatasetHeader, vaultPath: VaultPath, typedChunkReader: ChunkTyper, array: Zarr3Array)
-    extends ChunkReader(header, vaultPath, typedChunkReader)
+class Zarr3ChunkReader(header: DatasetHeader, typedChunkReader: ChunkTyper, array: Zarr3Array)
+    extends ChunkReader(header, typedChunkReader) // TODO move creation of chunk typer to ChunkReader?
     with LazyLogging {
 
-  override protected def readChunkBytesAndShape(path: String, range: Option[NumericRange[Long]])(
+  override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
-      bytes <- (vaultPath / path).readBytes(range) match {
+      bytes <- path.readBytes(range) match {
         case Some(bytes) => Fox.successful(bytes)
         case None        => Fox.empty
       }

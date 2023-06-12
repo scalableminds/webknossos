@@ -214,7 +214,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               color: isInEditMode ? "var(--ant-primary)" : undefined,
             }}
           />
-          {isInEditMode ? "Stop editing histogram range" : "Edit histogram range"}
+          {isInEditMode ? "Stop editing" : "Edit"} histogram range
         </div>
       </Tooltip>
     );

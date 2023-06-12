@@ -292,14 +292,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             }}
           >
             <Col span={3}>
-              <label
-                className="setting-label"
-                style={{
-                  width: "100%",
-                }}
-              >
-                Min:
-              </label>
+              <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
               <Tooltip title={tooltipTitleFor("minimum")}>

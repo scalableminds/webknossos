@@ -9,6 +9,7 @@ import {
   MenuProps,
   Col,
   Row,
+  Divider,
 } from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
@@ -560,7 +561,7 @@ function ChangeBrushSizeButton() {
   const getDefaultBrushSizes = (): [number, number, number] => {
     largeBrushSize = maximumBrushSize;
     mediumBrushSize = calculateMediumBrushSize(largeBrushSize);
-    smallBrushSize = Math.max(userSettings.brushSize.minimum, 10); // TODO unsure whether that makes sense across the board};
+    smallBrushSize = userSettings.brushSize.minimum;
     return [smallBrushSize, mediumBrushSize, largeBrushSize];
   };
 
@@ -642,7 +643,7 @@ function ChangeBrushSizeButton() {
               Set the brush size:
             </div>
             <Row align="middle" style={{ textAlign: "center" }}>
-              <Col flex={10}>
+              <Col>
                 <LogSliderSetting
                   label=""
                   roundTo={0}
@@ -654,7 +655,7 @@ function ChangeBrushSizeButton() {
                   onChange={handleUpdateBrushSize}
                 />
               </Col>
-              <Col flex={1}>
+              <Col>
                 <Dropdown
                   menu={{ items }}
                   trigger={["click", "contextMenu"]}
@@ -664,6 +665,7 @@ function ChangeBrushSizeButton() {
                 </Dropdown>
               </Col>
             </Row>
+            <Divider style={{ marginBottom: 15, marginTop: 15 }} />
             <Row justify="space-between" align="middle">
               <Col>
                 <div style={{ textAlign: "center" }}>
@@ -671,11 +673,11 @@ function ChangeBrushSizeButton() {
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(smallBrushSize)}
                   >
-                    <i className="fas fa-circle fa-xs fa-fw" style={{ transform: "scale(0.6)" }} />
+                    <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Small</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
                   {Math.round(smallBrushSize)}
                   {ThinSpace}vx
                 </div>
@@ -686,11 +688,11 @@ function ChangeBrushSizeButton() {
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(mediumBrushSize)}
                   >
-                    <i className="fas fa-circle fa-sm fa-fw" />
+                    <i className="fas fa-circle fa-sm" />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Medium</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
                   {Math.round(mediumBrushSize)}
                   {ThinSpace}vx
                 </div>
@@ -701,11 +703,11 @@ function ChangeBrushSizeButton() {
                     className="without-icon-margin"
                     onClick={() => handleUpdateBrushSize(largeBrushSize)}
                   >
-                    <i className="fas fa-circle fa-lg fa-fw" />
+                    <i className="fas fa-circle fa-lg" />
                   </ButtonComponent>
                 </div>
                 <div style={{ textAlign: "center" }}>Large</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center" }}>
+                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
                   {Math.round(largeBrushSize)}
                   {ThinSpace}vx
                 </div>

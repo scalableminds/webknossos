@@ -18,7 +18,7 @@ trait SegmentIndexKeyHelper {
 // read provides fallback data from fossildb
 // while write is done only locally in-memory, until flush is called
 // This saves a lot of db interactions (since adjacent bucket updates usually touch the same segments)
-class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: FossilDBClient, newVersion: Long)
+class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: FossilDBClient, version: Long)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
     with LazyLogging {
@@ -35,7 +35,7 @@ class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: Foss
       case Some(positions) => Fox.successful(positions)
       case None =>
         volumeSegmentIndexClient
-          .get(key, Some(newVersion), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
+          .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
           .map(_.value)
     }
   }
@@ -43,7 +43,7 @@ class VolumeSegmentIndexBuffer(tracingId: String, volumeSegmentIndexClient: Foss
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(segmentIndexBuffer.keys.toList) { key =>
-        volumeSegmentIndexClient.put(key, newVersion, segmentIndexBuffer(key))
+        volumeSegmentIndexClient.put(key, version, segmentIndexBuffer(key))
       }
     } yield ()
 

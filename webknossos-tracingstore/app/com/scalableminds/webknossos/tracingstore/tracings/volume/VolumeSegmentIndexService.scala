@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, TracingDataStore}
@@ -72,7 +72,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer,
                                                                                          segmentId,
                                                                                          bucketPosition.mag)
-      bucketPositionProto = bucketPositionVec3IntProto(bucketPosition)
+      bucketPositionProto = bucketPosition.toVec3IntProto
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
       _ = segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
     } yield ()
@@ -82,8 +82,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                       bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer, segmentId, bucketPosition.mag)
-      newBucketList = ListOfVec3IntProto(
-        (bucketPositionVec3IntProto(bucketPosition) +: previousBucketList.values).distinct)
+      newBucketList = ListOfVec3IntProto((bucketPosition.toVec3IntProto +: previousBucketList.values).distinct)
       _ <- segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
     } yield ()
 
@@ -95,9 +94,6 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       set.filter(!_.isZero).map { u: UnsignedInteger =>
         u.toPositiveLong
       }
-
-  private def bucketPositionVec3IntProto(bucketPosition: BucketPosition) =
-    Vec3IntProto(bucketPosition.bucketX, bucketPosition.bucketY, bucketPosition.bucketZ)
 
   private def getSegmentToBucketIndexWithEmptyFallback(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,

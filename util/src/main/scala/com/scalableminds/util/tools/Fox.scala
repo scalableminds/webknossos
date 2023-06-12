@@ -123,20 +123,8 @@ object Fox extends FoxImplicits {
   }
 
   // Run serially, fail on the first failure
-  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
-    def runNext(remaining: List[A], results: List[B]): Fox[List[B]] =
-      remaining match {
-        case head :: tail =>
-          for {
-            currentResult <- f(head)
-            results <- runNext(tail, currentResult :: results)
-          } yield results
-        case Nil =>
-          Fox.successful(results.reverse)
-      }
-
-    runNext(l, Nil)
-  }
+  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+    serialCombined(l.toIterator)(f)
 
   // Run serially, fail on the first failure
   def serialCombined[A, B](it: Iterator[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {

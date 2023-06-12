@@ -75,7 +75,7 @@ function FourthDimensionInputView() {
         <NumberSliderSetting
           label="Q"
           min={0}
-          max={1000}
+          max={100}
           value={fourthDimension}
           onChange={changeFourthDimension}
         />

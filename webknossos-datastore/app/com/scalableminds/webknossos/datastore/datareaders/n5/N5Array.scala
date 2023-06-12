@@ -1,12 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetHeader,
-  DatasetPath
-}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -41,6 +35,6 @@ class N5Array(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisOrder,
     extends DatasetArray(vaultPath, header, axisOrder, channelIndex)
     with LazyLogging {
 
-  override protected val chunkReader: ChunkReader =
-    N5ChunkReader.create(header)
+  override protected lazy val chunkReader: ChunkReader =
+    new N5ChunkReader(header)
 }

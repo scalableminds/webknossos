@@ -18,8 +18,7 @@ import scala.concurrent.ExecutionContext
 class DatasetArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
     extends LazyLogging {
 
-  protected val chunkReader: ChunkReader =
-    ChunkReader.create(header)
+  protected lazy val chunkReader: ChunkReader = new ChunkReader(header)
 
   // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: AlfuFoxCache[String, MultiArray] = {

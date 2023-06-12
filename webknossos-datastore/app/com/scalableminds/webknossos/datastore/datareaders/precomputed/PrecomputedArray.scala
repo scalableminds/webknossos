@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetPath}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo

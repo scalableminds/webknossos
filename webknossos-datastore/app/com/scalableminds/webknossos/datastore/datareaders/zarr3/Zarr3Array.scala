@@ -2,13 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  ChunkUtils,
-  DatasetArray,
-  DatasetPath
-}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -67,8 +61,8 @@ class Zarr3Array(vaultPath: VaultPath, header: Zarr3ArrayHeader, axisOrder: Axis
     }
   }
 
-  override protected val chunkReader: ChunkReader =
-    Zarr3ChunkReader.create(header, this)
+  override protected lazy val chunkReader: ChunkReader =
+    new Zarr3ChunkReader(header, this)
 
   private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
     AlfuFoxCache()

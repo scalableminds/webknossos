@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed problems which could arise when annotating volume data at negative positions (which is not supported and is properly ignored now). [#7124](https://github.com/scalableminds/webknossos/pull/7124)
 - Fixed some requests failing for streaming remote data via HTTP, which was observed when streaming data via Zarr from another WEBKNOSSOS instance. [#7125](https://github.com/scalableminds/webknossos/pull/7125)
 - Fixed that the brush preview was inaccurate in some scenarios. [#7129](https://github.com/scalableminds/webknossos/pull/7129)
+- Fixed order of decompression on neuroglancer precomputed datasets, which caused some segmentation layers to not load correctly. [#7135](https://github.com/scalableminds/webknossos/pull/7135/)
 
 ### Removed
 - Support for [webknososs-connect](https://github.com/scalableminds/webknossos-connect) data store servers has been removed. Use the "Add Remote Dataset" functionality instead. [#7031](https://github.com/scalableminds/webknossos/pull/7031)

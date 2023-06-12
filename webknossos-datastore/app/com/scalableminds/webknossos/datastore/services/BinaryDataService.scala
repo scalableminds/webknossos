@@ -87,9 +87,10 @@ class BinaryDataService(val dataBaseDir: Path,
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
+      val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
-        bucketProviderCache.getOrLoadAndPut((request.dataSource.id, request.dataLayer.name))(_ =>
-          request.dataLayer.bucketProvider(dataVaultServiceOpt, request.dataSource.id, sharedChunkContentsCache))
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))

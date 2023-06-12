@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetPath}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
@@ -66,9 +66,6 @@ class PrecomputedArray(relativePath: DatasetPath,
     extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {
-
-  override protected val chunkReader: ChunkReader =
-    PrecomputedChunkReader.create(vaultPath, header)
 
   lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {

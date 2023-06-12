@@ -359,7 +359,7 @@ class VolumeTracingService @Inject()(
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0,
-      hasSegmentIndex = volumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions)
+      hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions.fallbackLayer)
     )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"

@@ -17,6 +17,11 @@ import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 
+object VolumeSegmentIndexService {
+  // Currently, segment index is not supported for volume tracings with fallback layer
+  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+}
+
 // Segment-to-Bucket index for volume tracings in FossilDB
 // key: tracing id, segment id, mag – value: list of buckets
 // used for calculating segment statistics
@@ -32,9 +37,6 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   // Add segment index to merged tracing if all source tracings have a segment index
   def shouldCreateSegmentIndexForMerged(tracings: Seq[VolumeTracing]): Boolean =
     tracings.forall(_.hasSegmentIndex.getOrElse(false))
-
-  // Currently, segment index is not supported for volume tracings with fallback layer
-  def canHaveSegmentIndex(tracing: VolumeTracing): Option[Boolean] = Some(tracing.fallbackLayer.isEmpty)
 
   def updateFromBucket(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                        bucketPosition: BucketPosition,

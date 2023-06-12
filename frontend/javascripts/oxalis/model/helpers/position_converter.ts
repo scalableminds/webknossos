@@ -68,12 +68,13 @@ export function bucketPositionToGlobalAddress(
   bucketPosition: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const [x, y, z, resolutionIndex] = bucketPosition;
+  const [x, y, z, resolutionIndex, dims] = bucketPosition;
+  const offset = dims != null ? dims[0] : 0;
   const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
-    x * constants.BUCKET_WIDTH * resolution[0],
-    y * constants.BUCKET_WIDTH * resolution[1],
-    z * constants.BUCKET_WIDTH * resolution[2],
+    x * constants.BUCKET_WIDTH * resolution[0] + offset,
+    y * constants.BUCKET_WIDTH * resolution[1] + offset,
+    z * constants.BUCKET_WIDTH * resolution[2] + offset,
   ];
 }
 export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3): Vector3 {

@@ -1,4 +1,4 @@
-import { Alert, InputNumber } from "antd";
+import { Alert, InputNumber, Popover } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
@@ -32,6 +32,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
 import { setFourthDimension } from "oxalis/model/actions/flycam_actions";
+import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
@@ -68,7 +69,21 @@ function FourthDimensionInputView() {
       dispatch(setFourthDimension(value));
     }
   };
-  return <InputNumber value={fourthDimension} onChange={changeFourthDimension} />;
+  return (
+    <Popover
+      content={
+        <NumberSliderSetting
+          label="Q"
+          min={0}
+          max={1000}
+          value={fourthDimension}
+          onChange={changeFourthDimension}
+        />
+      }
+    >
+      <InputNumber value={fourthDimension} onChange={changeFourthDimension} />
+    </Popover>
+  );
 }
 
 class ActionBarView extends React.PureComponent<Props, State> {

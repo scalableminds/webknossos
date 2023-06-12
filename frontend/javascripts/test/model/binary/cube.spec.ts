@@ -11,6 +11,7 @@ import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const StoreMock = {
   getState: () => ({
@@ -46,11 +47,11 @@ mockRequire("libs/toast", {
   error: _.noop,
 });
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
+const DataCube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
 const test: TestInterface<{
-  cube: typeof Cube;
+  cube: typeof DataCube;
   pullQueue: Record<string, any>;
   pushQueue: Record<string, any>;
 }> = anyTest as any;
@@ -66,7 +67,12 @@ test.beforeEach((t) => {
     ] as Vector3[],
   };
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
-  const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
+  const cube = new DataCube(
+    new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
+    resolutionInfo,
+    "uint32",
+    false,
+  );
 
   class PullQueueMock {
     queue: Array<{ bucket: Vector4 }> = [];

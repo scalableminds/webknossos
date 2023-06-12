@@ -6,18 +6,14 @@ import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ResolutionInfo } from "../helpers/resolution_info";
 
 class BoundingBox {
-  boundingBox: BoundingBoxType | null | undefined;
   min: Vector3;
   max: Vector3;
 
-  // If maxRestriction is provided, the passed boundingBox is automatically
-  // clipped to maxRestriction
-  constructor(boundingBox: BoundingBoxType | null | undefined, maxRestriction?: Vector3) {
-    this.boundingBox = boundingBox;
+  constructor(boundingBox: BoundingBoxType | null | undefined) {
     // Min is including
     this.min = [-Infinity, -Infinity, -Infinity];
     // Max is excluding
-    this.max = maxRestriction != null ? _.clone(maxRestriction) : [Infinity, Infinity, Infinity];
+    this.max = [Infinity, Infinity, Infinity];
 
     if (boundingBox != null) {
       for (const i of Vector3Indicies) {

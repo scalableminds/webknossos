@@ -271,6 +271,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writeColor(t.color)
         writer.writeAttribute("name", t.name)
         t.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
+        t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
       }

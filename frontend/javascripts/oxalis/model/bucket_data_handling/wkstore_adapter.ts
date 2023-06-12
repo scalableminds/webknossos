@@ -20,7 +20,7 @@ import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import WorkerPool from "libs/worker_pool";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
@@ -47,7 +47,7 @@ type RequestBucketInfo = SendBucketInfo & {
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
-  zoomedAddress: Vector4,
+  zoomedAddress: BucketAddress,
   resolutionInfo: ResolutionInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
@@ -68,9 +68,10 @@ const createRequestBucketInfo = (
 });
 
 function createSendBucketInfo(
-  zoomedAddress: Vector4,
+  zoomedAddress: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): SendBucketInfo {
+  // todop: use dims
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
     mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
@@ -84,7 +85,7 @@ function getNullIndices<T>(arr: Array<T | null | undefined>): Array<number> {
 
 export async function requestWithFallback(
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
   const datasetName = state.dataset.name;
@@ -150,7 +151,7 @@ export async function requestWithFallback(
 export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
   isVolumeFallback: boolean = false,
 ): Promise<Array<Uint8Array | null | undefined>> {
@@ -224,7 +225,7 @@ export async function requestFromStore(
 
 function sliceBufferIntoPieces(
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
   missingBuckets: Array<number>,
   buffer: Uint8Array,
 ): Array<Uint8Array | null | undefined> {

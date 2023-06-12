@@ -22,7 +22,13 @@ import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import Toast from "libs/toast";
-import type { Vector3, Vector4, BoundingBoxType, LabelMasksByBucketAndW } from "oxalis/constants";
+import type {
+  Vector3,
+  Vector4,
+  BoundingBoxType,
+  LabelMasksByBucketAndW,
+  BucketAddress,
+} from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import { ResolutionInfo } from "../helpers/resolution_info";
 
@@ -61,7 +67,7 @@ class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
-  private cubes: Array<CubeEntry>;
+  private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
@@ -104,7 +110,7 @@ class DataCube {
 
     _.extend(this, BackboneEvents);
 
-    this.cubes = [];
+    this.cubes = {};
     this.buckets = [];
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
@@ -113,13 +119,17 @@ class DataCube {
       Math.ceil(layerBBox.max[2] / constants.BUCKET_WIDTH),
     ];
 
-    for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
-      const zoomedCubeBoundary: Vector3 = [
-        Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
-        Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
-        Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
-      ];
-      this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
+    // todo: don't hardcode. create lazily?
+    for (let q = 0; q < 1000; q++) {
+      for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
+        const zoomedCubeBoundary: Vector3 = [
+          Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
+          Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
+          Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
+        ];
+        const cubeKey = this.getCubeKey(resolutionIndex, [q]);
+        this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
+      }
     }
 
     const shouldBeRestrictedByTracingBoundingBox = () => {
@@ -195,31 +205,41 @@ class DataCube {
     return mappedId != null ? mappedId : idToMap;
   }
 
-  isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
-    if (this.cubes[zoomStep] == null) {
+  private getCubeKey(zoomStep: number, dims: number[] | undefined) {
+    return [zoomStep, ...(dims ?? [])].join("-");
+  }
+
+  isWithinBounds([x, y, z, zoomStep, dims]: BucketAddress): boolean {
+    const cubeKey = this.getCubeKey(zoomStep, dims);
+    if (this.cubes[cubeKey] == null) {
       return false;
     }
 
     return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
   }
 
-  getBucketIndex([x, y, z, zoomStep]: Vector4): number | null | undefined {
+  getBucketIndexAndCube([x, y, z, zoomStep, dims]: BucketAddress): [
+    number | null | undefined,
+    CubeEntry | null,
+  ] {
+    const cubeKey = this.getCubeKey(zoomStep, dims);
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
-    const cube = this.cubes[zoomStep];
+    const cube = this.cubes[cubeKey];
 
     if (cube != null) {
       const { boundary } = cube;
-      return x * boundary[2] * boundary[1] + y * boundary[2] + z;
+      const index = x * boundary[2] * boundary[1] + y * boundary[2] + z;
+      return [index, cube];
     }
 
-    return null;
+    return [null, null];
   }
 
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
-  getOrCreateBucket(address: Vector4): Bucket {
+  getOrCreateBucket(address: BucketAddress): Bucket {
     if (!this.isWithinBounds(address)) {
       return this.getNullBucket();
     }
@@ -234,13 +254,12 @@ class DataCube {
   }
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address: Vector4, skipBoundsCheck: boolean = false): Bucket {
+  getBucket(address: BucketAddress, skipBoundsCheck: boolean = false): Bucket {
     if (!skipBoundsCheck && !this.isWithinBounds(address)) {
       return this.getNullBucket();
     }
 
-    const bucketIndex = this.getBucketIndex(address);
-    const cube = this.cubes[address[3]];
+    const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
       const bucket = cube.data.get(bucketIndex);
@@ -253,11 +272,10 @@ class DataCube {
     return this.getNullBucket();
   }
 
-  createBucket(address: Vector4): Bucket {
+  createBucket(address: BucketAddress): Bucket {
     const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
     this.addBucketToGarbageCollection(bucket);
-    const bucketIndex = this.getBucketIndex(address);
-    const cube = this.cubes[address[3]];
+    const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
       cube.data.set(bucketIndex, bucket);
@@ -345,8 +363,7 @@ class DataCube {
 
   collectBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
-    const bucketIndex = this.getBucketIndex(address);
-    const cube = this.cubes[address[3]];
+    const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
       bucket.destroy();
@@ -669,7 +686,7 @@ class DataCube {
   }
 
   setBucketData(
-    zoomedAddress: Vector4,
+    zoomedAddress: BucketAddress,
     data: BucketDataArray,
     newPendingOperations: Array<(arg0: BucketDataArray) => void>,
   ) {

@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap, Vector4 } from "oxalis/constants";
+import type { Vector3, LabeledVoxelsMap, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -344,7 +344,7 @@ export function applyVoxelMap(
 
       if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
-        const nextBucketZoomedAddress: Vector4 = [...labeledBucketZoomedAddress];
+        const nextBucketZoomedAddress: BucketAddress = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;
         postprocessBucket(bucket);
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);

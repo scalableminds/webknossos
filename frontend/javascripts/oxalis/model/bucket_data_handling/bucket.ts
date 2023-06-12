@@ -7,7 +7,7 @@ import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volu
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, BucketAddress, Vector3, Vector4, Vector5 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -142,7 +142,7 @@ export class DataBucket {
   accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: Vector4;
+  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
@@ -156,7 +156,7 @@ export class DataBucket {
 
   constructor(
     elementClass: ElementClass,
-    zoomedAddress: Vector4,
+    zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
     cube: DataCube,
   ) {

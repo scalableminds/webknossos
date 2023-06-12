@@ -1,14 +1,15 @@
 import PriorityQueue from "js-priority-queue";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Vector4 } from "oxalis/constants";
+import type { BucketAddress } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import { asAbortable } from "libs/utils";
+
 export type PullQueueItem = {
   priority: number;
-  bucket: Vector4;
+  bucket: BucketAddress;
 };
 export const PullQueueConstants = {
   // For buckets that should be loaded immediately and
@@ -69,7 +70,7 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  async pullBatch(batch: Array<Vector4>): Promise<void> {
+  async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
     const { dataset } = Store.getState();
@@ -124,15 +125,17 @@ class PullQueue {
     }
   }
 
-  handleBucket(bucketAddress: Vector4, bucketData: Uint8Array | null | undefined): void {
+  handleBucket(bucketAddress: BucketAddress, bucketData: Uint8Array | null | undefined): void {
     const bucket = this.cube.getBucket(bucketAddress);
 
     if (bucket.type === "data") {
       // todo: revert
       if (bucketData != null) {
-        const fourthDimension = Store.getState().flycam.fourthDimension;
-        for (let idx = 0; idx < bucketData?.length; idx++) {
-          bucketData[idx] += fourthDimension;
+        const additionalDims = bucketAddress[4];
+        if (additionalDims != null) {
+          for (let idx = 0; idx < bucketData?.length; idx++) {
+            bucketData[idx] += additionalDims[0];
+          }
         }
       }
 

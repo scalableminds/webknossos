@@ -1,4 +1,4 @@
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { type ResolutionInfo } from "./resolution_info";
 
@@ -65,9 +65,10 @@ export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex:
   ];
 }
 export function bucketPositionToGlobalAddress(
-  [x, y, z, resolutionIndex]: Vector4,
+  bucketPosition: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
+  const [x, y, z, resolutionIndex] = bucketPosition;
   const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
     x * constants.BUCKET_WIDTH * resolution[0],
@@ -93,7 +94,7 @@ export function zoomedPositionToZoomedAddress(
     resolutionIndex,
   ];
 }
-export function zoomedAddressToZoomedPosition([x, y, z, _]: Vector4): Vector3 {
+export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vector3 {
   return [x * constants.BUCKET_WIDTH, y * constants.BUCKET_WIDTH, z * constants.BUCKET_WIDTH];
 }
 // TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo

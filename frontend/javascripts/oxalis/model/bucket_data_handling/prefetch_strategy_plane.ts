@@ -5,7 +5,7 @@ import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_co
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DimensionIndices } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
-import type { OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
+import type { BucketAddress, OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { ResolutionInfo } from "../helpers/resolution_info";
@@ -87,6 +87,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     resolutionInfo: ResolutionInfo,
+    additionalDims: number[] | null,
   ): Array<PullQueueItem> {
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
@@ -108,6 +109,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       areas,
       resolutions,
       false,
+      additionalDims,
     );
     let queueItemsForFallbackZoomStep: Array<PullQueueItem> = [];
     const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
@@ -123,6 +125,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         areas,
         resolutions,
         true,
+        additionalDims,
       );
     }
 
@@ -139,6 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     isFallback: boolean,
+    additionalDims: number[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: Array<PullQueueItem> = [];
 
@@ -147,7 +151,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     }
 
     const centerBucket = cube.positionToZoomedAddress(position, zoomStep);
-    const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
+    const centerBucket3: Vector3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
     const fallbackPriorityWeight = isFallback ? 50 : 0;
 
     for (const plane of OrthoViewValuesWithoutTDView) {
@@ -158,18 +162,16 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       this.w = w;
       // areas holds bucket indices for zoomStep = 0, which we want to
       // convert to the desired zoomStep
-      const widthHeightVector = [0, 0, 0, 0];
+      const widthHeightVector: Vector4 = [0, 0, 0, 0];
       widthHeightVector[u] = areas[plane].right - areas[plane].left;
       widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         widthHeightVector,
         resolutions,
         zoomStep,
       );
       const width = scaledWidthHeightVector[u];
       const height = scaledWidthHeightVector[v];
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
       const prefetchWeight = getPriorityWeightForPrefetch();
 
@@ -180,8 +182,9 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
           Math.abs(bucket[2] - centerBucket3[2]) +
           prefetchWeight +
           fallbackPriorityWeight;
+
         pullQueue.push({
-          bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
+          bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalDims ?? []],
           priority,
         });
 

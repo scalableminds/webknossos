@@ -1573,6 +1573,7 @@ class DataApi {
     resolutions: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
+    // todop: needs to be adapted to 4d
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution

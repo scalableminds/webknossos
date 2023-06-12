@@ -10,3 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [102-no-more-wkconnect.sql](conf/evolutions/102-no-more-wkconnect.sql)
+- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)

@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
   UpdateMappingNameAction,
+  VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
   VolumeTracingService
 }
@@ -52,6 +53,7 @@ class VolumeTracingController @Inject()(
     val slackNotificationService: TSSlackNotificationService,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings]
     with ProtoGeometryImplicits
@@ -95,8 +97,7 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[VolumeTracing]] = request.body
-          // Add segment index to merged tracing if all source tracings have a segment index
-          val shouldCreateSegmentIndex = tracings.flatten.count(t => t.hasSegmentIndex.getOrElse(false)) == tracings.flatten.length
+          val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings.flatten)
           val mergedTracing =
             tracingService
               .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty)

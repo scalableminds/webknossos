@@ -201,7 +201,7 @@ class SkeletonTracingService @Inject()(
                       tracings: Seq[SkeletonTracing],
                       newId: String,
                       newVersion: Long,
-                      toCache: Boolean): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty(false))
+                      toCache: Boolean): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty())
 
   def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

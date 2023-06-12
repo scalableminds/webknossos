@@ -21,7 +21,7 @@ case class MergedVolumeStats(
 )
 
 object MergedVolumeStats {
-  def empty(createdSegmentIndex: Boolean): MergedVolumeStats =
+  def empty(createdSegmentIndex: Boolean = false): MergedVolumeStats =
     MergedVolumeStats(0L, None, List.empty, createdSegmentIndex)
 }
 

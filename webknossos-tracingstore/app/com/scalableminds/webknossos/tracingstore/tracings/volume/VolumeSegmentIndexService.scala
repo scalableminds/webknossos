@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
@@ -27,6 +28,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     with LazyLogging {
 
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
+
+  // Add segment index to merged tracing if all source tracings have a segment index
+  def shouldCreateSegmentIndexForMerged(tracings: Seq[VolumeTracing]): Boolean =
+    tracings.forall(_.hasSegmentIndex.getOrElse(false))
+
+  // Currently, segment index is not supported for volume tracings with fallback layer
+  def canHaveSegmentIndex(tracing: VolumeTracing): Option[Boolean] = Some(tracing.fallbackLayer.isEmpty)
 
   def updateFromBucket(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                        bucketPosition: BucketPosition,

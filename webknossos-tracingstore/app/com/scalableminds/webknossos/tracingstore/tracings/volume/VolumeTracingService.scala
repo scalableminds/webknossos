@@ -155,10 +155,7 @@ class VolumeTracingService @Inject()(
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucketPosition = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
-      dataLayer = volumeTracingLayer(tracingId,
-                                     volumeTracing,
-                                     includeFallbackDataIfAvailable = true,
-                                     userToken = userToken)
+      dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
@@ -362,7 +359,7 @@ class VolumeTracingService @Inject()(
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0,
-      hasSegmentIndex = Some(tracingWithResolutionRestrictions.fallbackLayer.isEmpty) // add segment index if possible
+      hasSegmentIndex = volumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions)
     )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
@@ -594,8 +591,7 @@ class VolumeTracingService @Inject()(
         }
     }
 
-    // Add segment index to merged tracing if all source tracings have a segment index
-    val shouldCreateSegmentIndex = tracings.count(t => t.hasSegmentIndex.getOrElse(false)) == tracings.length
+    val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings)
 
     logger.info(
       s"Merging ${tracings.length} volume tracings into new $newId. CreateSegmentIndex = $shouldCreateSegmentIndex")
@@ -667,10 +663,7 @@ class VolumeTracingService @Inject()(
           _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
             mergedVolume.largestSegmentId.toLong,
             tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
-          dataLayer = volumeTracingLayer(tracingId,
-                                         tracing,
-                                         includeFallbackDataIfAvailable = true,
-                                         userToken = userToken)
+          dataLayer = volumeTracingLayer(tracingId, tracing)
           segmentIndexBuffer <- Fox.successful(
             new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version + 1))
           _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>

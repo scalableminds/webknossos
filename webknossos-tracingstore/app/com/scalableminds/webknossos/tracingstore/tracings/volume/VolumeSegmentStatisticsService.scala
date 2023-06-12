@@ -25,16 +25,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
-      volumeData <- data(tracing, tracingId, mag, bucketPositions, userToken) // TODO also load fallback layer data (with pinned agglomerate mapping)
+      volumeData <- data(tracing, tracingId, mag, bucketPositions, userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
 
-  def data(tracing: VolumeTracing,
-           tracingId: String,
-           mag: Vec3Int,
-           bucketPositions: ListOfVec3IntProto,
-           userToken: Option[String]): Fox[Array[Byte]] = {
+  private def data(tracing: VolumeTracing,
+                   tracingId: String,
+                   mag: Vec3Int,
+                   bucketPositions: ListOfVec3IntProto,
+                   userToken: Option[String]): Fox[Array[Byte]] = {
     val dataRequests = bucketPositions.values.map { position =>
       WebKnossosDataRequest(
         position = vec3IntFromProto(position) * mag * DataLayer.bucketLength,

@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
   ChunkReader,
@@ -10,6 +11,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   DatasetPath
 }
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
@@ -20,7 +22,12 @@ import scala.concurrent.ExecutionContext
 
 object Zarr3Array extends LazyLogging {
   @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): Zarr3Array = {
+  def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray]): Zarr3Array = {
     val rootPath = new DatasetPath("")
     val headerPath = rootPath.resolve(Zarr3ArrayHeader.ZARR_JSON)
     val headerBytes = (path / headerPath.storeKey).readBytes()
@@ -34,17 +41,34 @@ object Zarr3Array extends LazyLogging {
         case errors: JsError =>
           throw new Exception("Validating json as zarr v3 header failed: " + JsError.toJson(errors).toString())
       }
-    new Zarr3Array(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)), channelIndex)
+    new Zarr3Array(rootPath,
+                   path,
+                   dataSourceId,
+                   layerName,
+                   header,
+                   axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+                   channelIndex,
+                   sharedChunkContentsCache)
   }
 
 }
 
 class Zarr3Array(relativePath: DatasetPath,
                  vaultPath: VaultPath,
+                 dataSourceId: DataSourceId,
+                 layerName: String,
                  header: Zarr3ArrayHeader,
                  axisOrder: AxisOrder,
-                 channelIndex: Option[Int])
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
+                 channelIndex: Option[Int],
+                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(relativePath,
+                         vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         sharedChunkContentsCache)
     with LazyLogging {
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -76,8 +100,8 @@ class Zarr3Array(relativePath: DatasetPath,
   override protected val chunkReader: ChunkReader =
     Zarr3ChunkReader.create(vaultPath, header, this)
 
-  private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
-    AlfuFoxCache()
+  private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
+    AlfuCache()
 
   private def shardShape =
     header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard

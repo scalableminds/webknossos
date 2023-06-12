@@ -13,12 +13,15 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 object ZarrArray extends LazyLogging {
   @throws[IOException]
   def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray]): ZarrArray = {
@@ -42,6 +45,8 @@ object ZarrArray extends LazyLogging {
     }
     new ZarrArray(rootPath,
                   path,
+                  dataSourceId,
+                  layerName,
                   header,
                   axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                   channelIndex,
@@ -52,11 +57,20 @@ object ZarrArray extends LazyLogging {
 
 class ZarrArray(relativePath: DatasetPath,
                 vaultPath: VaultPath,
+                dataSourceId: DataSourceId,
+                layerName: String,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
                 channelIndex: Option[Int],
                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
+    extends DatasetArray(relativePath,
+                         vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         sharedChunkContentsCache)
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =

@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -13,6 +15,7 @@ import net.liftweb.common.Empty
 import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogging {
 
@@ -26,7 +29,10 @@ class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogg
 
 }
 
-class Zarr3BucketProvider(layer: Zarr3Layer, val dataVaultServiceOpt: Option[DataVaultService])
+class Zarr3BucketProvider(layer: Zarr3Layer,
+                          dataSourceId: DataSourceId,
+                          val dataVaultServiceOpt: Option[DataVaultService],
+                          sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging {
 
@@ -44,8 +50,10 @@ class Zarr3BucketProvider(layer: Zarr3Layer, val dataVaultServiceOpt: Option[Dat
               magPath: VaultPath <- if (zarrMag.isRemote) {
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                Zarr3Array.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
+              chunkContentsCache <- sharedChunkContentsCache
+              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(Zarr3Array
+                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache))
+                .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

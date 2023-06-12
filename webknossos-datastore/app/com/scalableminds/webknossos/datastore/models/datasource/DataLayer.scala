@@ -202,6 +202,7 @@ trait DataLayer extends DataLayerLike {
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
   def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)

@@ -103,6 +103,7 @@ case class VolumeTracingLayer(
       new VolumeTracingBucketProvider(this)
 
   override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                              dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     volumeBucketProvider
 

@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -29,6 +30,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 }
 
 class N5BucketProvider(layer: N5Layer,
+                       dataSourceId: DataSourceId,
                        val dataVaultServiceOpt: Option[DataVaultService],
                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
@@ -49,8 +51,9 @@ class N5BucketProvider(layer: N5Layer,
                 dataVaultService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache)).map(new N5CubeHandle(_))
+              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(N5Array
+                .open(magPath, dataSourceId, layer.name, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache))
+                .map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

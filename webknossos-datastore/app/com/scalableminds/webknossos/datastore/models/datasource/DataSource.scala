@@ -9,7 +9,10 @@ import scala.annotation.nowarn
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: String) // here team is not (yet) renamed to organization to avoid migrating all jsons
+  // here team is not (yet) renamed to organization to avoid migrating all jsons
+  case class DataSourceId(name: String, team: String) {
+    override def toString: String = s"DataSourceId($team/$name)"
+  }
 
   object DataSourceId {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]

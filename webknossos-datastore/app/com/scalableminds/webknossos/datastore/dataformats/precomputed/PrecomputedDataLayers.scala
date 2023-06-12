@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   DataFormat,
   DataLayer,
+  DataSourceId,
   ElementClass,
   SegmentationLayer
 }
@@ -21,8 +22,9 @@ trait PrecomputedLayer extends DataLayer {
   val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
   def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new PrecomputedBucketProvider(this, dataVaultServiceOpt, sharedChunkContentsCache)
+    new PrecomputedBucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

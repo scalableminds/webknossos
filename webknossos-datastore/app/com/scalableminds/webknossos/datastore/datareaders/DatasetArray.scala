@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -17,6 +18,8 @@ import scala.concurrent.ExecutionContext
 
 class DatasetArray(relativePath: DatasetPath,
                    vaultPath: VaultPath,
+                   dataSourceId: DataSourceId,
+                   layerName: String,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
@@ -90,7 +93,7 @@ class DatasetArray(relativePath: DatasetPath,
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
-    s"${vaultPath}____chunk_${chunkIndex.mkString(",")}"
+    s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex), _ => readSourceChunkData(chunkIndex))

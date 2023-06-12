@@ -206,7 +206,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   private def removeUserFromCache(userId: ObjectId): Unit =
-    userCache.remove(idAndAccessContextString => idAndAccessContextString._1 == userId)
+    userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {

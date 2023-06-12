@@ -29,7 +29,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
   def remove(key: K): Unit = store.synchronous().invalidate(key)
 
-  def remove(fn: K => Boolean): Int = {
+  def clear(fn: K => Boolean): Int = {
     val keysToRemove = keys.filter(fn(_))
     keysToRemove.foreach(remove)
     keysToRemove.size

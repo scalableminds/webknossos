@@ -5,6 +5,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetPath}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -20,6 +21,8 @@ import ucar.ma2.{Array => MultiArray}
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
   def open(magPath: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
@@ -48,22 +51,35 @@ object PrecomputedArray extends LazyLogging {
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
     val datasetPath = new DatasetPath(key)
-    new PrecomputedArray(datasetPath,
-                         basePath,
-                         scaleHeader,
-                         axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex,
-                         sharedChunkContentsCache)
+    new PrecomputedArray(
+      datasetPath,
+      basePath,
+      dataSourceId,
+      layerName,
+      scaleHeader,
+      axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+      channelIndex,
+      sharedChunkContentsCache
+    )
   }
 }
 
 class PrecomputedArray(relativePath: DatasetPath,
                        vaultPath: VaultPath,
+                       dataSourceId: DataSourceId,
+                       layerName: String,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
                        sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext)
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex, sharedChunkContentsCache)
+    extends DatasetArray(relativePath,
+                         vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {
 

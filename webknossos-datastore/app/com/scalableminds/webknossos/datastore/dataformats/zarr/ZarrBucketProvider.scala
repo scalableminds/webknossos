@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -29,6 +30,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 }
 
 class ZarrBucketProvider(layer: ZarrLayer,
+                         dataSourceId: DataSourceId,
                          val dataVaultServiceOpt: Option[DataVaultService],
                          sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
@@ -49,8 +51,8 @@ class ZarrBucketProvider(layer: ZarrLayer,
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache))
+              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(ZarrArray
+                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache))
                 .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty

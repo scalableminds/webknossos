@@ -14,8 +14,9 @@ trait N5Layer extends DataLayer {
   val dataFormat: DataFormat.Value = DataFormat.n5
 
   def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new N5BucketProvider(this, dataVaultServiceOpt, sharedChunkContentsCache)
+    new N5BucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

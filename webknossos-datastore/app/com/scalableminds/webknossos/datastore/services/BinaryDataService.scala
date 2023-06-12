@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -87,8 +87,9 @@ class BinaryDataService(val dataBaseDir: Path,
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
-        dataLayer.bucketProvider(dataVaultServiceOpt, sharedChunkContentsCache))
+      val bucketProvider =
+        bucketProviderCache.getOrLoadAndPut((request.dataSource.id, request.dataLayer.name))(_ =>
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, request.dataSource.id, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
@@ -202,19 +203,34 @@ class BinaryDataService(val dataBaseDir: Path,
     compressed
   }
 
-  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): (Int, Int) = {
+  def clearCache(organizationName: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
+    val dataSourceId = DataSourceId(datasetName, organizationName)
+
     def dataCubeMatchPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
+      cubeKey.dataSourceName == datasetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.dataSetName == dataSetName && agglomerateKey.organizationName == organizationName && layerName
+      agglomerateKey.dataSetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
         .forall(_ == agglomerateKey.layerName)
+
+    def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
+      key._1 == DataSourceId(datasetName, organizationName) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
+
     val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
-    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
+
+    bucketProviderCache.clear(bucketProviderPredicate)
+
+    def chunkContentsPredicate(key: String): Boolean =
+      key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
+        key.startsWith(s"${dataSourceId.toString}__$l"))
+
+    val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
+
+    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount)
   }
 
 }

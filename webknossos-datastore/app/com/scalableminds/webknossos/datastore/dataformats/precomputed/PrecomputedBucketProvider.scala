@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -29,6 +30,7 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCube
 }
 
 class PrecomputedBucketProvider(layer: PrecomputedLayer,
+                                dataSourceId: DataSourceId,
                                 val dataVaultServiceOpt: Option[DataVaultService],
                                 sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
@@ -50,9 +52,12 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache
               cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                PrecomputedArray
-                  .open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex, chunkContentsCache))
-                .map(new PrecomputedCubeHandle(_))
+                PrecomputedArray.open(magPath,
+                                      dataSourceId,
+                                      layer.name,
+                                      precomputedMag.axisOrder,
+                                      precomputedMag.channelIndex,
+                                      chunkContentsCache)).map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

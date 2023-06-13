@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.webknossos.datastore.models.datasource.CoordinateTransformationType.CoordinateTransformationType
 import play.api.libs.json.{Json, OFormat}
 
 case class ThinPlateSplineCorrespondences(
-    source: List[Double],
-    target: List[Double]
+    source: List[Vec3Double],
+    target: List[Vec3Double]
 )
 
 object ThinPlateSplineCorrespondences {

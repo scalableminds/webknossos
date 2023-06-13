@@ -15,15 +15,10 @@ import java.util
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class DatasetArray(relativePath: DatasetPath,
-                   vaultPath: VaultPath,
-                   header: DatasetHeader,
-                   axisOrder: AxisOrder,
-                   channelIndex: Option[Int])
+class DatasetArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
     extends LazyLogging {
 
-  protected val chunkReader: ChunkReader =
-    ChunkReader.create(vaultPath, header)
+  protected lazy val chunkReader: ChunkReader = new ChunkReader(header)
 
   // cache currently limited to 1 GB per array
   private lazy val chunkContentsCache: AlfuFoxCache[String, MultiArray] = {
@@ -103,14 +98,12 @@ class DatasetArray(relativePath: DatasetPath,
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
         chunkShape = header.chunkSizeAtIndex(chunkIndex)
-        multiArray <- chunkReader.read(shardPath.toString, chunkShape, Some(chunkRange))
+        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange))
       } yield multiArray
     } else {
-      val chunkFilename = getChunkFilename(chunkIndex)
-      val chunkFilePath = relativePath.resolve(chunkFilename)
-      val storeKey = chunkFilePath.storeKey
+      val chunkPath = vaultPath / getChunkFilename(chunkIndex)
       val chunkShape = header.chunkSizeAtIndex(chunkIndex)
-      chunkReader.read(storeKey, chunkShape, None)
+      chunkReader.read(chunkPath, chunkShape, None)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -141,8 +134,8 @@ class DatasetArray(relativePath: DatasetPath,
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.datasetShape.mkString(
-      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
+    s"${getClass.getCanonicalName} {axisOrder=$axisOrder shape=${header.datasetShape.mkString(",")} chunks=${header.chunkSize.mkString(
+      ",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }
 

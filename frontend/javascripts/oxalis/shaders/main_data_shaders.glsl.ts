@@ -35,7 +35,7 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
-  tpsTransformPerLayer?: Record<string, TPS3D>;
+  tpsTransformPerLayer: Record<string, TPS3D>;
 };
 
 const SHARED_UNIFORM_DECLARATIONS = `

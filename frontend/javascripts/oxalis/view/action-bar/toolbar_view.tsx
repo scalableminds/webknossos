@@ -585,38 +585,46 @@ function ChangeBrushSizeButton() {
 
   const items: MenuProps["items"] = [
     {
-      label: (
-        <div
-          onClick={() =>
-            handleUpdatePresetBrushSizes([brushSize, mediumBrushSize, maximumBrushSize])
-          }
-        >
-          Assign current brush size to small brush
-        </div>
-      ),
-      key: "assignToSmall",
-    },
-    {
-      label: (
-        <div
-          onClick={() =>
-            handleUpdatePresetBrushSizes([smallBrushSize, brushSize, maximumBrushSize])
-          }
-        >
-          Assign current brush size to medium brush
-        </div>
-      ),
-      key: "assignToMedium",
-    },
-    {
-      label: (
-        <div
-          onClick={() => handleUpdatePresetBrushSizes([smallBrushSize, mediumBrushSize, brushSize])}
-        >
-          Assign current brush size to large brush
-        </div>
-      ),
-      key: "assignToLarge",
+      label: "Assign current brush size to",
+      key: "assignToParent",
+      children: [
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes([brushSize, mediumBrushSize, maximumBrushSize])
+              }
+            >
+              Small brush
+            </div>
+          ),
+          key: "assignToSmall",
+        },
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes([smallBrushSize, brushSize, maximumBrushSize])
+              }
+            >
+              Medium brush
+            </div>
+          ),
+          key: "assignToMedium",
+        },
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes([smallBrushSize, mediumBrushSize, brushSize])
+              }
+            >
+              Large brush
+            </div>
+          ),
+          key: "assignToLarge",
+        },
+      ],
     },
     {
       label: <div onClick={() => handleUpdatePresetBrushSizes(getDefaultBrushSizes())}>Reset</div>,

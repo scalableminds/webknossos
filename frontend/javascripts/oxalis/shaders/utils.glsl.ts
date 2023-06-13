@@ -345,6 +345,26 @@ export const isFlightMode: ShaderModule = {
   `,
 };
 
+export const almostEq: ShaderModule = {
+  code: `
+    // These functions are useful for debugging.
+    bool almostEq(vec3 x, vec3 y, float thresh) {
+      vec3 diff = abs(x - y);
+      return diff.x <= thresh && diff.y <= thresh && diff.z <= thresh;
+    }
+
+    bool almostEq(vec3 x, vec3 y, vec3 thresh) {
+      vec3 diff = abs(x - y);
+      return diff.x <= thresh.x && diff.y <= thresh.y && diff.z <= thresh.z;
+    }
+
+    bool almostEq(float x, float y, float thresh) {
+      float diff = abs(x - y);
+      return diff <= thresh;
+    }
+  `,
+};
+
 export function formatNumberAsGLSLFloat(aNumber: number): string {
   if (aNumber % 1 === 0) {
     // Append ".0" via toFixed

@@ -653,7 +653,7 @@ type Transform =
   | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; tpsInv: TPS3D };
 
 function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
-  let coordinateTransformations = layer.coordinateTransformations; // || [{ type: "dummy" }];
+  let coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations) {
     return null;
   }

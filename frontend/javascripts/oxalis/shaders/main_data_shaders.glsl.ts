@@ -15,7 +15,15 @@ import {
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
 } from "./coords.glsl";
-import { inverse, div, isNan, transDim, isFlightMode, formatNumberAsGLSLFloat } from "./utils.glsl";
+import {
+  inverse,
+  div,
+  isNan,
+  transDim,
+  isFlightMode,
+  formatNumberAsGLSLFloat,
+  almostEq,
+} from "./utils.glsl";
 import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
@@ -120,21 +128,6 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-
-bool almostEq(vec3 x, vec3 y, float thresh) {
-  vec3 diff = abs(x - y);
-  return diff.x <= thresh && diff.y <= thresh && diff.z <= thresh;
-}
-
-bool almostEq(vec3 x, vec3 y, vec3 thresh) {
-  vec3 diff = abs(x - y);
-  return diff.x <= thresh.x && diff.y <= thresh.y && diff.z <= thresh.z;
-}
-
-bool almostEq(float x, float y, float thresh) {
-  float diff = abs(x - y);
-  return diff <= thresh;
-}
 `;
 
 export default function getMainFragmentShader(params: Params) {
@@ -173,6 +166,7 @@ ${compileShader(
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
   hasSegmentation ? getCrossHairOverlay : null,
+  almostEq,
 )}
 
 
@@ -353,6 +347,7 @@ ${compileShader(
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentationId : null,
   getResolution,
+  almostEq,
 )}
 
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};

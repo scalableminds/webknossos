@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIndexService
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
@@ -90,7 +91,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 userBoundingBoxes,
                 organizationName,
                 segments = v.segments,
-                segmentGroups = v.segmentGroups
+                segmentGroups = v.segmentGroups,
+                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName)
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,

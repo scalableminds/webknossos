@@ -556,7 +556,6 @@ function ChangeBrushSizeButton() {
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizesAsc,
   );
-  console.log(presetBrushSizes);
 
   const getDefaultBrushSizes = (): [number, number, number] => {
     largeBrushSize = maximumBrushSize;

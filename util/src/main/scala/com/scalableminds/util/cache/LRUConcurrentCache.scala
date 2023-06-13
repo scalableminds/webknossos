@@ -1,12 +1,11 @@
 package com.scalableminds.util.cache
 
-import java.util
 import scala.collection.JavaConverters._
 
 trait LRUConcurrentCache[K, V] {
   def maxEntries: Int
 
-  private val cache: util.LinkedHashMap[K, V] = new java.util.LinkedHashMap[K, V]() {
+  private val cache = new java.util.LinkedHashMap[K, V]() {
     override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
       if (size > maxEntries) {
         onElementRemoval(eldest.getKey, eldest.getValue)

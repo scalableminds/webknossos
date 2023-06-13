@@ -114,7 +114,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    Fox.option2Fox(shardPath.readBytes(Some(shardIndexRange)))
+    shardPath.readBytes(Some(shardIndexRange))
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
     // See https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#shard-index-format

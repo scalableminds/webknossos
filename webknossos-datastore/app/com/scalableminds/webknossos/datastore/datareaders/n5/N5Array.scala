@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.box2Fox
 
 import scala.concurrent.ExecutionContext
 

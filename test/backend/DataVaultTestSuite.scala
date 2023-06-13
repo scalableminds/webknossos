@@ -16,8 +16,11 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 class DataVaultTestSuite extends PlaySpec {
+
+  val openFoxJustification = "Opening Fox in Unit Test Context"
 
   "Data vault" when {
     "using Range requests" when {
@@ -29,7 +32,9 @@ class DataVaultTestSuite extends PlaySpec {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes =
-            (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes(Some(range)).get
+            (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+              .readBytes(Some(range))(globalExecutionContext)
+              .get(openFoxJustification)
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -40,7 +45,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / dataKey).readBytes(Some(range)).get
+          val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(openFoxJustification)
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -55,7 +60,9 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("http://storage.googleapis.com/")
           val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey").readBytes().get
+          val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+            .readBytes()(globalExecutionContext)
+            .get(openFoxJustification)
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -66,7 +73,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / dataKey).readBytes()
+          val bytes = (vaultPath / dataKey).readBytes()(globalExecutionContext).get(openFoxJustification)
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))

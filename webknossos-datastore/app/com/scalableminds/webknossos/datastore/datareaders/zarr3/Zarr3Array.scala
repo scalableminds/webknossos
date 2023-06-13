@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.box2Fox
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -80,7 +80,8 @@ class Zarr3Array(vaultPath: VaultPath, header: Zarr3ArrayHeader, axisOrder: Axis
       .sum
   }
 
-  private def readShardIndex(shardPath: VaultPath) = shardPath.readLastBytes(getShardIndexSize)
+  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
+    shardPath.readLastBytes(getShardIndexSize)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
     val _ = index.takeRight(4) // checksum: not checked for now

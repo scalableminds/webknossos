@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.tools.Fox
-import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
 import java.nio.file.Path

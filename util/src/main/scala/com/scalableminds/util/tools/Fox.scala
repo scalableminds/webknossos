@@ -3,7 +3,8 @@ package com.scalableminds.util.tools
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
@@ -310,6 +311,11 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
         case Empty              => Future.failed(new Exception("Empty"))
       }
     }).flatMap(identity)
+
+  def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
+    val box = Await.result(futureBox, awaitTimeout)
+    box.openOrThrowException(justification)
+  }
 
   /**
     * Helper to force an implicit conversation

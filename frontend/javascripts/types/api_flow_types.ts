@@ -723,6 +723,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
+  hasSegmentIndex?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

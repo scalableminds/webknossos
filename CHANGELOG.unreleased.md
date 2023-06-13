@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Subfolders of the currently active folder are now also rendered in the dataset table in the dashboard. [#6996](https://github.com/scalableminds/webknossos/pull/6996)
 - Added ability to view [zarr v3](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) datasets. [#7079](https://github.com/scalableminds/webknossos/pull/7079)
 - Added an index structure for volume annotation segments, in preparation for per-segment statistics. [#7063](https://github.com/scalableminds/webknossos/pull/7063)
+- Instead of showing all possible action items next to each other, there is now an overflow menu for layer actions. [#7123](https://github.com/scalableminds/webknossos/pull/7123) 
 - Added support for transformations with thin plate splines. [#7131](https://github.com/scalableminds/webknossos/pull/7131)
 
 ### Changed

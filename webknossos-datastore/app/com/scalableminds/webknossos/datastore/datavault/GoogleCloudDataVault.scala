@@ -2,15 +2,17 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 
 import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.ByteBuffer
+import scala.concurrent.ExecutionContext
 
 class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
 
-  lazy val storageOptions: StorageOptions = credential match {
+  private lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>
       StorageOptions
         .newBuilder()
@@ -27,13 +29,14 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = {
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
     val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)
     val blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build
     val encoding = Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
     range match {
-      case StartEnd(r) => {
+      case StartEnd(r) =>
         val blobReader = storage.reader(blobId)
         blobReader.seek(r.start)
         blobReader.limit(r.end)
@@ -42,8 +45,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         val arr = new Array[Byte](r.length)
         bb.position(0)
         bb.get(arr)
-        (arr, encoding)
-      }
+        Fox.successful((arr, encoding))
       case SuffixLength(l) =>
         val blobReader = storage.reader(blobId)
         blobReader.seek(-l)
@@ -52,10 +54,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
         val arr = new Array[Byte](l.toInt)
         bb.position(0)
         bb.get(arr)
-        (arr, encoding)
-      case Complete() => (storage.readAllBytes(bucket, objName), encoding)
+        Fox.successful((arr, encoding))
+      case Complete() => Fox.successful((storage.readAllBytes(bucket, objName), encoding))
     }
-
   }
 }
 

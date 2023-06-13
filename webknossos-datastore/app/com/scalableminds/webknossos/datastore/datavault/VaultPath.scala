@@ -3,36 +3,39 @@ package com.scalableminds.webknossos.datastore.datavault
 import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.Fox
 import net.liftweb.util.Helpers.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 class VaultPath(uri: URI, dataVault: DataVault) {
 
-  def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] = {
-    val resultOpt: Option[(Array[Byte], Encoding.Value)] = tryo(
-      dataVault.readBytes(this, RangeSpecifier.fromRangeOpt(range))).toOption
-    decodeResultOpt(resultOpt)
-  }
+  def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    for {
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range))
+      decoded <- decodeResultOpt(bytesAndEncoding)
+    } yield decoded
 
-  def readLastBytes(byteCount: Long): Option[Array[Byte]] = {
-    val resultOpt
-      : Option[(Array[Byte], Encoding.Value)] = tryo(dataVault.readBytes(this, SuffixLength(byteCount))).toOption
-    decodeResultOpt(resultOpt)
-  }
+  def readLastBytes(byteCount: Long)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    for {
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount))
+      decoded <- decodeResultOpt(bytesAndEncoding)
+    } yield decoded
 
-  private def decodeResultOpt(resultOpt: Option[(Array[Byte], Encoding.Value)]) =
-    resultOpt match {
-      case Some((bytes, encoding)) =>
+  private def decodeResultOpt(bytesAndEncoding: (Array[Byte], Encoding.Value))(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    bytesAndEncoding match {
+      case (bytes, encoding) =>
         encoding match {
-          case Encoding.gzip        => Some(ZipIO.gunzip(bytes))
-          case Encoding.brotli      => tryo(decodeBrotli(bytes)).toOption
-          case Encoding.`identity`  => Some(bytes)
-          case Encoding.unsupported => None
+          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes))
+          case Encoding.brotli     => tryo(decodeBrotli(bytes))
+          case Encoding.`identity` => Fox.successful(bytes)
+          case Encoding.unsupported =>
+            Fox.failure("Storage uses unsupported encoding.")
         }
-      case None => None
     }
 
   private def decodeBrotli(bytes: Array[Byte]) = {

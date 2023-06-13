@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.tools.Fox
 import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 class DataVaultTestSuite extends PlaySpec {
 
@@ -64,7 +66,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / dataKey).readBytes().get
+          val bytes = (vaultPath / dataKey).readBytes()
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -74,7 +76,8 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = ???
+        override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+            implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = ???
       }
 
       "Uri has no trailing slash" should {

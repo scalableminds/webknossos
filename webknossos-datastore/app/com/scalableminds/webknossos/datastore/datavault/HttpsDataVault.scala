@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -13,6 +14,7 @@ import sttp.client3._
 import sttp.model.Uri
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault {
 
@@ -88,7 +90,8 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
     }
   }
 
-  override def readBytes(path: VaultPath, range: RangeSpecifier): (Array[Byte], Encoding.Value) = {
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
     val uri = path.toUri
     val response = range match {
       case StartEnd(r) =>
@@ -102,12 +105,11 @@ class HttpsDataVault(credential: Option[DataVaultCredential]) extends DataVault 
     }
     val encoding = Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse(""))
 
-    if (!response.isSuccess) {
-      throw new Exception(s"Https read failed for uri $uri: Response was not successful ${response.statusText}")
-    }
     response.body match {
-      case Left(e)      => throw new Exception(s"Https read failed for uri $uri: $e: Response empty")
-      case Right(bytes) => (bytes, encoding)
+      case Left(e) => Fox.failure(s"Https read failed for uri $uri: $e: Response empty")
+      case _ if (!response.isSuccess) =>
+        Fox.failure(s"Https read failed for uri $uri: Response was not successful ${response.statusText}")
+      case Right(bytes) => Fox.successful((bytes, encoding))
     }
   }
 }

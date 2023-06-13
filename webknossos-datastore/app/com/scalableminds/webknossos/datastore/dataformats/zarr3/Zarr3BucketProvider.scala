@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
-import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 

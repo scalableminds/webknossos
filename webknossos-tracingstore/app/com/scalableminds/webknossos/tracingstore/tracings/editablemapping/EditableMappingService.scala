@@ -128,11 +128,11 @@ class EditableMappingService @Inject()(
 
   def duplicate(editableMappingIdOpt: Option[String],
                 version: Option[Long],
-                remoteFallbackLayerOpt: Option[RemoteFallbackLayer],
+                remoteFallbackLayerBox: Box[RemoteFallbackLayer],
                 userToken: Option[String]): Fox[String] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
-      remoteFallbackLayer <- remoteFallbackLayerOpt ?~> "duplicate on editable mapping without remote fallback layer"
+      remoteFallbackLayer <- remoteFallbackLayerBox ?~> "duplicate on editable mapping without remote fallback layer"
       editableMappingInfoAndVersion <- getInfoAndActualVersion(editableMappingId,
                                                                version,
                                                                remoteFallbackLayer,

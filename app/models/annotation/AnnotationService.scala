@@ -162,7 +162,8 @@ class AnnotationService @Inject()(
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
-        resolutions = resolutionsRestricted.map(vec3IntToProto)
+        resolutions = resolutionsRestricted.map(vec3IntToProto),
+        hasSegmentIndex = Some(fallbackLayer.isEmpty)
       )
   }
 
@@ -919,7 +920,7 @@ class AnnotationService @Inject()(
       Fox.successful(None)
     } else {
       for {
-        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext))
+        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext)) ?~> "user.notFound"
         userJson <- userService.compactWrites(user)
       } yield Some(userJson)
     }

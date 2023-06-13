@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 case class VoxelPosition(
@@ -93,6 +94,8 @@ case class BucketPosition(
 
   def hasNegativeComponent: Boolean =
     voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent
+
+  def toVec3IntProto: Vec3IntProto = Vec3IntProto(bucketX, bucketY, bucketZ)
 
   override def toString: String =
     s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag)"

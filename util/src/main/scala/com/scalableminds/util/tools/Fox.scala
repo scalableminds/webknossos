@@ -312,6 +312,9 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       }
     }).flatMap(identity)
 
+  /*
+    Awaits the future and opens the box. Do not use this in production code!
+   */
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
     val box = Await.result(futureBox, awaitTimeout)
     box.openOrThrowException(justification)

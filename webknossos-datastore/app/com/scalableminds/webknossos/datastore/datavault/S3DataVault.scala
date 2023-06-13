@@ -11,6 +11,7 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 
 import java.net.URI
@@ -41,22 +42,23 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
-    val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
-      case Some(value) => value
-      case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
-    }
-    val getObjectRequest = range match {
-      case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
-      case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
-      case Complete()      => getRequest(bucketName, objectKey)
-    }
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+    tryo {
+      val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
+        case Some(value) => value
+        case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
+      }
+      val getObjectRequest = range match {
+        case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
+        case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
+        case Complete()      => getRequest(bucketName, objectKey)
+      }
 
-    val obj = client.getObject(getObjectRequest)
-    val encoding = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
+      val obj = client.getObject(getObjectRequest)
+      val encoding = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
 
-    Fox.successful((IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding)))
-  }
+      (IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding))
+    }
 }
 
 object S3DataVault {

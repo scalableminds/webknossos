@@ -44,8 +44,7 @@ class N5BucketProvider(layer: N5Layer, val dataVaultServiceOpt: Option[DataVault
               magPath: VaultPath <- if (n5Mag.isRemote) {
                 dataVaultService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex)).map(new N5CubeHandle(_))
+              cubeHandle <- N5Array.open(magPath, n5Mag.axisOrder, n5Mag.channelIndex).map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

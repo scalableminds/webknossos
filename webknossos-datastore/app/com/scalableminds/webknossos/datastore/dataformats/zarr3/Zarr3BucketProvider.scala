@@ -44,8 +44,7 @@ class Zarr3BucketProvider(layer: Zarr3Layer, val dataVaultServiceOpt: Option[Dat
               magPath: VaultPath <- if (zarrMag.isRemote) {
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                Zarr3Array.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex)).map(new ZarrCubeHandle(_))
+              cubeHandle <- Zarr3Array.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex).map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

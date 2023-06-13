@@ -2,52 +2,35 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
-import play.api.libs.json.{JsError, JsSuccess, Json}
 
-import java.io.IOException
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 
 object PrecomputedArray extends LazyLogging {
-  @throws[IOException]
+
   def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int])(
-      implicit ec: ExecutionContext): PrecomputedArray = {
+      implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+    for {
+      headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
+        .readBytes() ?~> s"Could not read header ${PrecomputedHeader.FILENAME_INFO}"
+      rootHeader <- JsonHelper.parseAndValidateJson[PrecomputedHeader](headerBytes) ?~> "Could not parse array header"
+      scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
+      scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
+      _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
+    } yield
+      new PrecomputedArray(magPath,
+                           scaleHeader,
+                           axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+                           channelIndex)
 
-    val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
-    if (headerBytes.isEmpty)
-      throw new IOException(
-        "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val rootHeader: PrecomputedHeader =
-      Json.parse(headerString).validate[PrecomputedHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
-      }
-
-    val key = magPath.basename
-
-    val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
-      rootHeader.getScale(key).getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
-      rootHeader)
-    if (scaleHeader.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
-      throw new IllegalArgumentException(
-        f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
-    }
-    new PrecomputedArray(magPath,
-                         scaleHeader,
-                         axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex)
-  }
 }
 
 class PrecomputedArray(vaultPath: VaultPath,

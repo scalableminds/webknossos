@@ -1,33 +1,24 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.cache.AlfuFoxCache
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsError, JsSuccess, Json}
-
-import java.io.IOException
-import java.nio.charset.StandardCharsets
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object Zarr3Array extends LazyLogging {
-  @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): Zarr3Array = {
-    val headerBytes = (path / Zarr3ArrayHeader.ZARR_JSON).readBytes()
-    if (headerBytes.isEmpty)
-      throw new IOException("'" + Zarr3ArrayHeader.ZARR_JSON + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: Zarr3ArrayHeader =
-      Json.parse(headerString).validate[Zarr3ArrayHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as zarr v3 header failed: " + JsError.toJson(errors).toString())
-      }
-    new Zarr3Array(path, header, axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)), channelIndex)
-  }
+
+  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int])(
+      implicit ec: ExecutionContext): Fox[Zarr3Array] =
+    for {
+      headerBytes <- (path / Zarr3ArrayHeader.ZARR_JSON)
+        .readBytes() ?~> s"Could not read header ${Zarr3ArrayHeader.ZARR_JSON}"
+      header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
+      _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
+    } yield new Zarr3Array(path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
 
 }
 

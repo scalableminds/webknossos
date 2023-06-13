@@ -44,13 +44,12 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer, val dataVaultServiceOpt
               magPath: VaultPath <- if (precomputedMag.isRemote) {
                 dataVaultService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                PrecomputedArray.open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex))
+              cubeHandle <- PrecomputedArray
+                .open(magPath, precomputedMag.axisOrder, precomputedMag.channelIndex)
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }
-
     }
   }
 

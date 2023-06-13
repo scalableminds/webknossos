@@ -8,6 +8,7 @@ import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_f
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
+import { CloseOutlined } from "@ant-design/icons";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -24,7 +25,7 @@ type HistogramProps = OwnProps & {
   onChangeLayer: (
     layerName: string,
     propertyName: keyof DatasetLayerConfiguration,
-    value: [number, number] | number,
+    value: [number, number] | number | boolean,
   ) => void;
 };
 type HistogramState = {
@@ -290,7 +291,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               marginTop: 6,
             }}
           >
-            <Col span={4}>
+            <Col span={3}>
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
@@ -316,7 +317,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                 />
               </Tooltip>
             </Col>
-            <Col span={4}>
+            <Col span={3}>
               <label
                 className="setting-label"
                 style={{
@@ -350,6 +351,15 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                 />
               </Tooltip>
             </Col>
+            <Tooltip title="Stop editing histogram range">
+              <Col
+                span={2}
+                style={{ textAlign: "right", cursor: "pointer" }}
+                onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
+              >
+                <CloseOutlined />
+              </Col>
+            </Tooltip>
           </Row>
         ) : null}
       </Spin>

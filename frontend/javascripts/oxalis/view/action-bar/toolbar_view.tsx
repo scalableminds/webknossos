@@ -1258,7 +1258,7 @@ function ProofReadingComponents() {
   return (
     <>
       <ButtonComponent
-        title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+        title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
         className="narrow without-icon-margin"
         style={{ marginLeft: 12 }}

@@ -42,6 +42,7 @@ import type {
   MappingStatus,
   OrthoViewWithoutTD,
   InterpolationMode,
+  TreeType,
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -136,6 +137,7 @@ export type MutableTree = {
   edges: EdgeCollection;
   isVisible: boolean;
   nodes: MutableNodeMap;
+  type: TreeType;
 };
 export type Tree = {
   readonly treeId: number;
@@ -148,6 +150,7 @@ export type Tree = {
   readonly edges: EdgeCollection;
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
+  readonly type: TreeType;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;

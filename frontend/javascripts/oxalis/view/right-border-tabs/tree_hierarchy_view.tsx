@@ -1,5 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, MenuProps, Modal, notification } from "antd";
+import { Checkbox, Dropdown, MenuProps, Modal, Tooltip, notification } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -21,7 +21,7 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import type { Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, Vector3 } from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -626,6 +626,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         };
       };
 
+      const maybeProofreadingIcon =
+        tree.type === TreeTypeEnum.AGGLOMERATE ? (
+          <Tooltip title="Agglomerate Skeleton">
+            <i className="fas fa-clipboard-check" />
+          </Tooltip>
+        ) : null;
+
       nodeProps.title = (
         <div className={styleClass}>
           <Dropdown
@@ -657,7 +664,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   display: "inline",
                 }}
                 onClick={this.onSelectTree}
-              >{`(${tree.nodes.size()}) ${tree.name}`}</div>
+              >
+                {`(${tree.nodes.size()}) `}
+                {maybeProofreadingIcon}
+                {tree.name}
+              </div>
             </span>
           </Dropdown>
         </div>

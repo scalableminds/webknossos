@@ -63,7 +63,7 @@ import {
   Unicode,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
-import Store, { OxalisState } from "oxalis/store";
+import Store, { BrushPresets, OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
@@ -136,8 +136,8 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleUpdatePresetBrushSizes = (brushSizes: [number, number, number]) => {
-  Store.dispatch(updateUserSettingAction("presetBrushSizesAsc", brushSizes));
+const handleUpdatePresetBrushSizes = (brushSizes: BrushPresets) => {
+  Store.dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
 };
 
 const handleToggleAutomaticMeshRendering = (value: boolean) => {
@@ -554,25 +554,39 @@ function ChangeBrushSizeButton() {
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
   const presetBrushSizes = useSelector(
-    (state: OxalisState) => state.userConfiguration.presetBrushSizesAsc,
+    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
 
-  const getDefaultBrushSizes = (): [number, number, number] => {
-    largeBrushSize = maximumBrushSize;
-    mediumBrushSize = calculateMediumBrushSize(largeBrushSize);
-    smallBrushSize = userSettings.brushSize.minimum;
-    return [smallBrushSize, mediumBrushSize, largeBrushSize];
+  console.log(presetBrushSizes);
+  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  useEffect(() => {
+    if (presetBrushSizes == null) {
+      //TODO undefined when still fetching?
+      handleUpdatePresetBrushSizes(getDefaultBrushSizes());
+    }
+  }, [presetBrushSizes]);
+
+  const getDefaultBrushSizes = (): BrushPresets => {
+    return {
+      small: userSettings.brushSize.minimum,
+      medium: calculateMediumBrushSize(largeBrushSize),
+      large: maximumBrushSize,
+    };
   };
 
-  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
-
   let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
-  if (presetBrushSizes.length === 0) {
-    [smallBrushSize, mediumBrushSize, largeBrushSize] = getDefaultBrushSizes();
-    handleUpdatePresetBrushSizes(getDefaultBrushSizes());
+  if (presetBrushSizes == null) {
+    const defaultSizes = getDefaultBrushSizes();
+    smallBrushSize = defaultSizes.small;
+    mediumBrushSize = defaultSizes.medium;
+    largeBrushSize = defaultSizes.large;
   } else {
-    [smallBrushSize, mediumBrushSize, largeBrushSize] = presetBrushSizes;
+    smallBrushSize = presetBrushSizes?.small;
+    mediumBrushSize = presetBrushSizes?.medium;
+    largeBrushSize = presetBrushSizes?.large;
   }
+  //ich will die lokal haben weils praktischer ist.
+  // die sollen nicht default presets sein, wenn noch gefetcht wird. also nachm fetch auf fetched setzen, sonst default
 
   const centerBrushInViewport = () => {
     const position = getViewportExtents(Store.getState());
@@ -591,7 +605,11 @@ function ChangeBrushSizeButton() {
           label: (
             <div
               onClick={() =>
-                handleUpdatePresetBrushSizes([brushSize, mediumBrushSize, maximumBrushSize])
+                handleUpdatePresetBrushSizes({
+                  small: brushSize,
+                  medium: mediumBrushSize,
+                  large: largeBrushSize,
+                })
               }
             >
               Small brush
@@ -603,7 +621,11 @@ function ChangeBrushSizeButton() {
           label: (
             <div
               onClick={() =>
-                handleUpdatePresetBrushSizes([smallBrushSize, brushSize, maximumBrushSize])
+                handleUpdatePresetBrushSizes({
+                  small: smallBrushSize,
+                  medium: brushSize,
+                  large: maximumBrushSize,
+                })
               }
             >
               Medium brush
@@ -615,7 +637,11 @@ function ChangeBrushSizeButton() {
           label: (
             <div
               onClick={() =>
-                handleUpdatePresetBrushSizes([smallBrushSize, mediumBrushSize, brushSize])
+                handleUpdatePresetBrushSizes({
+                  small: smallBrushSize,
+                  medium: mediumBrushSize,
+                  large: brushSize,
+                })
               }
             >
               Large brush

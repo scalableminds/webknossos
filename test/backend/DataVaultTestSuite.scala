@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
+import play.api.test.WsTestClient
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -29,15 +30,17 @@ class DataVaultTestSuite extends PlaySpec {
 
       "with HTTP Vault" should {
         "return correct response" in {
-          val uri = new URI("http://storage.googleapis.com/")
-          val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes =
-            (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-              .readBytes(Some(range))(globalExecutionContext)
-              .get(openFoxJustification)
+          WsTestClient.withClient { ws =>
+            val uri = new URI("http://storage.googleapis.com/")
+            val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None), ws))
+            val bytes =
+              (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+                .readBytes(Some(range))(globalExecutionContext)
+                .get(openFoxJustification)
 
-          assert(bytes.length == range.length)
-          assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+            assert(bytes.length == range.length)
+            assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+          }
         }
       }
 
@@ -58,14 +61,16 @@ class DataVaultTestSuite extends PlaySpec {
 
       "with HTTP Vault" should {
         "return correct response" in {
-          val uri = new URI("http://storage.googleapis.com/")
-          val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-            .readBytes()(globalExecutionContext)
-            .get(openFoxJustification)
+          WsTestClient.withClient { ws =>
+            val uri = new URI("http://storage.googleapis.com/")
+            val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None), ws))
+            val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
+              .readBytes()(globalExecutionContext)
+              .get(openFoxJustification)
 
-          assert(bytes.length == dataLength)
-          assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+            assert(bytes.length == dataLength)
+            assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+          }
         }
       }
 

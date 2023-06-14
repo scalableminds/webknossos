@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
@@ -24,9 +24,9 @@ class TSRemoteDatastoreClient @Inject()(
     extends LazyLogging
     with MissingBucketHeaders {
 
-  private lazy val dataStoreUriCache: AlfuFoxCache[(String, String), String] = AlfuFoxCache()
-  private lazy val largestAgglomerateIdCache: AlfuFoxCache[(RemoteFallbackLayer, String, Option[String]), Long] =
-    AlfuFoxCache()
+  private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
+  private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
+    AlfuCache()
 
   def getAgglomerateSkeleton(userToken: Option[String],
                              remoteFallbackLayer: RemoteFallbackLayer,

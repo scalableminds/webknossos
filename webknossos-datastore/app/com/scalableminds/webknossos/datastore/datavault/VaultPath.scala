@@ -33,8 +33,6 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
           case Encoding.gzip       => tryo(ZipIO.gunzip(bytes))
           case Encoding.brotli     => tryo(decodeBrotli(bytes))
           case Encoding.`identity` => Fox.successful(bytes)
-          case Encoding.unsupported =>
-            Fox.failure("Storage uses unsupported encoding.")
         }
     }
 

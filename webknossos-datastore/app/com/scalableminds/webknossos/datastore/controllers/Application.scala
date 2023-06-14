@@ -30,13 +30,4 @@ class Application @Inject()(redisClient: DataStoreRedisStore,
     }
   }
 
-  def testVaultPath: Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      for {
-        vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI("http://127.0.0.1:5000/gzip"), None))
-        response <- vaultPath.readBytes(None)
-      } yield Ok(s"Received ${new String(response, StandardCharsets.UTF_8)}")
-    }
-  }
-
 }

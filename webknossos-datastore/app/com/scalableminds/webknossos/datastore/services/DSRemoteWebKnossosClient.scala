@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
@@ -39,7 +39,8 @@ class DSRemoteWebKnossosClient @Inject()(
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends RemoteWebKnossosClient
+)(implicit val ec: ExecutionContext)
+    extends RemoteWebKnossosClient
     with IntervalScheduler
     with LazyLogging
     with FoxImplicits {

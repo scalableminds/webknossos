@@ -10,6 +10,7 @@ import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
 /*
  * The BinaryDataService needs to be instantiated as singleton to provide a shared DataCubeCache.
@@ -18,11 +19,12 @@ import javax.inject.Inject
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
-                                        agglomerateService: AgglomerateService,
-                                        applicationHealthService: ApplicationHealthService,
-                                        dataVaultService: DataVaultService,
-                                        datasetErrorLoggingService: DatasetErrorLoggingService)
+class BinaryDataServiceHolder @Inject()(
+    config: DataStoreConfig,
+    agglomerateService: AgglomerateService,
+    applicationHealthService: ApplicationHealthService,
+    dataVaultService: DataVaultService,
+    datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {

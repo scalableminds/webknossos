@@ -21,8 +21,8 @@ import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
@@ -35,7 +35,7 @@ class DataSourceController @Inject()(
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
     uploadService: UploadService
-)(implicit bodyParsers: PlayBodyParsers)
+)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

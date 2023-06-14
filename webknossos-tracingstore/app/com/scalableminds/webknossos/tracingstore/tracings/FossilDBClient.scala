@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
@@ -14,7 +15,8 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, Reads, Writes}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.concurrent.Executor
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 trait KeyValueStoreImplicits extends BoxImplicits {
 
@@ -43,23 +45,35 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 
 class FossilDBClient(collection: String,
                      config: TracingStoreConfig,
-                     slackNotificationService: TSSlackNotificationService)
+                     slackNotificationService: TSSlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
   private val port = config.Tracingstore.Fossildb.port
   private val channel =
     NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
+  private val stub = FossilDBGrpc.stub(channel)
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
-  private val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
+  private val healthStub = HealthGrpc.newFutureStub(channel)
+
+  private def listenableFutureAsScala[T](lf: ListenableFuture[T])(implicit ec: Executor): Future[T] = {
+    val p = Promise[T]()
+    Futures.addCallback(lf, new FutureCallback[T] {
+      def onFailure(t: Throwable): Unit = p failure t
+      def onSuccess(result: T): Unit = p success result
+    }, ec)
+    p.future
+  }
 
   def checkHealth: Fox[Unit] =
     try {
-      val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance)
-      val replyString = reply.getStatus.toString
-      if (!(replyString == "SERVING")) throw new Exception(replyString)
-      logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
-      Fox.successful(())
+      for {
+        reply: HealthCheckResponse <- listenableFutureAsScala(healthStub.check(HealthCheckRequest.getDefaultInstance))(
+          ec.asInstanceOf[Executor])
+        replyString = reply.getStatus.toString
+        _ <- bool2Fox(replyString == "SERVING") ?~> replyString
+        _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+      } yield ()
     } catch {
       case e: Exception =>
         val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
@@ -70,14 +84,19 @@ class FossilDBClient(collection: String,
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     try {
-      val reply: GetReply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      fromByteArray(reply.value.toByteArray).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+      for {
+        reply: GetReply <- stub.get(GetRequest(collection, key, version, mayBeEmpty))
+        _ <- bool2Fox(reply.success) ?~> reply.errorMessage.getOrElse("")
+        result <- fromByteArray(reply.value.toByteArray)
+          .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+      } yield result
     } catch {
       case statusRuntimeException: StatusRuntimeException =>
+        logger.info("Exception during get: statusRuntimeException")
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
         else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
       case e: Exception => {
+        logger.info(s"Exception during get: ${e.getMessage}")
         if (e.getMessage == "No such element") { Fox.empty } else {
           Fox.failure("Could not get from FossilDB: " + e.getMessage)
         }

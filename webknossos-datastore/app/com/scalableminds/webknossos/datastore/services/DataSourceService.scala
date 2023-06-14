@@ -25,7 +25,7 @@ import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 
@@ -35,7 +35,8 @@ class DataSourceService @Inject()(
     dataVaultService: DataVaultService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends IntervalScheduler
+)(implicit val ec: ExecutionContext)
+    extends IntervalScheduler
     with LazyLogging
     with FoxImplicits {
 

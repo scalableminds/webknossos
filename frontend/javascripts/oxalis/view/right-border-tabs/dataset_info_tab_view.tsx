@@ -474,24 +474,21 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <Typography.Text style={{ position: "relative" }}>
             {description}
             <Tooltip title="Edit">
-              <Button
+              <div
+                role="button"
                 className="ant-typography-edit"
                 style={{
-                  border: 0,
-                  padding: 0,
-                  background: "transparent",
-                  lineHeight: "inherit",
                   display: "inline-block",
                   ...buttonStylesForMarkdownRendering,
                 }}
-                type="text"
                 onClick={() =>
                   this.setState({
                     isMarkdownModalOpen: true,
                   })
                 }
-                icon={<EditOutlined />}
-              />
+              >
+                <EditOutlined />
+              </div>
             </Tooltip>
           </Typography.Text>
           <MarkdownModal
@@ -628,10 +625,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { dataset } = this.props;
 
     return (
-      <div
-        className="flex-overflow padded-tab-content"
-        style={{ paddingLeft: 20, paddingRight: 20 }}
-      >
+      <div className="flex-overflow padded-tab-content">
         {this.getAnnotationName()}
         {this.getAnnotationDescription()}
         {this.getDatasetName()}

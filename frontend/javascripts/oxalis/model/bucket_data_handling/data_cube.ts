@@ -454,6 +454,7 @@ class DataCube {
 
     const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
+    // todop
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     let coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
@@ -621,6 +622,7 @@ class DataCube {
 
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
+            // todop
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
             if (neighbourBucket.type !== "null") {
@@ -718,6 +720,7 @@ class DataCube {
   isZoomStepCurrentlyRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
     // needs to be examined for rendering.
+    // todop
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
@@ -785,6 +788,7 @@ class DataCube {
       return 0;
     }
 
+    // todop
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
@@ -849,7 +853,8 @@ class DataCube {
     return this.positionToZoomedAddress(position, 0);
   }
 
-  async getLoadedBucket(bucketAddress: Vector4) {
+  async getLoadedBucket(bucketAddress: BucketAddress) {
+    // todop: check callers
     const bucket = this.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {

@@ -281,6 +281,7 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: str
             segmentationResolutionInfo.getDenseResolutions(),
             resolutionIndex,
           );
+          // todop
           const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
 
           if (bucket.type === "null") {

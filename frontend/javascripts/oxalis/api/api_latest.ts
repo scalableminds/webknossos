@@ -1535,6 +1535,7 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
 
+    // todop: make bucketAddress potentially higher dimensional?
     const topLeft = (bucketAddress: Vector4) =>
       bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
 

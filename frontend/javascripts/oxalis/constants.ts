@@ -16,6 +16,7 @@ export type Vector6 = [number, number, number, number, number, number];
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [q, r, ...]
 export type BucketAddress = Vector4 | [number, number, number, number, number[]];
+// export type BucketAddress = [number, number, number, number, number[]];
 
 export type Point2 = {
   x: number;
@@ -269,6 +270,7 @@ export const Unicode = {
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
+
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).

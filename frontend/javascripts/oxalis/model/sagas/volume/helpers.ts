@@ -155,6 +155,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -186,7 +187,11 @@ export function* labelWithVoxelBuffer2D(
 
   for (const boundingBoxChunk of bucketBoundingBoxes) {
     const { min, max } = boundingBoxChunk;
-    const bucketZoomedAddress = zoomedPositionToZoomedAddress(min, labeledZoomStep);
+    const bucketZoomedAddress = zoomedPositionToZoomedAddress(
+      min,
+      labeledZoomStep,
+      additionalCoords,
+    );
 
     if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
       throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");

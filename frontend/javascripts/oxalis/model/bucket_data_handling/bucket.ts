@@ -274,6 +274,10 @@ export class DataBucket {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
+  getAdditionalCoordinates(): number[] | undefined {
+    return this.zoomedAddress[4];
+  }
+
   is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
     // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
     // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position

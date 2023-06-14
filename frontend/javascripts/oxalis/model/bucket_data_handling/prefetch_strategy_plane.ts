@@ -199,7 +199,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
             const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
             pullQueue.push({
-              bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
+              bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoords ?? []],
               priority: preloadingPriority,
             });
           }

@@ -73,9 +73,11 @@ function upsampleVoxelMap(
         currentGoalBucketAddress[dimensionIndices[1]] += secondDimBucketOffset;
         // The inner bucket of whose the voxelMap will be created.
         let annotatedAtleastOneVoxel = false;
+
         const currentGoalBucket = dataCube.getOrCreateBucket([
           ...currentGoalBucketAddress,
           targetZoomStep,
+          labeledBucket.getAdditionalCoordinates() || [],
         ]);
 
         if (currentGoalBucket.type === "null") {
@@ -187,7 +189,12 @@ function downsampleVoxelMap(
       (value, index) => Math.floor(value * scaleToGoal[index]),
       labeledBucket.getAddress(),
     );
-    const goalBucket = dataCube.getOrCreateBucket([...goalBucketAddress, targetZoomStep]);
+
+    const goalBucket = dataCube.getOrCreateBucket([
+      ...goalBucketAddress,
+      targetZoomStep,
+      labeledBucket.getAdditionalCoordinates() || [],
+    ]);
 
     if (goalBucket.type === "null") {
       warnAboutCouldNotCreate([...goalBucketAddress, targetZoomStep]);

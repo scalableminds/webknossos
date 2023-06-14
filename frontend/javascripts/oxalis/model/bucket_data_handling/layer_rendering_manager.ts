@@ -2,7 +2,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import { M4x4, Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { map3 } from "libs/utils";
 import {

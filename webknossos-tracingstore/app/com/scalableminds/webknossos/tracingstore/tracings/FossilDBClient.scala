@@ -13,6 +13,7 @@ import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, Reads, Writes}
+import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.util.concurrent.Executor
@@ -34,8 +35,6 @@ trait KeyValueStoreImplicits extends BoxImplicits {
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 }
 
-case class KeyValuePair[T](key: String, value: T)
-
 case class VersionedKey(key: String, version: Long)
 
 case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
@@ -56,20 +55,11 @@ class FossilDBClient(collection: String,
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val healthStub = HealthGrpc.newFutureStub(channel)
 
-  private def listenableFutureAsScala[T](lf: ListenableFuture[T])(implicit ec: Executor): Future[T] = {
-    val p = Promise[T]()
-    Futures.addCallback(lf, new FutureCallback[T] {
-      def onFailure(t: Throwable): Unit = p failure t
-      def onSuccess(result: T): Unit = p success result
-    }, ec)
-    p.future
-  }
-
   def checkHealth: Fox[Unit] =
     try {
       for {
-        reply: HealthCheckResponse <- listenableFutureAsScala(healthStub.check(HealthCheckRequest.getDefaultInstance))(
-          ec.asInstanceOf[Executor])
+        reply: HealthCheckResponse <- Grpc.guavaFuture2ScalaFuture(
+          healthStub.check(HealthCheckRequest.getDefaultInstance))
         replyString = reply.getStatus.toString
         _ <- bool2Fox(replyString == "SERVING") ?~> replyString
         _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
@@ -91,6 +81,7 @@ class FossilDBClient(collection: String,
           .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
       } yield result
     } catch {
+      // TODO can this be omitted, is it in the future now? Wrap with readable error message anyway
       case statusRuntimeException: StatusRuntimeException =>
         logger.info("Exception during get: statusRuntimeException")
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
@@ -173,7 +164,7 @@ class FossilDBClient(collection: String,
       case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
     }
 
-  def put[T](key: String, version: Long, value: Array[Byte]): Fox[Unit] =
+  def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] =
     try {
       val reply = blockingStub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value)))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))

@@ -7,7 +7,7 @@ import type { ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType, values } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -63,12 +63,15 @@ class CubeEntry {
 const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
+type AdditionalCoordsSpec = Record<string, { bounds: [number, number]; index: number }> | null;
+
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
+  additionalCoords: AdditionalCoordsSpec;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pushQueue' has no initializer and is not... Remove this comment to see the full error message
@@ -98,6 +101,7 @@ class DataCube {
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
     layerBBox: BoundingBox,
+    additionalCoords: AdditionalCoordsSpec,
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
@@ -107,30 +111,12 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
+    this.additionalCoords = additionalCoords;
 
     _.extend(this, BackboneEvents);
 
     this.cubes = {};
     this.buckets = [];
-    // Initializing the cube-arrays with boundaries
-    const cubeBoundary = [
-      Math.ceil(layerBBox.max[0] / constants.BUCKET_WIDTH),
-      Math.ceil(layerBBox.max[1] / constants.BUCKET_WIDTH),
-      Math.ceil(layerBBox.max[2] / constants.BUCKET_WIDTH),
-    ];
-
-    // todo: don't hardcode. create lazily?
-    for (let q = 0; q < 1000; q++) {
-      for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
-        const zoomedCubeBoundary: Vector3 = [
-          Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
-          Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
-          Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
-        ];
-        const cubeKey = this.getCubeKey(resolutionIndex, [q]);
-        this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
-      }
-    }
 
     const shouldBeRestrictedByTracingBoundingBox = () => {
       const { task } = Store.getState();
@@ -210,8 +196,8 @@ class DataCube {
   }
 
   isWithinBounds([x, y, z, zoomStep, dims]: BucketAddress): boolean {
-    const cubeKey = this.getCubeKey(zoomStep, dims);
-    if (this.cubes[cubeKey] == null) {
+    const cube = this.getOrCreateCubeEntry(zoomStep, dims);
+    if (cube == null) {
       return false;
     }
 
@@ -222,10 +208,9 @@ class DataCube {
     number | null | undefined,
     CubeEntry | null,
   ] {
-    const cubeKey = this.getCubeKey(zoomStep, dims);
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
-    const cube = this.cubes[cubeKey];
+    const cube = this.getOrCreateCubeEntry(zoomStep, dims);
 
     if (cube != null) {
       const { boundary } = cube;
@@ -234,6 +219,23 @@ class DataCube {
     }
 
     return [null, null];
+  }
+
+  getOrCreateCubeEntry(zoomStep: number, dims: number[] | undefined): CubeEntry | null {
+    const cubeKey = this.getCubeKey(zoomStep, dims);
+    if (this.cubes[cubeKey] == null) {
+      const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
+      if (resolution == null) {
+        return null;
+      }
+      const zoomedCubeBoundary: Vector3 = [
+        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * resolution[0])) + 1,
+        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * resolution[1])) + 1,
+        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * resolution[2])) + 1,
+      ];
+      this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
+    }
+    return this.cubes[cubeKey];
   }
 
   // Either returns the existing bucket or creates a new one. Only returns

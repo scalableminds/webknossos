@@ -39,6 +39,8 @@ class DataLayer {
 
     this.cube = new DataCube(
       getLayerBoundingBox(dataset, this.name),
+      // todop: dont hardcode
+      { q: { bounds: [0, 1000], index: 0 } },
       getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       this.isSegmentation,

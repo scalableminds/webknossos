@@ -68,12 +68,11 @@ function upsampleVoxelMap(
         secondDimBucketOffset < numberOfBucketWithinSourceBucket[dimensionIndices[1]];
         secondDimBucketOffset++
       ) {
-        const currentGoalBucketAddress = [...goalBaseBucketAddress];
+        const currentGoalBucketAddress: Vector3 = [...goalBaseBucketAddress];
         currentGoalBucketAddress[dimensionIndices[0]] += firstDimBucketOffset;
         currentGoalBucketAddress[dimensionIndices[1]] += secondDimBucketOffset;
         // The inner bucket of whose the voxelMap will be created.
         let annotatedAtleastOneVoxel = false;
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...number[], number]' is not as... Remove this comment to see the full error message
         const currentGoalBucket = dataCube.getOrCreateBucket([
           ...currentGoalBucketAddress,
           targetZoomStep,

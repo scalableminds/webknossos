@@ -69,6 +69,7 @@ test.beforeEach((t) => {
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new DataCube(
     new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
+    null,
     resolutionInfo,
     "uint32",
     false,

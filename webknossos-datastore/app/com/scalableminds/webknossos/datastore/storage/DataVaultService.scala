@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.{
@@ -33,8 +33,8 @@ object DataVaultService {
 
 class DataVaultService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient, ws: WSClient) extends LazyLogging {
 
-  private val vaultCache: AlfuFoxCache[RemoteSourceDescriptor, DataVault] =
-    AlfuFoxCache(maxEntries = 100)
+  private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
+    AlfuCache(maxCapacity = 100)
 
   def vaultPathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
@@ -83,11 +83,11 @@ class DataVaultService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosCli
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }
-      logger.info(s"Successfully created data vault for ${remoteSource.uri.toString}")
+      logger.info(s"Created data vault for ${remoteSource.uri.toString}")
       Fox.successful(fs)
     } catch {
       case e: Exception =>
-        val msg = s"get vault path errored for ${remoteSource.uri.toString}:"
+        val msg = s"Creating data vault errored for ${remoteSource.uri.toString}:"
         logger.error(msg, e)
         Fox.failure(msg, Full(e))
     }

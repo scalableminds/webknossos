@@ -2,24 +2,42 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
 object ZarrArray extends LazyLogging {
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int])(
-      implicit ec: ExecutionContext): Fox[ZarrArray] =
+  def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header ${ZarrHeader.FILENAME_DOT_ZARRAY}"
       header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
-    } yield new ZarrArray(path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
+    } yield
+      new ZarrArray(path,
+                    dataSourceId,
+                    layerName,
+                    header,
+                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                    channelIndex,
+                    sharedChunkContentsCache)
 }
 
-class ZarrArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
-    extends DatasetArray(vaultPath, header, axisOrder, channelIndex)
-    with LazyLogging
+class ZarrArray(vaultPath: VaultPath,
+                dataSourceId: DataSourceId,
+                layerName: String,
+                header: DatasetHeader,
+                axisOrder: AxisOrder,
+                channelIndex: Option[Int],
+                sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)

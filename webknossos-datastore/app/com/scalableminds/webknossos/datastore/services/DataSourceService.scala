@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3Layer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
@@ -246,6 +247,7 @@ class DataSourceService @Inject()(
           case layer: N5Layer          => Some(layer.mags)
           case layer: PrecomputedLayer => Some(layer.mags)
           case layer: ZarrLayer        => Some(layer.mags)
+          case layer: Zarr3Layer       => Some(layer.mags)
           case _                       => None
         }
         removedEntriesCount = magsOpt match {

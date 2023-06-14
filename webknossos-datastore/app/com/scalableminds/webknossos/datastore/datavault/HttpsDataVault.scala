@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -40,7 +40,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 
   }
 
-  private val headerInfoCache: AlfuFoxCache[URI, (Boolean, Long)] = AlfuFoxCache()
+  private val headerInfoCache: AlfuCache[URI, (Boolean, Long)] = AlfuCache()
 
   private def getHeaderInformation(uri: URI)(implicit ec: ExecutionContext): Fox[(Boolean, Long)] =
     headerInfoCache.getOrLoad(

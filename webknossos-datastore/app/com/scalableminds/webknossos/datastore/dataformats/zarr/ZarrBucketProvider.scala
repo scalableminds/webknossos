@@ -1,15 +1,18 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
+import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
@@ -25,7 +28,10 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
 }
 
-class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataVaultService])
+class ZarrBucketProvider(layer: ZarrLayer,
+                         dataSourceId: DataSourceId,
+                         val dataVaultServiceOpt: Option[DataVaultService],
+                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging {
 
@@ -43,7 +49,10 @@ class ZarrBucketProvider(layer: ZarrLayer, val dataVaultServiceOpt: Option[DataV
               magPath: VaultPath <- if (zarrMag.isRemote) {
                 dataVaultService.vaultPathFor(zarrMag)
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
-              cubeHandle <- ZarrArray.open(magPath, zarrMag.axisOrder, zarrMag.channelIndex).map(new ZarrCubeHandle(_))
+              chunkContentsCache <- sharedChunkContentsCache.toFox
+              cubeHandle <- ZarrArray
+                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache)
+                .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }

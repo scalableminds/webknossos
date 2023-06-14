@@ -166,6 +166,8 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   timestamp: Date.now(),
   bitDepth: 8,
   interpolation: false,
+  // todop
+  additionalCoords: null,
 });
 
 function* mapAndFilterTreeData<R>(

@@ -48,7 +48,11 @@ import {
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setFourthDimension,
+  setPositionAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
@@ -96,12 +100,14 @@ function* centerActiveNode(action: Action): Saga<void> {
 
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
     (activeNode) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'suppressAnimation' does not exist on typ... Remove this comment to see the full error message
-      if (action.suppressAnimation === true) {
+      if ("suppressAnimation" in action && action.suppressAnimation) {
         Store.dispatch(setPositionAction(activeNode.position));
         Store.dispatch(setRotationAction(activeNode.rotation));
       } else {
         api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
+      }
+      if (activeNode.additionalCoords) {
+        Store.dispatch(setFourthDimension(activeNode.additionalCoords[0]));
       }
     },
   );

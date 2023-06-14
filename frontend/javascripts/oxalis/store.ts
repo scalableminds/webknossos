@@ -82,6 +82,7 @@ export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
+  additionalCoords: number[] | null;
   rotation: Vector3;
   bitDepth: number;
   viewport: number;

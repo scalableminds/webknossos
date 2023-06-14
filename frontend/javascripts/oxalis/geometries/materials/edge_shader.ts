@@ -1,20 +1,22 @@
 import * as THREE from "three";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
-  uniforms: Uniforms;
+  uniforms: Uniforms = {};
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
     this.material = new THREE.RawShaderMaterial({
-      // @ts-expect-error ts-migrate(2565) FIXME: Property 'uniforms' is used before being assigned.
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
+      glslVersion: THREE.GLSL3,
     });
+    shaderEditor.addMaterial("edge", this.material);
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
@@ -25,7 +27,19 @@ class EdgeShader {
       treeColors: {
         value: treeColorTexture,
       },
+      currentAdditionalCoords: {
+        // todop
+        value: [0],
+      },
     };
+
+    listenToStoreProperty(
+      (storeState) => storeState.flycam.fourthDimension,
+      (fourthDimension) => {
+        this.uniforms.currentAdditionalCoords.value = [fourthDimension];
+      },
+      true,
+    );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -37,23 +51,31 @@ class EdgeShader {
 precision highp float;
 precision highp int;
 
-varying vec3 color;
+out vec3 color;
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
-
+// todop: type of additional coord needs to be dynamic?
+uniform float currentAdditionalCoords;
 uniform sampler2D treeColors;
 
-attribute vec3 position;
-attribute float treeId;
+in vec3 position;
+in float treeId;
+
+// todop: type of additional coord needs to be dynamic?
+in float additionalCoords;
 
 void main() {
+    if (additionalCoords != currentAdditionalCoords) {
+      return;
+    }
+
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
       treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
     ));
-    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0;
+    bool isVisible = texture(treeColors, treeIdToTextureCoordinate).a == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
@@ -61,7 +83,7 @@ void main() {
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
+    color = texture(treeColors, treeIdToTextureCoordinate).rgb;
 }`;
   }
 
@@ -69,11 +91,12 @@ void main() {
     return `
 precision highp float;
 
-varying vec3 color;
+out vec4 fragColor;
+in vec3 color;
 
 void main()
 {
-    gl_FragColor = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 }`;
   }
 }

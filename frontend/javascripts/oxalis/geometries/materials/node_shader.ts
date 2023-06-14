@@ -7,6 +7,7 @@ import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+
 export const NodeTypes = {
   INVALID: 0.0,
   NORMAL: 1.0,
@@ -17,20 +18,18 @@ export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
 class NodeShader {
   material: THREE.RawShaderMaterial;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
-  uniforms: Uniforms;
+  uniforms: Uniforms = {};
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
     this.material = new THREE.RawShaderMaterial({
-      // @ts-expect-error ts-migrate(2565) FIXME: Property 'uniforms' is used before being assigned.
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
       transparent: true,
       glslVersion: THREE.GLSL3,
     });
-    shaderEditor.addMaterial("nodeFragment", this.material);
+    shaderEditor.addMaterial("node", this.material);
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
@@ -76,6 +75,10 @@ class NodeShader {
       viewMode: {
         value: 0,
       },
+      currentAdditionalCoords: {
+        // todop
+        value: [0],
+      },
     };
     listenToStoreProperty(
       (_state) => _state.userConfiguration.highlightCommentedNodes,
@@ -87,6 +90,13 @@ class NodeShader {
       (storeState) => storeState.temporaryConfiguration.viewMode,
       (viewMode) => {
         this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
+      },
+      true,
+    );
+    listenToStoreProperty(
+      (storeState) => storeState.flycam.fourthDimension,
+      (fourthDimension) => {
+        this.uniforms.currentAdditionalCoords.value = [fourthDimension];
       },
       true,
     );
@@ -116,11 +126,15 @@ uniform int isPicking; // bool indicates whether we are currently rendering for 
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
 uniform float viewMode;
+// todop: type of additional coord needs to be dynamic?
+uniform float currentAdditionalCoords;
 
 uniform sampler2D treeColors;
 
 in float radius;
 in vec3 position;
+// todop: type of additional coord needs to be dynamic?
+in float additionalCoords;
 in float type;
 in float isCommented;
 // Since attributes are only supported in vertex shader, we pass the attribute into a
@@ -157,6 +171,10 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
+    if (additionalCoords != currentAdditionalCoords) {
+      return;
+    }
+
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
       treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}

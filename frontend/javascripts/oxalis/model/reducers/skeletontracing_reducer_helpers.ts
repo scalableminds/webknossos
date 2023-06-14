@@ -115,6 +115,7 @@ export function createNode(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
   positionFloat: Vector3,
+  additionalCoords: number[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -137,6 +138,7 @@ export function createNode(
   // Create the new node
   const node: Node = {
     position,
+    additionalCoords,
     radius,
     rotation,
     viewport,
@@ -801,6 +803,8 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
+    // todop: dont hardcode
+    additionalCoords: [0],
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,

@@ -153,7 +153,13 @@ const initialState = update(defaultState, {
   },
 });
 
-const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2);
+const createNodeAction = SkeletonTracingActions.createNodeAction(
+  [1, 2, 3],
+  null,
+  [0, 1, 0],
+  0,
+  1.2,
+);
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();

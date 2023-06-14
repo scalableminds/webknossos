@@ -31,12 +31,24 @@ type BufferCollection = {
   idToBufferPosition: Map<string, BufferPosition>;
   freeList: Array<BufferPosition>;
   helper: BufferHelper;
-  material: THREE.Material;
+  material: THREE.RawShaderMaterial;
 };
+
+// Only T ==> 1
+const additionalCoordLength = 1;
+
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 const NodeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
+
+    geometry.setAttribute(
+      "additionalCoords",
+      new THREE.BufferAttribute(
+        new Float32Array(capacity * additionalCoordLength),
+        additionalCoordLength,
+      ),
+    );
     geometry.setAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.setAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.setAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -44,7 +56,7 @@ const NodeBufferHelperType = {
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.Object3D {
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Object3D {
     return new THREE.Points(geometry, material);
   },
 
@@ -52,11 +64,25 @@ const NodeBufferHelperType = {
 };
 const EdgeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
-    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
+    );
+
+    // Only T ==> 1
+    const additionalCoordLength = 1;
+    geometry.setAttribute(
+      "additionalCoords",
+      new THREE.BufferAttribute(
+        new Float32Array(capacity * additionalCoordLength * 2),
+        additionalCoordLength,
+      ),
+    );
+
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.Object3D {
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Object3D {
     return new THREE.LineSegments(geometry, material);
   },
 
@@ -167,7 +193,7 @@ class Skeleton {
 
   initializeBufferCollection(
     initialCapacity: number,
-    material: THREE.Material,
+    material: THREE.RawShaderMaterial,
     helper: BufferHelper,
   ): BufferCollection {
     const initialBuffer = this.initializeBuffer(
@@ -184,7 +210,11 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
+  initializeBuffer(
+    capacity: number,
+    material: THREE.RawShaderMaterial,
+    helper: BufferHelper,
+  ): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
@@ -320,10 +350,10 @@ class Skeleton {
         }
 
         case "updateNode": {
-          const { treeId, id, radius, position } = update.value;
+          const { treeId, id, radius, position, additionalCoords } = update.value;
           this.updateNodeRadius(treeId, id, radius);
           const tree = skeletonTracing.trees[treeId];
-          this.updateNodePosition(tree, id, position);
+          this.updateNodePosition(tree, id, position, additionalCoords);
           break;
         }
 
@@ -402,17 +432,14 @@ class Skeleton {
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
     let { activeTreeId } = skeletonTracing;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     const nodeUniforms = this.nodes.material.uniforms;
     nodeUniforms.planeZoomFactor.value = getZoomValue(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'linewidth' does not exist on type 'Mater... Remove this comment to see the full error message
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
@@ -428,17 +455,13 @@ class Skeleton {
   startPicking(isTouch: boolean): THREE.Object3D {
     this.pickingNode.matrixAutoUpdate = false;
     this.pickingNode.matrix.copy(this.rootGroup.matrixWorld);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     this.nodes.material.uniforms.isPicking.value = 1;
     return this.pickingNode;
   }
 
   stopPicking(): void {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     this.nodes.material.uniforms.isTouch.value = 0;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'Materi... Remove this comment to see the full error message
     this.nodes.material.uniforms.isPicking.value = 0;
   }
 
@@ -488,8 +511,13 @@ class Skeleton {
       this.nodes,
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
         const { attributes } = buffer.geometry;
-        // @ts-expect-error ts-migrate(2551) FIXME: Property 'set' does not exist on type 'BufferAttri... Remove this comment to see the full error message
-        attributes.position.set(node.position, index * 3);
+        (attributes.position as THREE.BufferAttribute).set(node.position, index * 3);
+        if (node.additionalCoords) {
+          (attributes.additionalCoords as THREE.BufferAttribute).set(
+            node.additionalCoords,
+            index * node.additionalCoords.length,
+          );
+        }
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.radius.array[index] = node.radius;
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
@@ -512,8 +540,7 @@ class Skeleton {
   deleteNode(treeId: number, nodeId: number) {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
+      const attribute = buffer.geometry.attributes.type as THREE.BufferAttribute;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
@@ -526,8 +553,7 @@ class Skeleton {
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.radius;
+      const attribute = buffer.geometry.attributes.radius as THREE.BufferAttribute;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = radius;
       return [attribute];
@@ -537,13 +563,24 @@ class Skeleton {
   /**
    * Updates a node's position and that of its edges in a WebGL buffer.
    */
-  updateNodePosition(tree: Tree, nodeId: number, position: Vector3) {
+  updateNodePosition(
+    tree: Tree,
+    nodeId: number,
+    position: Vector3,
+    additionalCoords: number[] | null | undefined,
+  ) {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.position;
+      const attribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
       attribute.set(position, index * 3);
+
+      if (additionalCoords) {
+        const attributeAdditionalCoords = buffer.geometry.attributes
+          .additionalCoords as THREE.BufferAttribute;
+        attributeAdditionalCoords.set(additionalCoords, index * additionalCoordLength);
+      }
+
       return [attribute];
     });
 
@@ -553,8 +590,7 @@ class Skeleton {
       const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-        const positionAttribute: THREE.BufferAttribute = buffer.geometry.attributes.position;
+        const positionAttribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
         positionAttribute.set(position, index * 6 + indexOffset);
         return [positionAttribute];
       });
@@ -576,8 +612,7 @@ class Skeleton {
   updateNodeType(treeId: number, nodeId: number, type: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
+      const attribute = buffer.geometry.attributes.type as THREE.BufferAttribute;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = type;
       return [attribute];
@@ -587,8 +622,7 @@ class Skeleton {
   updateIsCommented(treeId: number, nodeId: number, isCommented: boolean) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.isCommented;
+      const attribute = buffer.geometry.attributes.isCommented as THREE.BufferAttribute;
       // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean' is not assignable to type 'number'.
       attribute.array[index] = isCommented;
       return [attribute];
@@ -601,14 +635,27 @@ class Skeleton {
   createEdge(treeId: number, source: Node, target: Node) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const positionAttribute: THREE.BufferAttribute = buffer.geometry.attributes.position;
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const treeIdAttribute: THREE.BufferAttribute = buffer.geometry.attributes.treeId;
+      const { attributes } = buffer.geometry;
+      const positionAttribute = attributes.position as THREE.BufferAttribute;
+      const treeIdAttribute = attributes.treeId as THREE.BufferAttribute;
+      const additionalCoordsAttribute = attributes.additionalCoords as THREE.BufferAttribute;
+
       positionAttribute.set(source.position, index * 6);
       positionAttribute.set(target.position, index * 6 + 3);
+
+      if (source.additionalCoords && target.additionalCoords) {
+        additionalCoordsAttribute.set(
+          source.additionalCoords,
+          2 * index * source.additionalCoords.length,
+        );
+        additionalCoordsAttribute.set(
+          target.additionalCoords,
+          target.additionalCoords.length * (2 * index + 1),
+        );
+      }
+
       treeIdAttribute.set([treeId, treeId], index * 2);
-      return [positionAttribute, treeIdAttribute];
+      return [positionAttribute, treeIdAttribute, additionalCoordsAttribute];
     });
   }
 
@@ -619,8 +666,7 @@ class Skeleton {
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferAttribute | InterleavedBufferAttribute... Remove this comment to see the full error message
-      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.position;
+      const attribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
       attribute.set([0, 0, 0, 0, 0, 0], index * 6);
       return [attribute];
     });

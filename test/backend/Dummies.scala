@@ -10,7 +10,15 @@ object Dummies {
   val timestampLong = 123456789L
 
   def createDummyNode(id: Int): Node =
-    Node(id, Vec3IntProto(id, id + 1, id + 2), Vec3DoubleProto(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
+    Node(id,
+         Vec3IntProto(id, id + 1, id + 2),
+         Vec3DoubleProto(id, id + 1, id + 2),
+         id,
+         1,
+         10,
+         8,
+         id % 2 == 0,
+         timestamp)
 
   val tree1: Tree = Tree(
     1,
@@ -41,19 +49,21 @@ object Dummies {
   val treeGroup1: TreeGroup = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
   val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2)
 
-  val skeletonTracing: SkeletonTracing = SkeletonTracing("dummy_dataset",
-                                Seq(tree1, tree2),
-                                timestamp,
-                                None,
-                                Some(1),
-                                Vec3IntProto(1, 1, 1),
-                                Vec3DoubleProto(1.0, 1.0, 1.0),
-                                1.0,
-                                0,
-                                None,
-                                Seq(treeGroup1, treeGroup2),
-                                Seq.empty,
-                                Some("testOrganization"))
+  val skeletonTracing: SkeletonTracing = SkeletonTracing(
+    "dummy_dataset",
+    Seq(tree1, tree2),
+    timestamp,
+    None,
+    Some(1),
+    Vec3IntProto(1, 1, 1),
+    Vec3DoubleProto(1.0, 1.0, 1.0),
+    1.0,
+    0,
+    None,
+    Seq(treeGroup1, treeGroup2),
+    Seq.empty,
+    Some("testOrganization")
+  )
 
   //tree with two components, from tree1 and tree2
   val comp1Nodes = Seq(createDummyNode(10), createDummyNode(11), createDummyNode(12), createDummyNode(13))
@@ -65,23 +75,25 @@ object Dummies {
 
   val emptyTree: Tree = Tree(4, Seq(), Seq(), None, Seq(), Seq(), "Test Tree-3", timestamp, None)
 
-  val componentSkeletonTracing: SkeletonTracing = SkeletonTracing("dummy_dataset",
-                                         Seq(componentTree, emptyTree),
-                                         timestamp,
-                                         None,
-                                         None,
-                                         Vec3IntProto(1, 1, 1),
-                                         Vec3DoubleProto(1.0, 1.0, 1.0),
-                                         1.0,
-                                         0,
-                                         None,
-                                         Seq.empty,
-                                         Seq.empty,
-                                         Some("testOrganization"))
+  val componentSkeletonTracing: SkeletonTracing = SkeletonTracing(
+    "dummy_dataset",
+    Seq(componentTree, emptyTree),
+    timestamp,
+    None,
+    None,
+    Vec3IntProto(1, 1, 1),
+    Vec3DoubleProto(1.0, 1.0, 1.0),
+    1.0,
+    0,
+    None,
+    Seq.empty,
+    Seq.empty,
+    Some("testOrganization")
+  )
 
   val volumeTracing: VolumeTracing = VolumeTracing(
     None,
-    BoundingBoxProto(Vec3IntProto(0,0,0), 10, 10, 10),
+    BoundingBoxProto(Vec3IntProto(0, 0, 0), 10, 10, 10),
     timestamp,
     "dummy_dataset",
     Vec3IntProto(1, 1, 1),
@@ -91,6 +103,7 @@ object Dummies {
     Some(5L),
     0,
     1.0,
-    segments = Seq(Segment(5, Some(Vec3IntProto(7,7,7))))
+    segments = Seq(Segment(5, Some(Vec3IntProto(7, 7, 7)))),
+    hasSegmentIndex = Some(true)
   )
 }

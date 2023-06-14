@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetPath}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
@@ -21,9 +21,7 @@ object PrecomputedArray extends LazyLogging {
   def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int])(
       implicit ec: ExecutionContext): PrecomputedArray = {
 
-    val basePath = magPath.parent
-    val headerPath = s"${PrecomputedHeader.FILENAME_INFO}"
-    val headerBytes = (basePath / headerPath).readBytes()
+    val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")
@@ -45,21 +43,18 @@ object PrecomputedArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    val datasetPath = new DatasetPath(key)
-    new PrecomputedArray(datasetPath,
-                         basePath,
+    new PrecomputedArray(magPath,
                          scaleHeader,
                          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
                          channelIndex)
   }
 }
 
-class PrecomputedArray(relativePath: DatasetPath,
-                       vaultPath: VaultPath,
+class PrecomputedArray(vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int])(implicit ec: ExecutionContext)
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
+    extends DatasetArray(vaultPath, header, axisOrder, channelIndex)
     with FoxImplicits
     with LazyLogging {
 
@@ -161,10 +156,10 @@ class PrecomputedArray(relativePath: DatasetPath,
   private def getPathForShard(shardNumber: Long): VaultPath = {
     val shardBits = header.precomputedScale.sharding.map(_.shard_bits.toFloat).getOrElse(0f)
     if (shardBits == 0) {
-      vaultPath / relativePath.storeKey / "0.shard"
+      vaultPath / "0.shard"
     } else {
       val shardString = String.format(s"%1$$${(shardBits / 4).ceil.toInt}s", shardNumber.toHexString).replace(' ', '0')
-      vaultPath / relativePath.storeKey / s"$shardString.shard"
+      vaultPath / s"$shardString.shard"
     }
 
   }

@@ -286,7 +286,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                   placement="left"
                   title="For technical reasons, only segments that were manually annotated or
                       interacted with are counted towards this statistic. Segmentation layers
-                      created from automated workflows (aka fallback layers) are not currently
+                      created from automated workflows (also known as fallback layers) are not currently
                       considered."
                 >
                   {segmentCount} Segments

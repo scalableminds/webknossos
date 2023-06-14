@@ -86,7 +86,7 @@ class FossilDBClient(collection: String,
     try {
       for {
         reply: GetReply <- stub.get(GetRequest(collection, key, version, mayBeEmpty))
-        _ <- bool2Fox(reply.success) ?~> reply.errorMessage.getOrElse("")
+        _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
         result <- fromByteArray(reply.value.toByteArray)
           .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
       } yield result
@@ -95,13 +95,16 @@ class FossilDBClient(collection: String,
         logger.info("Exception during get: statusRuntimeException")
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
         else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
-      case e: Exception => {
+      case e: Exception =>
         logger.info(s"Exception during get: ${e.getMessage}")
-        if (e.getMessage == "No such element") { Fox.empty } else {
-          Fox.failure("Could not get from FossilDB: " + e.getMessage)
-        }
-      }
+        Fox.failure("Could not get from FossilDB: " + e.getMessage)
     }
+
+  private def assertSuccess(success: Boolean,
+                            errorMessage: Option[String] = None,
+                            mayBeEmpty: Option[Boolean] = None): Fox[Unit] =
+    if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
+    else bool2Fox(success) ?~> errorMessage.getOrElse("")
 
   def getVersion(key: String,
                  version: Option[Long] = None,

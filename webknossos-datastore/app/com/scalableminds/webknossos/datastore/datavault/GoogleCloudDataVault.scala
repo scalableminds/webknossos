@@ -31,36 +31,40 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private lazy val bucket: String = uri.getAuthority
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
-    tryo {
-      val objName = path.toUri.getPath.tail
-      val blobId = BlobId.of(bucket, objName)
-      val blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build
-      val encoding = Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
-      range match {
-        case StartEnd(r) => {
-          val blobReader = storage.reader(blobId)
-          blobReader.seek(r.start)
-          blobReader.limit(r.end)
-          val bb = ByteBuffer.allocateDirect(r.length)
-          blobReader.read(bb)
-          val arr = new Array[Byte](r.length)
-          bb.position(0)
-          bb.get(arr)
-          (arr, encoding)
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+
+    val objName = path.toUri.getPath.tail
+    val blobId = BlobId.of(bucket, objName)
+    for {
+      bytes <- tryo {
+        range match {
+          case StartEnd(r) =>
+            val blobReader = storage.reader(blobId)
+            blobReader.seek(r.start)
+            blobReader.limit(r.end)
+            val bb = ByteBuffer.allocateDirect(r.length)
+            blobReader.read(bb)
+            val arr = new Array[Byte](r.length)
+            bb.position(0)
+            bb.get(arr)
+            arr
+          case SuffixLength(l) =>
+            val blobReader = storage.reader(blobId)
+            blobReader.seek(-l)
+            val bb = ByteBuffer.allocateDirect(l.toInt)
+            blobReader.read(bb)
+            val arr = new Array[Byte](l.toInt)
+            bb.position(0)
+            bb.get(arr)
+            arr
+          case Complete() => storage.readAllBytes(bucket, objName)
         }
-        case SuffixLength(l) =>
-          val blobReader = storage.reader(blobId)
-          blobReader.seek(-l)
-          val bb = ByteBuffer.allocateDirect(l.toInt)
-          blobReader.read(bb)
-          val arr = new Array[Byte](l.toInt)
-          bb.position(0)
-          bb.get(arr)
-          (arr, encoding)
-        case Complete() => (storage.readAllBytes(bucket, objName), encoding)
       }
-    }
+      blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build)
+      encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
+    } yield (bytes, encoding)
+  }
+
 }
 
 object GoogleCloudDataVault {

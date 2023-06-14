@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Box, Failure, Full}
 
 object Encoding extends ExtendedEnumeration {
   type Encoding = Value
@@ -8,12 +10,12 @@ object Encoding extends ExtendedEnumeration {
 
   // Header defined in https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.2.2,
   // List of possible entries: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
-  def fromRfc7231String(s: String): Encoding =
+  def fromRfc7231String(s: String): Box[Encoding] =
     s match {
-      case "gzip"     => gzip
-      case "br"       => brotli
-      case "identity" => identity
-      case ""         => identity
-      case _          => unsupported
+      case "gzip"     => Full(gzip)
+      case "br"       => Full(brotli)
+      case "identity" => Full(identity)
+      case ""         => Full(identity)
+      case _          => Failure(s"Unsupported encoding: $s")
     }
 }

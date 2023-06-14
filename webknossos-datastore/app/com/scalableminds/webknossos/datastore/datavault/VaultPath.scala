@@ -4,6 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
@@ -11,22 +12,21 @@ import java.net.URI
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) {
+class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range))
-      decoded <- decodeResultOpt(bytesAndEncoding)
+      decoded <- decode(bytesAndEncoding)
     } yield decoded
 
   def readLastBytes(byteCount: Long)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount))
-      decoded <- decodeResultOpt(bytesAndEncoding)
+      decoded <- decode(bytesAndEncoding)
     } yield decoded
 
-  private def decodeResultOpt(bytesAndEncoding: (Array[Byte], Encoding.Value))(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def decode(bytesAndEncoding: (Array[Byte], Encoding.Value))(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bytesAndEncoding match {
       case (bytes, encoding) =>
         encoding match {

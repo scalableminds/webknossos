@@ -3,15 +3,18 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
-import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
+import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, DataVaultService, RemoteSourceDescriptor}
 
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
+import java.net.URI
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
-    implicit ec: ExecutionContext)
+class Application @Inject()(redisClient: DataStoreRedisStore,
+                            applicationHealthService: ApplicationHealthService,
+                            dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
@@ -24,6 +27,15 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
         _ <- Fox.bool2Fox(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
         _ = logger.info(s"Answering ok for Datastore health check, took ${Instant.since(before)}")
       } yield Ok("Ok")
+    }
+  }
+
+  def testVaultPath: Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      for {
+        vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI("http://127.0.0.1:5000/gzip"), None))
+        response <- vaultPath.readBytes(None)
+      } yield Ok(s"Received ${new String(response, StandardCharsets.UTF_8)}")
     }
   }
 

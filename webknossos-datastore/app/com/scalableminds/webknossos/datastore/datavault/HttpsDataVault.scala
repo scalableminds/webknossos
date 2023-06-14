@@ -2,40 +2,36 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
   LegacyDataVaultCredential,
   RemoteSourceDescriptor
 }
+import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status
 import play.api.libs.ws.{WSAuthScheme, WSClient, WSResponse}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
-
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) extends DataVault {
+class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) extends DataVault with LazyLogging {
 
-  private val connectionTimeout = 1 minute
   private val readTimeout = 10 minutes
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
-
     val uri = path.toUri
-    val responseFox = range match {
-      case StartEnd(r)          => getWithRange(uri, r)
-      case SuffixLength(length) => getWithSuffixRange(uri, length)
-      case Complete()           => fullGet(uri)
-    }
-
     for {
-      response: WSResponse <- responseFox
-      encoding = Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse(""))
+      response <- range match {
+        case StartEnd(r)          => getWithRange(uri, r)
+        case SuffixLength(length) => getWithSuffixRange(uri, length)
+        case Complete()           => fullGet(uri)
+      }
+      encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
       result <- if (Status.isSuccessful(response.status)) {
         Fox.successful((response.bodyAsBytes.toArray, encoding))
       } else if (response.status == 404) Fox.empty

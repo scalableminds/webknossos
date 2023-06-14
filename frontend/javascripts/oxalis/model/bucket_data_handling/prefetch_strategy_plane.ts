@@ -87,7 +87,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     resolutionInfo: ResolutionInfo,
-    additionalDims: number[] | null,
+    additionalCoords: number[] | null,
   ): Array<PullQueueItem> {
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
@@ -109,7 +109,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       areas,
       resolutions,
       false,
-      additionalDims,
+      additionalCoords,
     );
     let queueItemsForFallbackZoomStep: Array<PullQueueItem> = [];
     const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
@@ -125,7 +125,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         areas,
         resolutions,
         true,
-        additionalDims,
+        additionalCoords,
       );
     }
 
@@ -142,7 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     isFallback: boolean,
-    additionalDims: number[] | null,
+    additionalCoords: number[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: Array<PullQueueItem> = [];
 
@@ -184,7 +184,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
           fallbackPriorityWeight;
 
         pullQueue.push({
-          bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalDims ?? []],
+          bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoords ?? []],
           priority,
         });
 

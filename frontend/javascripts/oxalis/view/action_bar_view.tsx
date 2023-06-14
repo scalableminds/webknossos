@@ -31,7 +31,7 @@ import {
   getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
-import { setFourthDimension } from "oxalis/model/actions/flycam_actions";
+import { setAdditionalCoordinates } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
@@ -62,11 +62,13 @@ type State = {
 };
 
 function FourthDimensionInputView() {
-  const fourthDimension = useSelector((state: OxalisState) => state.flycam.fourthDimension);
+  const additionalCoords = useSelector((state: OxalisState) => state.flycam.additionalCoords);
+  // todop: adapt to multiple values
+  const val = (additionalCoords ?? [0])[0];
   const dispatch = useDispatch();
-  const changeFourthDimension = (value: number | null) => {
+  const changeAdditionalCoordinates = (value: number | null) => {
     if (value != null) {
-      dispatch(setFourthDimension(value));
+      dispatch(setAdditionalCoordinates([value]));
     }
   };
   return (
@@ -76,12 +78,12 @@ function FourthDimensionInputView() {
           label="Q"
           min={0}
           max={100}
-          value={fourthDimension}
-          onChange={changeFourthDimension}
+          value={val}
+          onChange={changeAdditionalCoordinates}
         />
       }
     >
-      <InputNumber value={fourthDimension} onChange={changeFourthDimension} />
+      <InputNumber value={val} onChange={changeAdditionalCoordinates} />
     </Popover>
   );
 }

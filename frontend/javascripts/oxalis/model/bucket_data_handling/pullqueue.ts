@@ -131,10 +131,10 @@ class PullQueue {
     if (bucket.type === "data") {
       // todo: revert
       if (bucketData != null) {
-        const additionalDims = bucketAddress[4];
-        if (additionalDims != null) {
+        const additionalCoords = bucketAddress[4];
+        if (additionalCoords != null) {
           for (let idx = 0; idx < bucketData?.length; idx++) {
-            bucketData[idx] += additionalDims[0];
+            bucketData[idx] += additionalCoords[0];
           }
         }
       }

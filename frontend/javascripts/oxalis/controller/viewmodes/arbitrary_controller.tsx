@@ -370,9 +370,9 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     const position = getPosition(Store.getState().flycam);
     const rotation = getRotation(Store.getState().flycam);
-    const fourthDimension = Store.getState().flycam.fourthDimension;
+    const additionalCoords = Store.getState().flycam.additionalCoords;
     Store.dispatch(
-      createNodeAction(position, [fourthDimension], rotation, constants.ARBITRARY_VIEW, 0),
+      createNodeAction(position, additionalCoords, rotation, constants.ARBITRARY_VIEW, 0),
     );
   }
 

@@ -34,9 +34,9 @@ class EdgeShader {
     };
 
     listenToStoreProperty(
-      (storeState) => storeState.flycam.fourthDimension,
-      (fourthDimension) => {
-        this.uniforms.currentAdditionalCoords.value = [fourthDimension];
+      (storeState) => storeState.flycam.additionalCoords,
+      (additionalCoords) => {
+        this.uniforms.currentAdditionalCoords.value = additionalCoords;
       },
       true,
     );

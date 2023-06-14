@@ -2,7 +2,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { map3 } from "libs/utils";
 import {
@@ -53,7 +53,7 @@ function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
-  additionalDims: number[] | null,
+  additionalCoords: number[] | null,
 ): Array<{
   priority: number;
   bucket: DataBucket;
@@ -76,7 +76,7 @@ function consumeBucketsFromArrayBuffer(
       uint32Array[currentBufferIndex + 1],
       uint32Array[currentBufferIndex + 2],
       uint32Array[currentBufferIndex + 3],
-      additionalDims ?? [],
+      additionalCoords ?? [],
     ];
     const priority = uint32Array[currentBufferIndex + 4];
     const bucket = cube.getOrCreateBucket(bucketAddress);
@@ -124,7 +124,7 @@ export default class LayerRenderingManager {
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
-  additionalDim: number | null = null;
+  additionalCoords: number[] | null = null;
 
   cuckooTable: CuckooTable | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -208,7 +208,7 @@ export default class LayerRenderingManager {
     const { sphericalCapRadius } = state.userConfiguration;
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
     const rects = getViewportRects(state);
-    const additionalDim = state.flycam.fourthDimension;
+    const additionalCoords = state.flycam.additionalCoords;
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -216,8 +216,7 @@ export default class LayerRenderingManager {
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      // todo: multidim
-      additionalDim !== this.additionalDim ||
+      !_.isEqual(additionalCoords, this.additionalCoords) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -227,7 +226,7 @@ export default class LayerRenderingManager {
       this.lastRects = rects;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
-      this.additionalDim = additionalDim;
+      this.additionalCoords = additionalCoords;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
@@ -253,7 +252,7 @@ export default class LayerRenderingManager {
             buffer,
             this.cube,
             this.textureBucketManager.maximumCapacity,
-            this.additionalDim != null ? [this.additionalDim] : null,
+            this.additionalCoords,
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);

@@ -237,10 +237,10 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_FOURTH_DIMENSION": {
+    case "SET_ADDITIONAL_COORDINATES": {
       return update(state, {
         flycam: {
-          fourthDimension: { $set: action.value },
+          additionalCoords: { $set: action.values },
         },
       });
     }

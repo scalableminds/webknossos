@@ -4,7 +4,7 @@ type ZoomOutAction = ReturnType<typeof zoomOutAction>;
 type ZoomByDeltaAction = ReturnType<typeof zoomByDeltaAction>;
 type SetZoomStepAction = ReturnType<typeof setZoomStepAction>;
 type SetPositionAction = ReturnType<typeof setPositionAction>;
-type SetFourthDimension = ReturnType<typeof setFourthDimension>;
+type SetAdditionalCoordinates = ReturnType<typeof setAdditionalCoordinates>;
 type SetRotationAction = ReturnType<typeof setRotationAction>;
 type SetDirectionAction = ReturnType<typeof setDirectionAction>;
 type MoveFlycamOrthoAction = ReturnType<typeof moveFlycamOrthoAction>;
@@ -21,7 +21,7 @@ export type FlycamAction =
   | ZoomByDeltaAction
   | SetZoomStepAction
   | SetPositionAction
-  | SetFourthDimension
+  | SetAdditionalCoordinates
   | SetRotationAction
   | SetDirectionAction
   | MoveFlycamAction
@@ -77,10 +77,10 @@ export const setPositionAction = (position: Vector3, dimensionToSkip?: number | 
     dimensionToSkip,
   } as const);
 
-export const setFourthDimension = (value: number) =>
+export const setAdditionalCoordinates = (values: number[] | null) =>
   ({
-    type: "SET_FOURTH_DIMENSION",
-    value,
+    type: "SET_ADDITIONAL_COORDINATES",
+    values,
   } as const);
 
 export const setRotationAction = (rotation: Vector3) =>

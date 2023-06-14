@@ -431,7 +431,7 @@ export type SaveState = {
 export type Flycam = {
   readonly zoomStep: number;
   readonly currentMatrix: Matrix4x4;
-  readonly fourthDimension: number;
+  readonly additionalCoords: number[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
 };

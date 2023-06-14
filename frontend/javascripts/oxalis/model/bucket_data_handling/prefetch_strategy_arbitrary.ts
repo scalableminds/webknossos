@@ -58,7 +58,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     position: Vector3,
     resolutions: Array<Vector3>,
     resolutionInfo: ResolutionInfo,
-    additionalDims: number[] | null,
+    additionalCoords: number[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: PullQueueItem[] = [];
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
@@ -91,7 +91,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       ];
       const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
       pullQueue.push({
-        bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalDims ?? []],
+        bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalCoords ?? []],
         priority: 1 + distanceToPosition,
       });
     }

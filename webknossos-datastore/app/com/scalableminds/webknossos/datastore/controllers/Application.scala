@@ -3,18 +3,15 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
-import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
-import java.net.URI
-import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(redisClient: DataStoreRedisStore,
-                            applicationHealthService: ApplicationHealthService,
-                            dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
+class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
+    implicit ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true

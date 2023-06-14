@@ -16,8 +16,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range))
-      decoded <- decode(bytesAndEncoding)
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?~> "Failed to read from vault path."
+      decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
   def readLastBytes(byteCount: Long)(implicit ec: ExecutionContext): Fox[Array[Byte]] =

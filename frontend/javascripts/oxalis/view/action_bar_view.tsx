@@ -33,6 +33,7 @@ import {
 import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinates } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
+import { ArbitraryVectorInput } from "libs/vector_input";
 
 const VersionRestoreWarning = (
   <Alert
@@ -61,29 +62,45 @@ type State = {
   isNewLayoutModalOpen: boolean;
 };
 
-function FourthDimensionInputView() {
+function AdditionalCoordinatesInputView() {
   const additionalCoords = useSelector((state: OxalisState) => state.flycam.additionalCoords);
-  // todop: adapt to multiple values
-  const val = (additionalCoords ?? [0])[0];
   const dispatch = useDispatch();
-  const changeAdditionalCoordinates = (value: number | null) => {
-    if (value != null) {
-      dispatch(setAdditionalCoordinates([value]));
+  const changeAdditionalCoordinates = (values: number[]) => {
+    if (values != null) {
+      dispatch(setAdditionalCoordinates(values));
     }
   };
+  if (additionalCoords == null || additionalCoords.length === 0) {
+    return null;
+  }
   return (
     <Popover
       content={
-        <NumberSliderSetting
-          label="Q"
-          min={0}
-          max={100}
-          value={val}
-          onChange={changeAdditionalCoordinates}
-        />
+        <div>
+          {additionalCoords.map((coord, idx) => (
+            <NumberSliderSetting
+              // todo: read label name from data layer spec
+              label="Q"
+              min={0}
+              max={100}
+              value={coord}
+              spans={[2, 19, 3]}
+              onChange={(newCoord) => {
+                const newCoords = additionalCoords.slice();
+                newCoords[idx] = newCoord;
+                changeAdditionalCoordinates(newCoords);
+              }}
+            />
+          ))}
+        </div>
       }
     >
-      <InputNumber value={val} onChange={changeAdditionalCoordinates} />
+      <ArbitraryVectorInput
+        autoSize
+        vectorLength={additionalCoords.length}
+        value={additionalCoords}
+        onChange={changeAdditionalCoordinates}
+      />
     </Popover>
   );
 }
@@ -202,7 +219,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          <FourthDimensionInputView />
+          <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

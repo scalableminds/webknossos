@@ -125,11 +125,14 @@ class PullQueue {
     }
   }
 
-  handleBucket(bucketAddress: BucketAddress, bucketData: Uint8Array | null | undefined): void {
+  private handleBucket(
+    bucketAddress: BucketAddress,
+    bucketData: Uint8Array | null | undefined,
+  ): void {
     const bucket = this.cube.getBucket(bucketAddress);
 
     if (bucket.type === "data") {
-      // todo: revert
+      // todop: revert
       if (bucketData != null) {
         const additionalCoords = bucketAddress[4];
         if (additionalCoords != null) {

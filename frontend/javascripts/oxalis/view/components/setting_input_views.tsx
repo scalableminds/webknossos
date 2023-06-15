@@ -29,12 +29,14 @@ type NumberSliderSettingProps = {
   min: number;
   step: number;
   disabled: boolean;
+  spans: Vector3;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
     min: 1,
     step: 1,
     disabled: false,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   };
 
   _onChange = (_value: number | null) => {
@@ -54,10 +56,10 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={this.props.spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
+        <Col span={this.props.spans[1]}>
           <Slider
             min={min}
             max={max}
@@ -67,7 +69,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             disabled={disabled}
           />
         </Col>
-        <Col span={SETTING_VALUE_SPAN}>
+        <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
             bordered={false}

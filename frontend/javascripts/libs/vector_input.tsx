@@ -12,6 +12,8 @@ type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
   autoSize?: boolean;
+  // Only used in ArbitraryVectorInput case
+  vectorLength?: number;
 };
 type State = {
   isEditing: boolean;
@@ -19,9 +21,8 @@ type State = {
   text: string;
 }; // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 
-class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'defaultValue' has no initializer and is ... Remove this comment to see the full error message
-  defaultValue: T;
+abstract class BaseVector<T extends number[]> extends React.PureComponent<BaseProps<T>, State> {
+  abstract get defaultValue(): T;
   static defaultProps = {
     value: "",
     onChange: () => {},
@@ -143,11 +144,22 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 }
 
 export class Vector3Input extends BaseVector<Vector3> {
-  defaultValue: Vector3 = [0, 0, 0];
+  get defaultValue(): Vector3 {
+    return [0, 0, 0];
+  }
 }
 export class Vector6Input extends BaseVector<Vector6> {
-  defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+  get defaultValue(): Vector6 {
+    return [0, 0, 0, 0, 0, 0];
+  }
 }
+
+export class ArbitraryVectorInput extends BaseVector<number[]> {
+  get defaultValue(): number[] {
+    return _.range(0, this.props.vectorLength).map(() => 0);
+  }
+}
+
 type BoundingBoxInputProps = Omit<InputProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;

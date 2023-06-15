@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
@@ -16,8 +15,8 @@ import play.api.libs.json.{Json, Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
-import java.util.concurrent.Executor
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 trait KeyValueStoreImplicits extends BoxImplicits {
 
@@ -55,40 +54,39 @@ class FossilDBClient(collection: String,
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val healthStub = HealthGrpc.newFutureStub(channel)
 
-  def checkHealth: Fox[Unit] =
-    try {
-      for {
-        reply: HealthCheckResponse <- Grpc.guavaFuture2ScalaFuture(
-          healthStub.check(HealthCheckRequest.getDefaultInstance))
-        replyString = reply.getStatus.toString
-        _ <- bool2Fox(replyString == "SERVING") ?~> replyString
-        _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
-      } yield ()
-    } catch {
-      case e: Exception =>
-        val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
-        logger.error(errorText)
-        Fox.failure(errorText)
-    }
+  def checkHealth: Fox[Unit] = {
+    val resultFox = for {
+      reply: HealthCheckResponse <- Grpc.guavaFuture2ScalaFuture(
+        healthStub.check(HealthCheckRequest.getDefaultInstance))
+      replyString = reply.getStatus.toString
+      _ <- bool2Fox(replyString == "SERVING") ?~> replyString
+      _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+    } yield ()
+    for {
+      box <- resultFox.futureBox
+      _ <- box match {
+        case Full(()) => Fox.successful(())
+        case Empty    => Fox.empty
+        case net.liftweb.common.Failure(msg, _, _) =>
+          val errorText = s"Failed to connect to FossilDB at $address:$port: $msg"
+          logger.error(errorText)
+          Fox.failure(errorText)
+      }
+    } yield ()
+  }
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
-      implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
-    try {
-      for {
-        reply: GetReply <- stub.get(GetRequest(collection, key, version, mayBeEmpty))
-        _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
-        result <- fromByteArray(reply.value.toByteArray)
-          .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
-      } yield result
-    } catch {
-      // TODO can this be omitted, is it in the future now? Wrap with readable error message anyway
-      case statusRuntimeException: StatusRuntimeException =>
-        logger.info("Exception during get: statusRuntimeException")
-        if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
-        else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
-      case e: Exception =>
-        logger.info(s"Exception during get: ${e.getMessage}")
-        Fox.failure("Could not get from FossilDB: " + e.getMessage)
+  private def wrapException[T](future: Future[T]): Fox[T] =
+    future.transformWith {
+      case Success(value) =>
+        Fox.successful(value).futureBox
+      case Failure(exception) =>
+        val box = exception match {
+          case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
+            new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+          case e: Exception =>
+            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${e.getMessage}", Full(e), Empty)
+        }
+        Future.successful(box)
     }
 
   private def assertSuccess(success: Boolean,
@@ -97,23 +95,27 @@ class FossilDBClient(collection: String,
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else bool2Fox(success) ?~> errorMessage.getOrElse("")
 
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
+    for {
+      reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
+      _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
+      result <- fromByteArray(reply.value.toByteArray)
+        .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+    } yield result
+
   def getVersion(key: String,
                  version: Option[Long] = None,
                  mayBeEmpty: Option[Boolean] = None,
                  emptyFallback: Option[Long] = None): Fox[Long] =
-    try {
-      val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
-      if (reply.success) Fox.successful(reply.actualVersion)
-      else {
-        if (mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")) {
-          emptyFallback.toFox
-        } else {
-          throw new Exception(reply.errorMessage.getOrElse(""))
-        }
-      }
-    } catch {
-      case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
-    }
+    for {
+      reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
+      result <- if (reply.success)
+        Fox.successful(reply.actualVersion)
+      else if (mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")) {
+        emptyFallback.toFox
+      } else Fox.failure(s"Could not get from FossilDB: ${reply.errorMessage.getOrElse("")}")
+    } yield result
 
   def getMultipleKeys[T](
       startAfterKey: Option[String],
@@ -148,32 +150,34 @@ class FossilDBClient(collection: String,
       key: String,
       newestVersion: Option[Long] = None,
       oldestVersion: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
-    try {
-      val reply =
-        blockingStub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      val parsedValues: List[Box[T]] = reply.values.map { v =>
+    (for {
+      reply <- wrapException(
+        stub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion)))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+      parsedValues: List[Box[T]] = reply.values.map { v =>
         fromByteArray(v.toByteArray)
       }.toList
-      for {
-        values <- Fox.combined(parsedValues.map { box: Box[T] =>
-          box.toFox
-        })
-      } yield reply.versions.zip(values).toList
-    } catch {
-      case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
-    }
+      values <- Fox.combined(parsedValues.map { box: Box[T] =>
+        box.toFox
+      })
+    } yield reply.versions.zip(values).toList) ?~> "Could not get multiple versions from FossilDB"
 
-  def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] =
-    try {
-      val reply = blockingStub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value)))
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      Fox.successful(Unit)
-    } catch {
-      case e: Exception =>
-        slackNotificationService.reportFossilWriteError("put", e)
-        Fox.failure("could not save to FossilDB: " + e.getMessage)
-    }
+  def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] = {
+    val putFox = for {
+      reply <- wrapException(stub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value))))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+    } yield ()
+    for {
+      box <- putFox.futureBox
+      _ <- box match {
+        case Full(()) => Fox.successful(())
+        case Empty    => Fox.empty
+        case net.liftweb.common.Failure(msg, _, _) =>
+          slackNotificationService.reportFossilWriteError("put", msg)
+          Fox.failure("could not save to FossilDB: " + msg)
+      }
+    } yield ()
+  }
 
   def shutdown(): Boolean = {
     channel.shutdownNow()

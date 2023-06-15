@@ -73,7 +73,7 @@ export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
-  extendedBindings: Array<KeyboardBindingPress> = [];
+  hasExtendedBindings: boolean = false;
   cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -94,6 +94,8 @@ export class InputKeyboardNoLoop {
     }
 
     if (extendedCommands) {
+      this.hasExtendedBindings = true;
+      document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
       this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
@@ -121,6 +123,13 @@ export class InputKeyboardNoLoop {
     this.cancelExtendedModeTimeoutId = setTimeout(() => {
       KeyboardJS.setContext("default");
     }, EXTENDED_COMMAND_DURATION);
+  };
+
+  preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
+    if (evt.ctrlKey && evt.key == "k") {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
   };
 
   cancelExtendedModeTimeout() {
@@ -178,6 +187,9 @@ export class InputKeyboardNoLoop {
 
     for (const binding of this.bindings) {
       KeyboardJS.unbind(...binding);
+    }
+    if (this.hasExtendedBindings) {
+      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
     }
   }
 }

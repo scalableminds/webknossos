@@ -590,10 +590,15 @@ class DataApi {
    * @example // Get the segmentation id for a segmentation layer
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
-  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+  async getDataValue(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number = 0,
+    additionalCoordinates: number[] | null = null,
+  ): Promise<number> {
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
-    const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+    const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     const bucket = cube.getOrCreateBucket(bucketAddress);
     if (bucket.type === "null") return 0;
     let needsToAwaitBucket = false;
@@ -616,7 +621,7 @@ class DataApi {
     }
 
     // Bucket has been loaded by now or was loaded already
-    return cube.getDataValue(position, null, zoomStep);
+    return cube.getDataValue(position, additionalCoordinates, null, zoomStep);
   }
 
   /**
@@ -644,12 +649,20 @@ class DataApi {
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  async labelVoxels(voxels: Array<Vector3>, label: number): Promise<void> {
+  async labelVoxels(
+    voxels: Array<Vector3>,
+    label: number,
+    additionalCoordinates: number[] | null = null,
+  ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(
       voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
+          voxel,
+          additionalCoordinates,
+          label,
+        ),
       ),
     );
     segmentationLayer.cube.pushQueue.push();

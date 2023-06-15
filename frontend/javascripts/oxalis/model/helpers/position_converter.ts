@@ -6,7 +6,8 @@ export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,
   resolutionIndex: number,
-): Vector4 {
+  additionalCoordinates: number[] | null,
+): BucketAddress {
   const resolution =
     resolutionIndex < resolutions.length
       ? resolutions[resolutionIndex]
@@ -16,6 +17,7 @@ export function globalPositionToBucketPosition(
     Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
     Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
     resolutionIndex,
+    additionalCoordinates || [],
   ];
 }
 export function scaleGlobalPositionWithResolution(

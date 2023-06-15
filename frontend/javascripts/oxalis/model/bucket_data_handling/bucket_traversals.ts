@@ -22,8 +22,8 @@ export default function traverse(
   const u = startPosition;
   const v = V3.sub(endPosition, startPosition);
   // The initialization phase begins by identifying the voxel in which the ray origin, → u, is found.
-  const uBucket = globalPositionToBucketPosition(startPosition, resolutions, zoomStep);
-  const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep);
+  const uBucket = globalPositionToBucketPosition(startPosition, resolutions, zoomStep, null);
+  const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep, null);
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
   const voxelSize = getBucketExtent(resolutions[zoomStep]);

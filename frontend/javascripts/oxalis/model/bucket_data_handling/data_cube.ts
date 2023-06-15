@@ -24,7 +24,6 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import Toast from "libs/toast";
 import type {
   Vector3,
-  Vector4,
   BoundingBoxType,
   LabelMasksByBucketAndW,
   BucketAddress,
@@ -375,6 +374,7 @@ class DataCube {
 
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
+    additionalCoordinates: number[] | null,
     label: number,
     activeSegmentId?: number | null | undefined,
   ): Promise<void> {
@@ -385,7 +385,13 @@ class DataCube {
 
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       promises.push(
-        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeSegmentId),
+        this._labelVoxelInResolution_DEPRECATED(
+          voxel,
+          additionalCoordinates,
+          label,
+          resolutionIndex,
+          activeSegmentId,
+        ),
       );
     }
 
@@ -395,6 +401,7 @@ class DataCube {
 
   async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
+    additionalCoordinates: number[] | null,
     label: number,
     zoomStep: number,
     activeSegmentId: number | null | undefined,
@@ -402,7 +409,7 @@ class DataCube {
     let voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {
-      const address = this.positionToZoomedAddress(voxel, zoomStep);
+      const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);
       const bucket = this.getOrCreateBucket(address);
 
       if (bucket instanceof DataBucket) {
@@ -410,7 +417,7 @@ class DataCube {
         let shouldUpdateVoxel = true;
 
         if (activeSegmentId != null) {
-          const voxelValue = this.getMappedDataValue(voxel, zoomStep);
+          const voxelValue = this.getMappedDataValue(voxel, additionalCoordinates, zoomStep);
           shouldUpdateVoxel = activeSegmentId === voxelValue;
         }
 
@@ -427,6 +434,7 @@ class DataCube {
 
   async floodFill(
     globalSeedVoxel: Vector3,
+    additionalCoordinates: number[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
@@ -453,8 +461,11 @@ class DataCube {
       Dimensions.transDimWithIndices(voxel, dimensionIndices);
 
     const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
-    const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
-    // todop
+    const seedBucketAddress = this.positionToZoomedAddress(
+      globalSeedVoxel,
+      additionalCoordinates,
+      zoomStep,
+    );
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     let coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
@@ -709,19 +720,28 @@ class DataCube {
 
   async isZoomStepUltimatelyRenderableForVoxel(
     voxel: Vector3,
+    additionalCoordinates: number[] | null,
     zoomStep: number = 0,
   ): Promise<boolean> {
     // Make sure the respective bucket is loaded before checking whether the zoomStep
     // is currently renderable for this voxel.
-    await this.getLoadedBucket(this.positionToZoomedAddress(voxel, zoomStep));
-    return this.isZoomStepCurrentlyRenderableForVoxel(voxel, zoomStep);
+    await this.getLoadedBucket(
+      this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
+    );
+    return this.isZoomStepCurrentlyRenderableForVoxel(voxel, additionalCoordinates, zoomStep);
   }
 
-  isZoomStepCurrentlyRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
+  isZoomStepCurrentlyRenderableForVoxel(
+    voxel: Vector3,
+    additionalCoordinates: number[] | null,
+    zoomStep: number = 0,
+  ): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
     // needs to be examined for rendering.
     // todop
-    const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    const bucket = this.getBucket(
+      this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
+    );
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     if (!(bucket instanceof DataBucket)) {
@@ -750,14 +770,18 @@ class DataCube {
     return false;
   }
 
-  getNextCurrentlyUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+  getNextCurrentlyUsableZoomStepForPosition(
+    position: Vector3,
+    additionalCoordinates: number[] | null,
+    zoomStep: number,
+  ): number {
     const resolutions = this.resolutionInfo.getDenseResolutions();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
       usableZoomStep < resolutions.length - 1 &&
-      !this.isZoomStepCurrentlyRenderableForVoxel(position, usableZoomStep)
+      !this.isZoomStepCurrentlyRenderableForVoxel(position, additionalCoordinates, usableZoomStep)
     ) {
       usableZoomStep++;
     }
@@ -767,6 +791,7 @@ class DataCube {
 
   async getNextUltimatelyUsableZoomStepForPosition(
     position: Vector3,
+    additionalCoordinates: number[] | null,
     zoomStep: number,
   ): Promise<number> {
     const resolutions = this.resolutionInfo.getDenseResolutions();
@@ -775,7 +800,11 @@ class DataCube {
     while (
       position &&
       usableZoomStep < resolutions.length - 1 && // eslint-disable-next-line no-await-in-loop
-      !(await this.isZoomStepUltimatelyRenderableForVoxel(position, usableZoomStep))
+      !(await this.isZoomStepUltimatelyRenderableForVoxel(
+        position,
+        additionalCoordinates,
+        usableZoomStep,
+      ))
     ) {
       usableZoomStep++;
     }
@@ -783,13 +812,19 @@ class DataCube {
     return usableZoomStep;
   }
 
-  getDataValue(voxel: Vector3, mapping: Mapping | null | undefined, zoomStep: number = 0): number {
+  getDataValue(
+    voxel: Vector3,
+    additionalCoordinates: number[] | null,
+    mapping: Mapping | null | undefined,
+    zoomStep: number = 0,
+  ): number {
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       return 0;
     }
 
-    // todop
-    const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    const bucket = this.getBucket(
+      this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
+    );
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
     if (bucket.hasData()) {
@@ -810,8 +845,17 @@ class DataCube {
     return 0;
   }
 
-  getMappedDataValue(voxel: Vector3, zoomStep: number = 0): number {
-    return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null, zoomStep);
+  getMappedDataValue(
+    voxel: Vector3,
+    additionalCoordinates: number[] | null,
+    zoomStep: number = 0,
+  ): number {
+    return this.getDataValue(
+      voxel,
+      additionalCoordinates,
+      this.isMappingEnabled() ? this.getMapping() : null,
+      zoomStep,
+    );
   }
 
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {
@@ -840,17 +884,19 @@ class DataCube {
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
-  positionToZoomedAddress(position: Vector3, zoomStep: number = 0): Vector4 {
+  positionToZoomedAddress(
+    position: Vector3,
+    additionalCoordinates: number[] | null,
+    zoomStep: number = 0,
+  ): BucketAddress {
+    // todop: adapt callers?
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
       this.resolutionInfo.getDenseResolutions(),
       zoomStep,
+      additionalCoordinates,
     );
-  }
-
-  positionToBaseAddress(position: Vector3): Vector4 {
-    return this.positionToZoomedAddress(position, 0);
   }
 
   async getLoadedBucket(bucketAddress: BucketAddress) {

@@ -155,7 +155,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
   traversedBuckets = makeBucketsUnique(traversedBuckets);
   const traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);
 
-  const centerAddress = globalPositionToBucketPosition(position, resolutions, logZoomStep);
+  const centerAddress = globalPositionToBucketPosition(position, resolutions, logZoomStep, null);
 
   for (const bucketAddress of traversedBucketsVec4) {
     const bucketVector3 = bucketAddress.slice(0, 3) as any as Vector3;

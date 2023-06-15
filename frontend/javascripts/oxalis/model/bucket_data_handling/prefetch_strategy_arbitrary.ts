@@ -83,6 +83,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
         position,
         resolutions,
         zoomStep,
+        null,
       );
       const positionBucket: Vector3 = [
         positionBucketWithZoomStep[0],

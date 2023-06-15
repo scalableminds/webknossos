@@ -356,7 +356,13 @@ export function* floodFill(): Saga<void> {
     );
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
+    const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
+    const oldSegmentIdAtSeed = cube.getDataValue(
+      seedPosition,
+      additionalCoords,
+      null,
+      labeledZoomStep,
+    );
 
     if (activeCellId === oldSegmentIdAtSeed) {
       Toast.warning("The clicked voxel's id is already equal to the active segment id.");
@@ -382,6 +388,7 @@ export function* floodFill(): Saga<void> {
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
       wasBoundingBoxExceeded,
@@ -389,6 +396,7 @@ export function* floodFill(): Saga<void> {
     } = yield* call(
       { context: cube, fn: cube.floodFill },
       seedPosition,
+      additionalCoords,
       activeCellId,
       dimensionIndices,
       boundingBoxForFloodFill,

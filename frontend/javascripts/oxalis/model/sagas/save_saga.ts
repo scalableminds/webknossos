@@ -274,14 +274,14 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: str
     for (const saveEntry of saveQueue) {
       for (const updateAction of saveEntry.actions) {
         if (updateAction.name === "updateBucket") {
-          const { position, mag } = updateAction.value;
+          const { position, mag, additionalCoordinates } = updateAction.value;
           const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
           const zoomedBucketAddress = globalPositionToBucketPosition(
             position,
             segmentationResolutionInfo.getDenseResolutions(),
             resolutionIndex,
+            additionalCoordinates,
           );
-          // todop
           const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
 
           if (bucket.type === "null") {

@@ -150,7 +150,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       return pullQueue;
     }
 
-    const centerBucket = cube.positionToZoomedAddress(position, zoomStep);
+    const centerBucket = cube.positionToZoomedAddress(position, additionalCoords, zoomStep);
     const centerBucket3: Vector3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
     const fallbackPriorityWeight = isFallback ? 50 : 0;
 

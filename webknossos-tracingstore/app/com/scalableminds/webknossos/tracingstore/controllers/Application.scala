@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(
     implicit ec: ExecutionContext)
@@ -28,6 +28,18 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
           s"Answering ok for Tracingstore health check, took ${afterRedis - before} ms (FossilDB ${afterFossil - before} ms, Redis ${afterRedis - afterFossil} ms).")
       } yield Ok("Ok")
     }
+  }
+
+  def sleep(): Future[Unit] = {
+    logger.info(s"[${Thread.currentThread.getName}] sleeping for 1 minute...")
+    Thread.sleep(1000 * 60)
+    logger.info(s"[${Thread.currentThread.getName}] waking up...")
+    Future.successful(())
+  }
+
+  def test: Action[AnyContent] = Action.async {
+    sleep()
+    Future.successful(Ok("started some sleeping!"))
   }
 
 }

@@ -90,7 +90,7 @@ class FossilDBClient(collection: String,
     }
 
   private def assertSuccess(success: Boolean,
-                            errorMessage: Option[String] = None,
+                            errorMessage: Option[String],
                             mayBeEmpty: Option[Boolean] = None): Fox[Unit] =
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else bool2Fox(success) ?~> errorMessage.getOrElse("")

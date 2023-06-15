@@ -1452,6 +1452,7 @@ class DataApi {
     layerName: string,
     mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
+    additionalCoordinates: number[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
@@ -1464,7 +1465,12 @@ class DataApi {
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
-    const bucketAddresses = this.getBucketAddressesInCuboid(mag1Bbox, resolutions, zoomStep);
+    const bucketAddresses = this.getBucketAddressesInCuboid(
+      mag1Bbox,
+      resolutions,
+      zoomStep,
+      additionalCoordinates,
+    );
 
     if (bucketAddresses.length > 15000) {
       console.warn(
@@ -1483,6 +1489,7 @@ class DataApi {
     viewport: OrthoView,
     layerName: string,
     maybeResolutionIndex: number | null | undefined,
+    additionalCoordinates: number[] | null,
   ) {
     const state = Store.getState();
     const [curU, curV, curW] = dimensions.transDim(
@@ -1526,6 +1533,7 @@ class DataApi {
         max,
       },
       zoomStep,
+      additionalCoordinates,
     );
     return cuboid;
   }
@@ -1534,12 +1542,16 @@ class DataApi {
     bbox: BoundingBoxType,
     resolutions: Array<Vector3>,
     zoomStep: number,
+    additionalCoordinates: number[] | null,
   ): Array<BucketAddress> {
     const buckets = [];
     const bottomRight = bbox.max;
-    // todop: make bucketAddress potentially higher dimensional?
-    // potentially change null parameter
-    const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep, null);
+    const minBucket = globalPositionToBucketPosition(
+      bbox.min,
+      resolutions,
+      zoomStep,
+      additionalCoordinates,
+    );
 
     const topLeft = (bucketAddress: BucketAddress) =>
       bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
@@ -1579,7 +1591,6 @@ class DataApi {
     resolutions: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    // todop: needs to be adapted to 4d
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution
@@ -1721,7 +1732,6 @@ class DataApi {
     label: number,
     additionalCoordinates: number[] | null = null,
   ): Promise<void> {
-    // todop check callers
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(

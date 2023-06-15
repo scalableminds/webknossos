@@ -282,11 +282,12 @@ export class DataBucket {
     // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
     // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position
     // is also returned along with the adjusted voxel coordinate in that neighboring bucket.
-    const neighbourBucketAddress: Vector4 = [
+    const neighbourBucketAddress: BucketAddress = [
       this.zoomedAddress[0],
       this.zoomedAddress[1],
       this.zoomedAddress[2],
       zoomStep,
+      this.getAdditionalCoordinates() || [],
     ];
     let isVoxelOutside = false;
     const adjustedVoxel: Vector3 = [voxel[0], voxel[1], voxel[2]];
@@ -298,7 +299,7 @@ export class DataBucket {
         const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
         // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
         // bucket address
-        neighbourBucketAddress[dimensionIndex] += sign * offset;
+        (neighbourBucketAddress[dimensionIndex] as number) += sign * offset;
       }
 
       adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);

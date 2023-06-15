@@ -633,7 +633,6 @@ class DataCube {
 
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
-            // todop
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
             if (neighbourBucket.type !== "null") {
@@ -738,7 +737,6 @@ class DataCube {
   ): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
     // needs to be examined for rendering.
-    // todop
     const bucket = this.getBucket(
       this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
     );
@@ -889,7 +887,6 @@ class DataCube {
     additionalCoordinates: number[] | null,
     zoomStep: number = 0,
   ): BucketAddress {
-    // todop: adapt callers?
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
@@ -900,7 +897,6 @@ class DataCube {
   }
 
   async getLoadedBucket(bucketAddress: BucketAddress) {
-    // todop: check callers
     const bucket = this.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {

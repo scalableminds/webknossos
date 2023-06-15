@@ -420,11 +420,14 @@ function* tryMinCutAtMag(
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoords);
+
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
     resolutionIndex,
+    additionalCoordinates,
   );
   // For the 3D volume flat arrays are constructed
   // which can be accessed with the helper methods
@@ -508,7 +511,16 @@ function* tryMinCutAtMag(
   const { visitedField } = traverseResidualsField(boundingBoxTarget, seedA, ll, edgeBuffer);
   console.timeEnd(`traverseResidualsField (${targetMagString})`);
   console.time(`labelDeletedEdges (${targetMagString})`);
-  labelDeletedEdges(visitedField, boundingBoxTarget, size, originalEdgeBuffer, targetMag, l, ll);
+  labelDeletedEdges(
+    visitedField,
+    boundingBoxTarget,
+    size,
+    originalEdgeBuffer,
+    targetMag,
+    l,
+    ll,
+    additionalCoordinates,
+  );
   console.timeEnd(`labelDeletedEdges (${targetMagString})`);
   console.timeEnd(`Total min-cut (${targetMagString})`);
 }
@@ -774,6 +786,7 @@ function labelDeletedEdges(
   targetMag: Vector3,
   l: L,
   ll: LL,
+  additionalCoordinates: number[] | null,
 ) {
   for (let z = 0; z < size[2]; z++) {
     for (let y = 0; y < size[1]; y++) {
@@ -796,7 +809,11 @@ function labelDeletedEdges(
               for (let dz = 0; dz < targetMag[2]; dz++) {
                 for (let dy = 0; dy < targetMag[1]; dy++) {
                   for (let dx = 0; dx < targetMag[0]; dx++) {
-                    api.data.labelVoxels([V3.add(position, [dx, dy, dz])], 0);
+                    api.data.labelVoxels(
+                      [V3.add(position, [dx, dy, dz])],
+                      0,
+                      additionalCoordinates,
+                    );
                   }
                 }
               }

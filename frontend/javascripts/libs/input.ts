@@ -126,7 +126,7 @@ export class InputKeyboardNoLoop {
   };
 
   preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
-    if (evt.ctrlKey && evt.key == "k") {
+    if (evt.ctrlKey && evt.key === "k") {
       evt.preventDefault();
       evt.stopPropagation();
     }

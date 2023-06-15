@@ -41,6 +41,7 @@ message VolumeTracing {
     optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
     optional bool mappingIsEditable = 18;
     repeated SegmentGroup segmentGroups = 19;
+    optional bool hasSegmentIndex = 20;
 }
 
 message SegmentGroup {

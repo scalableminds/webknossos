@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -56,8 +56,8 @@ trait AccessTokenService {
   val remoteWebKnossosClient: RemoteWebKnossosClient
 
   private val AccessExpiration: FiniteDuration = 2 minutes
-  private lazy val accessAnswersCache: AlfuFoxCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
-    AlfuFoxCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
+  private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
+    AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
       implicit ec: ExecutionContext): Fox[Result] =

@@ -5,7 +5,7 @@ import * as React from "react";
 import _ from "lodash";
 import dimensions from "oxalis/model/dimensions";
 import {
-  deleteActiveNodeAsUserAction,
+  deleteNodeAsUserAction,
   createTreeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -114,8 +114,8 @@ class SkeletonKeybindings {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
       // Delete active node
-      delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
-      backspace: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
+      delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
+      backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       c: () => Store.dispatch(createTreeAction()),
       e: () => SkeletonHandlers.moveAlongDirection(),
       r: () => SkeletonHandlers.moveAlongDirection(true),

@@ -12,16 +12,15 @@ import type {
   UserBoundingBoxToServer,
   OxalisState,
 } from "oxalis/store";
-import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
-import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeTool,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
 ): BoundingBoxType {
@@ -73,15 +72,7 @@ export function convertFrontendBoundingBoxToServer(
     depth: boundingBox.max[2] - boundingBox.min[2],
   };
 }
-export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxObject {
-  const [width, height, depth] = V3.sub(boundary.upperBoundary, boundary.lowerBoundary);
-  return {
-    width,
-    height,
-    depth,
-    topLeft: boundary.lowerBoundary,
-  };
-}
+
 // Currently unused.
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {

@@ -31,6 +31,11 @@ message BranchPoint {
     required int64 createdTimestamp = 2;
 }
 
+enum TreeTypeProto {
+  DEFAULT = 0;
+  AGGLOMERATE = 1;
+}
+
 message Tree {
      required int32 treeId = 1;
      repeated Node nodes = 2;
@@ -42,6 +47,7 @@ message Tree {
      required int64 createdTimestamp = 8;
      optional int32 groupId = 9;
      optional bool isVisible = 10; // in this case `None` means `true`
+     optional TreeTypeProto type = 11;
 }
 
 message TreeGroup {

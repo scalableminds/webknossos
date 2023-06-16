@@ -73,7 +73,6 @@ import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentati
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import _ from "lodash";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -708,7 +707,7 @@ function ChangeBrushSizePopover() {
               <Col>
                 <Dropdown
                   menu={{ items }}
-                  trigger={["click", "contextMenu"]}
+                  trigger={["click", "contextMenu", "hover"]}
                   placement="bottomLeft"
                 >
                   <SettingOutlined />

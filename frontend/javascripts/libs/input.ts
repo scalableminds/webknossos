@@ -413,13 +413,6 @@ export class InputMouse {
   };
 
   ignoreScrollingWhileDragging: boolean;
-  // Copied from backbone events (TODO: handle this better)
-  // // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
-  // on: (bindings: BindingMap<MouseHandler>) => void;
-  // // @ts-expect-error ts-migrate(2564) FIXME: Property 'off' has no initializer and is not defin... Remove this comment to see the full error message
-  // off: (...args: Array<any>) => any;
-  // // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  // trigger: (...args: Array<any>) => any;
 
   constructor(
     targetId: string,

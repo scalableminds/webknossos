@@ -19,8 +19,8 @@ import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_g
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import {
-  getBoundaries,
   getDataLayers,
+  getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
   getTransformsForLayerOrNull,
@@ -221,10 +221,10 @@ class SceneController {
     this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
-    const { lowerBoundary, upperBoundary } = getBoundaries(state.dataset);
+    const { min, max } = getDatasetBoundingBox(state.dataset);
     this.datasetBoundingBox = new Cube({
-      min: lowerBoundary,
-      max: upperBoundary,
+      min,
+      max,
       color: CUBE_COLOR,
       showCrossSections: true,
       isHighlighted: false,

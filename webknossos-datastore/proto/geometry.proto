@@ -9,6 +9,10 @@ message Vec3IntProto {
     required int32 z = 3;
 }
 
+message ListOfVec3IntProto {
+  repeated Vec3IntProto values = 1;
+}
+
 message Vec3DoubleProto {
     required double x = 1;
     required double y = 2;

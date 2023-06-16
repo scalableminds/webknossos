@@ -68,6 +68,7 @@ mockRequire("libs/date", DateMock);
 export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
+  withContext: (_arg0: string, arg1: () => void) => arg1(),
 };
 mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", {

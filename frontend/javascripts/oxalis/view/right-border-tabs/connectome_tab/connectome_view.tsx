@@ -36,7 +36,7 @@ import {
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants, { MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -153,6 +153,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   comments: [],
   isVisible: true,
   groupId: null,
+  type: TreeTypeEnum.DEFAULT,
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({

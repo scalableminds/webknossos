@@ -29,19 +29,22 @@ export function DetailsSidebar({
   setSelectedDataset,
   datasetCount,
   searchQuery,
-  activeFolderId,
+  // The folder ID to display details for. This can be the active folder selected in the tree view
+  // or a selected subfolder in the dataset table.
+  folderId,
   setFolderIdForEditModal,
+  displayedFolderEqualsActiveFolder,
 }: {
   selectedDatasets: APIDatasetCompact[];
   setSelectedDataset: (ds: APIDatasetCompact | null) => void;
+  folderId: string | null;
   datasetCount: number;
   searchQuery: string | null;
-  activeFolderId: string | null;
   setFolderIdForEditModal: (value: string | null) => void;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
-  const { data: folder, error } = useFolderQuery(activeFolderId);
-
+  const { data: folder, error } = useFolderQuery(folderId);
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
@@ -66,11 +69,12 @@ export function DetailsSidebar({
         <SearchDetails datasetCount={datasetCount} />
       ) : (
         <FolderDetails
-          activeFolderId={activeFolderId}
+          folderId={folderId}
           folder={folder}
           datasetCount={datasetCount}
           setFolderIdForEditModal={setFolderIdForEditModal}
           error={error}
+          displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
       )}
     </div>
@@ -214,19 +218,30 @@ function SearchDetails({ datasetCount }: { datasetCount: number }) {
 }
 
 function FolderDetails({
-  activeFolderId,
+  folderId,
   folder,
   datasetCount,
   setFolderIdForEditModal,
   error,
+  displayedFolderEqualsActiveFolder,
 }: {
-  activeFolderId: string | null;
+  folderId: string | null;
   folder: Folder | undefined;
   datasetCount: number;
   setFolderIdForEditModal: (id: string | null) => void;
   error: unknown;
+  displayedFolderEqualsActiveFolder: boolean;
 }) {
-  const maybeSelectMsg = getMaybeSelectMessage(datasetCount);
+  let message = getMaybeSelectMessage(datasetCount);
+  if (!displayedFolderEqualsActiveFolder) {
+    message =
+      datasetCount > 0
+        ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
+            "dataset",
+            datasetCount,
+          )}.`
+        : "";
+  }
   return (
     <>
       {folder ? (
@@ -251,14 +266,14 @@ function FolderDetails({
             <Tooltip title="This number is independent of any filters that might be applied to the current view (e.g., only showing available datasets)">
               {datasetCount} {pluralize("dataset", datasetCount)}*
             </Tooltip>
-            . {maybeSelectMsg}
+            . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
         </div>
       ) : error ? (
         "Could not load folder."
-      ) : activeFolderId != null ? (
+      ) : folderId != null ? (
         <Spin spinning />
       ) : null}
     </>

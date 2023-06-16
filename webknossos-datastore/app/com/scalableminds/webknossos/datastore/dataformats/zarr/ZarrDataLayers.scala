@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -7,12 +8,16 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
 
+import ucar.ma2.{Array => MultiArray}
+
 trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) =
-    new ZarrBucketProvider(this, dataVaultServiceOpt)
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
+    new ZarrBucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

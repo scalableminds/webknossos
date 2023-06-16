@@ -21,9 +21,9 @@ object PrecomputedCompressorFactory {
         getCompressorForShardingChunks(shardingSpecification.data_encoding)
       case None => nullCompressor
     }
-    val outerCompression = getCompressorForEncoding(header)
+    val chunkCompression = getCompressorForEncoding(header)
 
-    new ChainedCompressor(Seq(shardingCompression, outerCompression))
+    new ChainedCompressor(Seq(chunkCompression, shardingCompression))
 
   }
 

@@ -10,7 +10,7 @@ import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   setActiveNodeAction,
-  deleteActiveNodeAsUserAction,
+  deleteNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -223,7 +223,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
-        Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
       },
       q: downloadScreenshot,
     });

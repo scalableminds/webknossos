@@ -162,7 +162,7 @@ export const finishedResizingUserBoundingBoxAction = (id: number) =>
   } as const);
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: UserBoundingBoxWithoutId | null | undefined,
+  newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
   center?: Vector3,
 ) =>
   ({

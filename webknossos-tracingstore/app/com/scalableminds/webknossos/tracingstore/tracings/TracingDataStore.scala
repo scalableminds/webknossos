@@ -28,6 +28,8 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   lazy val volumeData = new FossilDBClient("volumeData", config, slackNotificationService)
 
+  lazy val volumeSegmentIndex = new FossilDBClient("volumeSegmentIndex", config, slackNotificationService)
+
   lazy val volumeUpdates = new FossilDBClient("volumeUpdates", config, slackNotificationService)
 
   lazy val editableMappingsInfo = new FossilDBClient("editableMappingsInfo", config, slackNotificationService)
@@ -40,7 +42,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   lazy val editableMappingUpdates = new FossilDBClient("editableMappingUpdates", config, slackNotificationService)
 
-  def shutdown(): Unit = {
+  private def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
     skeletonUpdates.shutdown()
@@ -51,6 +53,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
     editableMappingsAgglomerateToGraph.shutdown()
     editableMappingsSegmentToAgglomerate.shutdown()
     editableMappingUpdates.shutdown()
+    volumeSegmentIndex.shutdown()
     ()
   }
 

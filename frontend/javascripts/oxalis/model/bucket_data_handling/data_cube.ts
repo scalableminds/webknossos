@@ -41,7 +41,9 @@ class CubeEntry {
     this.data = new Map();
     this.boundary = boundary;
   }
-} // Instead of using blank, constant thresholds for the bounding box which
+}
+
+// Instead of using blank, constant thresholds for the bounding box which
 // limits a floodfill operation, the bounding box can also be increased dynamically
 // so that long, thin processes get a larger bounding box limit.
 // If USE_FLOODFILL_VOXEL_THRESHOLD is true, the amount of labeled voxels is taken into account
@@ -55,7 +57,6 @@ const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
-  upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   cubes: Array<CubeEntry>;
@@ -88,13 +89,12 @@ class DataCube {
   // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
-    upperBoundary: Vector3,
+    layerBBox: BoundingBox,
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
   ) {
-    this.upperBoundary = upperBoundary;
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
@@ -104,18 +104,17 @@ class DataCube {
     this.buckets = [];
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
-      Math.ceil(this.upperBoundary[0] / constants.BUCKET_WIDTH),
-      Math.ceil(this.upperBoundary[1] / constants.BUCKET_WIDTH),
-      Math.ceil(this.upperBoundary[2] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[0] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[1] / constants.BUCKET_WIDTH),
+      Math.ceil(layerBBox.max[2] / constants.BUCKET_WIDTH),
     ];
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
-      const zoomedCubeBoundary = [
+      const zoomedCubeBoundary: Vector3 = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
         Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
     }
 
@@ -125,19 +124,17 @@ class DataCube {
       return !isVolumeTask;
     };
 
-    this.boundingBox = new BoundingBox(
-      shouldBeRestrictedByTracingBoundingBox()
-        ? getSomeTracing(Store.getState().tracing).boundingBox
-        : null,
-      this.upperBoundary,
-    );
+    // Satisfy TS. The actual initialization is done by listenToStoreProperty
+    // (the second parameter ensures that the callback is called immediately).
+    this.boundingBox = new BoundingBox(null);
     listenToStoreProperty(
       (state) => getSomeTracing(state.tracing).boundingBox,
       (boundingBox) => {
-        if (shouldBeRestrictedByTracingBoundingBox()) {
-          this.boundingBox = new BoundingBox(boundingBox, this.upperBoundary);
-        }
+        this.boundingBox = new BoundingBox(
+          shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
+        ).intersectedWith(layerBBox);
       },
+      true,
     );
   }
 
@@ -379,11 +376,7 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
-    let voxelInCube = true;
-
-    for (let i = 0; i <= 2; i++) {
-      voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
-    }
+    let voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel, zoomStep);
@@ -805,14 +798,13 @@ class DataCube {
    */
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
-    const voxelOffset = [0, 0, 0];
+    const voxelOffset: Vector3 = [0, 0, 0];
     const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     return voxelOffset;
   }
 

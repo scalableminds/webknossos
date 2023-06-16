@@ -26,7 +26,6 @@ object PrecomputedArray extends LazyLogging {
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
-    val basePath = magPath.parent
     val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
@@ -50,7 +49,7 @@ object PrecomputedArray extends LazyLogging {
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
     new PrecomputedArray(
-      basePath,
+      magPath,
       dataSourceId,
       layerName,
       scaleHeader,

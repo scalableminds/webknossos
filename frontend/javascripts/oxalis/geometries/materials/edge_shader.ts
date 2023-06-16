@@ -3,6 +3,8 @@ import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shad
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import { Store } from "oxalis/singletons";
+import _ from "lodash";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
@@ -27,16 +29,21 @@ class EdgeShader {
       treeColors: {
         value: treeColorTexture,
       },
-      currentAdditionalCoords: {
-        // todop
-        value: [0],
-      },
     };
+    const { additionalCoords } = Store.getState().flycam;
+
+    _.each(additionalCoords, (_val, idx) => {
+      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+        value: 0,
+      };
+    });
 
     listenToStoreProperty(
       (storeState) => storeState.flycam.additionalCoords,
       (additionalCoords) => {
-        this.uniforms.currentAdditionalCoords.value = additionalCoords;
+        _.each(additionalCoords, (val, idx) => {
+          this.uniforms[`currentAdditionalCoord_${idx}`].value = val;
+        });
       },
       true,
     );
@@ -47,7 +54,9 @@ class EdgeShader {
   }
 
   getVertexShader(): string {
-    return `
+    const { additionalCoords } = Store.getState().flycam;
+
+    return _.template(`
 precision highp float;
 precision highp int;
 
@@ -56,20 +65,25 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
-// todop: type of additional coord needs to be dynamic?
-uniform float currentAdditionalCoords;
 uniform sampler2D treeColors;
+
+<% _.each(additionalCoords || [], (_coord, idx) => { %>
+  uniform float currentAdditionalCoord_<%= idx %>;
+<% }) %>
 
 in vec3 position;
 in float treeId;
 
-// todop: type of additional coord needs to be dynamic?
-in float additionalCoords;
+<% _.each(additionalCoords || [], (_coord, idx) => { %>
+  in float additionalCoord_<%= idx %>;
+<% }) %>
 
 void main() {
-    if (additionalCoords != currentAdditionalCoords) {
-      return;
-    }
+    <% _.each(additionalCoords || [], (_coord, idx) => { %>
+      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+        return;
+      }
+    <% }) %>
 
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
@@ -84,7 +98,7 @@ void main() {
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     color = texture(treeColors, treeIdToTextureCoordinate).rgb;
-}`;
+}`)({ additionalCoords });
   }
 
   getFragmentShader(): string {

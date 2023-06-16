@@ -7,7 +7,7 @@ import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volu
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
-import type { BoundingBoxType, BucketAddress, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";

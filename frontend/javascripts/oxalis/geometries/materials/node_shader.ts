@@ -7,6 +7,7 @@ import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import _ from "lodash";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -34,6 +35,7 @@ class NodeShader {
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
     const state = Store.getState();
+    const { additionalCoords } = state.flycam;
     this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor
@@ -75,11 +77,14 @@ class NodeShader {
       viewMode: {
         value: 0,
       },
-      currentAdditionalCoords: {
-        // todop
-        value: [0],
-      },
     };
+
+    _.each(additionalCoords, (_val, idx) => {
+      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+        value: 0,
+      };
+    });
+
     listenToStoreProperty(
       (_state) => _state.userConfiguration.highlightCommentedNodes,
       (highlightCommentedNodes) => {
@@ -96,7 +101,9 @@ class NodeShader {
     listenToStoreProperty(
       (storeState) => storeState.flycam.additionalCoords,
       (additionalCoords) => {
-        this.uniforms.currentAdditionalCoords.value = additionalCoords;
+        _.each(additionalCoords, (val, idx) => {
+          this.uniforms[`currentAdditionalCoord_${idx}`].value = val;
+        });
       },
       true,
     );
@@ -107,7 +114,9 @@ class NodeShader {
   }
 
   getVertexShader(): string {
-    return `
+    const { additionalCoords } = Store.getState().flycam;
+
+    return _.template(`
 precision highp float;
 precision highp int;
 
@@ -126,15 +135,21 @@ uniform int isPicking; // bool indicates whether we are currently rendering for 
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
 uniform float viewMode;
-// todop: type of additional coord needs to be dynamic?
-uniform float currentAdditionalCoords;
+
+<% _.each(additionalCoords || [], (_coord, idx) => { %>
+  uniform float currentAdditionalCoord_<%= idx %>;
+<% }) %>
 
 uniform sampler2D treeColors;
 
 in float radius;
 in vec3 position;
-// todop: type of additional coord needs to be dynamic?
-in float additionalCoords;
+
+<% _.each(additionalCoords || [], (_coord, idx) => { %>
+  in float additionalCoord_<%= idx %>;
+<% }) %>
+
+
 in float type;
 in float isCommented;
 // Since attributes are only supported in vertex shader, we pass the attribute into a
@@ -171,9 +186,12 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
-    if (additionalCoords != currentAdditionalCoords) {
-      return;
-    }
+    <% _.each(additionalCoords || [], (_coord, idx) => { %>
+      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+        return;
+      }
+    <% }) %>
+
 
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
@@ -244,7 +262,7 @@ void main() {
       gl_PointSize *= 2.0;
     }
 
-}`;
+}`)({ additionalCoords });
   }
 
   getFragmentShader(): string {

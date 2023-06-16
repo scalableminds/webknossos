@@ -1,4 +1,4 @@
-import { Alert, InputNumber, Popover } from "antd";
+import { Alert, Popover } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
@@ -81,6 +81,8 @@ function AdditionalCoordinatesInputView() {
             <NumberSliderSetting
               // todo: read label name from data layer spec
               label="Q"
+              // todop: use name of coord as key
+              // key={idx}
               min={0}
               max={100}
               value={coord}
@@ -100,6 +102,7 @@ function AdditionalCoordinatesInputView() {
         vectorLength={additionalCoords.length}
         value={additionalCoords}
         onChange={changeAdditionalCoordinates}
+        style={{ marginLeft: 8 }}
       />
     </Popover>
   );

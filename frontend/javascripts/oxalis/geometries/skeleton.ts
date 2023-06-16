@@ -34,21 +34,20 @@ type BufferCollection = {
   material: THREE.RawShaderMaterial;
 };
 
-// Only T ==> 1
-const additionalCoordLength = 1;
+// todop: dont hardcode
+const additionalCoordLength = 2;
 
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 const NodeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
 
-    geometry.setAttribute(
-      "additionalCoords",
-      new THREE.BufferAttribute(
-        new Float32Array(capacity * additionalCoordLength),
-        additionalCoordLength,
-      ),
-    );
+    for (const idx of _.range(0, additionalCoordLength)) {
+      geometry.setAttribute(
+        `additionalCoord_${idx}`,
+        new THREE.BufferAttribute(new Float32Array(capacity), 1),
+      );
+    }
     geometry.setAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.setAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.setAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -62,6 +61,7 @@ const NodeBufferHelperType = {
 
   supportsPicking: true,
 };
+
 const EdgeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute(
@@ -69,15 +69,12 @@ const EdgeBufferHelperType = {
       new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
     );
 
-    // Only T ==> 1
-    const additionalCoordLength = 1;
-    geometry.setAttribute(
-      "additionalCoords",
-      new THREE.BufferAttribute(
-        new Float32Array(capacity * additionalCoordLength * 2),
-        additionalCoordLength,
-      ),
-    );
+    for (const idx of _.range(0, additionalCoordLength)) {
+      geometry.setAttribute(
+        `additionalCoord_${idx}`,
+        new THREE.BufferAttribute(new Float32Array(capacity * 2), 1),
+      );
+    }
 
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
@@ -512,11 +509,14 @@ class Skeleton {
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
         const { attributes } = buffer.geometry;
         (attributes.position as THREE.BufferAttribute).set(node.position, index * 3);
+
         if (node.additionalCoords) {
-          (attributes.additionalCoords as THREE.BufferAttribute).set(
-            node.additionalCoords,
-            index * node.additionalCoords.length,
-          );
+          for (const idx of _.range(0, node.additionalCoords.length)) {
+            const attributeAdditionalCoords = buffer.geometry.attributes[
+              `additionalCoord_${idx}`
+            ] as THREE.BufferAttribute;
+            attributeAdditionalCoords.set([node.additionalCoords[idx]], index);
+          }
         }
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.radius.array[index] = node.radius;
@@ -576,9 +576,12 @@ class Skeleton {
       attribute.set(position, index * 3);
 
       if (additionalCoords) {
-        const attributeAdditionalCoords = buffer.geometry.attributes
-          .additionalCoords as THREE.BufferAttribute;
-        attributeAdditionalCoords.set(additionalCoords, index * additionalCoordLength);
+        for (const idx of _.range(0, additionalCoords.length)) {
+          const attributeAdditionalCoords = buffer.geometry.attributes[
+            `additionalCoord_${idx}`
+          ] as THREE.BufferAttribute;
+          attributeAdditionalCoords.set([additionalCoords[idx]], index);
+        }
       }
 
       return [attribute];
@@ -638,24 +641,25 @@ class Skeleton {
       const { attributes } = buffer.geometry;
       const positionAttribute = attributes.position as THREE.BufferAttribute;
       const treeIdAttribute = attributes.treeId as THREE.BufferAttribute;
-      const additionalCoordsAttribute = attributes.additionalCoords as THREE.BufferAttribute;
 
       positionAttribute.set(source.position, index * 6);
       positionAttribute.set(target.position, index * 6 + 3);
+      treeIdAttribute.set([treeId, treeId], index * 2);
 
+      const changedAttributes = [];
       if (source.additionalCoords && target.additionalCoords) {
-        additionalCoordsAttribute.set(
-          source.additionalCoords,
-          2 * index * source.additionalCoords.length,
-        );
-        additionalCoordsAttribute.set(
-          target.additionalCoords,
-          target.additionalCoords.length * (2 * index + 1),
-        );
+        for (const idx of _.range(0, source.additionalCoords.length)) {
+          const additionalCoordAttribute = attributes[
+            `additionalCoord_${idx}`
+          ] as THREE.BufferAttribute;
+
+          additionalCoordAttribute.set([source.additionalCoords[idx]], 2 * index);
+          additionalCoordAttribute.set([target.additionalCoords[idx]], 2 * index + 1);
+          changedAttributes.push(additionalCoordAttribute);
+        }
       }
 
-      treeIdAttribute.set([treeId, treeId], index * 2);
-      return [positionAttribute, treeIdAttribute, additionalCoordsAttribute];
+      return [positionAttribute, treeIdAttribute, ...changedAttributes];
     });
   }
 

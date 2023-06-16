@@ -489,7 +489,6 @@ export class InputMouse {
     this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
     this.hammerManager.on("pinchend", () => this.pinchEnd());
 
-    console.log("initialBindings", initialBindings);
     for (const [eventName, eventHandler] of Object.entries(initialBindings)) {
       this.emitter.on(eventName, eventHandler);
     }

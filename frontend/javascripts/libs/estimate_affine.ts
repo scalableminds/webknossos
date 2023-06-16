@@ -25,7 +25,14 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
     b.push([qz]);
   }
 
-  const x = solve(A, b).to1DArray();
+  const xMatrix = solve(A, b);
+  const x = xMatrix.to1DArray();
+  const error = Matrix.sub(b, new Matrix(A).mmul(xMatrix)).to1DArray();
+  console.log(
+    "Affine estimation error: ",
+    error,
+    `(mean=${_.mean(error.map((el) => Math.abs(el)))})`,
+  );
 
   const affineMatrix = new Matrix([
     [x[0], x[1], x[2], x[3]],

@@ -26,8 +26,7 @@ object PrecomputedArray extends LazyLogging {
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
-    val basePath = magPath.parent
-    val headerBytes = (basePath / PrecomputedHeader.FILENAME_INFO).readBytes()
+    val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
         "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")

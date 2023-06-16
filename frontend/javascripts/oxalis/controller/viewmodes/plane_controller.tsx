@@ -291,7 +291,6 @@ class PlaneController extends React.PureComponent<Props> {
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then((el) => {
-        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }

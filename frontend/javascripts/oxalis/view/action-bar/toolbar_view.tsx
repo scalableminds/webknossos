@@ -73,6 +73,7 @@ import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentati
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import _ from "lodash";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -556,23 +557,20 @@ function ChangeBrushSizeButton() {
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
-
-  console.log(presetBrushSizes);
   let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
-  useEffect(() => {
-    if (presetBrushSizes == null) {
-      //TODO undefined when still fetching?
-      handleUpdatePresetBrushSizes(getDefaultBrushSizes());
-    }
-  }, [presetBrushSizes]);
-
   const getDefaultBrushSizes = (): BrushPresets => {
     return {
-      small: userSettings.brushSize.minimum,
-      medium: calculateMediumBrushSize(largeBrushSize),
+      small: Math.max(userSettings.brushSize.minimum, 10),
+      medium: calculateMediumBrushSize(maximumBrushSize),
       large: maximumBrushSize,
     };
   };
+  console.log(getDefaultBrushSizes());
+  useEffect(() => {
+    if (presetBrushSizes == null) {
+      handleUpdatePresetBrushSizes(getDefaultBrushSizes());
+    }
+  }, [presetBrushSizes]);
 
   let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
   if (presetBrushSizes == null) {
@@ -585,8 +583,6 @@ function ChangeBrushSizeButton() {
     mediumBrushSize = presetBrushSizes?.medium;
     largeBrushSize = presetBrushSizes?.large;
   }
-  //ich will die lokal haben weils praktischer ist.
-  // die sollen nicht default presets sein, wenn noch gefetcht wird. also nachm fetch auf fetched setzen, sonst default
 
   const centerBrushInViewport = () => {
     const position = getViewportExtents(Store.getState());
@@ -668,13 +664,6 @@ function ChangeBrushSizeButton() {
             }}
             onMouseEnter={() => centerBrushInViewport()}
           >
-            <div
-              style={{
-                marginBottom: 8,
-              }}
-            >
-              Set the brush size:
-            </div>
             <Row align="middle" style={{ textAlign: "center" }}>
               <Col>
                 <LogSliderSetting

@@ -50,7 +50,7 @@ object PrecomputedArray extends LazyLogging {
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
     new PrecomputedArray(
-      basePath,
+      magPath,
       dataSourceId,
       layerName,
       scaleHeader,

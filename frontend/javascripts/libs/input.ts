@@ -67,19 +67,42 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // This keyboard hook directly passes a keycombo and callback
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
+const EXTENDED_COMMAND_KEYS = "ctrl + k";
+const EXTENDED_COMMAND_DURATION = 3000;
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
+  hasExtendedBindings: boolean = false;
+  cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     initialBindings: BindingMap<KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
     },
+    extendedCommands?: BindingMap<KeyboardHandler>,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
+
+    if (extendedCommands != null && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
+      console.warn(
+        `Extended commands are enabled, but the keybinding for it is already in use. Please change the keybinding for '${EXTENDED_COMMAND_KEYS}'.`,
+      );
+    }
+
+    if (extendedCommands) {
+      this.hasExtendedBindings = true;
+      document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
+      this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
+      // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      for (const key of Object.keys(extendedCommands)) {
+        const callback = extendedCommands[key];
+        this.attach(key, callback, true);
+      }
     }
 
     for (const key of Object.keys(initialBindings)) {
@@ -88,7 +111,35 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler) {
+  toggleExtendedMode = (evt: KeyboardEvent) => {
+    evt.preventDefault();
+    const isInExtendedMode = KeyboardJS.getContext() === "extended";
+    if (isInExtendedMode) {
+      this.cancelExtendedModeTimeout();
+      KeyboardJS.setContext("default");
+      return;
+    }
+    KeyboardJS.setContext("extended");
+    this.cancelExtendedModeTimeoutId = setTimeout(() => {
+      KeyboardJS.setContext("default");
+    }, EXTENDED_COMMAND_DURATION);
+  };
+
+  preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
+    if (evt.ctrlKey && evt.key === "k") {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
+
+  cancelExtendedModeTimeout() {
+    if (this.cancelExtendedModeTimeoutId != null) {
+      clearTimeout(this.cancelExtendedModeTimeoutId);
+      this.cancelExtendedModeTimeoutId = null;
+    }
+  }
+
+  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -103,6 +154,11 @@ export class InputKeyboardNoLoop {
         if (shouldIgnore(event, key)) {
           return;
         }
+        const isInExtendedMode = KeyboardJS.getContext() === "extended";
+        if (isInExtendedMode) {
+          this.cancelExtendedModeTimeout();
+          KeyboardJS.setContext("default");
+        }
 
         if (!event.repeat) {
           callback(event);
@@ -113,7 +169,15 @@ export class InputKeyboardNoLoop {
       },
       _.noop,
     ];
-    KeyboardJS.bind(...binding);
+    if (isExtendedCommand) {
+      KeyboardJS.withContext("extended", () => {
+        KeyboardJS.bind(...binding);
+      });
+    } else {
+      KeyboardJS.withContext("default", () => {
+        KeyboardJS.bind(...binding);
+      });
+    }
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
     return this.bindings.push(binding);
   }
@@ -123,6 +187,9 @@ export class InputKeyboardNoLoop {
 
     for (const binding of this.bindings) {
       KeyboardJS.unbind(...binding);
+    }
+    if (this.hasExtendedBindings) {
+      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
     }
   }
 }
@@ -221,7 +288,9 @@ export class InputKeyboard {
         }
       },
     ];
-    KeyboardJS.bind(...binding);
+    KeyboardJS.withContext("default", () => {
+      KeyboardJS.bind(...binding);
+    });
     this.bindings.push(binding);
   }
 

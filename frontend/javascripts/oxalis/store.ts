@@ -291,7 +291,7 @@ export type BrushPresets = {
   readonly small: number;
   readonly medium: number;
   readonly large: number;
-}
+};
 
 export type DatasetConfiguration = {
   readonly fourBit: boolean;
@@ -342,7 +342,9 @@ export type UserConfiguration = {
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
   readonly presetBrushSizes: {
-    small: number, medium: number, large: number
+    small: number;
+    medium: number;
+    large: number;
   } | null;
   readonly rotateValue: number;
   readonly sortCommentsAsc: boolean;

@@ -549,15 +549,40 @@ function CreateTreeButton() {
   );
 }
 
-function ChangeBrushSizeButton() {
+function BrushPresetButton({
+  name,
+  icon,
+  brushSize,
+  onClick,
+}: {
+  name: string;
+  onClick: () => void;
+  icon: JSX.Element;
+  brushSize: number;
+}) {
   const { ThinSpace } = Unicode;
+  return (
+    <>
+      <div style={{ textAlign: "center" }}>
+        <ButtonComponent className="without-icon-margin" onClick={onClick}>
+          {icon}
+        </ButtonComponent>
+      </div>
+      <div style={{ textAlign: "center" }}>{name}</div>
+      <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
+        {brushSize}
+        {ThinSpace}vx
+      </div>
+    </>
+  );
+}
+
+function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  const presetBrushSizes = useSelector(
-    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
-  );
   let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+
   const getDefaultBrushSizes = (): BrushPresets => {
     return {
       small: Math.max(userSettings.brushSize.minimum, 10),
@@ -565,7 +590,10 @@ function ChangeBrushSizeButton() {
       large: maximumBrushSize,
     };
   };
-  console.log(getDefaultBrushSizes());
+
+  const presetBrushSizes = useSelector(
+    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
+  );
   useEffect(() => {
     if (presetBrushSizes == null) {
       handleUpdatePresetBrushSizes(getDefaultBrushSizes());
@@ -690,49 +718,28 @@ function ChangeBrushSizeButton() {
             <Divider style={{ marginBottom: 15, marginTop: 15 }} />
             <Row justify="space-between" align="middle">
               <Col>
-                <div style={{ textAlign: "center" }}>
-                  <ButtonComponent
-                    className="without-icon-margin"
-                    onClick={() => handleUpdateBrushSize(smallBrushSize)}
-                  >
-                    <i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
-                  </ButtonComponent>
-                </div>
-                <div style={{ textAlign: "center" }}>Small</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
-                  {Math.round(smallBrushSize)}
-                  {ThinSpace}vx
-                </div>
+                <BrushPresetButton
+                  name="Small"
+                  onClick={() => handleUpdateBrushSize(smallBrushSize)}
+                  icon={<i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />}
+                  brushSize={Math.round(smallBrushSize)}
+                />
               </Col>
               <Col>
-                <div style={{ textAlign: "center" }}>
-                  <ButtonComponent
-                    className="without-icon-margin"
-                    onClick={() => handleUpdateBrushSize(mediumBrushSize)}
-                  >
-                    <i className="fas fa-circle fa-sm" />
-                  </ButtonComponent>
-                </div>
-                <div style={{ textAlign: "center" }}>Medium</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
-                  {Math.round(mediumBrushSize)}
-                  {ThinSpace}vx
-                </div>
+                <BrushPresetButton
+                  name="Medium"
+                  onClick={() => handleUpdateBrushSize(mediumBrushSize)}
+                  icon={<i className="fas fa-circle fa-sm" />}
+                  brushSize={Math.round(mediumBrushSize)}
+                />
               </Col>
               <Col>
-                <div style={{ textAlign: "center" }}>
-                  <ButtonComponent
-                    className="without-icon-margin"
-                    onClick={() => handleUpdateBrushSize(largeBrushSize)}
-                  >
-                    <i className="fas fa-circle fa-lg" />
-                  </ButtonComponent>
-                </div>
-                <div style={{ textAlign: "center" }}>Large</div>
-                <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
-                  {Math.round(largeBrushSize)}
-                  {ThinSpace}vx
-                </div>
+                <BrushPresetButton
+                  name="Large"
+                  onClick={() => handleUpdateBrushSize(largeBrushSize)}
+                  icon={<i className="fas fa-circle fa-lg" />}
+                  brushSize={Math.round(largeBrushSize)}
+                />
               </Col>
             </Row>
           </div>
@@ -1161,7 +1168,7 @@ function ToolSpecificSettings({
           className="antd-legacy-group"
         >
           {showCreateCellButton ? <CreateCellButton /> : null}
-          {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
+          {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
         </Space>
       ) : null}
 

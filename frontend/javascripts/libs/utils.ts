@@ -407,12 +407,7 @@ export function stringToNumberArray(s: string): Array<number> {
   const result = [];
 
   for (const e of stringArray) {
-    let newEl;
-    try {
-      newEl = eval(e);
-    } catch {
-      newEl = parseFloat(e);
-    }
+    const newEl = parseFloat(e);
 
     if (!Number.isNaN(newEl)) {
       result.push(newEl);

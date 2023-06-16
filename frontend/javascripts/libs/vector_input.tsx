@@ -82,15 +82,9 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 
   makeInvalidValueValid(text: string): T {
     const validSubVector = text
-      .replace(this.props.allowDecimals ? /[^0-9,.+-/*()]/gm : /[^0-9,+-/*()]/gm, "")
+      .replace(this.props.allowDecimals ? /[^0-9,.]/gm : /[^0-9,]/gm, "")
       .split(",")
-      .map((el) => {
-        try {
-          return eval(el);
-        } catch {
-          return parseFloat(el) || 0;
-        }
-      })
+      .map((el) => parseFloat(el) || 0)
       .slice(0, this.defaultValue.length);
     const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
     const vector = paddedVector as any as T;
@@ -109,8 +103,8 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = this.props.allowDecimals
-      ? /^[\d\s,.+-/*()]*$/g.test(text)
-      : /^[\d\s,+-/*()]*$/g.test(text);
+      ? /^[\d\s,.]*$/g.test(text)
+      : /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === this.defaultValue.length;
 

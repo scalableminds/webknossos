@@ -1,10 +1,11 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -15,12 +16,17 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   @throws[IOException]
-  def open(magPath: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int])(
-      implicit ec: ExecutionContext): PrecomputedArray = {
-
+  def open(magPath: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
+    val basePath = magPath.parent
     val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
@@ -43,18 +49,26 @@ object PrecomputedArray extends LazyLogging {
       throw new IllegalArgumentException(
         f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
     }
-    new PrecomputedArray(magPath,
-                         scaleHeader,
-                         axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-                         channelIndex)
+    new PrecomputedArray(
+      basePath,
+      dataSourceId,
+      layerName,
+      scaleHeader,
+      axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+      channelIndex,
+      sharedChunkContentsCache
+    )
   }
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
+                       dataSourceId: DataSourceId,
+                       layerName: String,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
-                       channelIndex: Option[Int])(implicit ec: ExecutionContext)
-    extends DatasetArray(vaultPath, header, axisOrder, channelIndex)
+                       channelIndex: Option[Int],
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext)
+    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {
 
@@ -73,11 +87,11 @@ class PrecomputedArray(vaultPath: VaultPath,
   // Implemented according to https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md,
   // directly adapted from https://github.com/scalableminds/webknossos-connect/blob/master/wkconnect/backends/neuroglancer/sharding.py.
 
-  private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
-    AlfuFoxCache()
+  private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
+    AlfuCache()
 
-  private val minishardIndexCache: AlfuFoxCache[(VaultPath, Int), Seq[(Long, Long, Long)]] =
-    AlfuFoxCache()
+  private val minishardIndexCache: AlfuCache[(VaultPath, Int), Seq[(Long, Long, Long)]] =
+    AlfuCache()
 
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
     CompressedMortonCode.encode(chunkIndex, header.gridSize)

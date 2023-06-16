@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
@@ -41,7 +41,7 @@ class TSRemoteWebKnossosClient @Inject()(
 
   private val webKnossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val dataSourceIdByTracingIdCache: AlfuFoxCache[String, DataSourceId] = AlfuFoxCache()
+  private lazy val dataSourceIdByTracingIdCache: AlfuCache[String, DataSourceId] = AlfuCache()
 
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")

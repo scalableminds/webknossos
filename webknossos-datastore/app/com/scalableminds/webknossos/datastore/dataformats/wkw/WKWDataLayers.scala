@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
+import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
 
@@ -17,7 +19,9 @@ trait WKWLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider =
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                              dataSourceId: DataSourceId,
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new WKWBucketProvider(this)
 
   def wkwResolutions: List[WKWResolution]

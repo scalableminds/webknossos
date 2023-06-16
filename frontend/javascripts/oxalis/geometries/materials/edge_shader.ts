@@ -16,6 +16,7 @@ class EdgeShader {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
+      transparent: true,
       glslVersion: THREE.GLSL3,
     });
     shaderEditor.addMaterial("edge", this.material);
@@ -78,10 +79,13 @@ in float treeId;
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
+out float alpha;
+
 void main() {
+    alpha = 1.0;
     <% _.each(additionalCoords || [], (_coord, idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
-        return;
+        alpha = 0.;
       }
     <% }) %>
 
@@ -107,10 +111,11 @@ precision highp float;
 
 out vec4 fragColor;
 in vec3 color;
+in float alpha;
 
 void main()
 {
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, alpha);
 }`;
   }
 }

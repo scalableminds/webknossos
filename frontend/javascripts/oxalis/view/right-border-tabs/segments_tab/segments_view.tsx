@@ -7,6 +7,7 @@ import {
   SettingOutlined,
   ExclamationCircleOutlined,
   ArrowRightOutlined,
+  AimOutlined,
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -57,6 +58,7 @@ import { updateTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import {
   BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
+  clickSegmentAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
@@ -969,6 +971,13 @@ class SegmentsView extends React.Component<Props, State> {
                       label: "Create new group",
                     },
                     {
+                      key: "focusSegment",
+                      onClick: () => this.openFocusSegmentPrompt(),
+                      disabled: isEditingDisabled,
+                      icon: <AimOutlined />,
+                      label: "Focus segment by ID",
+                    },
+                    {
                       key: "delete",
                       disabled: isEditingDisabled,
                       onClick: () => this.handleDeleteGroup(id),
@@ -1111,6 +1120,17 @@ class SegmentsView extends React.Component<Props, State> {
         </DomVisibilityObserver>
       </div>
     );
+  }
+
+  openFocusSegmentPrompt() {
+    const id = window.prompt("Focus segment with ID: ");
+    if (id == null || isNaN(+id)) {
+      alert("Please enter a valid segment ID");
+    } else {
+      console.log(`test${Number(id)} ${getPosition(this.props.flycam)}`);
+      Store.dispatch(clickSegmentAction(Number(id), getPosition(this.props.flycam)));
+      console.log(id);
+    }
   }
 
   createGroup(groupId: number): void {

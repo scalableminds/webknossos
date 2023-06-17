@@ -73,6 +73,7 @@ import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentati
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import { InputKeyboardNoLoop } from "libs/input";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -618,6 +619,13 @@ function ChangeBrushSizePopover() {
       setMousePositionAction([position[activeViewPort][0] / 2, position[activeViewPort][1] / 2]),
     );
   };
+
+  const extendedKeyboardBindings = {
+    1: () => handleUpdateBrushSize(smallBrushSize),
+    2: () => handleUpdateBrushSize(mediumBrushSize),
+    3: () => handleUpdateBrushSize(largeBrushSize),
+  };
+  new InputKeyboardNoLoop({}, {}, extendedKeyboardBindings);
 
   const items: MenuProps["items"] = [
     {

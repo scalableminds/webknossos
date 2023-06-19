@@ -30,16 +30,4 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
     }
   }
 
-  def sleep(): Future[Unit] = {
-    logger.info(s"[${Thread.currentThread.getName}] sleeping for 1 minute...")
-    Thread.sleep(1000 * 60)
-    logger.info(s"[${Thread.currentThread.getName}] waking up...")
-    Future.successful(())
-  }
-
-  def test: Action[AnyContent] = Action.async {
-    sleep()
-    Future.successful(Ok("started some sleeping!"))
-  }
-
 }

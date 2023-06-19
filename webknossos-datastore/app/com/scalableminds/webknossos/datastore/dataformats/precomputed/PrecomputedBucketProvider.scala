@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.precomputed
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
-import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
@@ -50,18 +49,18 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
               magPath: VaultPath <- if (precomputedMag.isRemote) {
                 dataVaultService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
-              chunkContentsCache <- sharedChunkContentsCache
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(
-                PrecomputedArray.open(magPath,
-                                      dataSourceId,
-                                      layer.name,
-                                      precomputedMag.axisOrder,
-                                      precomputedMag.channelIndex,
-                                      chunkContentsCache)).map(new PrecomputedCubeHandle(_))
+              chunkContentsCache <- sharedChunkContentsCache.toFox
+              cubeHandle <- PrecomputedArray
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      precomputedMag.axisOrder,
+                      precomputedMag.channelIndex,
+                      chunkContentsCache)
+                .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
           case None => Empty
         }
-
     }
   }
 

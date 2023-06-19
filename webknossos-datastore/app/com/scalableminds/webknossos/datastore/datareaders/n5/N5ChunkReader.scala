@@ -30,10 +30,7 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
     }
 
     for {
-      bytes <- path.readBytes(range) match {
-        case Some(bytes) => Fox.successful(bytes)
-        case None        => Fox.empty
-      }
+      bytes <- path.readBytes(range)
       (blockHeader, data) <- tryo(dataExtractor.readBytesAndHeader(bytes)).toFox
       paddedChunkBytes <- tryo(processBytes(data, blockHeader.blockSize.product)).toFox ?~> "chunk.decompress.failed"
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))

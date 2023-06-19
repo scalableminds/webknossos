@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.services.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
@@ -23,10 +24,11 @@ import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +46,8 @@ class WKRemoteDataStoreController @Inject()(
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
     mailchimpClient: MailchimpClient,
+    slackNotificationService: SlackNotificationService,
+    conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -78,8 +82,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
-                          requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
+  private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
+                                  requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
@@ -104,11 +108,20 @@ class WKRemoteDataStoreController @Inject()(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion)(usedStorageService.refreshStorageReportForDataset(dataSet))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user._organization, dataSetName))
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }
     }
+
+  private def logUploadToSlack(organizationId: ObjectId, datasetName: String): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+      resultLink = s"${conf.Http.uri}/datasets/${organization.name}/$datasetName"
+      _ = slackNotificationService.info("Dataset upload (without conversion)",
+                                        s"For organization: ${organization.displayName}. <$resultLink|Result>")
+    } yield ()
 
   def statusUpdate(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name, key) { _ =>
@@ -172,11 +185,10 @@ class WKRemoteDataStoreController @Inject()(
           .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
         _ <- existingDataset.flatMap {
-          case Full(dataset) => {
+          case Full(dataset) =>
             dataSetDAO
               .deleteDataset(dataset._id)
               .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-          }
           case _ => Fox.successful(())
         }
       } yield Ok

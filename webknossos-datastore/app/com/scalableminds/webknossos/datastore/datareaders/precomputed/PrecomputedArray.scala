@@ -17,7 +17,6 @@ import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
-
   def open(
       magPath: VaultPath,
       dataSourceId: DataSourceId,

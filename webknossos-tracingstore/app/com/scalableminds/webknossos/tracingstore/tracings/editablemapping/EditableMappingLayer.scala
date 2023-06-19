@@ -18,13 +18,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSourceDescriptorService}
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def dataVaultServiceOpt: Option[DataVaultService] = None
+  override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -83,7 +83,7 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)

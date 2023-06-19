@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3Layer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
@@ -32,7 +32,7 @@ import scala.io.Source
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
-    dataVaultService: DataVaultService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit val ec: ExecutionContext)
@@ -252,7 +252,7 @@ class DataSourceService @Inject()(
           case _                       => None
         }
         removedEntriesCount = magsOpt match {
-          case Some(mags) => mags.map(mag => dataVaultService.removeVaultFromCache(mag)); mags.length
+          case Some(mags) => mags.map(mag => remoteSourceDescriptorService.removeVaultFromCache(mag)); mags.length
           case None       => 0
         }
       } yield removedEntriesCount

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
 import ucar.ma2.{Array => MultiArray}
@@ -30,7 +30,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 
 class N5BucketProvider(layer: N5Layer,
                        dataSourceId: DataSourceId,
-                       val dataVaultServiceOpt: Option[DataVaultService],
+                       val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging {
@@ -43,11 +43,11 @@ class N5BucketProvider(layer: N5Layer,
     n5MagOpt match {
       case None => Fox.empty
       case Some(n5Mag) =>
-        dataVaultServiceOpt match {
-          case Some(dataVaultService: DataVaultService) =>
+        remoteSourceDescriptorServiceOpt match {
+          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
               magPath: VaultPath <- if (n5Mag.isRemote) {
-                dataVaultService.vaultPathFor(n5Mag)
+                remoteSourceDescriptorService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- N5Array

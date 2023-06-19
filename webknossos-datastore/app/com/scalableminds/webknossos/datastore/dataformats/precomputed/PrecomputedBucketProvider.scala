@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
 
@@ -30,7 +30,7 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCube
 
 class PrecomputedBucketProvider(layer: PrecomputedLayer,
                                 dataSourceId: DataSourceId,
-                                val dataVaultServiceOpt: Option[DataVaultService],
+                                val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                                 sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging {
@@ -43,11 +43,11 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
     precomputedMagOpt match {
       case None => Fox.empty
       case Some(precomputedMag) =>
-        dataVaultServiceOpt match {
-          case Some(dataVaultService: DataVaultService) =>
+        remoteSourceDescriptorServiceOpt match {
+          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
               magPath: VaultPath <- if (precomputedMag.isRemote) {
-                dataVaultService.vaultPathFor(precomputedMag)
+                remoteSourceDescriptorService.vaultPathFor(precomputedMag)
               } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- PrecomputedArray

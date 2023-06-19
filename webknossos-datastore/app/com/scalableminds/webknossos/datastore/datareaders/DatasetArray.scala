@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -143,5 +143,8 @@ class DatasetArray(vaultPath: VaultPath,
 }
 
 object DatasetArray {
-  val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+  private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+
+  def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
+    bool2Fox(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of ${chunkSizeLimitBytes}, got ${bytesPerChunk}"
 }

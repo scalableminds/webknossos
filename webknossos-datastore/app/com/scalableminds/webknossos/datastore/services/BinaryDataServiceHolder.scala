@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}

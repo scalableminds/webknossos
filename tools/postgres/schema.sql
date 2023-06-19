@@ -386,6 +386,7 @@ CREATE TABLE webknossos.multiUsers(
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
@@ -498,6 +499,13 @@ CREATE TABLE webknossos.folder_allowedTeams(
   PRIMARY KEY (_folder, _team)
 );
 
+CREATE TABLE webknossos.emailVerificationKeys(
+  _id CHAR(24) PRIMARY KEY,
+  key TEXT NOT NULL,
+  email VARCHAR(512) NOT NULL,
+  _multiUser CHAR(24) NOT NULL,
+  validUntil TIMESTAMPTZ NOT NULL
+);
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 

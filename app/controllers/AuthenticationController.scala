@@ -57,6 +57,7 @@ class AuthenticationController @Inject()(
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
+    emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -127,7 +128,8 @@ class AuthenticationController @Inject()(
                          autoActivate: Boolean,
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
-                         registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+                         registerBrainDB: Boolean = false,
+                         verifyEmail: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
     val passwordInfo: PasswordInfo =
       password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
     for {
@@ -138,7 +140,8 @@ class AuthenticationController @Inject()(
                                  autoActivate,
                                  passwordInfo,
                                  isAdmin = false,
-                                 isOrganizationOwner = false) ?~> "user.creation.failed"
+                                 isOrganizationOwner = false,
+                                 emailVerified = verifyEmail) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -175,6 +178,8 @@ class AuthenticationController @Inject()(
                     authenticator <- combinedAuthenticatorService.create(loginInfo)
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
+                    _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+                      emailVerificationService.assertUserHasVerifiedEmail(user)(GlobalAccessContext, ec))
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                     _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
                   } yield result
@@ -515,7 +520,7 @@ class AuthenticationController @Inject()(
     }
 
   // Is called after user was successfully authenticated
-  def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
+  private def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
     implicit request: Request[AnyContent] =>
       userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
@@ -525,7 +530,13 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user <- createUser(organization, oidc.email, oidc.given_name, oidc.family_name, autoActivate = true, None)
+            user <- createUser(organization,
+                               oidc.email,
+                               oidc.given_name,
+                               oidc.family_name,
+                               autoActivate = true,
+                               None,
+                               verifyEmail = true) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(loginInfo)
@@ -577,14 +588,17 @@ class AuthenticationController @Inject()(
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
-                    user <- userService.insert(organization._id,
-                                               email,
-                                               firstName,
-                                               lastName,
-                                               isActive = true,
-                                               passwordHasher.hash(signUpData.password),
-                                               isAdmin = true,
-                                               isOrganizationOwner = true) ?~> "user.creation.failed"
+                    user <- userService.insert(
+                      organization._id,
+                      email,
+                      firstName,
+                      lastName,
+                      isActive = true,
+                      passwordHasher.hash(signUpData.password),
+                      isAdmin = true,
+                      isOrganizationOwner = true,
+                      emailVerified = false
+                    ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService

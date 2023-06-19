@@ -38,6 +38,7 @@ class UserService @Inject()(conf: WkConf,
                             teamMembershipService: TeamMembershipService,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
+                            emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -91,7 +92,8 @@ class UserService @Inject()(conf: WkConf,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean,
-             isOrganizationOwner: Boolean): Fox[User] = {
+             isOrganizationOwner: Boolean,
+             emailVerified: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -100,9 +102,11 @@ class UserService @Inject()(conf: WkConf,
         multiUserId,
         email,
         passwordInfo,
-        isSuperUser = false
+        isSuperUser = false,
+        isEmailVerified = emailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
+      _ <- Fox.runIf(!emailVerified)(emailVerificationService.sendEmailVerification(multiUser))
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
       teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
       newUserId = ObjectId.generate

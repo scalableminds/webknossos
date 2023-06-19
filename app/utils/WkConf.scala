@@ -32,6 +32,14 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
       val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
+
+      object EmailVerification {
+        val activated: Boolean = get[Boolean]("webKnossos.user.emailVerification.activated")
+        val required: Boolean = get[Boolean]("webKnossos.user.emailVerification.required")
+        val gracePeriod: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.gracePeriod")
+        val linkExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.linkExpiry")
+      }
+
     }
 
     val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")

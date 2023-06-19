@@ -99,7 +99,8 @@ class WKRemoteDataStoreController @Inject()(
                           token: String,
                           dataSetName: String,
                           dataSetSizeBytes: Long,
-                          needsConversion: Boolean): Action[AnyContent] =
+                          needsConversion: Boolean,
+                          viaAddRoute: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
@@ -107,19 +108,20 @@ class WKRemoteDataStoreController @Inject()(
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- Fox.runIf(!needsConversion)(usedStorageService.refreshStorageReportForDataset(dataSet))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user._organization, dataSetName))
+          _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataSet))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user._organization, dataSetName, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }
     }
 
-  private def logUploadToSlack(organizationId: ObjectId, datasetName: String): Fox[Unit] =
+  private def logUploadToSlack(organizationId: ObjectId, datasetName: String, viaAddRoute: Boolean): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
       resultLink = s"${conf.Http.uri}/datasets/${organization.name}/$datasetName"
-      _ = slackNotificationService.info("Dataset upload (without conversion)",
+      addNote = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
+      _ = slackNotificationService.info(s"Dataset added $addNote",
                                         s"For organization: ${organization.displayName}. <$resultLink|Result>")
     } yield ()
 

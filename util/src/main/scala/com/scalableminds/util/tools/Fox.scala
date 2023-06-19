@@ -247,9 +247,20 @@ object Fox extends FoxImplicits {
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self: Fox[A] = this
 
+  // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
   def ?~>(s: String): Fox[A] =
     new Fox(futureBox.map(_ ?~! s))
 
+  // Add error message only in case of Failure, pass through Empty
+  def ?~~>(s: String): Fox[A] =
+    futureBox.flatMap {
+      case f: Failure =>
+        new Fox(Future.successful(f)) ?~> s
+      case Full(value) => Fox.successful(value)
+      case Empty       => Fox.empty
+    }
+
+  // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
   def ~>[T](errorCode: => T): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 

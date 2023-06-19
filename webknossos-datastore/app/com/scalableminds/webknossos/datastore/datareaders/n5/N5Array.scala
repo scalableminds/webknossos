@@ -21,7 +21,7 @@ object N5Array extends LazyLogging {
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[N5Array] =
     for {
       headerBytes <- (path / N5Header.FILENAME_ATTRIBUTES_JSON)
-        .readBytes() ?~> s"Could not read header ${N5Header.FILENAME_ATTRIBUTES_JSON}"
+        .readBytes() ?~> s"Could not read header at ${N5Header.FILENAME_ATTRIBUTES_JSON}"
       header <- JsonHelper.parseAndValidateJson[N5Header](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
     } yield

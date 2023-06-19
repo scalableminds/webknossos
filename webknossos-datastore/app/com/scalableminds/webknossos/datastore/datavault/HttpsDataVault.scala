@@ -29,7 +29,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       response <- range match {
         case StartEnd(r)          => getWithRange(uri, r)
         case SuffixLength(length) => getWithSuffixRange(uri, length)
-        case Complete()           => fullGet(uri)
+        case Complete()           => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
       result <- if (Status.isSuccessful(response.status)) {
@@ -56,17 +56,17 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
   private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- rpc(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get()
+      response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get()
     } yield response
 
   private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- rpc(uri).withHttpHeaders("Range" -> s"bytes=-$length").get()
+      response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get()
     } yield response
 
-  private def fullGet(uri: URI)(implicit ec: ExecutionContext): Fox[WSResponse] =
-    rpc(uri).get()
+  private def getComplete(uri: URI)(implicit ec: ExecutionContext): Fox[WSResponse] =
+    buildRequest(uri).get()
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
@@ -74,7 +74,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       _ <- bool2Fox(headerInfos._1) ?~> s"Range requests not supported for ${uri.toString}"
     } yield ()
 
-  private def rpc(uri: URI) = {
+  private def buildRequest(uri: URI) = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)
     getBasicAuthCredential match {
       case Some(credential) =>

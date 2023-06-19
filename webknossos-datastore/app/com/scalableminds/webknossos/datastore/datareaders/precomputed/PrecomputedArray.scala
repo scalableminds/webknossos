@@ -26,7 +26,7 @@ object PrecomputedArray extends LazyLogging {
       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
-        .readBytes() ?~> s"Could not read header ${PrecomputedHeader.FILENAME_INFO}"
+        .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
       rootHeader <- JsonHelper.parseAndValidateJson[PrecomputedHeader](headerBytes) ?~> "Could not parse array header"
       scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)

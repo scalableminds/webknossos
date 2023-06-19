@@ -6,7 +6,6 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full, Empty}
 import net.liftweb.util.Helpers.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
@@ -18,20 +17,14 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncodingBox <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)).futureBox
-      bytesAndEncoding <- bytesAndEncodingBox match {
-        case f: Failure =>
-          f ?~> "Failed to read from vault path" // Add error message only in Failure case, propagate Empty
-        case Full(bytesAndEncoding) => Fox.successful(bytesAndEncoding)
-        case Empty                  => Fox.empty
-      }
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?~~> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
   def readLastBytes(byteCount: Long)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount))
-      decoded <- decode(bytesAndEncoding)
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount)) ?~~> "Failed to read from vault path"
+      decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
   private def decode(bytesAndEncoding: (Array[Byte], Encoding.Value))(implicit ec: ExecutionContext): Fox[Array[Byte]] =

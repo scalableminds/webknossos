@@ -1,17 +1,16 @@
 package com.scalableminds.webknossos.datastore.datavault
 
-import com.scalableminds.util.tools.Fox
+import net.liftweb.util.Helpers.tryo
 
 import java.net.URI
 import java.nio.file.Path
 import scala.collection.immutable.NumericRange
-import scala.concurrent.ExecutionContext
 
 class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
     extends VaultPath(uri = new URI(""), dataVault = dataVault) {
 
-  override def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    dataVault.readBytesLocal(basePath, range)
+  override def readBytes(range: Option[NumericRange[Long]] = None): Option[Array[Byte]] =
+    tryo(dataVault.readBytesLocal(basePath, range)).toOption
 
   override def basename: String = basePath.getFileName.toString
 

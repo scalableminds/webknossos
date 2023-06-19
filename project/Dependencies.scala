@@ -46,6 +46,7 @@ object Dependencies {
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
   private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
+  private val sttp = "com.softwaremill.sttp.client3" %% "core" % "3.8.11"
   private val guava = "com.google.guava" % "guava" % "18.0"
   private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
@@ -106,6 +107,7 @@ object Dependencies {
     awsS3,
     tika,
     jblosc,
+    sttp,
     commonsCompress,
     googleCloudStorage,
     googleCloudStorageNio,

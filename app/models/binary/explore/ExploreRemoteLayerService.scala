@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultsHolder, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.credential.CredentialService
 import models.user.User
@@ -38,9 +38,7 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, dataVaultService: DataVaultService)
-    extends FoxImplicits
-    with LazyLogging {
+class ExploreRemoteLayerService @Inject()(credentialService: CredentialService) extends FoxImplicits with LazyLogging {
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
@@ -174,7 +172,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
                                                             requestingUser._organization)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
-      remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
+      remotePath <- DataVaultsHolder.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
         remotePath,
         credentialId.map(_.toString),

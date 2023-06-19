@@ -1,4 +1,4 @@
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -22,7 +22,7 @@ import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Model, api } from "oxalis/singletons";
 import PlaneView from "oxalis/view/plane_view";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
@@ -65,8 +65,10 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracing, getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import {getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -263,7 +265,6 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
   };
-
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   isStarted: boolean = false;
   // Copied from backbone events (TODO: handle this better)
@@ -280,7 +281,6 @@ class PlaneController extends React.PureComponent<Props> {
 
     this.storePropertyUnsubscribers = [];
   }
-
   componentDidMount() {
     this.input = {
       // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
@@ -319,6 +319,19 @@ class PlaneController extends React.PureComponent<Props> {
         );
       });
     });
+  }
+
+  getBrushPresetsOrSetDefault():BrushPresets{
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if(brushPresetsFromStore!=null){
+      return brushPresetsFromStore;
+    }
+    else{
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
   }
 
   getPlaneMouseControls(planeId: OrthoView): Record<string, any> {
@@ -491,8 +504,30 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
+
+    const handleUpdateBrushSize = (size: 1|2|3) => {
+      const brushPresets = this.getBrushPresetsOrSetDefault();
+      switch(size){
+        case 1:
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+          console.log(`${brushPresets.small}`);
+          break;
+        case 2:
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+          console.log(`${brushPresets.medium}`);
+          break;
+        case 3:
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+          console.log(`${brushPresets.large}`);
+          break;
+      }
+    }
+
     let extendedControls = {
       m: () => setTool(AnnotationToolEnum.MOVE),
+      1: () => console.log('1'),
+      2: () => handleUpdateBrushSize(2),
+      3: () => handleUpdateBrushSize(3),
       ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 

@@ -577,35 +577,35 @@ function BrushPresetButton({
   );
 }
 
+  export function getDefaultBrushSizes (maximum: number, minimum: number) {
+    return {
+      small: Math.max(minimum, 10),
+      medium: calculateMediumBrushSize(maximum),
+      large: maximum,
+    };
+}
+
 function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
   let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
 
-  const getDefaultBrushSizes = (): BrushPresets => {
-    return {
-      small: Math.max(userSettings.brushSize.minimum, 10),
-      medium: calculateMediumBrushSize(maximumBrushSize),
-      large: maximumBrushSize,
-    };
-  };
-
+  const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
   useEffect(() => {
     if (presetBrushSizes == null) {
-      handleUpdatePresetBrushSizes(getDefaultBrushSizes());
+      handleUpdatePresetBrushSizes(defaultBrushSizes);
     }
   }, [presetBrushSizes]);
 
   let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
   if (presetBrushSizes == null) {
-    const defaultSizes = getDefaultBrushSizes();
-    smallBrushSize = defaultSizes.small;
-    mediumBrushSize = defaultSizes.medium;
-    largeBrushSize = defaultSizes.large;
+    smallBrushSize = defaultBrushSizes.small;
+    mediumBrushSize = defaultBrushSizes.medium;
+    largeBrushSize = defaultBrushSizes.large;
   } else {
     smallBrushSize = presetBrushSizes?.small;
     mediumBrushSize = presetBrushSizes?.medium;
@@ -683,7 +683,7 @@ function ChangeBrushSizePopover() {
       ],
     },
     {
-      label: <div onClick={() => handleUpdatePresetBrushSizes(getDefaultBrushSizes())}>Reset</div>,
+      label: <div onClick={() => handleUpdatePresetBrushSizes(defaultBrushSizes)}>Reset</div>,
       key: "reset",
     },
   ];

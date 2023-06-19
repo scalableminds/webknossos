@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(
     implicit ec: ExecutionContext)

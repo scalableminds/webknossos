@@ -257,6 +257,9 @@
               this._paused = false;
               this.setContext("global");
               this.watch(targetWindow, targetElement, platform, userAgent);
+              // Switch to default context whose shortcuts will not be active in other contexts.
+              // Having the global context as default would leave the shortcuts in all contexts active.
+              this.setContext("default");
             }
 
             Keyboard.prototype.setLocale = function (localeName, localeBuilder) {

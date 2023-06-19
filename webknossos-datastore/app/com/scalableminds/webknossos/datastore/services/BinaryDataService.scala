@@ -1,15 +1,17 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
+import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
@@ -20,6 +22,7 @@ class BinaryDataService(val dataBaseDir: Path,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         dataVaultServiceOpt: Option[DataVaultService],
                         val applicationHealthService: Option[ApplicationHealthService],
+                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: Option[DatasetErrorLoggingService])
     extends FoxImplicits
     with DataSetDeleter
@@ -39,12 +42,13 @@ class BinaryDataService(val dataBaseDir: Path,
       Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
     } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.subsamplingStrides == Vec3Int(1, 1, 1)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
-        handleBucketRequest(request, bucket)
+        handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }
     } else {
       Fox.sequence {
         bucketQueue.toList.map { bucket =>
-          handleBucketRequest(request, bucket).map(r => bucket -> r)
+          handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
+            .map(r => bucket -> r)
         }
       }.map(buckets => cutOutCuboid(request, buckets.flatten))
     }
@@ -84,8 +88,11 @@ class BinaryDataService(val dataBaseDir: Path,
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      val bucketProvider = bucketProviderCache.getOrLoadAndPut(request.dataLayer)(dataLayer =>
-        dataLayer.bucketProvider(dataVaultServiceOpt))
+      // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
+      val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
+      val bucketProvider =
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
@@ -199,19 +206,34 @@ class BinaryDataService(val dataBaseDir: Path,
     compressed
   }
 
-  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): (Int, Int) = {
+  def clearCache(organizationName: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
+    val dataSourceId = DataSourceId(datasetName, organizationName)
+
     def dataCubeMatchPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
+      cubeKey.dataSourceName == datasetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.dataSetName == dataSetName && agglomerateKey.organizationName == organizationName && layerName
+      agglomerateKey.dataSetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
         .forall(_ == agglomerateKey.layerName)
+
+    def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
+      key._1 == DataSourceId(datasetName, organizationName) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
+
     val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
-    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
+
+    bucketProviderCache.clear(bucketProviderPredicate)
+
+    def chunkContentsPredicate(key: String): Boolean =
+      key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
+        key.startsWith(s"${dataSourceId.toString}__$l"))
+
+    val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
+
+    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount)
   }
 
 }

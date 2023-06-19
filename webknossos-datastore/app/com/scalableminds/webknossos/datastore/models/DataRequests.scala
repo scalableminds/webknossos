@@ -29,6 +29,7 @@ case class WebKnossosDataRequest(
     cubeSize: Int,
     fourBit: Option[Boolean],
     applyAgglomerate: Option[String],
+    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]],
     version: Option[Long]
 ) extends AbstractDataRequest {
 
@@ -36,7 +37,7 @@ case class WebKnossosDataRequest(
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
 
   def settings: DataServiceRequestSettings =
-    DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
+    DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version, additionalCoordinates)
 }
 
 object WebKnossosDataRequest {
@@ -66,4 +67,13 @@ object DataRequestCollection {
   type DataRequestCollection = List[AbstractDataRequest]
 
   implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)
+}
+
+case class AdditionalCoordinateRequest(
+    name: String,
+    value: Int
+)
+
+object AdditionalCoordinateRequest {
+  implicit val jsonFormat: OFormat[AdditionalCoordinateRequest] = Json.format[AdditionalCoordinateRequest]
 }

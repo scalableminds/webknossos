@@ -33,6 +33,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       object Mapping {
         val maxEntries: Int = get[Int]("datastore.cache.mapping.maxEntries")
       }
+      object ImageArrayChunks {
+        val maxSizeBytes: Long = get[Long]("datastore.cache.imageArrayChunks.maxSizeBytes")
+      }
       object AgglomerateFile {
         val maxFileHandleEntries: Int = get[Int]("datastore.cache.agglomerateFile.maxFileHandleEntries")
         val maxSegmentIdEntries: Int = get[Int]("datastore.cache.agglomerateFile.maxSegmentIdEntries")

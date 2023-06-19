@@ -40,7 +40,8 @@ class WebknossosZarrExplorer extends RemoteLayerExplorer {
                                Category.color,
                                l.boundingBox,
                                zarrLayer._1.elementClass,
-                               zarrLayer._1.mags),
+                               zarrLayer._1.mags,
+                               additionalCoordinates = None),
                  zarrLayer._2))
         case layer => Fox.failure(s"Only remote Zarr layers are supported, got ${layer.getClass}.")
       }

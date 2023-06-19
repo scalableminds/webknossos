@@ -416,7 +416,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             key: "mergeWithFallbackLayerButton",
           }
         : null,
-      !this.props.dataset.isEditable
+      this.props.dataset.isEditable
         ? { label: this.getReloadDataButton(layerName), key: "reloadDataButton" }
         : null,
       {
@@ -602,11 +602,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
         <div className="flex-container">
           <div className="flex-item">
-            <Tooltip title="More actions">
-              <Dropdown menu={{ items }} trigger={["click", "contextMenu"]} placement="bottomRight">
-                <EllipsisOutlined />
-              </Dropdown>
-            </Tooltip>
+            <Dropdown
+              menu={{ items }}
+              trigger={["click", "contextMenu", "hover"]}
+              placement="bottomRight"
+            >
+              <EllipsisOutlined />
+            </Dropdown>
           </div>
         </div>
       </div>

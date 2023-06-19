@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -19,8 +19,8 @@ trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebKnossosClient: TSRemoteWebKnossosClient
 
-  private lazy val fallbackDataCache: AlfuFoxCache[FallbackDataKey, (Array[Byte], List[Int])] =
-    AlfuFoxCache(maxEntries = 3000)
+  private lazy val fallbackDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
+    AlfuCache(maxCapacity = 3000)
 
   def remoteFallbackLayerFromVolumeTracing(tracing: VolumeTracing, tracingId: String)(
       implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =

@@ -170,7 +170,8 @@ trait VolumeTracingDownsampling
         (bucketPosition.voxelMag1X / requiredMag.x / 32) * requiredMag.x * 32,
         (bucketPosition.voxelMag1Y / requiredMag.y / 32) * requiredMag.y * 32,
         (bucketPosition.voxelMag1Z / requiredMag.z / 32) * requiredMag.z * 32,
-        requiredMag
+        requiredMag,
+        bucketPosition.additionalCoordinates
       )
     }.toSet
 
@@ -186,7 +187,8 @@ trait VolumeTracingDownsampling
         bucketPosition.voxelMag1X + x * bucketPosition.bucketLength * previousMag.x,
         bucketPosition.voxelMag1Y + y * bucketPosition.bucketLength * previousMag.y,
         bucketPosition.voxelMag1Z + z * bucketPosition.bucketLength * previousMag.z,
-        previousMag
+        previousMag,
+        bucketPosition.additionalCoordinates //TODO?
       )
     }
 

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
@@ -10,6 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
 }
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
@@ -81,7 +83,7 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
-  def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
+  private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
@@ -144,6 +146,12 @@ object LayerViewConfiguration {
   implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 
+case class AdditionalCoordinate(name: String, bounds: Array[Int], index: Int)
+
+object AdditionalCoordinate {
+  implicit val jsonFormat: Format[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
+}
+
 trait DataLayerLike {
 
   def name: String
@@ -163,6 +171,16 @@ trait DataLayerLike {
   def adminViewConfiguration: Option[LayerViewConfiguration]
 
   def coordinateTransformations: Option[List[CoordinateTransformation]]
+
+  // n-dimensional datasets = 3-dimensional datasets with additional coordinates
+  def additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+
+  def additionalCoordinateMap: Map[String, AdditionalCoordinate] =
+    additionalCoordinates match {
+      case Some(additionalCoords) =>
+        additionalCoords.map(additionalCoord => (additionalCoord.name -> additionalCoord)).toMap
+      case None => Map()
+    }
 }
 
 object DataLayerLike {
@@ -199,7 +217,9 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 

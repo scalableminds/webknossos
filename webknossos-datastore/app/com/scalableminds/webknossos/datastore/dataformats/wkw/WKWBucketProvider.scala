@@ -3,16 +3,18 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Empty, Failure, Full}
+
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle with FoxImplicits {
 
-  def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
     val blockOffsetX = bucket.bucketX % numBlocksPerCubeDimension
     val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension

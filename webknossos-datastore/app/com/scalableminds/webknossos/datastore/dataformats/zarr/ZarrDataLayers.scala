@@ -38,7 +38,8 @@ case class ZarrDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1)
+    override val numChannels: Option[Int] = Some(1),
+    override val additionalCoordinates: Option[Seq[AdditionalCoordinate]]
 ) extends ZarrLayer
 
 object ZarrDataLayer {

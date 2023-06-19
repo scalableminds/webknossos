@@ -4,6 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{Array => MultiArray}
@@ -41,6 +42,7 @@ object N5Array extends LazyLogging {
                 header,
                 axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                 channelIndex,
+                None,
                 sharedChunkContentsCache)
   }
 }
@@ -51,8 +53,16 @@ class N5Array(vaultPath: VaultPath,
               header: DatasetHeader,
               axisOrder: AxisOrder,
               channelIndex: Option[Int],
+              additionalCoordinates: Option[Seq[AdditionalCoordinate]],
               sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
+    extends DatasetArray(vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         additionalCoordinates,
+                         sharedChunkContentsCache)
     with LazyLogging {
 
   override protected lazy val chunkReader: ChunkReader =

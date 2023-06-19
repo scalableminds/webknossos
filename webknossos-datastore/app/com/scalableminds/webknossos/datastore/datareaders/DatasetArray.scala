@@ -7,6 +7,8 @@ import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -22,6 +24,7 @@ class DatasetArray(vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
+                   additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
@@ -40,6 +43,34 @@ class DatasetArray(vaultPath: VaultPath,
     readBytes(shapeArray, offsetArray)
   }
 
+  def readBytesWithAdditionalCoordinates(
+      shape: Vec3Int,
+      offset: Vec3Int,
+      additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
+      additionalCoordinates: Map[String, AdditionalCoordinate])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalCoordinates.size
+    val shapeArray: Array[Int] = Array.fill(dimensionCount)(1)
+    shapeArray(dimensionCount - 3) = shape.x //put xyz at the end for now. Doesn't really make sense in general (?)
+    shapeArray(dimensionCount - 2) = shape.y
+    shapeArray(dimensionCount - 1) = shape.z
+
+    val offsetArray: Array[Int] = Array.fill(dimensionCount)(0)
+    offsetArray(dimensionCount - 3) = offset.x
+    offsetArray(dimensionCount - 2) = offset.y
+    offsetArray(dimensionCount - 1) = offset.z
+
+    channelIndex match {
+      case Some(c) => offsetArray(axisOrder.c.getOrElse(axisOrder.x - 1)) = c
+      case None    => ()
+    }
+
+    for (additionalCoordinateRequest <- additionalCoordinateRequests) {
+      val index = additionalCoordinates(additionalCoordinateRequest.name).index
+      offsetArray(index) = additionalCoordinateRequest.value
+    }
+    readBytes(shapeArray, offsetArray)
+  }
+
   // returns byte array in fortran-order with little-endian values
   private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
@@ -50,7 +81,8 @@ class DatasetArray(vaultPath: VaultPath,
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
+    val totalOffset
+      : Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _) // TODO: header.voxeloffset might not work for non-ngff nd-datasets
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,

@@ -73,7 +73,13 @@ class NgffExplorer extends RemoteLayerExplorer {
                                   elementClass,
                                   magsWithAttributes.map(_.mag),
                                   largestSegmentId = None)
-          } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+          } else
+            ZarrDataLayer(name,
+                          Category.color,
+                          boundingBox,
+                          elementClass,
+                          magsWithAttributes.map(_.mag),
+                          additionalCoordinates = Some(multiscale.getAdditionalCoordsFromAxes))
         } yield (layer, voxelSizeNanometers)
       })
     } yield layerTuples
@@ -140,10 +146,12 @@ class NgffExplorer extends RemoteLayerExplorer {
     val y = axes.indexWhere(axisMatches(_, "y"))
     val z = axes.indexWhere(axisMatches(_, "z"))
     val c = axes.indexWhere(_.`type` == "channel")
+    val t = axes.indexWhere(_.`type` == "time")
     val cOpt = if (c == -1) None else Some(c)
+    val tOpt = if (t == -1) None else Some(t)
     for {
       _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder(x, y, z, cOpt)
+    } yield AxisOrder(x, y, z, cOpt, tOpt)
   }
 
   private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =

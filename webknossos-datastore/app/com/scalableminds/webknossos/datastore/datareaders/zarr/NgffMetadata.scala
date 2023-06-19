@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -62,6 +63,37 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
         case Some(unknownUnit)  => Fox.failure(s"Unknown space axis unit: $unknownUnit")
       }
 
+  def timeUnitToSFactor(implicit ec: ExecutionContext): Fox[Double] =
+    if (`type` != "time")
+      Fox.failure(s"unit-to-seconds factor requested for non-time axis ($name, type=${`type`})")
+    else
+      unit.map(_.toLowerCase) match {
+        case None                => Fox.successful(1.0)
+        case Some("")            => Fox.successful(1.0)
+        case Some("yoctosecond") => Fox.successful(1e-24)
+        case Some("zeptosecond") => Fox.successful(1e-21)
+        case Some("attosecond")  => Fox.successful(1e-18)
+        case Some("femtosecond") => Fox.successful(1e-15)
+        case Some("picosecond")  => Fox.successful(1e-12)
+        case Some("nanosecond")  => Fox.successful(1e-9)
+        case Some("microsecond") => Fox.successful(1e-6)
+        case Some("millisecond") => Fox.successful(1e-3)
+        case Some("centisecond") => Fox.successful(1e-2)
+        case Some("decisecond")  => Fox.successful(1e-1)
+        case Some("second")      => Fox.successful(1.0)
+        case Some("hectosecond") => Fox.successful(1e2)
+        case Some("kilosecond")  => Fox.successful(1e3)
+        case Some("megasecond")  => Fox.successful(1e6)
+        case Some("gigasecond")  => Fox.successful(1e9)
+        case Some("terasecond")  => Fox.successful(1e12)
+        case Some("petasecond")  => Fox.successful(1e15)
+        case Some("exasecond")   => Fox.successful(1e18)
+        case Some("zettasecond") => Fox.successful(1e21)
+        case Some("yottasecond") => Fox.successful(1e24)
+        case Some("minute")      => Fox.successful(60)
+        case Some("hour")        => Fox.successful(60 * 60)
+        case Some(unknownUnit)   => Fox.failure(s"Unknown time axis unit: $unknownUnit")
+      }
 }
 
 object NgffAxis {
@@ -78,7 +110,18 @@ case class NgffMultiscalesItem(
       NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
     ),
     datasets: List[NgffDataset]
-)
+  ) {
+
+  def getAdditionalCoordsFromAxes: Seq[AdditionalCoordinate] = {
+    val defaultAxes = List("c", "x", "y", "z")
+    axes.zipWithIndex.flatMap(axisAndIndex =>
+      if (!defaultAxes.contains(axisAndIndex._1.name)) {
+        Some(AdditionalCoordinate(name = axisAndIndex._1.name, bounds = Array(0, 0), index = axisAndIndex._2))
+      } else {
+        None
+      })
+  }
+}
 
 object NgffMultiscalesItem {
   implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]

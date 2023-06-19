@@ -46,7 +46,8 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
         fourBit = None,
         applyAgglomerate = None,
-        version = None
+        version = None,
+        additionalCoordinates = None
       )
       (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),

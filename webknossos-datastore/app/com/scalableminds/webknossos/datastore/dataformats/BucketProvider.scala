@@ -20,7 +20,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
+    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket, readInstruction.dataLayer))
 
   private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DataCubeHandle] = {

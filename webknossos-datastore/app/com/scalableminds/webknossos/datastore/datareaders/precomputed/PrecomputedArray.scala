@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -25,7 +26,7 @@ object PrecomputedArray extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): PrecomputedArray = {
+           sharedChunkContentsCache: AlfuCache[String, MultiArray]): PrecomputedArray = {
     val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
     if (headerBytes.isEmpty)
       throw new IOException(
@@ -55,7 +56,8 @@ object PrecomputedArray extends LazyLogging {
       scaleHeader,
       axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
       channelIndex,
-      sharedChunkContentsCache
+      None,
+      sharedChunkContentsCache,
     )
   }
 }
@@ -66,8 +68,16 @@ class PrecomputedArray(vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext)
-    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
+                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         additionalCoordinates,
+                         sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {
 
@@ -245,11 +255,10 @@ class PrecomputedArray(vaultPath: VaultPath,
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)]): Fox[NumericRange.Exclusive[Long]] =
+  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)])(
+      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
-      chunkSpecification <- minishardIndex
-        .find(_._1 == chunkId)
-        .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
+      chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)

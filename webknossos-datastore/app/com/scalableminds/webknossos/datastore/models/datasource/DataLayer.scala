@@ -146,6 +146,12 @@ object LayerViewConfiguration {
   implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 
+case class AdditionalCoordinate(name: String, bounds: Array[Int], index: Int)
+
+object AdditionalCoordinate {
+  implicit val jsonFormat: Format[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
+}
+
 trait DataLayerLike {
 
   def name: String
@@ -165,6 +171,16 @@ trait DataLayerLike {
   def adminViewConfiguration: Option[LayerViewConfiguration]
 
   def coordinateTransformations: Option[List[CoordinateTransformation]]
+
+  // n-dimensional datasets = 3-dimensional datasets with additional coordinates
+  def additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+
+  def additionalCoordinateMap: Map[String, AdditionalCoordinate] =
+    additionalCoordinates match {
+      case Some(additionalCoords) =>
+        additionalCoords.map(additionalCoord => (additionalCoord.name -> additionalCoord)).toMap
+      case None => Map()
+    }
 }
 
 object DataLayerLike {

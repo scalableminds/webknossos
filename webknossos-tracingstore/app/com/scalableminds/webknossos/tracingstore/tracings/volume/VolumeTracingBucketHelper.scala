@@ -87,7 +87,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
             val bucket = BucketPosition(x * resolution.x * DataLayer.bucketLength,
                                         y * resolution.y * DataLayer.bucketLength,
                                         z * resolution.z * DataLayer.bucketLength,
-                                        resolution)
+                                        resolution,
+                                        None)
             Some((name, bucket))
           case _ => None
         }
@@ -151,7 +152,8 @@ trait VolumeTracingBucketHelper
       cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),
       fourBit = None,
       applyAgglomerate = dataLayer.tracing.mappingName,
-      version = None
+      version = None,
+      additionalCoordinates = None
     )
     for {
       remoteFallbackLayer <- dataLayer.volumeTracingService

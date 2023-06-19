@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArr
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
@@ -41,6 +42,7 @@ object ZarrArray extends LazyLogging {
                   header,
                   axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                   channelIndex,
+                  None,
                   sharedChunkContentsCache)
   }
 }
@@ -51,5 +53,13 @@ class ZarrArray(vaultPath: VaultPath,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
                 channelIndex: Option[Int],
+                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
+    extends DatasetArray(vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         additionalCoordinates,
+                         sharedChunkContentsCache)

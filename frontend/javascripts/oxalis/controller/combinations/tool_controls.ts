@@ -12,6 +12,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getContourTracingMode,
+  getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -39,7 +40,7 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
+import Store, { BrushPresets } from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
@@ -52,6 +53,9 @@ import {
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { userSettings } from "types/schemas/user_settings.schema";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -443,6 +447,43 @@ export class DrawTool {
         Store.dispatch(hideBrushAction());
       },
     };
+  }
+
+  static getBrushPresetsOrSetDefault():BrushPresets{
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if(brushPresetsFromStore!=null){
+      return brushPresetsFromStore;
+    }
+    else{
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
+  }
+
+  static handleUpdateBrushSize (size: "small"|"medium"|"large") {
+    console.log("yas kween");
+    const brushPresets = this.getBrushPresetsOrSetDefault();
+    switch(size){
+      case "small":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        break;
+      case "medium":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        break;
+      case "large":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        break;
+    }
+    return;
+  }
+
+  static getExtendedKeyboardControls() {
+    return {       
+    1: () => this.handleUpdateBrushSize("small"),
+    2: () => this.handleUpdateBrushSize("medium"),
+    3: () => this.handleUpdateBrushSize("large"),}
   }
 
   static getActionDescriptors(

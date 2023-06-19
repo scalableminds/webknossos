@@ -21,7 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Creating bounding boxes can now be done by dragging the left mouse button (when the bounding box tool is selected). To move around in the dataset while this tool is active, keep ALT pressed. [#7118](https://github.com/scalableminds/webknossos/pull/7118)
 - Agglomerate skeletons can only be modified if the proofreading tool is active so they stay in sync with the underlying segmentation and agglomerate graph. Agglomerate skeletons cannot be modified using any other means. They are marked in the skeleton list using the clipboard icon of the proofreading tool. When exporting skeletons in the NML format, trees ("things") now have a `type` property which is either "DEFAULT" or "AGGLOMERATE". [#7086](https://github.com/scalableminds/webknossos/pull/7086)
 - The cache for remote dataset array contents can now have a configured size in bytes. New config option `datastore.cache.imageArrayChunks.maxSizeBytes`. Default is 2 GB, consider increasing for production. [#7067](https://github.com/scalableminds/webknossos/pull/7067)
-- Optimized processing of parallel requests, improving performance and reducing idle waiting. [#7137](https://github.com/scalableminds/webknossos/pull/7137)
+- Optimized processing of parallel requests for remote datasets, improving performance and reducing idle waiting. [#7137](https://github.com/scalableminds/webknossos/pull/7137)
 
 ### Fixed
 - Fixed a bug where some volume annotations could not be downloaded. [#7115](https://github.com/scalableminds/webknossos/pull/7115)

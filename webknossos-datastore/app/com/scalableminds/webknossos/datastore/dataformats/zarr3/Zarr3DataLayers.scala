@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
@@ -21,10 +21,10 @@ trait Zarr3Layer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr3
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new Zarr3BucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
+    new Zarr3BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

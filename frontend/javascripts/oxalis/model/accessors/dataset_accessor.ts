@@ -650,9 +650,9 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
 
 type Transform =
   | { type: "affine"; affineMatrix: Matrix4x4 }
-  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; tpsInv: TPS3D };
+  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; scaledTpsInv: TPS3D };
 
-function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
+function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer): Transform | null {
   let coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations) {
     return null;
@@ -670,12 +670,16 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
     const nestedMatrix = transformation.matrix;
     return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
   } else if (type === "thin_plate_spline") {
-    const { source, target } = transformation.correspondences;
+    let { source, target } = transformation.correspondences;
     const affineMatrix = estimateAffine(source, target).to1DArray() as any as Matrix4x4;
+
+    source = source.map((point) => V3.scale3(point, dataset.dataSource.scale));
+    target = target.map((point) => V3.scale3(point, dataset.dataSource.scale));
+
     return {
       type,
       affineMatrix,
-      tpsInv: new TPS3D(target, source),
+      scaledTpsInv: new TPS3D(target, source),
     };
   }
 
@@ -685,9 +689,28 @@ function _getTransformsForLayerOrNull(layer: APIDataLayer): Transform | null {
   return null;
 }
 
-export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(layer: APIDataLayer): Transform {
-  return getTransformsForLayerOrNull(layer) || IdentityTransform;
+function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
+  let cachedA: A | null = null;
+  let cacheForA: Map<B, T> = new Map();
+  return (a: A, b: B): T => {
+    if (a !== cachedA) {
+      cachedA = a;
+      cacheForA = new Map();
+    }
+    if (!cacheForA.has(b)) {
+      cacheForA.set(b, fn(a, b));
+    }
+    const res = cacheForA.get(b);
+    if (res === undefined) {
+      throw new Error("Error in caching logic.");
+    }
+    return res;
+  };
+}
+
+export const getTransformsForLayerOrNull = memoizeWithTwoKeys(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(dataset: APIDataset, layer: APIDataLayer): Transform {
+  return getTransformsForLayerOrNull(dataset, layer) || IdentityTransform;
 }
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {

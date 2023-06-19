@@ -195,7 +195,7 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
-    const layerMatrix = invertAndTranspose(getTransformsForLayer(layer).affineMatrix);
+    const layerMatrix = invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix);
 
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,

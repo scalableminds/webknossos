@@ -80,7 +80,9 @@ export function* watchZ1Downsampling(): Saga<void> {
 
       let scaleX = 1;
       let scaleY = 1;
-      const transformMatrix = getTransformsForLayer(dataLayer).affineMatrix;
+      const transformMatrix = yield* select(
+        (state) => getTransformsForLayer(state.dataset, dataLayer).affineMatrix,
+      );
       if (transformMatrix !== Identity4x4) {
         const matrix = invertAndTranspose(transformMatrix);
         // A scale greater than 1 "shrinks" the data (effectively improving

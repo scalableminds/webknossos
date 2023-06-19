@@ -113,7 +113,7 @@ class PlaneMaterialFactory {
   oldVertexShaderCode: string | null | undefined;
   unsubscribeSeedsFn: (() => void) | null = null;
 
-  tpsInvPerLayer: Record<string, TPS3D> = {};
+  scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
@@ -241,13 +241,14 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
       };
-      const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+      const dataset = Store.getState().dataset;
+      const layer = getLayerByName(dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(getTransformsForLayer(layer).affineMatrix),
+        value: invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(getTransformsForLayer(layer).affineMatrix, Identity4x4),
+        value: !_.isEqual(getTransformsForLayer(dataset, layer).affineMatrix, Identity4x4),
       };
     }
 
@@ -443,7 +444,10 @@ class PlaneMaterialFactory {
                 ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
                 : null;
 
-            const hasTransform = !_.isEqual(getTransformsForLayer(layer).affineMatrix, Identity4x4);
+            const hasTransform = !_.isEqual(
+              getTransformsForLayer(Store.getState().dataset, layer).affineMatrix,
+              Identity4x4,
+            );
             if (!hasTransform && suitableMag) {
               representativeMagForVertexAlignment = V3.min(
                 representativeMagForVertexAlignment,
@@ -595,16 +599,17 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.dataLayers,
         (layers) => {
-          this.tpsInvPerLayer = {};
+          this.scaledTpsInvPerLayer = {};
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
-            const transforms = getTransformsForLayer(layer);
+            const transforms = getTransformsForLayer(Store.getState().dataset, layer);
             const { affineMatrix } = transforms;
-            const tpsInv = transforms.type === "thin_plate_spline" ? transforms.tpsInv : null;
+            const scaledTpsInv =
+              transforms.type === "thin_plate_spline" ? transforms.scaledTpsInv : null;
 
-            if (tpsInv) {
-              this.tpsInvPerLayer[name] = tpsInv;
+            if (scaledTpsInv) {
+              this.scaledTpsInvPerLayer[name] = scaledTpsInv;
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
@@ -957,7 +962,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      tpsTransformPerLayer: this.tpsInvPerLayer,
+      tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [
       code,
@@ -991,7 +996,7 @@ class PlaneMaterialFactory {
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
-      tpsTransformPerLayer: this.tpsInvPerLayer,
+      tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }
 }

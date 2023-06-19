@@ -146,9 +146,11 @@ in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
 
-<% _.each(layerNamesWithSegmentation, function(name) { %>
-  in vec3 tpsOffsetXYZ_<%= name %>;
-<% }) %>
+<% _.each(layerNamesWithSegmentation, function(name) {
+  if (tpsTransformPerLayer[name] != null) { %>
+    in vec3 tpsOffsetXYZ_<%= name %>;
+<% }
+}) %>
 
 ${compileShader(
   inverse,
@@ -320,9 +322,12 @@ out vec4 worldCoord;
 out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
-<% _.each(layerNamesWithSegmentation, function(name) { %>
+<% _.each(layerNamesWithSegmentation, function(name) {
+  if (tpsTransformPerLayer[name] != null) { %>
   out vec3 tpsOffsetXYZ_<%= name %>;
-<% }) %>
+<%
+  }
+}) %>
 
 flat out vec2 index;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];

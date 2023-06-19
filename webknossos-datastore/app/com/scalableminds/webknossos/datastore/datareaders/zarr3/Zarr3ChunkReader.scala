@@ -12,7 +12,10 @@ class Zarr3ChunkReader(header: DatasetHeader, array: Zarr3Array) extends ChunkRe
   override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
-      bytes <- path.readBytes(range)
+      bytes <- path.readBytes(range) match {
+        case Some(bytes) => Fox.successful(bytes)
+        case None        => Fox.empty
+      }
       decoded = array.codecs.foldRight(bytes)((c, bytes) =>
         c match {
           case codec: BytesToBytesCodec => codec.decode(bytes)

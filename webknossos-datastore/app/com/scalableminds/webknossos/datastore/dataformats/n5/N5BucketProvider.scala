@@ -2,17 +2,16 @@ package com.scalableminds.webknossos.datastore.dataformats.n5
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
-import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
@@ -31,7 +30,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 
 class N5BucketProvider(layer: N5Layer,
                        dataSourceId: DataSourceId,
-                       val dataVaultServiceOpt: Option[DataVaultService],
+                       val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with LazyLogging {
@@ -44,15 +43,15 @@ class N5BucketProvider(layer: N5Layer,
     n5MagOpt match {
       case None => Fox.empty
       case Some(n5Mag) =>
-        dataVaultServiceOpt match {
-          case Some(dataVaultService: DataVaultService) =>
+        remoteSourceDescriptorServiceOpt match {
+          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
               magPath: VaultPath <- if (n5Mag.isRemote) {
-                dataVaultService.vaultPathFor(n5Mag)
+                remoteSourceDescriptorService.vaultPathFor(n5Mag)
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
-              chunkContentsCache <- sharedChunkContentsCache
-              cubeHandle <- tryo(onError = (e: Throwable) => logger.error(TextUtils.stackTraceAsString(e)))(N5Array
-                .open(magPath, dataSourceId, layer.name, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache))
+              chunkContentsCache <- sharedChunkContentsCache.toFox
+              cubeHandle <- N5Array
+                .open(magPath, dataSourceId, layer.name, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache)
                 .map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty

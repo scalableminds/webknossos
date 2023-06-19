@@ -371,6 +371,7 @@ class PlaneMaterialFactory {
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
+    this.startListeningForShaderCodeRelatedInput();
     const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms();
     // The uniforms instance must not be changed (e.g., with
     // {...this.uniforms, ...additionalUniforms}), as this would result in
@@ -403,12 +404,40 @@ class PlaneMaterialFactory {
     };
 
     this.material.side = THREE.DoubleSide;
-    this.startListening();
-
-    this.recomputeShaders();
+    this.startListeningForUniforms();
   }
 
-  startListening() {
+  startListeningForShaderCodeRelatedInput() {
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.dataset.dataSource.dataLayers,
+        (layers) => {
+          this.scaledTpsInvPerLayer = {};
+          for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+            const layer = layers[layerIdx];
+            const name = sanitizeName(layer.name);
+            const transforms = getTransformsForLayer(Store.getState().dataset, layer);
+            const { affineMatrix } = transforms;
+            const scaledTpsInv =
+              transforms.type === "thin_plate_spline" ? transforms.scaledTpsInv : null;
+
+            if (scaledTpsInv) {
+              this.scaledTpsInvPerLayer[name] = scaledTpsInv;
+            }
+
+            this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
+            const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
+            this.uniforms[`${name}_has_transform`] = {
+              value: hasTransform,
+            };
+          }
+        },
+        true,
+      ),
+    );
+  }
+
+  startListeningForUniforms() {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getActiveMagIndicesForLayers(storeState),
@@ -591,33 +620,6 @@ class PlaneMaterialFactory {
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
           this.uniforms.blendMode.value = blendMode === BLEND_MODES.Additive ? 1.0 : 0.0;
-        },
-        true,
-      ),
-    );
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.dataLayers,
-        (layers) => {
-          this.scaledTpsInvPerLayer = {};
-          for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
-            const layer = layers[layerIdx];
-            const name = sanitizeName(layer.name);
-            const transforms = getTransformsForLayer(Store.getState().dataset, layer);
-            const { affineMatrix } = transforms;
-            const scaledTpsInv =
-              transforms.type === "thin_plate_spline" ? transforms.scaledTpsInv : null;
-
-            if (scaledTpsInv) {
-              this.scaledTpsInvPerLayer[name] = scaledTpsInv;
-            }
-
-            this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
-            const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
-            this.uniforms[`${name}_has_transform`] = {
-              value: hasTransform,
-            };
-          }
         },
         true,
       ),

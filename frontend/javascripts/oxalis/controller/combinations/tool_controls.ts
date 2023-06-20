@@ -12,7 +12,6 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getContourTracingMode,
-  getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -40,7 +39,7 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store, { BrushPresets } from "oxalis/store";
+import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
@@ -53,9 +52,6 @@ import {
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
-import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
-import { userSettings } from "types/schemas/user_settings.schema";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -448,7 +444,7 @@ export class DrawTool {
       },
     };
   }
-  
+
   static getActionDescriptors(
     activeTool: AnnotationTool,
     useLegacyBindings: boolean,

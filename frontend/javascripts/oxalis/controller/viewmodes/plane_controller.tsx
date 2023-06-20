@@ -1,4 +1,4 @@
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -65,9 +65,12 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { getActiveSegmentationTracing, getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
-import {getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function ensureNonConflictingHandlers(
@@ -455,24 +458,25 @@ class PlaneController extends React.PureComponent<Props> {
       ),
     );
   }
-  
-  getBrushPresetsOrSetDefault():BrushPresets{
+
+  getBrushPresetsOrSetDefault(): BrushPresets {
     const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
-    if(brushPresetsFromStore!=null){
+    if (brushPresetsFromStore != null) {
       return brushPresetsFromStore;
-    }
-    else{
+    } else {
       const maximumBrushSize = getMaximumBrushSize(Store.getState());
-      const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+      const defaultBrushSizes = getDefaultBrushSizes(
+        maximumBrushSize,
+        userSettings.brushSize.minimum,
+      );
       Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
       return defaultBrushSizes;
     }
   }
 
-  handleUpdateBrushSize (size: "small"|"medium"|"large") {
-    console.log("yas kween");
+  handleUpdateBrushSize(size: "small" | "medium" | "large") {
     const brushPresets = this.getBrushPresetsOrSetDefault();
-    switch(size){
+    switch (size) {
       case "small":
         Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
         break;
@@ -485,7 +489,6 @@ class PlaneController extends React.PureComponent<Props> {
     }
     return;
   }
-
 
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {

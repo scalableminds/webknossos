@@ -73,7 +73,6 @@ import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentati
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { InputKeyboardNoLoop } from "libs/input";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -577,7 +576,7 @@ function BrushPresetButton({
   );
 }
 
-  export function getDefaultBrushSizes (maximumSize: number, minimumSize: number) {
+export function getDefaultBrushSizes (maximumSize: number, minimumSize: number) {
     return {
       small: Math.max(minimumSize, 10),
       medium: calculateMediumBrushSize(maximumSize),

@@ -6,6 +6,10 @@ Then, we will learn how to automate this process using Python.
 Additionally, I will guide you through the process of incorporating a remote dataset into WEBKNOSSOS.
 Let’s take a look!
 
+Here is full tutorial video, alternatively continue reading below.
+
+![youtube-video](https://www.youtube.com/embed/Cz98_zO1Z2w)
+
 ## Download and Export
 
 WEBKNOSSOS makes it easy to [download and export annotations as Tiff images or OME-Tiff](./export.md#data-export-through-the-ui).

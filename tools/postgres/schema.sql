@@ -385,8 +385,8 @@ CREATE TABLE webknossos.multiUsers(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isEmailVerified BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 

@@ -232,7 +232,7 @@ type State = {
   renamingCounter: number;
   selectedSegmentId: number | null | undefined;
   activeMeshJobId: string | null | undefined;
-  activeDropdownSegmentId: number | null | undefined;
+  activeDropdownSegmentOrGroupId: number | null | undefined;
   groupTree: TreeNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
@@ -323,7 +323,7 @@ class SegmentsView extends React.Component<Props, State> {
     renamingCounter: 0,
     selectedSegmentId: null,
     activeMeshJobId: null,
-    activeDropdownSegmentId: null,
+    activeDropdownSegmentOrGroupId: null,
     groupTree: [],
     prevProps: null,
     groupToDelete: null,
@@ -516,15 +516,16 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleSegmentDropdownMenuVisibility = (segmentId: number, isVisible: boolean) => {
+    console.log(segmentId);
     if (isVisible) {
       this.setState({
-        activeDropdownSegmentId: segmentId,
+        activeDropdownSegmentOrGroupId: segmentId,
       });
       return;
     }
 
     this.setState({
-      activeDropdownSegmentId: null,
+      activeDropdownSegmentOrGroupId: null,
     });
   };
 
@@ -784,13 +785,7 @@ class SegmentsView extends React.Component<Props, State> {
 
     segmentGroupToChangeColor.forEach((segment) =>
       Store.dispatch(
-        updateSegmentAction(
-          segment.id,
-          { color: color },
-          visibleSegmentationLayer.name,
-          // The parameter createsNewUndoState is not passed, since the action
-          // is added to a batch and batch updates always crate a new undo state.
-        ),
+        updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),
       ),
     );
   }
@@ -960,7 +955,7 @@ class SegmentsView extends React.Component<Props, State> {
                     segment={segment}
                     centeredSegmentId={centeredSegmentId}
                     selectedSegmentId={this.state.selectedSegmentId}
-                    activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+                    activeDropdownSegmentId={this.state.activeDropdownSegmentOrGroupId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     isosurface={this.props.isosurfaces[segment.id]}
@@ -1013,7 +1008,7 @@ class SegmentsView extends React.Component<Props, State> {
                               return;
                             }
                             console.log(color);
-                            //this.setGroupColor(id, color);
+                            this.setGroupColor(id, color);
                           }}
                           rgb={[0.5, 0.5, 0.5]}
                         />
@@ -1057,7 +1052,10 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open={true}
+                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+                      onOpenChange={(isVisible) =>
+                        this.handleSegmentDropdownMenuVisibility(id, isVisible)
+                      }
                       trigger={["contextMenu"]}
                     >
                       <EditableTextLabel

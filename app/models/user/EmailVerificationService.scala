@@ -28,7 +28,8 @@ class EmailVerificationService @Inject()(conf: WkConf,
                                                        key,
                                                        multiUser.email,
                                                        multiUser._id,
-                                                       expiration)
+                                                       expiration,
+                                                       isUsed = false)
       _ <- emailVerificationKeyDAO.insertOne(evk)
       _ = Mailer ! Send(defaultMails.emailVerificationMail(multiUser.email, key))
     } yield ()
@@ -36,9 +37,11 @@ class EmailVerificationService @Inject()(conf: WkConf,
   def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       evk <- emailVerificationKeyDAO.findOneByKey(key)
-      multiUser <- multiUserDAO.findOne(evk._multiUser)
-      _ <- Fox.bool2Fox(evk.email == multiUser.email)
-      _ = multiUserDAO.updateEmailVerification(evk._multiUser, verified = true) //TODO: Mark key as used
+      _ <- Fox.bool2Fox(!evk.isUsed) ?~> "user.email.verification.keyUsed"
+      multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
+      _ <- Fox.bool2Fox(evk.email == multiUser.email) ?~> "user.email.verification.emailDoesNotMatch"
+      _ = multiUserDAO.updateEmailVerification(evk._multiUser, verified = true)
+      _ <- emailVerificationKeyDAO.markAsUsed(evk._id)
     } yield ()
 
   def assertUserHasVerifiedEmail(user: User)(
@@ -46,7 +49,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
       ec: ExecutionContext
   ): Fox[Unit] =
     for {
-      multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)
+      multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser) ?~> "user.notFound"
       endOfGracePeriod: Instant = multiUser.created + conf.WebKnossos.User.EmailVerification.gracePeriod
       overGracePeriod = endOfGracePeriod.isPast
       _ <- Fox.bool2Fox(

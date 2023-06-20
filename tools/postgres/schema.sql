@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(102);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
 COMMIT TRANSACTION;
 
 
@@ -504,7 +504,8 @@ CREATE TABLE webknossos.emailVerificationKeys(
   key TEXT NOT NULL,
   email VARCHAR(512) NOT NULL,
   _multiUser CHAR(24) NOT NULL,
-  validUntil TIMESTAMPTZ NOT NULL
+  validUntil TIMESTAMPTZ NOT NULL,
+  isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');

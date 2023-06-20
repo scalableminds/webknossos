@@ -11,7 +11,12 @@ import utils.sql.{SQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class EmailVerificationKey(_id: ObjectId, key: String, email: String, _multiUser: ObjectId, validUntil: Instant)
+case class EmailVerificationKey(_id: ObjectId,
+                                key: String,
+                                email: String,
+                                _multiUser: ObjectId,
+                                validUntil: Instant,
+                                isUsed: Boolean)
 
 class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[EmailVerificationKey, EmailverificationkeysRow, Emailverificationkeys](sqlClient) {
@@ -29,14 +34,15 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
         row.key,
         row.email,
         ObjectId(row._Multiuser),
-        Instant.fromSql(row.validuntil)
+        Instant.fromSql(row.validuntil),
+        row.isused
       )
     )
 
   def insertOne(evk: EmailVerificationKey): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil)
-                         values(${evk._id}, ${evk.key}, ${evk.email}, ${evk._multiUser}, ${evk.validUntil})""".asUpdate)
+      _ <- run(q"""insert into webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed)
+                         values(${evk._id}, ${evk.key}, ${evk.email}, ${evk._multiUser}, ${evk.validUntil}, ${evk.isUsed})""".asUpdate)
     } yield ()
 
   def findOneByKey(key: String): Fox[EmailVerificationKey] =
@@ -44,5 +50,12 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
       r <- run(q"select $columns from webknossos.emailVerificationKeys where key = $key".as[EmailverificationkeysRow])
       parsed <- parseFirst(r, key)
     } yield parsed
+
+  def markAsUsed(emailVerificationKeyId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""update webknossos.emailVerificationKeys set
+                          isused = true
+                   where _id = $emailVerificationKeyId""".asUpdate)
+    } yield ()
 
 }

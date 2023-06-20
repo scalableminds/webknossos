@@ -577,11 +577,11 @@ function BrushPresetButton({
   );
 }
 
-  export function getDefaultBrushSizes (maximum: number, minimum: number) {
+  export function getDefaultBrushSizes (maximumSize: number, minimumSize: number) {
     return {
-      small: Math.max(minimum, 10),
-      medium: calculateMediumBrushSize(maximum),
-      large: maximum,
+      small: Math.max(minimumSize, 10),
+      medium: calculateMediumBrushSize(maximumSize),
+      large: maximumSize,
     };
 }
 

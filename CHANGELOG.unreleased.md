@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added ability to view [zarr v3](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) datasets. [#7079](https://github.com/scalableminds/webknossos/pull/7079)
 - Added an index structure for volume annotation segments, in preparation for per-segment statistics. [#7063](https://github.com/scalableminds/webknossos/pull/7063)
 - Instead of showing all possible action items next to each other, there is now an overflow menu for layer actions. [#7123](https://github.com/scalableminds/webknossos/pull/7123) 
+- Added configuration to require users' emails to be verified, added flow to verify emails via link. [#7161](https://github.com/scalableminds/webknossos/pull/7161)
 
 ### Changed
 - Creating bounding boxes can now be done by dragging the left mouse button (when the bounding box tool is selected). To move around in the dataset while this tool is active, keep ALT pressed. [#7118](https://github.com/scalableminds/webknossos/pull/7118)

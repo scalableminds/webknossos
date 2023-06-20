@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
@@ -10,12 +11,13 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
 }
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -81,7 +83,7 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
-  def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
+  private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
@@ -199,7 +201,9 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.precomputed
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -8,18 +9,22 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   DataFormat,
   DataLayer,
+  DataSourceId,
   ElementClass,
   SegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
+import ucar.ma2.{Array => MultiArray}
 
 trait PrecomputedLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]) =
-    new PrecomputedBucketProvider(this, dataVaultServiceOpt)
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
+    new PrecomputedBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

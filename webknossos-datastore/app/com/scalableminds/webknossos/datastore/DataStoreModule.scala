@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
 class DataStoreModule extends AbstractModule {
 
@@ -16,6 +17,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[DataSourceRepository]).asEagerSingleton()
     bind(classOf[UploadService]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
+    bind(classOf[DataVaultService]).asEagerSingleton()
     bind(classOf[DSRemoteWebKnossosClient]).asEagerSingleton()
     bind(classOf[BinaryDataServiceHolder]).asEagerSingleton()
     bind(classOf[MappingService]).asEagerSingleton()

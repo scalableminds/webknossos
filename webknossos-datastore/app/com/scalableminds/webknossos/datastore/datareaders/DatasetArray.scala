@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -15,17 +16,16 @@ import java.util
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class DatasetArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
+class DatasetArray(vaultPath: VaultPath,
+                   dataSourceId: DataSourceId,
+                   layerName: String,
+                   header: DatasetHeader,
+                   axisOrder: AxisOrder,
+                   channelIndex: Option[Int],
+                   sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
   protected lazy val chunkReader: ChunkReader = new ChunkReader(header)
-
-  // cache currently limited to 1 GB per array
-  private lazy val chunkContentsCache: AlfuFoxCache[String, MultiArray] = {
-    val maxSizeBytes = 1000L * 1000 * 1000
-    val maxEntries = maxSizeBytes / header.bytesPerChunk
-    AlfuFoxCache(maxEntries.toInt)
-  }
 
   // Returns byte array in fortran-order with little-endian values
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -90,8 +90,11 @@ class DatasetArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisO
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
 
+  private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
+    s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
+
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
-    chunkContentsCache.getOrLoad(chunkIndex.mkString(","), _ => readSourceChunkData(chunkIndex))
+    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex), _ => readSourceChunkData(chunkIndex))
 
   private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {
@@ -140,5 +143,8 @@ class DatasetArray(vaultPath: VaultPath, header: DatasetHeader, axisOrder: AxisO
 }
 
 object DatasetArray {
-  val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+  private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+
+  def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
+    bool2Fox(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of ${chunkSizeLimitBytes}, got ${bytesPerChunk}"
 }

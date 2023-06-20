@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.google.inject.Inject
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -86,18 +86,17 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   private val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
-  private lazy val materializedInfoCache: AlfuFoxCache[(String, Long), EditableMappingInfo] = AlfuFoxCache(
-    maxEntries = 100)
+  private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
-  private lazy val segmentToAgglomerateChunkCache: AlfuFoxCache[(String, Long, Long), Seq[(Long, Long)]] =
-    AlfuFoxCache()
+  private lazy val segmentToAgglomerateChunkCache: AlfuCache[(String, Long, Long), Seq[(Long, Long)]] =
+    AlfuCache()
 
-  private lazy val agglomerateToGraphCache: AlfuFoxCache[(String, Long, Long), AgglomerateGraph] =
-    AlfuFoxCache(maxEntries = 50)
+  private lazy val agglomerateToGraphCache: AlfuCache[(String, Long, Long), AgglomerateGraph] =
+    AlfuCache(maxCapacity = 50)
 
   def infoJson(tracingId: String,
                editableMappingInfo: EditableMappingInfo,

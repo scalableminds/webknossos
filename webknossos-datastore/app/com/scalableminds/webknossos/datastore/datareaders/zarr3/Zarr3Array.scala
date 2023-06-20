@@ -1,38 +1,46 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.cache.AlfuFoxCache
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.cache.AlfuCache
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsError, JsSuccess, Json}
-
-import java.io.IOException
-import java.nio.charset.StandardCharsets
+import com.scalableminds.util.tools.Fox.box2Fox
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object Zarr3Array extends LazyLogging {
-  @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): Zarr3Array = {
-    val headerBytes = (path / Zarr3ArrayHeader.ZARR_JSON).readBytes()
-    if (headerBytes.isEmpty)
-      throw new IOException("'" + Zarr3ArrayHeader.ZARR_JSON + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: Zarr3ArrayHeader =
-      Json.parse(headerString).validate[Zarr3ArrayHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as zarr v3 header failed: " + JsError.toJson(errors).toString())
-      }
-    new Zarr3Array(path, header, axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)), channelIndex)
-  }
 
+  def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
+    for {
+      headerBytes <- (path / Zarr3ArrayHeader.ZARR_JSON)
+        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.ZARR_JSON}"
+      header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
+    } yield
+      new Zarr3Array(path,
+                     dataSourceId,
+                     layerName,
+                     header,
+                     axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+                     channelIndex,
+                     sharedChunkContentsCache)
 }
 
-class Zarr3Array(vaultPath: VaultPath, header: Zarr3ArrayHeader, axisOrder: AxisOrder, channelIndex: Option[Int])
-    extends DatasetArray(vaultPath, header, axisOrder, channelIndex)
+class Zarr3Array(vaultPath: VaultPath,
+                 dataSourceId: DataSourceId,
+                 layerName: String,
+                 header: Zarr3ArrayHeader,
+                 axisOrder: AxisOrder,
+                 channelIndex: Option[Int],
+                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
     with LazyLogging {
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -64,8 +72,8 @@ class Zarr3Array(vaultPath: VaultPath, header: Zarr3ArrayHeader, axisOrder: Axis
   override protected lazy val chunkReader: ChunkReader =
     new Zarr3ChunkReader(header, this)
 
-  private val shardIndexCache: AlfuFoxCache[VaultPath, Array[Byte]] =
-    AlfuFoxCache()
+  private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
+    AlfuCache()
 
   private def shardShape =
     header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
@@ -89,7 +97,8 @@ class Zarr3Array(vaultPath: VaultPath, header: Zarr3ArrayHeader, axisOrder: Axis
       .sum
   }
 
-  private def readShardIndex(shardPath: VaultPath) = shardPath.readLastBytes(getShardIndexSize)
+  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
+    shardPath.readLastBytes(getShardIndexSize)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
     val _ = index.takeRight(4) // checksum: not checked for now

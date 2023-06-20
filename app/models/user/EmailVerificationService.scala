@@ -24,7 +24,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(ctx)
       key: String <- Fox.successful(RandomIDGenerator.generateBlocking(32))
-      expiration = Instant.now + conf.WebKnossos.User.EmailVerification.linkExpiry
+      expiration = conf.WebKnossos.User.EmailVerification.linkExpiry.map(Instant.now + _)
       evk: EmailVerificationKey = EmailVerificationKey(ObjectId.generate,
                                                        key,
                                                        multiUser.email,
@@ -40,6 +40,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     for {
       evk <- emailVerificationKeyDAO.findOneByKey(key)
       _ <- Fox.bool2Fox(!evk.isUsed) ?~> "user.email.verification.keyUsed"
+      _ <- Fox.bool2Fox(evk.validUntil.forall(!_.isPast)) ?~> "user.email.linkExpired"
       multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
       _ <- Fox.bool2Fox(evk.email == multiUser.email) ?~> "user.email.verification.emailDoesNotMatch"
       _ = multiUserDAO.updateEmailVerification(evk._multiUser, verified = true)

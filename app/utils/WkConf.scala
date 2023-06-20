@@ -37,7 +37,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
         val activated: Boolean = get[Boolean]("webKnossos.user.emailVerification.activated")
         val required: Boolean = get[Boolean]("webKnossos.user.emailVerification.required")
         val gracePeriod: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.gracePeriod")
-        val linkExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.linkExpiry")
+        val linkExpiry: Option[FiniteDuration] =
+          getOptional[FiniteDuration]("webKnossos.user.emailVerification.linkExpiry")
       }
 
     }

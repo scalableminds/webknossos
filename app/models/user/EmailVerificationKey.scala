@@ -15,7 +15,7 @@ case class EmailVerificationKey(_id: ObjectId,
                                 key: String,
                                 email: String,
                                 _multiUser: ObjectId,
-                                validUntil: Instant,
+                                validUntil: Option[Instant],
                                 isUsed: Boolean)
 
 class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -34,7 +34,7 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
         row.key,
         row.email,
         ObjectId(row._Multiuser),
-        Instant.fromSql(row.validuntil),
+        row.validuntil.map(Instant.fromSql),
         row.isused
       )
     )

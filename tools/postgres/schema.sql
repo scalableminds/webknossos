@@ -504,7 +504,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   key TEXT NOT NULL,
   email VARCHAR(512) NOT NULL,
   _multiUser CHAR(24) NOT NULL,
-  validUntil TIMESTAMPTZ NOT NULL,
+  validUntil TIMESTAMPTZ,
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 

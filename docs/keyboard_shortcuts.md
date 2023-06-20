@@ -112,7 +112,7 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 
 ## Tool Switching Shortcuts
 
-Note that you need to first press CTRL + K, release these keys and then the letter that was assigned to a specific tool in order to switch to it.  
+Note that you need to first press CTRL + K, release these keys and then press the letter that was assigned to a specific tool in order to switch to it.  
 CTRL + K is not needed for cyclic tool switching via W / SHIFT + W.
 
 | Key Binding                       | Operation                                                                         |
@@ -124,11 +124,21 @@ CTRL + K is not needed for cyclic tool switching via W / SHIFT + W.
 | CTRL + K, **B**                       | Brush Tool                                                                        |
 | CTRL + K, **E**                       | Brush Erase Tool                                                                  |
 | CTRL + K, **L**                       | Lasso Tool                                                                        |
-| CTRL + K, **R**                       | Lasso Erase Too                                                                  |
+| CTRL + K, **R**                       | Lasso Erase Tool                                                                  |
 | CTRL + K, **P**                       | Segment Picker Tool                                                               |
 | CTRL + K, **Q**                       | Quick Select Tool                                                                 |
 | CTRL + K, **X**                       | Bounding Box Tool                                                                 |
 | CTRL + K, **O**                       | Proofreading Tool                                                                 |
+
+### Brush Related Shortcuts
+
+Note that you need to first press CTRL + K, release these keys and press the suitable number.
+
+| Key Binding                       | Operation                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| CTRL + K, **1**                       | Switch to small brush                                                             |
+| CTRL + K, **2**                       | Switch to medium sized brush                                                      |
+| CTRL + K, **3**                       | Switch to large brush                                                             |
 
 ## Mesh Related Shortcuts
 

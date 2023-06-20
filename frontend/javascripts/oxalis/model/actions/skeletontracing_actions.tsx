@@ -14,6 +14,7 @@ import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { batchActions } from "redux-batched-actions";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -161,7 +162,7 @@ export const initializeSkeletonTracingAction = (tracing: ServerSkeletonTracing) 
 
 export const createNodeAction = (
   position: Vector3,
-  additionalCoords: number[] | null,
+  additionalCoords: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,

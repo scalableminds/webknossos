@@ -26,6 +26,7 @@ async function getClippingValues(
   const { dataset } = state;
   const { elementClass } = getLayerByName(dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+  const { additionalCoords } = state.flycam;
 
   // Find a viable resolution to compute the histogram on
   // Ideally, we want to avoid resolutions 1 and 2 to keep
@@ -36,9 +37,24 @@ async function getClippingValues(
   let dataForAllViewPorts;
   try {
     const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-      api.data.getViewportData(OrthoViews.PLANE_XY, layerName, desiredResolutionIndex),
-      api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, desiredResolutionIndex),
-      api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, desiredResolutionIndex),
+      api.data.getViewportData(
+        OrthoViews.PLANE_XY,
+        layerName,
+        desiredResolutionIndex,
+        additionalCoords,
+      ),
+      api.data.getViewportData(
+        OrthoViews.PLANE_XZ,
+        layerName,
+        desiredResolutionIndex,
+        additionalCoords,
+      ),
+      api.data.getViewportData(
+        OrthoViews.PLANE_YZ,
+        layerName,
+        desiredResolutionIndex,
+        additionalCoords,
+      ),
     ]);
     dataForAllViewPorts = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
     // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.

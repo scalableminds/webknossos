@@ -1,12 +1,13 @@
 import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 import { type ResolutionInfo } from "./resolution_info";
 
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,
   resolutionIndex: number,
-  additionalCoordinates: number[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): BucketAddress {
   const resolution =
     resolutionIndex < resolutions.length
@@ -70,15 +71,12 @@ export function bucketPositionToGlobalAddress(
   bucketPosition: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const [x, y, z, resolutionIndex, dims] = bucketPosition;
-  // todop: revert
-  // const offset = dims != null ? dims[1] : 0;
-  const offset = 0;
+  const [x, y, z, resolutionIndex, _dims] = bucketPosition;
   const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
-    x * constants.BUCKET_WIDTH * resolution[0] + offset,
-    y * constants.BUCKET_WIDTH * resolution[1] + offset,
-    z * constants.BUCKET_WIDTH * resolution[2] + offset,
+    x * constants.BUCKET_WIDTH * resolution[0],
+    y * constants.BUCKET_WIDTH * resolution[1],
+    z * constants.BUCKET_WIDTH * resolution[2],
   ];
 }
 export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3): Vector3 {
@@ -91,7 +89,7 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
 export function zoomedPositionToZoomedAddress(
   [x, y, z]: Vector3,
   resolutionIndex: number,
-  additionalCoords: number[] | null,
+  additionalCoords: AdditionalCoordinate[] | null,
 ): BucketAddress {
   return [
     Math.floor(x / constants.BUCKET_WIDTH),

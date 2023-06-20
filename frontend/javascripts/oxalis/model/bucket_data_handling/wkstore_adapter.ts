@@ -33,9 +33,10 @@ const compressionPool = new WorkerPool(
   COMPRESSION_WORKER_COUNT,
 );
 export const REQUEST_TIMEOUT = 60000;
+export type AdditionalCoordinate = { name: string; value: number };
 export type SendBucketInfo = {
   position: Vector3;
-  additionalCoordinates: Array<{ name: string; value: number }> | null;
+  additionalCoordinates: Array<AdditionalCoordinate> | null | undefined;
   mag: Vector3;
   cubeSize: number;
 };
@@ -74,8 +75,7 @@ function createSendBucketInfo(
 ): SendBucketInfo {
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
-    additionalCoordinates:
-      zoomedAddress[4] != null ? [{ name: "t", value: zoomedAddress[4][0] }] : null,
+    additionalCoordinates: zoomedAddress[4],
     mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };

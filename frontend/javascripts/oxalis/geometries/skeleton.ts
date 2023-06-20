@@ -12,6 +12,7 @@ import NodeShader, {
 } from "oxalis/geometries/materials/node_shader";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 const MAX_CAPACITY = 1000;
 
@@ -515,7 +516,7 @@ class Skeleton {
             const attributeAdditionalCoords = buffer.geometry.attributes[
               `additionalCoord_${idx}`
             ] as THREE.BufferAttribute;
-            attributeAdditionalCoords.set([node.additionalCoords[idx]], index);
+            attributeAdditionalCoords.set([node.additionalCoords[idx].value], index);
           }
         }
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
@@ -567,7 +568,7 @@ class Skeleton {
     tree: Tree,
     nodeId: number,
     position: Vector3,
-    additionalCoords: number[] | null | undefined,
+    additionalCoords: AdditionalCoordinate[] | null | undefined,
   ) {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
@@ -580,7 +581,7 @@ class Skeleton {
           const attributeAdditionalCoords = buffer.geometry.attributes[
             `additionalCoord_${idx}`
           ] as THREE.BufferAttribute;
-          attributeAdditionalCoords.set([additionalCoords[idx]], index);
+          attributeAdditionalCoords.set([additionalCoords[idx].value], index);
         }
       }
 
@@ -653,8 +654,8 @@ class Skeleton {
             `additionalCoord_${idx}`
           ] as THREE.BufferAttribute;
 
-          additionalCoordAttribute.set([source.additionalCoords[idx]], 2 * index);
-          additionalCoordAttribute.set([target.additionalCoords[idx]], 2 * index + 1);
+          additionalCoordAttribute.set([source.additionalCoords[idx].value], 2 * index);
+          additionalCoordAttribute.set([target.additionalCoords[idx].value], 2 * index + 1);
           changedAttributes.push(additionalCoordAttribute);
         }
       }

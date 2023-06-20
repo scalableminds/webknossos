@@ -42,7 +42,7 @@ export default function traverse(
   ];
   const intersectedBuckets: Vector3[] = [[X, Y, Z]];
 
-  const behindLastBucket = (dim: number, pos: number) => {
+  const behindLastBucket = (dim: 0 | 1 | 2, pos: number) => {
     if (step[dim] < 0) {
       return pos < lastBucket[dim];
     } else if (step[dim] > 0) {

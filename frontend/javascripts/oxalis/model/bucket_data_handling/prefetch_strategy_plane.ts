@@ -9,6 +9,7 @@ import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { AdditionalCoordinate } from "./wkstore_adapter";
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
 export enum ContentTypes {
@@ -87,7 +88,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     resolutionInfo: ResolutionInfo,
-    additionalCoords: number[] | null,
+    additionalCoords: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
@@ -142,7 +143,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     isFallback: boolean,
-    additionalCoords: number[] | null,
+    additionalCoords: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: Array<PullQueueItem> = [];
 

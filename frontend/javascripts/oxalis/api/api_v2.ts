@@ -57,6 +57,7 @@ import { coalesce } from "libs/utils";
 
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -594,7 +595,7 @@ class DataApi {
     layerName: string,
     position: Vector3,
     zoomStep: number = 0,
-    additionalCoordinates: number[] | null = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<number> {
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
@@ -652,7 +653,7 @@ class DataApi {
   async labelVoxels(
     voxels: Array<Vector3>,
     label: number,
-    additionalCoordinates: number[] | null = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();

@@ -34,6 +34,7 @@ import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinates } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 const VersionRestoreWarning = (
   <Alert
@@ -65,11 +66,20 @@ type State = {
 function AdditionalCoordinatesInputView() {
   const additionalCoords = useSelector((state: OxalisState) => state.flycam.additionalCoords);
   const dispatch = useDispatch();
-  const changeAdditionalCoordinates = (values: number[]) => {
+  const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
       dispatch(setAdditionalCoordinates(values));
     }
   };
+  const changeAdditionalCoordinatesFromVector = (values: number[]) => {
+    if (additionalCoords != null) {
+      additionalCoords.map((el, index) => ({
+        ...el,
+        value: values[index],
+      }));
+    }
+  };
+
   if (additionalCoords == null || additionalCoords.length === 0) {
     return null;
   }
@@ -79,17 +89,18 @@ function AdditionalCoordinatesInputView() {
         <div>
           {additionalCoords.map((coord, idx) => (
             <NumberSliderSetting
-              // todo: read label name from data layer spec
-              label="Q"
-              // todop: use name of coord as key
-              // key={idx}
+              label={coord.name}
+              key={coord.name}
               min={0}
               max={100}
-              value={coord}
+              value={coord.value}
               spans={[2, 19, 3]}
               onChange={(newCoord) => {
                 const newCoords = additionalCoords.slice();
-                newCoords[idx] = newCoord;
+                newCoords[idx] = {
+                  ...newCoords[idx],
+                  value: newCoord,
+                };
                 changeAdditionalCoordinates(newCoords);
               }}
             />
@@ -100,8 +111,8 @@ function AdditionalCoordinatesInputView() {
       <ArbitraryVectorInput
         autoSize
         vectorLength={additionalCoords.length}
-        value={additionalCoords}
-        onChange={changeAdditionalCoordinates}
+        value={additionalCoords.map((el) => el.value)}
+        onChange={changeAdditionalCoordinatesFromVector}
         style={{ marginLeft: 8 }}
       />
     </Popover>

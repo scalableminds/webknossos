@@ -31,6 +31,7 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import { AdditionalCoordinate } from "./wkstore_adapter";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
@@ -53,7 +54,7 @@ function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
-  additionalCoords: number[] | null,
+  additionalCoords: AdditionalCoordinate[] | null,
 ): Array<{
   priority: number;
   bucket: DataBucket;
@@ -124,7 +125,7 @@ export default class LayerRenderingManager {
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
-  additionalCoords: number[] | null = null;
+  additionalCoords: AdditionalCoordinate[] | null = null;
 
   cuckooTable: CuckooTable | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];

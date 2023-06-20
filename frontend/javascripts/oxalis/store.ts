@@ -68,6 +68,7 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import { AdditionalCoordinate } from "./model/bucket_data_handling/wkstore_adapter";
 
 export type MutableCommentType = {
   content: string;
@@ -82,7 +83,7 @@ export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
-  additionalCoords: number[] | null;
+  additionalCoords: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
@@ -431,7 +432,7 @@ export type SaveState = {
 export type Flycam = {
   readonly zoomStep: number;
   readonly currentMatrix: Matrix4x4;
-  readonly additionalCoords: number[] | null;
+  readonly additionalCoords: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
 };

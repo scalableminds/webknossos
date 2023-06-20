@@ -6,6 +6,7 @@ import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue"
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { AdditionalCoordinate } from "./wkstore_adapter";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
@@ -58,7 +59,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     position: Vector3,
     resolutions: Array<Vector3>,
     resolutionInfo: ResolutionInfo,
-    additionalCoords: number[] | null,
+    additionalCoords: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: PullQueueItem[] = [];
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);

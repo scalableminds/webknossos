@@ -1,3 +1,5 @@
+import { AdditionalCoordinate } from "./model/bucket_data_handling/wkstore_adapter";
+
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
@@ -14,8 +16,10 @@ export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 
 // For 3D data BucketAddress = x, y, z, mag
-// For higher dimensional data, BucketAddress = x, y, z, mag, [q, r, ...]
-export type BucketAddress = Vector4 | [number, number, number, number, number[]];
+// For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
+export type BucketAddress =
+  | Vector4
+  | [number, number, number, number, AdditionalCoordinate[] | null];
 // export type BucketAddress = [number, number, number, number, number[]];
 
 export type Point2 = {

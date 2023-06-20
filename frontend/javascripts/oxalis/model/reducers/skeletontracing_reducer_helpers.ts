@@ -41,6 +41,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 
@@ -115,7 +116,7 @@ export function createNode(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
   positionFloat: Vector3,
-  additionalCoords: number[] | null,
+  additionalCoords: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -804,7 +805,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
     // todop: dont hardcode
-    additionalCoords: [0, 0],
+    additionalCoords: [],
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,

@@ -160,6 +160,7 @@ import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1389,7 +1390,7 @@ class DataApi {
     layerName: string,
     position: Vector3,
     _zoomStep: number | null | undefined = null,
-    additionalCoordinates: number[] | null = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<number> {
     // todop: check callers
 
@@ -1452,7 +1453,7 @@ class DataApi {
     layerName: string,
     mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
-    additionalCoordinates: number[] | null = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
@@ -1489,7 +1490,7 @@ class DataApi {
     viewport: OrthoView,
     layerName: string,
     maybeResolutionIndex: number | null | undefined,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
     const [curU, curV, curW] = dimensions.transDim(
@@ -1542,7 +1543,7 @@ class DataApi {
     bbox: BoundingBoxType,
     resolutions: Array<Vector3>,
     zoomStep: number,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<BucketAddress> {
     const buckets = [];
     const bottomRight = bbox.max;
@@ -1730,7 +1731,7 @@ class DataApi {
   async labelVoxels(
     voxels: Array<Vector3>,
     label: number,
-    additionalCoordinates: number[] | null = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();

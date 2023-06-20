@@ -1,4 +1,5 @@
 import type { Vector3, OrthoView } from "oxalis/constants";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 type ZoomInAction = ReturnType<typeof zoomInAction>;
 type ZoomOutAction = ReturnType<typeof zoomOutAction>;
 type ZoomByDeltaAction = ReturnType<typeof zoomByDeltaAction>;
@@ -77,7 +78,7 @@ export const setPositionAction = (position: Vector3, dimensionToSkip?: number | 
     dimensionToSkip,
   } as const);
 
-export const setAdditionalCoordinates = (values: number[] | null) =>
+export const setAdditionalCoordinates = (values: AdditionalCoordinate[] | null) =>
   ({
     type: "SET_ADDITIONAL_COORDINATES",
     values,

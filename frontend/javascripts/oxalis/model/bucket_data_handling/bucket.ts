@@ -15,6 +15,7 @@ import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { AdditionalCoordinate } from "./wkstore_adapter";
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
@@ -274,7 +275,7 @@ export class DataBucket {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
-  getAdditionalCoordinates(): number[] | undefined {
+  getAdditionalCoordinates(): AdditionalCoordinate[] | undefined | null {
     return this.zoomedAddress[4];
   }
 

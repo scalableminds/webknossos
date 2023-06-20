@@ -30,6 +30,7 @@ import type {
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { AdditionalCoordinate } from "./wkstore_adapter";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -190,8 +191,8 @@ class DataCube {
     return mappedId != null ? mappedId : idToMap;
   }
 
-  private getCubeKey(zoomStep: number, dims: number[] | undefined) {
-    return [zoomStep, ...(dims ?? [])].join("-");
+  private getCubeKey(zoomStep: number, dims: AdditionalCoordinate[] | undefined | null) {
+    return [zoomStep, ...(dims ?? []).map((el) => el.value)].join("-");
   }
 
   isWithinBounds([x, y, z, zoomStep, dims]: BucketAddress): boolean {
@@ -220,7 +221,10 @@ class DataCube {
     return [null, null];
   }
 
-  getOrCreateCubeEntry(zoomStep: number, dims: number[] | undefined): CubeEntry | null {
+  getOrCreateCubeEntry(
+    zoomStep: number,
+    dims: AdditionalCoordinate[] | null | undefined,
+  ): CubeEntry | null {
     const cubeKey = this.getCubeKey(zoomStep, dims);
     if (this.cubes[cubeKey] == null) {
       const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
@@ -374,7 +378,7 @@ class DataCube {
 
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     label: number,
     activeSegmentId?: number | null | undefined,
   ): Promise<void> {
@@ -401,7 +405,7 @@ class DataCube {
 
   async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     label: number,
     zoomStep: number,
     activeSegmentId: number | null | undefined,
@@ -434,7 +438,7 @@ class DataCube {
 
   async floodFill(
     globalSeedVoxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
@@ -719,7 +723,7 @@ class DataCube {
 
   async isZoomStepUltimatelyRenderableForVoxel(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): Promise<boolean> {
     // Make sure the respective bucket is loaded before checking whether the zoomStep
@@ -732,7 +736,7 @@ class DataCube {
 
   isZoomStepCurrentlyRenderableForVoxel(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
@@ -770,7 +774,7 @@ class DataCube {
 
   getNextCurrentlyUsableZoomStepForPosition(
     position: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
     const resolutions = this.resolutionInfo.getDenseResolutions();
@@ -789,7 +793,7 @@ class DataCube {
 
   async getNextUltimatelyUsableZoomStepForPosition(
     position: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): Promise<number> {
     const resolutions = this.resolutionInfo.getDenseResolutions();
@@ -812,7 +816,7 @@ class DataCube {
 
   getDataValue(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
   ): number {
@@ -845,7 +849,7 @@ class DataCube {
 
   getMappedDataValue(
     voxel: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): number {
     return this.getDataValue(
@@ -884,7 +888,7 @@ class DataCube {
 
   positionToZoomedAddress(
     position: Vector3,
-    additionalCoordinates: number[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): BucketAddress {
     // return the bucket a given voxel lies in

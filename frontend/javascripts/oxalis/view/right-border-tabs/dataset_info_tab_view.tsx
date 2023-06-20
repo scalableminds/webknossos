@@ -360,7 +360,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (this.props.isDatasetViewMode) {
       return (
         <div className="info-tab-block">
-          <p
+          <div
             style={{
               wordWrap: "break-word",
             }}
@@ -369,7 +369,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               {displayName || datasetName}
             </Title>
             {getEditSettingsIcon()}
-          </p>
+          </div>
           {datasetDescription ? (
             <div
               style={{
@@ -534,8 +534,16 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
     const contributorTags =
       contributors.length > 0
-        ? contributors.map((user) => <Tag color="blue">{formatUserName(activeUser, user)}</Tag>)
-        : [<Tag color="blue">None</Tag>];
+        ? contributors.map((user) => (
+            <Tag key={user.id} color="blue">
+              {formatUserName(activeUser, user)}
+            </Tag>
+          ))
+        : [
+            <Tag key="None" color="blue">
+              None
+            </Tag>,
+          ];
 
     return (
       <>

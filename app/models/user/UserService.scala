@@ -106,7 +106,6 @@ class UserService @Inject()(conf: WkConf,
         isEmailVerified = emailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
-      _ <- Fox.runIf(!emailVerified)(emailVerificationService.sendEmailVerification(multiUser))
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
       teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
       newUserId = ObjectId.generate
@@ -126,6 +125,7 @@ class UserService @Inject()(conf: WkConf,
         isUnlisted = false,
         lastTaskTypeId = None
       )
+      _ <- Fox.runIf(!emailVerified)(emailVerificationService.sendEmailVerification(user))
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
     } yield user

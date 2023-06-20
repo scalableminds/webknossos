@@ -204,11 +204,11 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def emailVerificationMail(userEmail: String, key: String): Mail =
+  def emailVerificationMail(user: User, userEmail: String, key: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Verify Your Email at WEBKNOSSOS",
-      bodyHtml = html.mail.verifyEmail("No name", key).body,
+      bodyHtml = html.mail.verifyEmail(user.name, key).body,
       recipients = List(userEmail)
     )
 

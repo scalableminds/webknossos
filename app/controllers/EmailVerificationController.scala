@@ -28,8 +28,7 @@ class EmailVerificationController @Inject()(
   @ApiOperation(value = "")
   def requestVerificationMail: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- emailVerificationService.sendEmailVerification(requestingMultiUser)
+      _ <- emailVerificationService.sendEmailVerification(request.identity)
     } yield Ok
   }
 }

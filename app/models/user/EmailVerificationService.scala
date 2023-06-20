@@ -20,8 +20,9 @@ class EmailVerificationService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def sendEmailVerification(multiUser: MultiUser)(implicit ec: ExecutionContext): Fox[Unit] =
+  def sendEmailVerification(user: User)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
+      multiUser <- multiUserDAO.findOne(user._multiUser)(ctx)
       key: String <- Fox.successful(RandomIDGenerator.generateBlocking(32))
       expiration = Instant.now + conf.WebKnossos.User.EmailVerification.linkExpiry
       evk: EmailVerificationKey = EmailVerificationKey(ObjectId.generate,
@@ -31,7 +32,8 @@ class EmailVerificationService @Inject()(conf: WkConf,
                                                        expiration,
                                                        isUsed = false)
       _ <- emailVerificationKeyDAO.insertOne(evk)
-      _ = Mailer ! Send(defaultMails.emailVerificationMail(multiUser.email, key))
+      fullVerificationLink = s"${conf.Http.uri}/api/verifyEmail/$key" // TODO: Frontend creates a page for verification
+      _ = Mailer ! Send(defaultMails.emailVerificationMail(user, multiUser.email, fullVerificationLink))
     } yield ()
 
   def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =

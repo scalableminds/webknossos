@@ -1,10 +1,13 @@
-@( name: String, key: String )
+@( name: String, url: String )
 
 @emailBaseTemplate() {
   <p>Hi @name,</p>
 
   <p>
-    Please verify your email here (TODO URL) <a href="@{key}">@key</a>.
+    Please use the link below to verify your email.
+  </p>
+  <p>
+    <a href="@{url}">@url</a>.
   </p>
 
 

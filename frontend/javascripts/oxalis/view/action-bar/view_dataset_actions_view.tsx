@@ -17,6 +17,8 @@ import {
 import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
+import features from "features";
+import { getAISegmentationMenu } from "./tracing_actions_view";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -29,10 +31,25 @@ export const screenshotMenuItem: MenuItemType = {
 };
 
 export default function ViewDatasetActionsView(props: Props) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
+  const isAINucleiSegmentationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showAINucleiSegmentationModal,
+  );
+  const isAINeuronSegmentationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showAINeuronSegmentationModal,
+  );
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
+
+  const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
+    isAINucleiSegmentationModalOpen,
+    isAINeuronSegmentationModalOpen,
+  );
+  const isAISegmentationEnabled =
+    features().jobsEnabled && activeUser != null && activeUser.isSuperUser;
+
   const shareDatasetModal = (
     <ShareViewDatasetModalView
       isOpen={isShareModalOpen}
@@ -62,6 +79,7 @@ export default function ViewDatasetActionsView(props: Props) {
         icon: <DownloadOutlined />,
         label: "Download",
       },
+      isAISegmentationEnabled ? AISegmentationMenu : null,
       props.layoutMenu,
     ],
   };
@@ -74,6 +92,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
+      {isAISegmentationEnabled ? AISegmentationModals : null}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

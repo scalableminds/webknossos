@@ -41,6 +41,8 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
+  setAINucleiSegmentationModalVisibilityAction,
+  setAINeuronSegmentationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -91,14 +93,14 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
+  isAINeuronSegmentationModalOpen: boolean;
+  isAINucleiSegmentationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
-  isAINucleiSegmentationModalOpen: boolean;
-  isAINeuronSegmentationModalOpen: boolean;
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
   isZarrPrivateLinksModalOpen: boolean;
@@ -256,10 +258,45 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   };
 }
 
+export function getAISegmentationMenu(
+  isAINucleiSegmentationModalOpen: boolean,
+  isAINeuronSegmentationModalOpen: boolean,
+): [SubMenuType, React.ReactNode] {
+  const AISegmentationMenu = {
+    key: "ai-segmentation-menu",
+    icon: <SettingOutlined />,
+    label: "AI Segementation",
+    children: [
+      {
+        key: "ai-nuclei-segmentation",
+        label: "AI Nuclei Segmentation",
+        onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
+      },
+      {
+        key: "ai-neuron-segmentation",
+        label: "AI Neuron Segmentation",
+        onClick: () => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true)),
+      },
+    ],
+  };
+
+  const AISegmentationModals = isAINucleiSegmentationModalOpen ? (
+    <NucleiSegmentationModal
+      key="ai-nuclei-segmentation-modal"
+      handleClose={() => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(false))}
+    />
+  ) : isAINeuronSegmentationModalOpen ? (
+    <NeuronSegmentationModal
+      key="ai-neuron-segmentation-modal"
+      handleClose={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
+    />
+  ) : null;
+
+  return [AISegmentationMenu, AISegmentationModals];
+}
+
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
-    isAINeuronSegmentationModalOpen: false,
-    isAINucleiSegmentationModalOpen: false,
     isMergeModalOpen: false,
     isZarrPrivateLinksModalOpen: false,
     isUserScriptsModalOpen: false,
@@ -444,24 +481,10 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleAINucleiSegmentationModalOpen = () => {
-    this.setState({
-      isAINucleiSegmentationModalOpen: true,
-    });
-  };
-
-  handleAINeuronSegmentationModalOpen = () => {
-    this.setState({
-      isAINeuronSegmentationModalOpen: true,
-    });
-  };
-
   handleModalClose = () => {
     this.setState({
       isMergeModalOpen: false,
       isUserScriptsModalOpen: false,
-      isAINeuronSegmentationModalOpen: false,
-      isAINucleiSegmentationModalOpen: false,
     });
   };
 
@@ -652,37 +675,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     if (features().jobsEnabled && activeUser != null && activeUser.isSuperUser) {
-      menuItems.push({
-        key: "ai-segmentation-menu",
-        icon: <SettingOutlined />,
-        label: "AI Segementation",
-        children: [
-          {
-            key: "ai-nuclei-segmentation",
-            label: "AI Nuclei Segmentation",
-            onClick: this.handleAINucleiSegmentationModalOpen,
-          },
-          {
-            key: "ai-neuron-segmentation",
-            label: "AI Neuron Segmentation",
-            onClick: this.handleAINeuronSegmentationModalOpen,
-          },
-        ],
-      });
-      if (this.state.isAINucleiSegmentationModalOpen)
-        modals.push(
-          <NucleiSegmentationModal
-            key="ai-nuclei-segmentation-modal"
-            handleClose={this.handleModalClose}
-          />,
-        );
-      if (this.state.isAINeuronSegmentationModalOpen)
-        modals.push(
-          <NeuronSegmentationModal
-            key="ai-neuron-segmentation-modal"
-            handleClose={this.handleModalClose}
-          />,
-        );
+      const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
+        this.props.isAINucleiSegmentationModalOpen,
+        this.props.isAINeuronSegmentationModalOpen,
+      );
+      menuItems.push(AISegmentationMenu);
+      modals.push(AISegmentationModals);
     }
 
     menuItems.push(screenshotMenuItem);
@@ -767,6 +765,8 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
+    isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
+    isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

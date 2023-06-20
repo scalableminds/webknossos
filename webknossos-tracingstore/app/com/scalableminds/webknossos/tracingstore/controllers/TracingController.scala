@@ -207,7 +207,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
             tracingService
-              .handleUpdateGroup(tracingId, updateGroup, prevVersion)
+              .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
               .flatMap(_ =>
                 tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
               .map(_ => updateGroup.version)

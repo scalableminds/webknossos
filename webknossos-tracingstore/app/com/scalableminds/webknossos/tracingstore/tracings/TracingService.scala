@@ -23,7 +23,7 @@ trait TracingService[T <: GeneratedMessage]
     with ColorGenerator
     with BoundingBoxMerger {
 
-  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
+  private val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 
   def tracingType: TracingType
 
@@ -114,7 +114,10 @@ trait TracingService[T <: GeneratedMessage]
           Fox.successful(tracing)
     }
 
-  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
+  def handleUpdateGroup(tracingId: String,
+                        updateGroup: UpdateActionGroup[T],
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 

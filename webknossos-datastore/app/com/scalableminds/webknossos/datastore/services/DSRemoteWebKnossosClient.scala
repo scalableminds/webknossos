@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
@@ -68,12 +68,14 @@ class DSRemoteWebKnossosClient @Inject()(
   def reportUpload(dataSourceId: DataSourceId,
                    dataSetSizeBytes: Long,
                    needsConversion: Boolean,
+                   viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
     for {
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
+        .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()
@@ -109,7 +111,7 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
-  private lazy val tracingstoreUriCache: AlfuFoxCache[String, String] = AlfuFoxCache()
+  private lazy val tracingstoreUriCache: AlfuCache[String, String] = AlfuCache()
   def getTracingstoreUri: Fox[String] =
     tracingstoreUriCache.getOrLoad(
       "tracingStore",
@@ -123,8 +125,8 @@ class DSRemoteWebKnossosClient @Inject()(
 
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
   // while still limiting the number of remote lookups during streaming
-  private lazy val annotationSourceCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =
-    AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
+  private lazy val annotationSourceCache: AlfuCache[(String, Option[String]), AnnotationSource] =
+    AlfuCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
   def getAnnotationSource(accessToken: String, userToken: Option[String]): Fox[AnnotationSource] =
     annotationSourceCache.getOrLoad(
@@ -136,8 +138,8 @@ class DSRemoteWebKnossosClient @Inject()(
           .getWithJsonResponse[AnnotationSource]
     )
 
-  private lazy val credentialCache: AlfuFoxCache[String, DataVaultCredential] =
-    AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
+  private lazy val credentialCache: AlfuCache[String, DataVaultCredential] =
+    AlfuCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
   def getCredential(credentialId: String): Fox[DataVaultCredential] =
     credentialCache.getOrLoad(

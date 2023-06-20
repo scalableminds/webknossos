@@ -70,17 +70,25 @@ Learn more about the skeleton, volume, and hybrid annotations as well as the int
 
 ![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.jpeg)
 
+## Tutorials
+We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 
+
+- [Tutorial: Volume Annotation](./tutorial_volume_annotation.md)
+- [Tutorial: Data Sharing with WEBKNOSSOS](./tutorial_data_sharing.md)
+- [Tutorial: Automation and Interoperability](./tutorial_automation.md)
+
 ## Learn More
 
 Now you know the basics of WEBKNOSSOS.
 Feel free to explore more features of WEBKNOSSOS in this documentation.
 
 - [Dashboard](./dashboard.md)
-- [Skeleton Annotations](./skeleton_annotation.md)
 - [Volume Annotations & Proof-Reading](./volume_annotation.md)
-- [Keyboard Shortcuts](./keyboard_shortcuts.md)
+- [Skeleton Annotations](./skeleton_annotation.md)
 - [Understanding the User Interface](./tracing_ui.md)
-- [Sharing](./sharing.md)
+- [Keyboard Shortcuts](./keyboard_shortcuts.md)
+- [Collaboration & Sharing](./sharing.md)
+- [Data Export and Interoperability](./export.md)
 - [Datasets](./datasets.md) and [Data Formats](./data_formats.md)
 - [User and Permission Management](./users.md)
 - [Task and Project Management](./tasks.md)

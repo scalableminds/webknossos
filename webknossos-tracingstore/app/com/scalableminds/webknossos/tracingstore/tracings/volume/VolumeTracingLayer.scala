@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
@@ -7,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSourceDescriptorService}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -18,10 +19,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
+import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  override def dataVaultServiceOpt: Option[DataVaultService] = None
+  override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
@@ -29,7 +31,7 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
+  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
@@ -45,7 +47,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
+  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
   val temporaryTracingStore: TemporaryTracingStore[VolumeTracing] = layer.temporaryTracingStore
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
@@ -61,7 +63,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
     } yield ()
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStreamFromCache(layer)
+    bucketStreamFromTemporaryStore(layer)
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
     throw new NotImplementedException // Temporary Volume Tracings do not support versioning
@@ -88,7 +90,7 @@ case class VolumeTracingLayer(
   override val mappings: Option[Set[String]] = None
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
-  lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
+  private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
@@ -100,7 +102,10 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService]): BucketProvider = volumeBucketProvider
+  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                              dataSourceId: DataSourceId,
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+    volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 

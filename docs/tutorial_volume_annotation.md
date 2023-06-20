@@ -2,10 +2,9 @@
 
 In this tutorial, we will explore the volume annotation features of WEBKNOSSOS. We will cover everything from opening and annotating a published dataset to utilizing both basic and advanced annotation tools. Additionally, I will explain a few things about meshes and provide insights into the layer system of WEBKNOSSOS. Let’s get started!
 
-<!--
 Here is full tutorial video, alternatively continue reading below.
 
-![type:video Tutorial: Volume Annotation with WEBKNOSSOS](TODO add YouTube link) -->
+![youtube-video](https://www.youtube.com/embed/HgFYzy-lrZ0)
 
 If you already have an account, go to the “featured publications” page. Alternatively, sign up for free in less than a minute on [https://webknossos.org](https://webknossos.org).
 

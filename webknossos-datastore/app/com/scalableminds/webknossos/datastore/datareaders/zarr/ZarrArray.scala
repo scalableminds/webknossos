@@ -1,52 +1,43 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetHeader,
-  DatasetPath
-}
+import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
+import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsError, JsSuccess, Json}
+
+import scala.concurrent.ExecutionContext
 
 object ZarrArray extends LazyLogging {
-  @throws[IOException]
-  def open(path: VaultPath, axisOrderOpt: Option[AxisOrder], channelIndex: Option[Int]): ZarrArray = {
-    val rootPath = new DatasetPath("")
-    val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-    val headerBytes = (path / headerPath.storeKey).readBytes()
-    if (headerBytes.isEmpty)
-      throw new IOException(
-        "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: ZarrHeader =
-      Json.parse(headerString).validate[ZarrHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
-      }
-    if (header.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
-      throw new IllegalArgumentException(
-        f"Chunk size of this Zarr Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
-    }
-    new ZarrArray(rootPath, path, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)), channelIndex)
-  }
-
+  def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
+    for {
+      headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
+        .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
+      header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes) ?~> "Could not parse array header"
+      _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
+    } yield
+      new ZarrArray(path,
+                    dataSourceId,
+                    layerName,
+                    header,
+                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                    channelIndex,
+                    sharedChunkContentsCache)
 }
 
-class ZarrArray(relativePath: DatasetPath,
-                vaultPath: VaultPath,
+class ZarrArray(vaultPath: VaultPath,
+                dataSourceId: DataSourceId,
+                layerName: String,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
-                channelIndex: Option[Int])
-    extends DatasetArray(relativePath, vaultPath, header, axisOrder, channelIndex)
-    with LazyLogging {
-
-  override protected val chunkReader: ChunkReader =
-    ChunkReader.create(vaultPath, header)
-}
+                channelIndex: Option[Int],
+                sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)

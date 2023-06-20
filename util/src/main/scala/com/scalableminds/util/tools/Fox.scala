@@ -3,7 +3,8 @@ package com.scalableminds.util.tools
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
@@ -123,18 +124,22 @@ object Fox extends FoxImplicits {
   }
 
   // Run serially, fail on the first failure
-  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
-    def runNext(remaining: List[A], results: List[B]): Fox[List[B]] =
-      remaining match {
-        case head :: tail =>
-          for {
-            currentResult <- f(head)
-            results <- runNext(tail, currentResult :: results)
-          } yield results
-        case Nil =>
-          Fox.successful(results.reverse)
+  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+    serialCombined(l.toIterator)(f)
+
+  // Run serially, fail on the first failure
+  def serialCombined[A, B](it: Iterator[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
+    def runNext(results: List[B]): Fox[List[B]] =
+      if (it.hasNext) {
+        for {
+          currentResult <- f(it.next())
+          results <- runNext(currentResult :: results)
+        } yield results
+      } else {
+        Fox.successful(results.reverse)
       }
-    runNext(l, Nil)
+
+    runNext(Nil)
   }
 
   // run in sequence, drop everything that isn’t full
@@ -242,9 +247,20 @@ object Fox extends FoxImplicits {
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self: Fox[A] = this
 
+  // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
   def ?~>(s: String): Fox[A] =
     new Fox(futureBox.map(_ ?~! s))
 
+  // Add error message only in case of Failure, pass through Empty
+  def ?=>(s: String): Fox[A] =
+    futureBox.flatMap {
+      case f: Failure =>
+        new Fox(Future.successful(f)) ?~> s
+      case Full(value) => Fox.successful(value)
+      case Empty       => Fox.empty
+    }
+
+  // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
   def ~>[T](errorCode: => T): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 
@@ -306,6 +322,14 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
         case Empty              => Future.failed(new Exception("Empty"))
       }
     }).flatMap(identity)
+
+  /*
+    Awaits the future and opens the box. Do not use this in production code!
+   */
+  def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
+    val box = Await.result(futureBox, awaitTimeout)
+    box.openOrThrowException(justification)
+  }
 
   /**
     * Helper to force an implicit conversation

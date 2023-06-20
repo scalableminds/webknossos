@@ -18,11 +18,12 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 - Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT
 - Fully browser-based user experience. No installation required
 - Efficient 3D data streaming for quick loading speeds
-- Creation/editing of skeleton (line-segments) and 3D volumetric annotations
+- Creation/editing of [skeleton (line-segments)](./skeleton_annotation.md) and [3D volumetric annotations](./volume_annotation.md)
 - [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
-- Easy Sharing. Every dataset and annotation can be securely shared as a web link with others
-- Fine-grained access permission and and user roles for secure collaboration
+- [Easy Sharing](./sharing.md). Every dataset and annotation can be securely shared as a web link with others
+- [Fine-grained access permission](./users.md) and and user roles for secure collaboration
+- [AI Quick Select tool](./volume_annotation.md#ai-quick-select) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data_formats.md) (some formats will be converted on upload)
 - [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel

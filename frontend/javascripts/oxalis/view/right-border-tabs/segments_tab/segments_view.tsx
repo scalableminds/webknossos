@@ -7,6 +7,7 @@ import {
   SettingOutlined,
   ExclamationCircleOutlined,
   ArrowRightOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -28,6 +29,7 @@ import {
 } from "antd";
 import features from "features";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
@@ -41,6 +43,7 @@ import {
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
+  getSegmentColorAsHSLA,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -91,6 +94,7 @@ import {
   findParentIdForGroupId,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
+import { ChangeColorMenuItemContent } from "components/color_picker";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -768,6 +772,29 @@ class SegmentsView extends React.Component<Props, State> {
     </>
   );
 
+  setGroupColor(groupId: number, color: Vector3) {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToChangeColor =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    segmentGroupToChangeColor.forEach((segment) =>
+      Store.dispatch(
+        updateSegmentAction(
+          segment.id,
+          { color: color },
+          visibleSegmentationLayer.name,
+          // The parameter createsNewUndoState is not passed, since the action
+          // is added to a batch and batch updates always crate a new undo state.
+        ),
+      ),
+    );
+  }
+
   handleDeleteGroup = (id: number) => {
     const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
 
@@ -958,7 +985,6 @@ class SegmentsView extends React.Component<Props, State> {
               } else {
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
-
                 const menu: MenuProps = {
                   items: [
                     {
@@ -974,6 +1000,24 @@ class SegmentsView extends React.Component<Props, State> {
                       onClick: () => this.handleDeleteGroup(id),
                       icon: <DeleteOutlined />,
                       label: "Delete group",
+                    },
+                    {
+                      key: "changeGroupColor",
+                      disabled: false,
+                      label: (
+                        <ChangeColorMenuItemContent
+                          title="Change Group Color"
+                          isDisabled={false}
+                          onSetColor={(color) => {
+                            if (getVisibleSegmentationLayer == null) {
+                              return;
+                            }
+                            console.log(color);
+                            //this.setGroupColor(id, color);
+                          }}
+                          rgb={[0.5, 0.5, 0.5]}
+                        />
+                      ),
                     },
                     this.state.selectedSegmentId != null
                       ? {
@@ -1013,6 +1057,7 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
+                      open={true}
                       trigger={["contextMenu"]}
                     >
                       <EditableTextLabel

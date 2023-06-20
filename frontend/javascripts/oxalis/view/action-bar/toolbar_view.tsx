@@ -620,13 +620,6 @@ function ChangeBrushSizePopover() {
     );
   };
 
-  const extendedKeyboardBindings = {
-    1: () => handleUpdateBrushSize(smallBrushSize),
-    2: () => handleUpdateBrushSize(mediumBrushSize),
-    3: () => handleUpdateBrushSize(largeBrushSize),
-  };
-  new InputKeyboardNoLoop({}, {}, extendedKeyboardBindings);
-
   const items: MenuProps["items"] = [
     {
       label: "Assign current brush size to",

@@ -448,44 +448,7 @@ export class DrawTool {
       },
     };
   }
-
-  static getBrushPresetsOrSetDefault():BrushPresets{
-    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
-    if(brushPresetsFromStore!=null){
-      return brushPresetsFromStore;
-    }
-    else{
-      const maximumBrushSize = getMaximumBrushSize(Store.getState());
-      const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
-      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
-      return defaultBrushSizes;
-    }
-  }
-
-  static handleUpdateBrushSize (size: "small"|"medium"|"large") {
-    console.log("yas kween");
-    const brushPresets = this.getBrushPresetsOrSetDefault();
-    switch(size){
-      case "small":
-        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
-        break;
-      case "medium":
-        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
-        break;
-      case "large":
-        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
-        break;
-    }
-    return;
-  }
-
-  static getExtendedKeyboardControls() {
-    return {       
-    1: () => this.handleUpdateBrushSize("small"),
-    2: () => this.handleUpdateBrushSize("medium"),
-    3: () => this.handleUpdateBrushSize("large"),}
-  }
-
+  
   static getActionDescriptors(
     activeTool: AnnotationTool,
     useLegacyBindings: boolean,

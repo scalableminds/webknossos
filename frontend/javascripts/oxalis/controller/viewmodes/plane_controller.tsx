@@ -525,10 +525,10 @@ class PlaneController extends React.PureComponent<Props> {
 
     let extendedControls = {
       m: () => setTool(AnnotationToolEnum.MOVE),
-      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
       1: () => this.handleUpdateBrushSize("small"),
       2: () => this.handleUpdateBrushSize("medium"),
       3: () => this.handleUpdateBrushSize("large"),
+      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -551,7 +551,6 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.tracing.volumes.length > 0 != null
         ? VolumeKeybindings.getExtendedKeyboardControls()
         : {};
-    //const extendedDrawControls = this.props.activeTool == AnnotationToolEnum.BRUSH ? null: DrawTool.getExtendedKeyboardControls(); //TODO needs to be moved somewhere useful where its actually called
     ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
     const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
     ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);

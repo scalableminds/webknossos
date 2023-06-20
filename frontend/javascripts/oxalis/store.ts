@@ -341,11 +341,7 @@ export type UserConfiguration = {
   readonly centerNewNode: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
-  readonly presetBrushSizes: {
-    small: number;
-    medium: number;
-    large: number;
-  } | null;
+  readonly presetBrushSizes: BrushPresets | null;
   readonly rotateValue: number;
   readonly sortCommentsAsc: boolean;
   readonly sortTreesByName: boolean;

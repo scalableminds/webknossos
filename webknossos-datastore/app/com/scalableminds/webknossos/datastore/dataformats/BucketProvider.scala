@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemVaultPath, VaultPath}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
 
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def dataVaultServiceOpt: Option[DataVaultService]
+  def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService]
 
   // To be defined in subclass.
   def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[DataCubeHandle] =

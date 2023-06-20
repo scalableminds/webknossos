@@ -50,6 +50,7 @@ import {
 import {
   maybeFetchMeshFilesAction,
   updateCurrentMeshFileAction,
+  updateIsosurfaceVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -790,6 +791,21 @@ class SegmentsView extends React.Component<Props, State> {
     );
   }
 
+  handleChangeMeshVisibility = (layerName: string, groupId: number, isVisible: boolean) => {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToLoadMeshes =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    segmentGroupToLoadMeshes.forEach((segment) =>
+      Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible)),
+    );
+  };
+
   handleDeleteGroup = (id: number) => {
     const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
 
@@ -998,11 +1014,11 @@ class SegmentsView extends React.Component<Props, State> {
                     },
                     {
                       key: "changeGroupColor",
-                      disabled: false,
+                      disabled: isEditingDisabled,
                       label: (
                         <ChangeColorMenuItemContent
                           title="Change Group Color"
-                          isDisabled={false}
+                          isDisabled={isEditingDisabled}
                           onSetColor={(color) => {
                             if (getVisibleSegmentationLayer == null) {
                               return;
@@ -1012,6 +1028,27 @@ class SegmentsView extends React.Component<Props, State> {
                           }}
                           rgb={[0.5, 0.5, 0.5]}
                         />
+                      ),
+                    },
+                    {
+                      key: "loadMeshesOfGroup",
+                      label: (
+                        <div
+                          onClick={() => {
+                            if (this.props.visibleSegmentationLayer == null) {
+                              // Satisfy TS
+                              return;
+                            }
+                            this.handleChangeMeshVisibility(
+                              this.props.visibleSegmentationLayer.name,
+                              id,
+                              true,
+                            );
+                            console.log("load or hide");
+                          }}
+                        >
+                          Load/Hide meshes of group
+                        </div>
                       ),
                     },
                     this.state.selectedSegmentId != null
@@ -1052,7 +1089,7 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
                       onOpenChange={(isVisible) =>
                         this.handleSegmentDropdownMenuVisibility(id, isVisible)
                       }

@@ -455,6 +455,37 @@ class PlaneController extends React.PureComponent<Props> {
       ),
     );
   }
+  
+  getBrushPresetsOrSetDefault():BrushPresets{
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if(brushPresetsFromStore!=null){
+      return brushPresetsFromStore;
+    }
+    else{
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
+  }
+
+  handleUpdateBrushSize (size: "small"|"medium"|"large") {
+    console.log("yas kween");
+    const brushPresets = this.getBrushPresetsOrSetDefault();
+    switch(size){
+      case "small":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        break;
+      case "medium":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        break;
+      case "large":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        break;
+    }
+    return;
+  }
+
 
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {
@@ -495,6 +526,9 @@ class PlaneController extends React.PureComponent<Props> {
     let extendedControls = {
       m: () => setTool(AnnotationToolEnum.MOVE),
       ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
+      1: () => this.handleUpdateBrushSize("small"),
+      2: () => this.handleUpdateBrushSize("medium"),
+      3: () => this.handleUpdateBrushSize("large"),
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -517,9 +551,9 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.tracing.volumes.length > 0 != null
         ? VolumeKeybindings.getExtendedKeyboardControls()
         : {};
-    const extendedDrawControls = this.props.activeTool == AnnotationToolEnum.BRUSH ? null: DrawTool.getExtendedKeyboardControls(); //TODO needs to be moved somewhere useful where its actually called
+    //const extendedDrawControls = this.props.activeTool == AnnotationToolEnum.BRUSH ? null: DrawTool.getExtendedKeyboardControls(); //TODO needs to be moved somewhere useful where its actually called
     ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
-    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls, ... extendedDrawControls };
+    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
     ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);
     extendedControls = { ...extendedControls, ...extendedAnnotationControls };
 

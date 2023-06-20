@@ -139,6 +139,9 @@ export default class TextureBucketManager {
       bucket.zoomedAddress[3],
       this.layerIndex,
     ]);
+
+    // @ts-ignore
+    window.needsRerender = true;
   }
 
   // Takes an array of buckets and ensures that these

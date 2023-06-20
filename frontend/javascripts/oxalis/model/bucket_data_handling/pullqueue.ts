@@ -132,16 +132,6 @@ class PullQueue {
     const bucket = this.cube.getBucket(bucketAddress);
 
     if (bucket.type === "data") {
-      // todop: revert
-      if (bucketData != null) {
-        const additionalCoords = bucketAddress[4];
-        if (additionalCoords != null) {
-          for (let idx = 0; idx < bucketData?.length; idx++) {
-            bucketData[idx] += additionalCoords[0];
-          }
-        }
-      }
-
       bucket.receiveData(bucketData);
     }
   }

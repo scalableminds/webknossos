@@ -4,6 +4,14 @@ export default {
   $schema: "http://json-schema.org/draft-06/schema#",
   ...baseDatasetViewConfiguration,
   definitions: {
+    "types::Vector2": {
+      type: "array",
+      items: {
+        type: "number",
+      },
+      minItems: 2,
+      maxItems: 2,
+    },
     "types::Vector3": {
       type: "array",
       items: {
@@ -77,6 +85,23 @@ export default {
         },
         numChannels: {
           type: "number",
+        },
+        additionalCoordinates: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+              },
+              bounds: {
+                $ref: "#/definitions/types::Vector2",
+              },
+              index: {
+                type: "number",
+              },
+            },
+          },
         },
         mags: {
           type: "array",

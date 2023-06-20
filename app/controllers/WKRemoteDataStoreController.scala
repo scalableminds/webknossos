@@ -20,7 +20,7 @@ import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
-import models.user.{User, UserDAO, UserService}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -44,6 +44,7 @@ class WKRemoteDataStoreController @Inject()(
     userDAO: UserDAO,
     folderDAO: FolderDAO,
     jobDAO: JobDAO,
+    multiUserDAO: MultiUserDAO,
     credentialDAO: CredentialDAO,
     mailchimpClient: MailchimpClient,
     slackNotificationService: SlackNotificationService,
@@ -109,19 +110,21 @@ class WKRemoteDataStoreController @Inject()(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataSet))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user._organization, dataSetName, viaAddRoute))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataSetName, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }
     }
 
-  private def logUploadToSlack(organizationId: ObjectId, datasetName: String, viaAddRoute: Boolean): Fox[Unit] =
+  private def logUploadToSlack(user: User, datasetName: String, viaAddRoute: Boolean): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       resultLink = s"${conf.Http.uri}/datasets/${organization.name}/$datasetName"
-      addNote = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
-      _ = slackNotificationService.info(s"Dataset added $addNote",
+      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
+      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
                                         s"For organization: ${organization.displayName}. <$resultLink|Result>")
     } yield ()
 

@@ -440,7 +440,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   getEmptyListPlaceholder = () => {
-    return (
+    return this.state.isLoading ? null : (
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
           <Card bordered={false} cover={<i className="drawing drawing-empty-list-annotations" />}>

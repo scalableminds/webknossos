@@ -14,11 +14,9 @@ import {
   Select,
 } from "antd";
 import {
-  CloudUploadOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  RocketOutlined,
   SettingOutlined,
   InfoCircleOutlined,
   HourglassOutlined,
@@ -27,11 +25,10 @@ import {
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
-import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
-import features, { getDemoDatasetUrl } from "features";
+import features from "features";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
 import dayjs from "dayjs";
@@ -118,6 +115,7 @@ function DatasetView(props: Props) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
   }, []);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -129,6 +127,7 @@ function DatasetView(props: Props) {
 
     return () => (interval != null ? clearInterval(interval) : undefined);
   }, []);
+
   useEffect(() => {
     persistence.persist({
       searchQuery: searchQuery || "",
@@ -169,10 +168,6 @@ function DatasetView(props: Props) {
       />
     );
   }
-
-  const margin = {
-    marginRight: 5,
-  };
 
   const createFilteringModeRadio = (key: DatasetFilteringMode, label: string) => (
     <Radio
@@ -229,7 +224,6 @@ function DatasetView(props: Props) {
   ) : (
     searchBox
   );
-  const showLoadingIndicator = context.isLoading || context.isChecking;
 
   const adminHeader = (
     <div
@@ -240,37 +234,12 @@ function DatasetView(props: Props) {
     >
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
-          <Tooltip
-            title={
-              showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."
-            }
-          >
-            <Dropdown.Button
-              menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
-              style={margin}
-              onClick={() => context.fetchDatasets()}
-              disabled={context.isChecking}
-            >
-              {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
-            </Dropdown.Button>
-          </Tooltip>
-
-          <Link
-            to={
-              context.activeFolderId != null && (folder == null || folder.isEditable)
-                ? `/datasets/upload?to=${context.activeFolderId}`
-                : "/datasets/upload"
-            }
-            style={margin}
-          >
-            <Button type="primary" icon={<PlusOutlined />}>
-              Add Dataset
-            </Button>
-          </Link>
+          <DatasetRefreshButton context={context} />
+          <DatasetAddButton context={context} />
           {context.activeFolderId != null && (
             <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
-              style={margin}
+              style={{ marginRight: 5 }}
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
@@ -325,6 +294,44 @@ function DatasetView(props: Props) {
         {content}
       </Spin>
     </div>
+  );
+}
+
+export function DatasetRefreshButton({ context }: { context: DatasetCollectionContextValue }) {
+  const showLoadingIndicator = context.isLoading || context.isChecking;
+
+  return (
+    <Tooltip
+      title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
+    >
+      <Dropdown.Button
+        menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
+        style={{ marginRight: 5 }}
+        onClick={() => context.fetchDatasets()}
+        disabled={context.isChecking}
+      >
+        {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+      </Dropdown.Button>
+    </Tooltip>
+  );
+}
+
+export function DatasetAddButton({ context }: { context: DatasetCollectionContextValue }) {
+  const { data: folder } = useFolderQuery(context.activeFolderId);
+
+  return (
+    <Link
+      to={
+        context.activeFolderId != null && (folder == null || folder.isEditable)
+          ? `/datasets/upload?to=${context.activeFolderId}`
+          : "/datasets/upload"
+      }
+      style={{ marginRight: 5 }}
+    >
+      <Button type="primary" icon={<PlusOutlined />}>
+        Add Dataset
+      </Button>
+    </Link>
   );
 }
 
@@ -495,74 +502,24 @@ function renderPlaceholder(
   }
 
   if (searchQuery) {
-    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH ? "No datasets found." : null;
+    return searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH
+      ? "No datasets match your search."
+      : null;
   }
-
-  const openPublicDatasetCard = (
-    <OptionCard
-      header="Open Demo Dataset"
-      icon={<RocketOutlined />}
-      action={
-        <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
-          <Button>Open Dataset</Button>
-        </a>
-      }
-      height={350}
-    >
-      Have a look at a public dataset to experience WEBKNOSSOS in action.
-    </OptionCard>
-  );
-
-  const uploadPlaceholder = (
-    <OptionCard
-      header="Import Dataset"
-      icon={<CloudUploadOutlined />}
-      action={
-        <Link to="/datasets/upload">
-          <Button>Open Import Dialog</Button>
-        </Link>
-      }
-      height={350}
-    >
-      WEBKNOSSOS supports a variety of (remote){" "}
-      <a
-        href="https://docs.webknossos.org/webknossos/data_formats.html"
-        target="_blank"
-        rel="noreferrer"
-      >
-        file formats
-      </a>{" "}
-      and is also able to convert them when necessary.
-    </OptionCard>
-  );
 
   const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
     ? "There are no datasets in this folder. Import one or move a dataset from another folder."
     : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
 
   return (
-    <Row
-      justify="center"
+    <div
       style={{
-        padding: "20px 50px 70px",
+        marginTop: 24,
+        textAlign: "center",
       }}
-      align="middle"
     >
-      <Col span={18}>
-        <Row gutter={16} justify="center" align="bottom">
-          {features().isWkorgInstance ? openPublicDatasetCard : null}
-          {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
-        </Row>
-        <div
-          style={{
-            marginTop: 24,
-            textAlign: "center",
-          }}
-        >
-          {emptyListHintText}
-        </div>
-      </Col>
-    </Row>
+      {emptyListHintText}
+    </div>
   );
 }
 

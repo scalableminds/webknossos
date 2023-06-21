@@ -1,6 +1,6 @@
 import { filterNullValues } from "libs/utils";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIUser } from "types/api_flow_types";
+import { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
@@ -13,7 +13,7 @@ import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
 import features, { getDemoDatasetUrl } from "features";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { useFolderHierarchyQuery } from "./dataset/queries";
+import { useFolderHierarchyQuery, useDatasetsInFolderQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;
@@ -38,6 +38,8 @@ function DatasetFolderViewInner(props: Props) {
       setSelectedDatasets([]);
       return;
     }
+    // Clear folder selection if a dataset is selected.
+    context.setSelectedFolder(null);
 
     setSelectedDatasets((oldSelectedDatasets) => {
       const set = new Set(oldSelectedDatasets);
@@ -60,6 +62,22 @@ function DatasetFolderViewInner(props: Props) {
     });
   };
 
+  const setSelectedFolder = (folder: FolderItem | null) => {
+    if (folder) {
+      setSelectedDatasets([]);
+    }
+    if (folder?.key === context.selectedFolder?.key) {
+      context.setSelectedFolder(null);
+      return;
+    }
+    context.setSelectedFolder(folder);
+  };
+  const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
+    context.selectedFolder?.key || null,
+  );
+  const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
+  const datasetCountForDetailsSidebar =
+    context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;
@@ -197,8 +215,10 @@ function DatasetFolderViewInner(props: Props) {
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
+          onSelectFolder={setSelectedFolder}
           selectedDatasets={selectedDatasets}
           context={context}
+          setFolderIdForEditModal={setFolderIdForEditModal}
         />
       </main>
       <div
@@ -212,10 +232,11 @@ function DatasetFolderViewInner(props: Props) {
         <DetailsSidebar
           selectedDatasets={selectedDatasets}
           setSelectedDataset={setSelectedDataset}
-          activeFolderId={context.activeFolderId}
-          datasetCount={context.datasets.length}
+          folderId={folderIdForDetailsSidebar}
+          datasetCount={datasetCountForDetailsSidebar}
           setFolderIdForEditModal={setFolderIdForEditModal}
           searchQuery={context.globalSearchQuery}
+          displayedFolderEqualsActiveFolder={context.selectedFolder == null}
         />
       </div>
     </div>

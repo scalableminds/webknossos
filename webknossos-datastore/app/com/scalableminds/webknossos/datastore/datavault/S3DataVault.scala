@@ -9,11 +9,15 @@ import com.amazonaws.auth.{
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.GetObjectRequest
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
+import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 
 import java.net.URI
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -27,23 +31,30 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
 
+  private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest = {
+    val req = new GetObjectRequest(bucketName, key)
+    // Suffix length range request is not supported by aws sdk
+    // see https://github.com/aws/aws-sdk-java/issues/1551#issuecomment-382540551 for this workaround
+    req.setRange(0) // Disable MD5 checksum, which fails on partial reads
+    req.putCustomRequestHeader("Range", s"bytes=-$length")
+    req
+  }
+
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = {
-    val objectKey = S3DataVault.getObjectKeyFromUri(path.toUri) match {
-      case Some(value) => value
-      case None        => throw new Exception(s"Could not get key for S3 from uri: ${uri.toString}")
-    }
-    val getObjectRequest = range match {
-      case Some(r) => getRangeRequest(bucketName, objectKey, r)
-      case None    => getRequest(bucketName, objectKey)
-    }
-
-    val obj = client.getObject(getObjectRequest)
-    val encoding = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
-
-    (IOUtils.toByteArray(obj.getObjectContent), Encoding.fromRfc7231String(encoding))
-  }
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+    for {
+      objectKey <- S3DataVault.objectKeyFromUri(path.toUri)
+      request = range match {
+        case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
+        case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
+        case Complete()      => getRequest(bucketName, objectKey)
+      }
+      obj <- tryo(client.getObject(request))
+      encodingStr = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
+      encoding <- Encoding.fromRfc7231String(encodingStr)
+    } yield (IOUtils.toByteArray(obj.getObjectContent), encoding)
 }
 
 object S3DataVault {
@@ -77,16 +88,14 @@ object S3DataVault {
   private def isShortStyle(uri: URI): Boolean =
     !uri.getHost.contains(".")
 
-  private def getObjectKeyFromUri(uri: URI): Option[String] =
+  private def objectKeyFromUri(uri: URI): Box[String] =
     if (isVirtualHostedStyle(uri)) {
-      Some(uri.getPath)
+      Full(uri.getPath)
     } else if (isPathStyle(uri)) {
-      Some(uri.getPath.substring(1).split("/").tail.mkString("/"))
+      Full(uri.getPath.substring(1).split("/").tail.mkString("/"))
     } else if (isShortStyle(uri)) {
-      Some(uri.getPath.tail)
-    } else {
-      None
-    }
+      Full(uri.getPath.tail)
+    } else Failure(s"Not a valid s3 uri: $uri")
 
   private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AWSCredentialsProvider =
     credentialOpt match {

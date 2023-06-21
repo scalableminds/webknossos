@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Dropdown, MenuProps, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -10,6 +10,7 @@ import {
   VerticalAlignMiddleOutlined,
   LockOutlined,
   UnlockOutlined,
+  EllipsisOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -22,7 +23,6 @@ import {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
-import { AsyncIconButton } from "components/async_clickables";
 import { HoverIconButton } from "components/hover_icon_button";
 import {
   SwitchSetting,
@@ -50,11 +50,11 @@ import {
   getDefaultIntensityRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
-  getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
   getTransformsForLayerOrNull,
   getWidestResolutions,
+  getLayerBoundingBox,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -172,8 +172,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<ScanOutlined />}
+        <div
           onClick={
             !isDisabled
               ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
@@ -182,26 +181,22 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
-        />
+        >
+          <ScanOutlined />
+          Jump to data
+        </div>
       </Tooltip>
     );
   };
 
   getReloadDataButton = (layerName: string) => {
-    if (!this.props.dataset.isEditable) {
-      return null;
-    }
-    const tooltipText =
-      "Reload the data from the server. Use this when the data on the server changed.";
+    const tooltipText = "Use this when the data on the server changed.";
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<ReloadOutlined />}
-          onClick={() => this.reloadLayerData(layerName)}
-          style={{
-            cursor: "pointer",
-          }}
-        />
+        <div onClick={() => this.reloadLayerData(layerName)}>
+          <ReloadOutlined />
+          Reload data from server
+        </div>
       </Tooltip>
     );
   };
@@ -212,28 +207,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       : "Manually set the possible range of the histogram.";
     return (
       <Tooltip title={tooltipText}>
-        <EditOutlined
-          onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
-          style={{
-            cursor: "pointer",
-            color: isInEditMode ? "var(--ant-primary)" : undefined,
-          }}
-        />
+        <div onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}>
+          <EditOutlined
+            style={{
+              cursor: "pointer",
+              color: isInEditMode ? "var(--ant-primary)" : undefined,
+            }}
+          />
+          {isInEditMode ? "Stop editing" : "Edit"} histogram range
+        </div>
       </Tooltip>
     );
   };
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
-    <Tooltip title="Merge this volume annotation with its fallback layer.">
-      <i
-        onClick={() => this.setState({ layerToMergeWithFallback: layer })}
-        className="fas fa-object-ungroup"
-        style={{
-          cursor: "pointer",
-          opacity: 0.7,
-        }}
-      />
-    </Tooltip>
+    <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
+      <i className="fas fa-object-ungroup" />
+      Merge this volume annotation with its fallback layer
+    </div>
   );
 
   getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
@@ -241,12 +232,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <i
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
         className="fas fa-trash"
-        style={{
-          cursor: "pointer",
-          opacity: 0.7,
-        }}
       />
     </Tooltip>
+  );
+
+  getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
+    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
+      <i className="fas fa-trash" />
+      Delete this annotation layer
+    </div>
   );
 
   deleteAnnotationLayerIfConfirmed = async (
@@ -289,14 +283,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <Tooltip title={tooltipText}>
-        <AsyncIconButton
-          icon={<VerticalAlignMiddleOutlined />}
-          style={{
-            cursor: "pointer",
-            transform: "rotate(90deg)",
-          }}
-          onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}
-        />
+        <div onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}>
+          <VerticalAlignMiddleOutlined
+            style={{
+              cursor: "pointer",
+              transform: "rotate(90deg)",
+            }}
+          />
+          Clip histogram
+        </div>
       </Tooltip>
     );
   };
@@ -414,6 +409,38 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
+    const possibleItems: MenuProps["items"] = [
+      isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+        ? {
+            label: this.getMergeWithFallbackLayerButton(layer),
+            key: "mergeWithFallbackLayerButton",
+          }
+        : null,
+      this.props.dataset.isEditable
+        ? { label: this.getReloadDataButton(layerName), key: "reloadDataButton" }
+        : null,
+      {
+        label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
+        key: "findDataButton",
+      },
+      isAnnotationLayer && !isOnlyAnnotationLayer
+        ? {
+            label: (
+              <div className="flex-item">
+                {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
+              </div>
+            ),
+            key: "deleteAnnotationLayer",
+          }
+        : null,
+      hasHistogram && !isDisabled
+        ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
+        : null,
+      hasHistogram && !isDisabled
+        ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
+        : null,
+    ];
+    const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -575,24 +602,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
         <div className="flex-container">
           <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
-          </div>
-          <div className="flex-item">
-            {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          </div>
-          <div className="flex-item">
-            {isVolumeTracing && !isDisabled && maybeFallbackLayer != null
-              ? this.getMergeWithFallbackLayerButton(layer)
-              : null}
-          </div>
-          <div className="flex-item">
-            {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
-          </div>
-          <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
-          <div className="flex-item">
-            {isAnnotationLayer && !isOnlyAnnotationLayer
-              ? this.getDeleteAnnotationLayerButton(readableName, layer)
-              : null}
+            <Dropdown
+              menu={{ items }}
+              trigger={["click", "contextMenu", "hover"]}
+              placement="bottomRight"
+            >
+              <EllipsisOutlined />
+            </Dropdown>
           </div>
         </div>
       </div>
@@ -780,10 +796,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         V3.mul4x4(matrix, foundPosition, foundPosition);
       }
     } else {
-      const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
-      const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
-        (el: number) => el / 2,
-      ) as Vector3;
+      const centerPosition = getLayerBoundingBox(dataset, layerName).getCenter();
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
       );

@@ -4,7 +4,7 @@ import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -199,7 +199,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,
-          name = s"agglomerate $agglomerateId ($mappingName)"
+          name = s"agglomerate $agglomerateId ($mappingName)",
+          `type` = Some(TreeTypeProto.AGGLOMERATE)
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(

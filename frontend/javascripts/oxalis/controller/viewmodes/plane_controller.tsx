@@ -5,7 +5,7 @@ import * as React from "react";
 import _ from "lodash";
 import dimensions from "oxalis/model/dimensions";
 import {
-  deleteActiveNodeAsUserAction,
+  deleteNodeAsUserAction,
   createTreeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -22,7 +22,7 @@ import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Model, api } from "oxalis/singletons";
 import PlaneView from "oxalis/view/plane_view";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
@@ -31,7 +31,12 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction, enterAction, escapeAction } from "oxalis/model/actions/ui_actions";
+import {
+  cycleToolAction,
+  enterAction,
+  escapeAction,
+  setToolAction,
+} from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -60,8 +65,13 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -93,6 +103,10 @@ const cycleToolsBackwards = () => {
   Store.dispatch(cycleToolAction(true));
 };
 
+const setTool = (tool: AnnotationTool) => {
+  Store.dispatch(setToolAction(tool));
+};
+
 type StateProps = {
   tracing: Tracing;
   activeTool: AnnotationTool;
@@ -105,8 +119,8 @@ class SkeletonKeybindings {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
       // Delete active node
-      delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
-      backspace: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
+      delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
+      backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       c: () => Store.dispatch(createTreeAction()),
       e: () => SkeletonHandlers.moveAlongDirection(),
       r: () => SkeletonHandlers.moveAlongDirection(true),
@@ -131,6 +145,10 @@ class SkeletonKeybindings {
       "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
     };
   }
+
+  static getExtendedKeyboardControls() {
+    return { s: () => setTool(AnnotationToolEnum.SKELETON) };
+  }
 }
 
 class VolumeKeybindings {
@@ -154,6 +172,19 @@ class VolumeKeybindings {
       },
     };
   }
+
+  static getExtendedKeyboardControls() {
+    return {
+      b: () => setTool(AnnotationToolEnum.BRUSH),
+      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
+      l: () => setTool(AnnotationToolEnum.TRACE),
+      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
+      f: () => setTool(AnnotationToolEnum.FILL_CELL),
+      p: () => setTool(AnnotationToolEnum.PICK_CELL),
+      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+      o: () => setTool(AnnotationToolEnum.PROOFREAD),
+    };
+  }
 }
 
 class BoundingBoxKeybindings {
@@ -161,6 +192,10 @@ class BoundingBoxKeybindings {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
     };
+  }
+
+  static getExtendedKeyboardControls() {
+    return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
   }
 }
 
@@ -233,7 +268,6 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
   };
-
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   isStarted: boolean = false;
   // Copied from backbone events (TODO: handle this better)
@@ -250,7 +284,6 @@ class PlaneController extends React.PureComponent<Props> {
 
     this.storePropertyUnsubscribers = [];
   }
-
   componentDidMount() {
     this.input = {
       // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
@@ -376,7 +409,10 @@ class PlaneController extends React.PureComponent<Props> {
       up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
       down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
     });
-    const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
+    const {
+      baseControls: notLoopedKeyboardControls,
+      extendedControls: extendedNotLoopedKeyboardControls,
+    } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
     ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
     this.input.keyboardLoopDelayed = new InputKeyboard(
@@ -404,7 +440,11 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
+      notLoopedKeyboardControls,
+      {},
+      extendedNotLoopedKeyboardControls,
+    );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.userConfiguration.keyboardDelay,
@@ -417,6 +457,37 @@ class PlaneController extends React.PureComponent<Props> {
         },
       ),
     );
+  }
+
+  getBrushPresetsOrSetDefault(): BrushPresets {
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if (brushPresetsFromStore != null) {
+      return brushPresetsFromStore;
+    } else {
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(
+        maximumBrushSize,
+        userSettings.brushSize.minimum,
+      );
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
+  }
+
+  handleUpdateBrushSize(size: "small" | "medium" | "large") {
+    const brushPresets = this.getBrushPresetsOrSetDefault();
+    switch (size) {
+      case "small":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        break;
+      case "medium":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        break;
+      case "large":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        break;
+    }
+    return;
   }
 
   getNotLoopedKeyboardControls(): Record<string, any> {
@@ -454,6 +525,15 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
+
+    let extendedControls = {
+      m: () => setTool(AnnotationToolEnum.MOVE),
+      1: () => this.handleUpdateBrushSize("small"),
+      2: () => this.handleUpdateBrushSize("medium"),
+      3: () => this.handleUpdateBrushSize("large"),
+      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
+    };
+
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {
       c: null,
@@ -468,16 +548,29 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
     const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
+    const extendedSkeletonControls =
+      this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
+    const extendedVolumeControls =
+      this.props.tracing.volumes.length > 0 != null
+        ? VolumeKeybindings.getExtendedKeyboardControls()
+        : {};
+    ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
+    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
+    ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);
+    extendedControls = { ...extendedControls, ...extendedAnnotationControls };
 
     return {
-      ...baseControls,
-      ...skeletonControls,
-      ...volumeControls,
-      c: this.createToolDependentKeyboardHandler(
-        skeletonCHandler,
-        volumeCHandler,
-        boundingBoxCHandler,
-      ),
+      baseControls: {
+        ...baseControls,
+        ...skeletonControls,
+        ...volumeControls,
+        c: this.createToolDependentKeyboardHandler(
+          skeletonCHandler,
+          volumeCHandler,
+          boundingBoxCHandler,
+        ),
+      },
+      extendedControls,
     };
   }
 

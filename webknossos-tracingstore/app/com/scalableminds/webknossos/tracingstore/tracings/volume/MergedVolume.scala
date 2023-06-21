@@ -16,10 +16,13 @@ import scala.concurrent.ExecutionContext
 case class MergedVolumeStats(
     largestSegmentId: Long,
     sortedResolutionList: Option[List[Vec3IntProto]], // None means do not touch the resolution list
-    labelMaps: List[Map[Long, Long]])
+    labelMaps: List[Map[Long, Long]],
+    createdSegmentIndex: Boolean
+)
 
 object MergedVolumeStats {
-  def empty: MergedVolumeStats = MergedVolumeStats(0L, None, List.empty)
+  def empty(createdSegmentIndex: Boolean = false): MergedVolumeStats =
+    MergedVolumeStats(0L, None, List.empty, createdSegmentIndex)
 }
 
 class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0)
@@ -140,11 +143,12 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
       case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
 
-  def stats: MergedVolumeStats =
+  def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
       largestSegmentId.toLong,
       Some(presentResolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
-      labelMapsToLongMaps
+      labelMapsToLongMaps,
+      createdSegmentIndex
     )
 
   private def labelMapsToLongMaps =

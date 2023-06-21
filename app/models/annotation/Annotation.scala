@@ -107,7 +107,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       insertOneQuery(annotationId, annotationLayer)
     }
 
-  def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
+  private def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
     q"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
             values($annotationId, ${a.tracingId}, ${a.typ}, ${a.name})""".asUpdate
 

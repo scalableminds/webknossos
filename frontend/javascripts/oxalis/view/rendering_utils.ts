@@ -12,7 +12,6 @@ import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
-import html2canvas from "html2canvas";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -139,14 +138,16 @@ export async function downloadScreenshot() {
         : null;
     const canvas =
       inputCatcherElement != null
-        ? await html2canvas(inputCatcherElement as HTMLElement, {
-            backgroundColor: null,
-            // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
-            // as otherwise the two images would not fit together on a HiDPI screen.
-            // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
-            scale: 1,
-            ignoreElements: (element) => element.id === "TDViewControls",
-          })
+        ? await import("html2canvas").then((html2canvas) =>
+            html2canvas.default(inputCatcherElement as HTMLElement, {
+              backgroundColor: null,
+              // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+              // as otherwise the two images would not fit together on a HiDPI screen.
+              // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+              scale: 1,
+              ignoreElements: (element) => element.id === "TDViewControls",
+            }),
+          )
         : null;
 
     // eslint-disable-next-line no-await-in-loop

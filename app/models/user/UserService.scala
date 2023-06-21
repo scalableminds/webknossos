@@ -6,7 +6,7 @@ import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.cache.AlfuFoxCache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -47,8 +47,8 @@ class UserService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  private val userCache: AlfuFoxCache[(ObjectId, String), User] =
-    AlfuFoxCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
+  private val userCache: AlfuCache[(ObjectId, String), User] =
+    AlfuCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
@@ -206,7 +206,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   private def removeUserFromCache(userId: ObjectId): Unit =
-    userCache.remove(idAndAccessContextString => idAndAccessContextString._1 == userId)
+    userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {

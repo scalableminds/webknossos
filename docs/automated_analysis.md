@@ -7,8 +7,9 @@ The automated analysis features are designed to provide a general solution to a 
 We plan to add more automated analysis features in the future. If you want to work with us on an automated analysis project, [please contact us](mailto:hello@webknossos.org). 
 We would love to integrate analysis solutions for more modalities and use cases.
 
-Automated analysis is only available on [webknossos.org](https://webknossos.org) at the moment. 
-If you want to set up on-premise automated analysis at your institute/workplace, then [please contact us](mailto:hello@webknossos.org). 
+!!!info
+    Automated analysis is only available on [webknossos.org](https://webknossos.org) at the moment. 
+    If you want to set up on-premise automated analysis at your institute/workplace, then [please contact us](mailto:hello@webknossos.org). 
 
 ## Nuclei Inferral
 As a first trial, WEBKNOSSOS includes nuclei segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will find and segment all nuclei within the dataset.

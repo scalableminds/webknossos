@@ -156,7 +156,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       </a>
     );
     const importLink = (
-      <div className="dataset-actions">
+      <div className="dataset-table-actions">
         <Link
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
           className="import-dataset"
@@ -182,7 +182,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <div>
         {dataset.isEditable && !dataset.isActive ? importLink : null}
         {dataset.isActive ? (
-          <div className="dataset-actions nowrap">
+          <div className="dataset-table-actions nowrap">
             <NewAnnotationLink
               dataset={dataset}
               isReloading={isReloading}

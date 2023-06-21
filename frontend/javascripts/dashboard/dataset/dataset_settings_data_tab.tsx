@@ -189,56 +189,57 @@ function SimpleDatasetForm({
         }
       >
         <List.Item>
-          <Row
-            gutter={48}
+          <div
             style={{
               width: "100%",
             }}
           >
-            <Col span={10}>
-              <FormItemWithInfo
-                name={["dataSource", "id", "name"]}
-                label="Name"
-                info="The name of the dataset"
-                validateFirst
-                rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
-              >
-                <Input
-                  // Renaming an existing DS is not supported right now
-                  disabled={!allowRenamingDataset}
-                  style={{
-                    width: 400,
-                  }}
-                />
-              </FormItemWithInfo>
-            </Col>
-            <Col span={12}>
-              <FormItemWithInfo
-                name={["dataSource", "scale"]}
-                label="Voxel Size"
-                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                rules={[
-                  {
-                    required: true,
-                    message: "Please provide a scale for the dataset.",
-                  },
-                  {
-                    validator: syncValidator(
-                      (value: Vector3) => value?.every((el) => el > 0),
-                      "Each component of the scale must be greater than 0",
-                    ),
-                  },
-                ]}
-              >
-                <Vector3Input
-                  style={{
-                    width: 400,
-                  }}
-                  allowDecimals
-                />
-              </FormItemWithInfo>
-            </Col>
-          </Row>
+            <Row gutter={48}>
+              <Col span={24} xl={12}>
+                <FormItemWithInfo
+                  name={["dataSource", "id", "name"]}
+                  label="Name"
+                  info="The name of the dataset"
+                  validateFirst
+                  rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
+                >
+                  <Input
+                    // Renaming an existing DS is not supported right now
+                    disabled={!allowRenamingDataset}
+                    style={{
+                      width: 408,
+                    }}
+                  />
+                </FormItemWithInfo>
+              </Col>
+              <Col span={24} xl={12}>
+                <FormItemWithInfo
+                  name={["dataSource", "scale"]}
+                  label="Voxel Size"
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please provide a scale for the dataset.",
+                    },
+                    {
+                      validator: syncValidator(
+                        (value: Vector3) => value?.every((el) => el > 0),
+                        "Each component of the scale must be greater than 0",
+                      ),
+                    },
+                  ]}
+                >
+                  <Vector3Input
+                    style={{
+                      width: 400,
+                    }}
+                    allowDecimals
+                  />
+                </FormItemWithInfo>
+              </Col>
+            </Row>
+          </div>
         </List.Item>
       </List>
 
@@ -344,17 +345,18 @@ function SimpleLayerForm({
     <div
       style={{
         width: "100%",
+        position: "relative",
       }}
     >
       {mayLayerBeRemoved && (
-        <div style={{ float: "right" }}>
+        <div style={{ position: "absolute", top: 12, right: 0, zIndex: 1000 }}>
           <Tooltip title="Remove Layer">
             <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
           </Tooltip>
         </div>
       )}
       <Row gutter={48}>
-        <Col span={10}>
+        <Col span={24} xl={12}>
           <FormItemWithInfo
             name={["dataSource", "dataLayers", index, "name"]}
             label="Name"
@@ -383,7 +385,7 @@ function SimpleLayerForm({
               // editing the layer name for wkw.
               disabled={layer.dataFormat === "wkw"}
               style={{
-                width: 300,
+                width: 408,
               }}
             />
           </FormItemWithInfo>
@@ -438,7 +440,7 @@ function SimpleLayerForm({
               disabled
               allowClear
               value={getMags(layer).map((mag) => mag.toString())}
-              style={{ width: 360 }}
+              style={{ width: 408 }}
             >
               {getMags(layer).map((mag) => (
                 <Select.Option key={mag.toString()} value={mag.toString()}>
@@ -448,7 +450,7 @@ function SimpleLayerForm({
             </Select>
           </FormItemWithInfo>
         </Col>
-        <Col span={12}>
+        <Col span={24} xl={12}>
           <FormItemWithInfo
             name={["dataSource", "dataLayers", index, "boundingBox"]}
             label="Bounding box"

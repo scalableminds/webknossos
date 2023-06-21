@@ -13,10 +13,11 @@ import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3Layer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
@@ -31,7 +32,7 @@ import scala.io.Source
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
-    dataVaultService: DataVaultService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends IntervalScheduler
@@ -246,10 +247,11 @@ class DataSourceService @Inject()(
           case layer: N5Layer          => Some(layer.mags)
           case layer: PrecomputedLayer => Some(layer.mags)
           case layer: ZarrLayer        => Some(layer.mags)
+          case layer: Zarr3Layer       => Some(layer.mags)
           case _                       => None
         }
         removedEntriesCount = magsOpt match {
-          case Some(mags) => mags.map(mag => dataVaultService.removeVaultFromCache(mag)); mags.length
+          case Some(mags) => mags.map(mag => remoteSourceDescriptorService.removeVaultFromCache(mag)); mags.length
           case None       => 0
         }
       } yield removedEntriesCount

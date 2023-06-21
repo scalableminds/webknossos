@@ -1,15 +1,19 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.tools.Fox
+
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path}
 import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
 class FileSystemDataVault extends DataVault {
-  override def readBytes(path: VaultPath, range: Option[NumericRange[Long]]): (Array[Byte], Encoding.Value) = ???
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = ???
 
-  def readBytesLocal(path: Path, range: Option[NumericRange[Long]]): Array[Byte] =
+  def readBytesLocal(path: Path, range: Option[NumericRange[Long]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     range match {
-      case None => Files.readAllBytes(path)
+      case None => Fox.successful(Files.readAllBytes(path))
       case Some(r) =>
         val channel = Files.newByteChannel(path)
         val buf = ByteBuffer.allocateDirect(r.length)
@@ -18,7 +22,7 @@ class FileSystemDataVault extends DataVault {
         buf.position(0)
         val arr = new Array[Byte](r.length)
         buf.get(arr)
-        arr
+        Fox.successful(arr)
     }
 }
 

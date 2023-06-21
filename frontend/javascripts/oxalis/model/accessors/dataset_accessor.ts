@@ -236,61 +236,43 @@ export function getDefaultIntensityRangeOfLayer(
       return [0, 255];
   }
 }
-export type Boundary = {
-  lowerBoundary: Vector3;
-  upperBoundary: Vector3;
-};
-
-/*
-   The returned Boundary denotes a half-open interval. This means that the lowerBoundary
-   is included in the bounding box and the upper boundary is *not* included.
-*/
-export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
-  const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
-  const lowerBoundary = topLeft;
-  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth] as Vector3;
-  return {
-    lowerBoundary,
-    upperBoundary,
-  };
-}
 
 export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
-  const { lowerBoundary, upperBoundary } = getLayerBoundaries(dataset, layerName);
+  /*
+     The returned bounding box denotes a half-open interval. This means that min
+     is included in the bounding box and max is *not* included.
+  */
+  const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
+  const min = topLeft;
+  const max = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth] as Vector3;
+
   return new BoundingBox({
-    min: lowerBoundary,
-    max: upperBoundary,
+    min,
+    max,
   });
 }
 
-export function getBoundaries(dataset: APIDataset): Boundary {
-  const lowerBoundary = [Infinity, Infinity, Infinity];
-  const upperBoundary = [-Infinity, -Infinity, -Infinity];
+export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+  const min: Vector3 = [Infinity, Infinity, Infinity];
+  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
   const layers = getDataLayers(dataset);
 
   for (const dataLayer of layers) {
-    const layerBoundaries = getLayerBoundaries(dataset, dataLayer.name);
+    const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
 
     for (const i of Vector3Indicies) {
-      lowerBoundary[i] = Math.min(lowerBoundary[i], layerBoundaries.lowerBoundary[i]);
-      upperBoundary[i] = Math.max(upperBoundary[i], layerBoundaries.upperBoundary[i]);
+      min[i] = Math.min(min[i], layerBox.min[i]);
+      max[i] = Math.max(max[i], layerBox.max[i]);
     }
   }
 
-  return {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    lowerBoundary,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    upperBoundary,
-  };
+  return new BoundingBox({
+    min,
+    max,
+  });
 }
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
-  const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
-  return [
-    (lowerBoundary[0] + upperBoundary[0]) / 2,
-    (lowerBoundary[1] + upperBoundary[1]) / 2,
-    (lowerBoundary[2] + upperBoundary[2]) / 2,
-  ];
+  return getDatasetBoundingBox(dataset).getCenter();
 }
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;

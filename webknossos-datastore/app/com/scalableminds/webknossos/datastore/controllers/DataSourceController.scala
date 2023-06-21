@@ -202,10 +202,12 @@ Expects:
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(dataSourceId,
-                                                       dataSetSizeBytes,
-                                                       request.body.needsConversion.getOrElse(false),
-                                                       urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebKnossosClient.reportUpload(
+                dataSourceId,
+                dataSetSizeBytes,
+                request.body.needsConversion.getOrElse(false),
+                viaAddRoute = false,
+                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result
@@ -429,6 +431,12 @@ Expects:
             "dataSource.alreadyPresent")
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
                                                   expectExisting = false)
+          _ <- remoteWebKnossosClient.reportUpload(
+            DataSourceId(dataSetName, organizationName),
+            0L,
+            needsConversion = false,
+            viaAddRoute = true,
+            userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
         } yield Ok
       }
     }
@@ -477,7 +485,7 @@ Expects:
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
-        val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
+        val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
@@ -486,7 +494,7 @@ Expects:
         for {
           clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
           _ = logger.info(
-            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles, $closedAgglomerateFileHandleCount agglomerate file handles and removed $clearedVaultCacheEntries vault cache entries.")
+            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

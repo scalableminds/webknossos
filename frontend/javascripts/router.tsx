@@ -117,7 +117,7 @@ function PageNotFoundView() {
     <Row justify="center" align="middle" className="background-organelles">
       <Col>
         <Result
-          icon={<i className="drawing-404" />}
+          icon={<i className="drawing drawing-404" />}
           status="warning"
           title={
             <span style={{ color: "white" }}>Sorry, the page you visited does not exist.</span>

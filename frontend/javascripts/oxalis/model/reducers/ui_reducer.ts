@@ -96,6 +96,18 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_AI_NUCLEI_SEGMENTATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAINucleiSegmentationModal: action.visible,
+      });
+    }
+
+    case "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAINeuronSegmentationModal: action.visible,
+      });
+    }
+
     case "SET_BUSY_BLOCKING_INFO_ACTION": {
       if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
         throw new Error(

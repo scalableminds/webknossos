@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Agglomerate skeletons can only be modified if the proofreading tool is active so they stay in sync with the underlying segmentation and agglomerate graph. Agglomerate skeletons cannot be modified using any other means. They are marked in the skeleton list using the clipboard icon of the proofreading tool. When exporting skeletons in the NML format, trees ("things") now have a `type` property which is either "DEFAULT" or "AGGLOMERATE". [#7086](https://github.com/scalableminds/webknossos/pull/7086)
 - The cache for remote dataset array contents can now have a configured size in bytes. New config option `datastore.cache.imageArrayChunks.maxSizeBytes`. Default is 2 GB, consider increasing for production. [#7067](https://github.com/scalableminds/webknossos/pull/7067)
 - Optimized processing of parallel requests for remote datasets, improving performance and reducing idle waiting. [#7137](https://github.com/scalableminds/webknossos/pull/7137)
+- Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)
 
 ### Fixed
 - Fixed a bug where some volume annotations could not be downloaded. [#7115](https://github.com/scalableminds/webknossos/pull/7115)

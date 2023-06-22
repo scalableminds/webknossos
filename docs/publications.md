@@ -1,4 +1,4 @@
-## Publications
+# Publications
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
 ## 2022

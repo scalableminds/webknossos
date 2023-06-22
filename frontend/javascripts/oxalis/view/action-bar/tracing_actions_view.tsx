@@ -41,6 +41,8 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
+  setAINucleiSegmentationModalVisibilityAction,
+  setAINeuronSegmentationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -70,6 +72,10 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import {
+  NeuronSegmentationModal,
+  NucleiSegmentationModal,
+} from "../right-border-tabs/starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -87,6 +93,8 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
+  isAINeuronSegmentationModalOpen: boolean;
+  isAINucleiSegmentationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -248,6 +256,43 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       },
     ],
   };
+}
+
+export function getAISegmentationMenu(
+  isAINucleiSegmentationModalOpen: boolean,
+  isAINeuronSegmentationModalOpen: boolean,
+): [SubMenuType, React.ReactNode] {
+  const AISegmentationMenu = {
+    key: "ai-segmentation-menu",
+    icon: <SettingOutlined />,
+    label: "AI Segementation",
+    children: [
+      {
+        key: "ai-nuclei-segmentation",
+        label: "AI Nuclei Segmentation",
+        onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
+      },
+      {
+        key: "ai-neuron-segmentation",
+        label: "AI Neuron Segmentation",
+        onClick: () => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true)),
+      },
+    ],
+  };
+
+  const AISegmentationModals = isAINucleiSegmentationModalOpen ? (
+    <NucleiSegmentationModal
+      key="ai-nuclei-segmentation-modal"
+      handleClose={() => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(false))}
+    />
+  ) : isAINeuronSegmentationModalOpen ? (
+    <NeuronSegmentationModal
+      key="ai-neuron-segmentation-modal"
+      handleClose={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
+    />
+  ) : null;
+
+  return [AISegmentationMenu, AISegmentationModals];
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -430,20 +475,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleMergeClose = () => {
-    this.setState({
-      isMergeModalOpen: false,
-    });
-  };
-
   handleUserScriptsOpen = () => {
     this.setState({
       isUserScriptsModalOpen: true,
     });
   };
 
-  handleUserScriptsClose = () => {
+  handleModalClose = () => {
     this.setState({
+      isMergeModalOpen: false,
       isUserScriptsModalOpen: false,
     });
   };
@@ -633,6 +673,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: "Duplicate",
       });
     }
+
+    if (features().jobsEnabled && activeUser != null && activeUser.isSuperUser) {
+      const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
+        this.props.isAINucleiSegmentationModalOpen,
+        this.props.isAINeuronSegmentationModalOpen,
+      );
+      menuItems.push(AISegmentationMenu);
+      modals.push(AISegmentationModals);
+    }
+
     menuItems.push(screenshotMenuItem);
     menuItems.push({
       key: "user-scripts-button",
@@ -644,7 +694,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       <UserScriptsModalView
         key="user-scripts-modal"
         isOpen={this.state.isUserScriptsModalOpen}
-        onOK={this.handleUserScriptsClose}
+        onOK={this.handleModalClose}
       />,
     );
 
@@ -659,7 +709,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         <MergeModalView
           key="merge-modal"
           isOpen={this.state.isMergeModalOpen}
-          onOk={this.handleMergeClose}
+          onOk={this.handleModalClose}
         />,
       );
     }
@@ -715,6 +765,8 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
+    isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
+    isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

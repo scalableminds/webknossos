@@ -69,12 +69,14 @@ class DSRemoteWebKnossosClient @Inject()(
   def reportUpload(dataSourceId: DataSourceId,
                    dataSetSizeBytes: Long,
                    needsConversion: Boolean,
+                   viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
     for {
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
+        .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()

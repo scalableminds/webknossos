@@ -202,10 +202,12 @@ Expects:
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(dataSourceId,
-                                                       dataSetSizeBytes,
-                                                       request.body.needsConversion.getOrElse(false),
-                                                       urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebKnossosClient.reportUpload(
+                dataSourceId,
+                dataSetSizeBytes,
+                request.body.needsConversion.getOrElse(false),
+                viaAddRoute = false,
+                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result
@@ -429,6 +431,12 @@ Expects:
             "dataSource.alreadyPresent")
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
                                                   expectExisting = false)
+          _ <- remoteWebKnossosClient.reportUpload(
+            DataSourceId(dataSetName, organizationName),
+            0L,
+            needsConversion = false,
+            viaAddRoute = true,
+            userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
         } yield Ok
       }
     }

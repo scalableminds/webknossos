@@ -32,15 +32,15 @@ class EmailVerificationService @Inject()(conf: WkConf,
                                                        expiration,
                                                        isUsed = false)
       _ <- emailVerificationKeyDAO.insertOne(evk)
-      fullVerificationLink = s"${conf.Http.uri}/api/verifyEmail/$key" // TODO: Frontend creates a page for verification
+      fullVerificationLink = s"${conf.Http.uri}/verifyEmail/$key"
       _ = Mailer ! Send(defaultMails.emailVerificationMail(user, multiUser.email, fullVerificationLink))
     } yield ()
 
   def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
-      evk <- emailVerificationKeyDAO.findOneByKey(key)
+      evk <- emailVerificationKeyDAO.findOneByKey(key) ?~> "user.email.verification.keyInvalid"
       _ <- Fox.bool2Fox(!evk.isUsed) ?~> "user.email.verification.keyUsed"
-      _ <- Fox.bool2Fox(evk.validUntil.forall(!_.isPast)) ?~> "user.email.linkExpired"
+      _ <- Fox.bool2Fox(evk.validUntil.forall(!_.isPast)) ?~> "user.email.verification.linkExpired"
       multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
       _ <- Fox.bool2Fox(evk.email == multiUser.email) ?~> "user.email.verification.emailDoesNotMatch"
       _ = multiUserDAO.updateEmailVerification(evk._multiUser, verified = true)

@@ -52,7 +52,8 @@ user.lastOwner=Cannot deactivate the organization owner. Please talk to the WEBK
 
 user.email.alreadyInUse=This email address is already in use
 user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts
-user.email.notVerified=Your email address is not verified
+user.email.notVerified=Your email address is not verified.
+user.email.verification.keyInvalid=Verification key is invalid.
 user.email.verification.keyUsed=Verification key has already been used.
 user.email.verification.emailDoesNotMatch=This verification key is associated with a different email address.
 user.email.verification.linkExpired=The email verification link is expired.

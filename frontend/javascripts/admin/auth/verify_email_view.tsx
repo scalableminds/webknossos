@@ -3,10 +3,13 @@ import React, { useEffect } from "react";
 import { useFetch } from "libs/react_helpers";
 import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { AsyncButton } from "components/async_clickables";
 import { ServerErrorMessage } from "libs/request";
+import { useHistory } from "react-router-dom";
+
+const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 
 export default function VerifyEmailView({ token }: { token: string }) {
+  const history = useHistory();
   const [result, exception] = useFetch(
     async () => {
       try {
@@ -33,19 +36,23 @@ export default function VerifyEmailView({ token }: { token: string }) {
           .join(" ");
       }
       errorMessage = errorMessage || "Verification failed.";
+      const handleResend = async () => {
+        await requestVerificationMail();
+        Toast.close(VERIFICATION_ERROR_TOAST_KEY);
+      };
       Toast.error(
         <>
           {errorMessage}{" "}
-          <AsyncButton style={{ display: "inline" }} type="link" onClick={requestVerificationMail}>
+          <a href="#" type="link" onClick={handleResend}>
             Resend verification email.
-          </AsyncButton>
+          </a>
         </>,
+        { sticky: true, key: VERIFICATION_ERROR_TOAST_KEY },
       );
     }
-    // An error toast will be automatically shown by the Request
-    // module.
+
     if (result || exception) {
-      console.log("redirect");
+      history.push("/");
     }
   }, [result, exception]);
   return (

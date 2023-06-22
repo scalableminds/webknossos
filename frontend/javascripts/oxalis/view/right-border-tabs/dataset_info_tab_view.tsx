@@ -97,21 +97,13 @@ const shortcuts = [
   },
   {
     key: "3",
-    keybinding: [
-      <div
-        key="move"
-        className="keyboard-mouse-icon icon-mouse-left"
-      />,
-    ],
+    keybinding: [<div key="move" className="keyboard-mouse-icon icon-mouse-left" />],
     action: "Move",
   },
   {
     key: "4",
     keybinding: [
-      <div
-        key="rotate"
-        className="keyboard-mouse-icon icon-mouse-right"
-      />,
+      <div key="rotate" className="keyboard-mouse-icon icon-mouse-right" />,
       "in 3D View",
     ],
     action: "Rotate 3D View",

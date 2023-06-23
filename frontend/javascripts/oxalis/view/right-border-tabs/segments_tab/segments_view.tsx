@@ -237,6 +237,7 @@ type State = {
   groupTree: TreeNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
+  areSegmentsInGroupVisible: { [groupId: number]: boolean };
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -328,6 +329,7 @@ class SegmentsView extends React.Component<Props, State> {
     groupTree: [],
     prevProps: null,
     groupToDelete: null,
+    areSegmentsInGroupVisible: {},
   };
 
   componentDidMount() {
@@ -338,6 +340,9 @@ class SegmentsView extends React.Component<Props, State> {
     if (features().jobsEnabled) {
       this.pollJobData();
     }
+    this.props.segmentGroups.forEach(
+      (group) => (this.state.areSegmentsInGroupVisible[group.groupId] = true),
+    );
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -517,7 +522,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleSegmentDropdownMenuVisibility = (segmentId: number, isVisible: boolean) => {
-    console.log(segmentId);
     if (isVisible) {
       this.setState({
         activeDropdownSegmentOrGroupId: segmentId,
@@ -801,9 +805,18 @@ class SegmentsView extends React.Component<Props, State> {
     const segmentGroupToLoadMeshes =
       groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
 
-    segmentGroupToLoadMeshes.forEach((segment) =>
-      Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible)),
-    );
+    segmentGroupToLoadMeshes.forEach((segment) => {
+      if (Store.getState().localSegmentationData[layerName].isosurfaces[segment.id] != null) {
+        Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible));
+      }
+    });
+
+    const copyOfState = this.state.areSegmentsInGroupVisible;
+    copyOfState[groupId] = isVisible;
+    this.setState({
+      areSegmentsInGroupVisible: copyOfState,
+    });
+    console.log(this.state.areSegmentsInGroupVisible);
   };
 
   handleDeleteGroup = (id: number) => {
@@ -1000,7 +1013,10 @@ class SegmentsView extends React.Component<Props, State> {
                   items: [
                     {
                       key: "create",
-                      onClick: () => this.createGroup(id),
+                      onClick: () => {
+                        this.createGroup(id);
+                        this.handleSegmentDropdownMenuVisibility(id, false);
+                      },
                       disabled: isEditingDisabled,
                       icon: <PlusOutlined />,
                       label: "Create new group",
@@ -1008,7 +1024,10 @@ class SegmentsView extends React.Component<Props, State> {
                     {
                       key: "delete",
                       disabled: isEditingDisabled,
-                      onClick: () => this.handleDeleteGroup(id),
+                      onClick: () => {
+                        this.handleDeleteGroup(id);
+                        this.handleSegmentDropdownMenuVisibility(id, false);
+                      },
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
@@ -1023,34 +1042,36 @@ class SegmentsView extends React.Component<Props, State> {
                             if (getVisibleSegmentationLayer == null) {
                               return;
                             }
-                            console.log(color);
                             this.setGroupColor(id, color);
                           }}
                           rgb={[0.5, 0.5, 0.5]}
                         />
                       ),
                     },
-                    {
-                      key: "loadMeshesOfGroup",
-                      label: (
-                        <div
-                          onClick={() => {
-                            if (this.props.visibleSegmentationLayer == null) {
-                              // Satisfy TS
-                              return;
-                            }
-                            this.handleChangeMeshVisibility(
-                              this.props.visibleSegmentationLayer.name,
-                              id,
-                              true,
-                            );
-                            console.log("load or hide");
-                          }}
-                        >
-                          Load/Hide meshes of group
-                        </div>
-                      ),
-                    },
+                    this.state != null
+                      ? {
+                          key: "loadMeshesOfGroup",
+                          label: (
+                            <div
+                              onClick={() => {
+                                if (this.props.visibleSegmentationLayer == null) {
+                                  // Satisfy TS
+                                  return;
+                                }
+                                this.handleChangeMeshVisibility(
+                                  this.props.visibleSegmentationLayer.name,
+                                  id,
+                                  !this.state.areSegmentsInGroupVisible[id],
+                                );
+                                this.handleSegmentDropdownMenuVisibility(id, false);
+                              }}
+                            >
+                              {this.state.areSegmentsInGroupVisible[id] ? "Hide" : "Show"} meshes of
+                              group
+                            </div>
+                          ),
+                        }
+                      : null,
                     this.state.selectedSegmentId != null
                       ? {
                           key: "moveHere",
@@ -1068,6 +1089,7 @@ class SegmentsView extends React.Component<Props, State> {
                               this.props.visibleSegmentationLayer.name,
                               true,
                             );
+                            this.handleSegmentDropdownMenuVisibility(id, false);
                           },
                           disabled: isEditingDisabled,
                           icon: <ArrowRightOutlined />,

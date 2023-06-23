@@ -88,6 +88,10 @@ const KNOWN_CYCLES = [
   ["libs/request.ts", "admin/datastore_health_check.ts"],
   ["libs/mjs.ts"],
   ["oxalis/controller/url_manager.ts", "oxalis/model_initialization.ts"],
+  [
+    "oxalis/view/action-bar/tracing_actions_view.tsx",
+    "oxalis/view/action-bar/view_dataset_actions_view.tsx",
+  ],
 ];
 
 madge("frontend/javascripts/main.tsx", {

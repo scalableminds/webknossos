@@ -5,6 +5,7 @@ import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getMappingInfo,
   getVisibleOrLastSegmentationLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { OxalisState } from "oxalis/store";
@@ -28,21 +29,30 @@ const AGGLOMERATE_STATES = {
     value: false,
     reason: messages["tracing.agglomerate_skeleton.no_mapping"],
   },
-  NO_AGGLOMERATE_FILE: {
+  NO_AGGLOMERATE_FILE_ACTIVE: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file"],
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"],
+  },
+  NO_AGGLOMERATE_FILE_AVAILABLE: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
   },
   YES: {
     value: true,
     reason: "",
   },
 };
+export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
-  const segmentation = Model.getVisibleSegmentationLayer();
+  const segmentation = getVisibleSegmentationLayer(state);
 
   if (!segmentation) {
     return AGGLOMERATE_STATES.NO_SEGMENTATION;
+  }
+
+  if ((segmentation.agglomerates?.length ?? 0) === 0) {
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_AVAILABLE;
   }
 
   const { mappingName, mappingType, mappingStatus } = getMappingInfo(
@@ -55,7 +65,7 @@ export function hasAgglomerateMapping(state: OxalisState) {
   }
 
   if (mappingType !== "HDF5") {
-    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE;
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_ACTIVE;
   }
 
   return AGGLOMERATE_STATES.YES;

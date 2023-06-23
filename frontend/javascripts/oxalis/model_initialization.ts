@@ -709,7 +709,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         }
 
         if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"]);
           continue;
         }
 

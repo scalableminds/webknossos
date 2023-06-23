@@ -3,8 +3,10 @@ import type { AnnotationTool } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import {
+  AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableResolutionForSegmentationTracing,
+  hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -15,10 +17,6 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import {
-  AgglomerateState,
-  hasAgglomerateMapping,
-} from "oxalis/controller/combinations/segmentation_handlers";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 

@@ -34,6 +34,7 @@ import {
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
   getSegmentColorAsHSLA,
+  hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -69,7 +70,6 @@ import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
-import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";

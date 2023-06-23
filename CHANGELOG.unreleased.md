@@ -21,5 +21,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 
 ### Removed
+- Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)
 
 ### Breaking Changes

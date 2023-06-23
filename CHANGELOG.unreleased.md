@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - In order to facilitate changing the brush size in the brush tool, buttons with preset brush sizes were added. These presets are user configurable by assigning the current brush size to any of the preset buttons. Additionally the preset brush sizes can be set with keyboard shortcuts. [#7101](https://github.com/scalableminds/webknossos/pull/7101)
 - Added new graphics and restyled empty dashboards. [#7008](https://github.com/scalableminds/webknossos/pull/7008)
 - Added warning when using WEBKNOSSOS in an outdated browser. [#7165](https://github.com/scalableminds/webknossos/pull/7165)
+- Added a search feature for segments and segment groups. Listed segments/groups can be searched by id and name. [#7175](https://github.com/scalableminds/webknossos/pull/7175)
 
 ### Changed
 - Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)

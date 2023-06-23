@@ -154,6 +154,7 @@ export function callDeepWithChildren(
     }
   });
 }
+
 export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup | null | undefined {
   let foundGroup = null;
   callDeep(groups, groupId, (group, _index, _groups) => {

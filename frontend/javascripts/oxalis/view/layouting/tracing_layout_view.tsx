@@ -1,5 +1,10 @@
-import { Alert, Layout, Tooltip } from "antd";
-import { WarningFilled } from "@ant-design/icons";
+import { Alert, Button, Layout, Space, Tooltip } from "antd";
+import {
+  CaretDownOutlined,
+  CaretUpOutlined,
+  SearchOutlined,
+  WarningFilled,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
@@ -42,6 +47,7 @@ import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 
 const { Sider } = Layout;
 
@@ -83,6 +89,70 @@ type State = {
   model: Record<string, any>;
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
+
+function FloatingMobileControls() {
+  return (
+    <div style={{ position: "absolute", left: 36, bottom: 36, zIndex: 100000 }}>
+      <Space>
+        <Button
+          size="large"
+          type="primary"
+          shape="circle"
+          icon={
+            <img
+              src="/assets/images/icon-sidebar-hide-left-bright.svg"
+              style={{ filter: "brightness(10)" }}
+            />
+          }
+        />
+        <Button
+          size="large"
+          type="primary"
+          shape="circle"
+          icon={
+            <img
+              src="/assets/images/icon-sidebar-hide-right-bright.svg"
+              style={{ filter: "brightness(10)" }}
+            />
+          }
+        />
+        <Button
+          size="large"
+          type="primary"
+          shape="circle"
+          icon={<CaretUpOutlined />}
+          onClick={() => {
+            return MoveHandlers.moveW(1, true);
+          }}
+        />
+        <Button
+          size="large"
+          type="primary"
+          shape="circle"
+          icon={<CaretDownOutlined />}
+          onClick={() => {
+            return MoveHandlers.moveW(-1, true);
+          }}
+        />
+        <Button
+          size="large"
+          type="primary"
+          shape="circle"
+          icon={
+            <div
+              style={{
+                background:
+                  "transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAUCAYAAABiS3YzAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAB3RJTUUH3wsOCAciLIHE4wAAAEdJREFUOMvtkksOADAERGl6b5x8eoBqo6E7b+kzJiBqqmEvaGaINIsIhydFRG8185RQVTD7RgC87yTrdPw4VIvWMzMf0DQ7CzmmFh3I1FWCAAAAAElFTkSuQmCC) no-repeat center",
+                height: "100%",
+                filter: "brightness(1000)",
+              }}
+            />
+          }
+        />
+      </Space>
+    </div>
+  );
+}
 
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   static getDerivedStateFromError() {
@@ -300,6 +370,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
+        <FloatingMobileControls />
 
         {status === "loaded" && (
           <ContextMenuContainer

@@ -11,13 +11,13 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
 
-import scala.concurrent.ExecutionContext.Implicits._
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends BoxImplicits with LazyLogging {
 
-  def jsonToFile[A: Writes](path: Path, value: A) =
+  def jsonToFile[A: Writes](path: Path, value: A): Box[Unit] =
     FileIO.printToFile(path.toFile) { printer =>
       printer.print(Json.prettyPrint(Json.toJson(value)))
     }
@@ -101,6 +101,9 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     }
   }
 
+  def parseAndValidateJson[T: Reads](bytes: Array[Byte]): Box[T] =
+    parseAndValidateJson[T](new String(bytes, StandardCharsets.UTF_8))
+
   def parseAndValidateJson[T: Reads](s: String): Box[T] =
     tryo(Json.parse(s))
       .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
@@ -111,14 +114,6 @@ object JsonHelper extends BoxImplicits with LazyLogging {
         Full(parsed)
       case errors: JsError =>
         Failure("Validating Json Failed: " + JsError.toJson(errors).toString())
-    }
-
-  def jsResultToFox[T](result: JsResult[T]): Fox[T] =
-    result match {
-      case JsSuccess(parsed, _) =>
-        Fox.successful(parsed)
-      case errors: JsError =>
-        Fox.failure("Validating Json Failed: " + JsError.toJson(errors).toString())
     }
 
   def jsResultToOpt[T](result: JsResult[T]): Option[T] =

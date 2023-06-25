@@ -8,6 +8,8 @@ import {
   ExclamationCircleOutlined,
   ArrowRightOutlined,
   EditOutlined,
+  CloudDownloadOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
@@ -49,6 +51,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   maybeFetchMeshFilesAction,
+  triggerIsosurfaceDownloadAction,
   updateCurrentMeshFileAction,
   updateIsosurfaceVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -96,6 +99,8 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import MenuItem from "antd/lib/menu/MenuItem";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -341,7 +346,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.pollJobData();
     }
     this.props.segmentGroups.forEach(
-      (group) => (this.state.areSegmentsInGroupVisible[group.groupId] = true),
+      (group) => (this.state.areSegmentsInGroupVisible[group.groupId] = false), //TODO unsure if decent default
     );
   }
 
@@ -795,6 +800,92 @@ class SegmentsView extends React.Component<Props, State> {
     );
   }
 
+  doesGroupHaveAnyMeshes = (groupId: number): boolean => {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return false;
+    }
+    const layerName = visibleSegmentationLayer.name;
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToLoadMeshes =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    let bool = false;
+    segmentGroupToLoadMeshes.forEach((segment) => {
+      if (Store.getState().localSegmentationData[layerName].isosurfaces[segment.id] != null) {
+        bool = true;
+      }
+    });
+    return bool;
+  };
+
+  getLoadMeshesMenuItem = (id: number): ItemType => {
+    if (this.props.currentMeshFile != null) {
+      return {
+        key: "loadMeshesOfGroup",
+        label: (
+          <>
+            <CloudDownloadOutlined />
+            Load meshes for segments
+          </>
+        ),
+        children: [
+          {
+            key: "loadAcHoc",
+            label: (
+              <div
+                onClick={() => {
+                  if (this.props.visibleSegmentationLayer == null) {
+                    return;
+                  }
+                  this.handleLoadMeshesAdHoc(id);
+                  this.handleSegmentDropdownMenuVisibility(id, false);
+                }}
+              >
+                ad hoc
+              </div>
+            ),
+          },
+          {
+            key: "loadByFile",
+            label: (
+              <div
+                onClick={() => {
+                  if (this.props.visibleSegmentationLayer == null) {
+                    return;
+                  }
+                  this.handleLoadMeshesFromFile(id);
+                  this.handleSegmentDropdownMenuVisibility(id, false);
+                }}
+              >
+                precomputed
+              </div>
+            ),
+          },
+        ],
+      };
+    } else {
+      return {
+        key: "loadOnlyAcHoc",
+        label: (
+          <div
+            onClick={() => {
+              if (this.props.visibleSegmentationLayer == null) {
+                return;
+              }
+              this.handleLoadMeshesAdHoc(id);
+              this.handleSegmentDropdownMenuVisibility(id, false);
+            }}
+          >
+            <CloudDownloadOutlined />
+            Load meshes for segments (ad-hoc)
+          </div>
+        ),
+      };
+    }
+  };
+
   handleChangeMeshVisibility = (layerName: string, groupId: number, isVisible: boolean) => {
     const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
 
@@ -816,7 +907,79 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({
       areSegmentsInGroupVisible: copyOfState,
     });
-    console.log(this.state.areSegmentsInGroupVisible);
+  };
+
+  handleLoadMeshesAdHoc = (groupId: number) => {
+    // TODO fix code duplication
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToLoadMeshes =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    segmentGroupToLoadMeshes.forEach((segment) => {
+      if (segment.somePosition == null) return;
+      this.props.loadAdHocMesh(segment.id, segment.somePosition);
+    });
+
+    const copyOfState = this.state.areSegmentsInGroupVisible;
+    copyOfState[groupId] = true;
+    this.setState({
+      areSegmentsInGroupVisible: copyOfState,
+    });
+  };
+
+  handleLoadMeshesFromFile = (groupId: number) => {
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToLoadMeshes =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    segmentGroupToLoadMeshes.forEach((segment) => {
+      if (segment.somePosition == null || this.props.currentMeshFile == null) return;
+      this.props.loadPrecomputedMesh(
+        segment.id,
+        segment.somePosition,
+        this.props.currentMeshFile.meshFileName,
+      );
+    });
+
+    const copyOfState = this.state.areSegmentsInGroupVisible;
+    copyOfState[groupId] = true;
+    this.setState({
+      areSegmentsInGroupVisible: copyOfState,
+    });
+  };
+
+  downloadAllMeshesForGroup = (groupId: number) => {
+    // TODO ZIP if more than one
+    const { segments, segmentGroups, visibleSegmentationLayer } = this.props;
+
+    if (segments == null || segmentGroups == null || visibleSegmentationLayer == null) {
+      return;
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const segmentGroupToLoadMeshes =
+      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+
+    if (visibleSegmentationLayer != null) {
+      segmentGroupToLoadMeshes.forEach((segment) => {
+        Store.dispatch(
+          triggerIsosurfaceDownloadAction(
+            segment.name ? segment.name : "mesh",
+            segment.id,
+            visibleSegmentationLayer.name,
+          ),
+        );
+      });
+    }
   };
 
   handleDeleteGroup = (id: number) => {
@@ -1048,9 +1211,10 @@ class SegmentsView extends React.Component<Props, State> {
                         />
                       ),
                     },
-                    this.state != null
+                    this.getLoadMeshesMenuItem(id),
+                    this.state != null && this.doesGroupHaveAnyMeshes(id)
                       ? {
-                          key: "loadMeshesOfGroup",
+                          key: "showMeshesOfGroup",
                           label: (
                             <div
                               onClick={() => {
@@ -1066,8 +1230,29 @@ class SegmentsView extends React.Component<Props, State> {
                                 this.handleSegmentDropdownMenuVisibility(id, false);
                               }}
                             >
+                              <i className="fas fa-dice-d20"></i>
                               {this.state.areSegmentsInGroupVisible[id] ? "Hide" : "Show"} meshes of
                               group
+                            </div>
+                          ),
+                        }
+                      : null,
+                    this.state != null && this.doesGroupHaveAnyMeshes(id)
+                      ? {
+                          key: "downloadAllMeshes",
+                          label: (
+                            <div
+                              onClick={() => {
+                                if (this.props.visibleSegmentationLayer == null) {
+                                  // Satisfy TS
+                                  return;
+                                }
+                                this.downloadAllMeshesForGroup(id);
+                                this.handleSegmentDropdownMenuVisibility(id, false);
+                              }}
+                            >
+                              <DownloadOutlined />
+                              Download all meshes in group
                             </div>
                           ),
                         }

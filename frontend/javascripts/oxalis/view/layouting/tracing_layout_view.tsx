@@ -88,7 +88,49 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
+type TriggerCallback = () => void;
+
+const useTriggerRepeatedly = (triggerCallback: TriggerCallback) => {
+  const [isPressed, setIsPressed] = React.useState(false);
+
+  React.useEffect(() => {
+    let timerId: NodeJS.Timeout;
+
+    if (isPressed) {
+      const trigger = () => {
+        timerId = setTimeout(() => {
+          triggerCallback();
+          trigger();
+        }, 200); // Adjust the delay between triggers as needed
+      };
+
+      trigger();
+    }
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [isPressed, triggerCallback]);
+
+  const onTouchStart = (event: React.TouchEvent<any>) => {
+    console.log("onTouchStart");
+    setIsPressed(true);
+  };
+
+  const onTouchEnd = () => {
+    console.log("onTouchEnd");
+    setIsPressed(false);
+  };
+
+  return { onTouchStart, onTouchEnd };
+};
+
 function FloatingMobileControls() {
+  const moveForward = () => {
+    return MoveHandlers.moveW(1, true);
+  };
+  const moveForwardProps = useTriggerRepeatedly(moveForward);
+
   return (
     <div style={{ position: "absolute", left: 72, bottom: 72, zIndex: 100000 }}>
       <Space>
@@ -126,9 +168,8 @@ function FloatingMobileControls() {
           shape="circle"
           style={{ width: 80, height: 80 }}
           icon={<CaretUpOutlined style={{ transform: "scale(2)" }} />}
-          onClick={() => {
-            return MoveHandlers.moveW(1, true);
-          }}
+          onClick={moveForward}
+          {...moveForwardProps}
         />
         <Button
           size="large"

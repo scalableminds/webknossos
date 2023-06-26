@@ -246,15 +246,15 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     initializeInputCatcherSizes();
     window.addEventListener("resize", this.debouncedOnLayoutChange);
     window.addEventListener("touchstart", this.handleTouchStart);
-    window.addEventListener("mousemove", this.handleMouseMove, false);
+    window.addEventListener("mouseover", this.handleMouseOver, false);
   };
 
   handleTouchStart = () => {
     this.lastTouchTimeStamp = Date.now();
-    console.log("touch start");
     return this.setState({ showFloatingMobileButtons: true });
   };
-  handleMouseMove = () => {
+
+  handleMouseOver = () => {
     if (this.lastTouchTimeStamp && Date.now() - this.lastTouchTimeStamp < 1000) {
       // Ignore mouse move events when they are shortly after touch events because the browser
       // emulates these events when touch is used.
@@ -262,7 +262,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // were never shown, anyway.
       return;
     }
-    console.log("mouse move");
     return this.setState({ showFloatingMobileButtons: false });
   };
 

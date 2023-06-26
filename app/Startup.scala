@@ -16,8 +16,7 @@ import utils.sql.SqlClient
 
 import javax.inject._
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.sys.process._
 
@@ -31,7 +30,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         tempFileService: TempFileService,
                         inviteService: InviteService,
                         sqlClient: SqlClient,
-                        slackNotificationService: SlackNotificationService)
+                        slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val beforeStartup = System.currentTimeMillis()

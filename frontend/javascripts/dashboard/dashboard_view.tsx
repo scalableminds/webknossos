@@ -177,18 +177,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             }
           : null,
         {
-          label: "Tasks",
-          key: "tasks",
-          children: (
-            <RenderingTabContext.Provider value="tasks">
-              <DashboardTaskListView
-                isAdminView={this.props.isAdminView}
-                userId={this.props.userId}
-              />
-            </RenderingTabContext.Provider>
-          ),
-        },
-        {
           label: "Annotations",
           key: "explorativeAnnotations",
           children: (
@@ -197,6 +185,18 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}
                 activeUser={this.props.activeUser}
+              />
+            </RenderingTabContext.Provider>
+          ),
+        },
+        {
+          label: "Tasks",
+          key: "tasks",
+          children: (
+            <RenderingTabContext.Provider value="tasks">
+              <DashboardTaskListView
+                isAdminView={this.props.isAdminView}
+                userId={this.props.userId}
               />
             </RenderingTabContext.Provider>
           ),

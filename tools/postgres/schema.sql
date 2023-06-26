@@ -151,7 +151,9 @@ CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
   _dataSet CHAR(24) NOT NULL,
   layerName VARCHAR(256) NOT NULL,
   type VARCHAR(256) NOT NULL,
-  matrix JSONB
+  matrix JSONB,
+  correspondences JSONB,
+  insertionOrderIndex INT
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(

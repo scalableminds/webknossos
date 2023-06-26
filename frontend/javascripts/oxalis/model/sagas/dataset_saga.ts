@@ -13,9 +13,10 @@ import {
   invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
-import { getCurrentResolution, Identity4x4 } from "../accessors/flycam_accessor";
+import { getCurrentResolution } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
+import { Identity4x4 } from "oxalis/constants";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -79,7 +80,9 @@ export function* watchZ1Downsampling(): Saga<void> {
 
       let scaleX = 1;
       let scaleY = 1;
-      const transformMatrix = getTransformsForLayer(dataLayer);
+      const transformMatrix = yield* select(
+        (state) => getTransformsForLayer(state.dataset, dataLayer).affineMatrix,
+      );
       if (transformMatrix !== Identity4x4) {
         const matrix = invertAndTranspose(transformMatrix);
         // A scale greater than 1 "shrinks" the data (effectively improving

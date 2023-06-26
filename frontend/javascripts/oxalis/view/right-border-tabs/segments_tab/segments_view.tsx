@@ -779,6 +779,19 @@ class SegmentsView extends React.Component<Props, State> {
     </>
   );
 
+  getToastForMissingLocations = (groupId: number) => {
+    const segmentsWithoutPosition = this.getSegmentsWithMissingLocation(groupId); // TODO
+    if (segmentsWithoutPosition.length > 0) {
+      console.log(`Segments with unknown positions: ${segmentsWithoutPosition}`);
+      return Toast.info(
+        <React.Fragment>
+          {segmentsWithoutPosition.length} meshes couldn't be loaded because the segment position is
+          unknown. The segment IDs were printed to the console.
+        </React.Fragment>,
+      );
+    }
+  };
+
   getLoadMeshesMenuItem = (id: number): ItemType => {
     if (this.props.currentMeshFile != null) {
       return {
@@ -786,12 +799,12 @@ class SegmentsView extends React.Component<Props, State> {
         label: (
           <>
             <CloudDownloadOutlined />
-            Load meshes for segments
+            Load all meshes
           </>
         ),
         children: [
           {
-            key: "loadAcHoc",
+            key: "loadAdHoc",
             label: (
               <div
                 onClick={() => {
@@ -799,6 +812,7 @@ class SegmentsView extends React.Component<Props, State> {
                     return;
                   }
                   this.handleLoadMeshesAdHoc(id);
+                  this.getToastForMissingLocations(id);
                   this.handleSegmentDropdownMenuVisibility(id, false);
                 }}
               >
@@ -815,6 +829,7 @@ class SegmentsView extends React.Component<Props, State> {
                     return;
                   }
                   this.handleLoadMeshesFromFile(id);
+                  this.getToastForMissingLocations(id);
                   this.handleSegmentDropdownMenuVisibility(id, false);
                 }}
               >
@@ -834,6 +849,7 @@ class SegmentsView extends React.Component<Props, State> {
                 return;
               }
               this.handleLoadMeshesAdHoc(id);
+              this.getToastForMissingLocations(id);
               this.handleSegmentDropdownMenuVisibility(id, false);
             }}
           >
@@ -856,24 +872,6 @@ class SegmentsView extends React.Component<Props, State> {
       ),
     );
   }
-
-  doesGroupHaveAnyMeshes = (groupId: number): boolean => {
-    const { visibleSegmentationLayer } = this.props;
-    if (visibleSegmentationLayer == null) return false;
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return false;
-    let bool = false;
-    segmentGroup.forEach((segment) => {
-      if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
-          segment.id
-        ] != null
-      ) {
-        bool = true;
-      }
-    });
-    return bool;
-  };
 
   handleChangeMeshVisibility = (layerName: string, groupId: number, isVisible: boolean) => {
     const { visibleSegmentationLayer } = this.props;
@@ -910,6 +908,16 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({
       areSegmentsInGroupVisible: copyOfState,
     });
+  };
+
+  getSegmentsWithMissingLocation = (groupId: number): number[] => {
+    const segmentGroup = this.getSegmentsOfGroup(groupId);
+    if (segmentGroup == null) return [];
+    let segmentIdsWithoutPosition: number[] = [];
+    segmentGroup.forEach((segment) => {
+      if (segment.somePosition == null) segmentIdsWithoutPosition.push(segment.id);
+    });
+    return segmentIdsWithoutPosition.sort();
   };
 
   handleLoadMeshesFromFile = (groupId: number) => {
@@ -1084,9 +1092,8 @@ class SegmentsView extends React.Component<Props, State> {
       return null;
     }
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    const segmentGroupToLoadMeshes =
-      groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
-    return segmentGroupToLoadMeshes;
+    const segmentsOfGroup = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+    return segmentsOfGroup;
   };
 
   onRenameStart = () => {
@@ -1215,8 +1222,8 @@ class SegmentsView extends React.Component<Props, State> {
                               }}
                             >
                               <i className="fas fa-dice-d20" />
-                              {this.state.areSegmentsInGroupVisible[id] ? "Hide" : "Show"} meshes of
-                              group
+                              {this.state.areSegmentsInGroupVisible[id] ? "Hide" : "Show"} all
+                              meshes
                             </div>
                           ),
                         }
@@ -1236,7 +1243,7 @@ class SegmentsView extends React.Component<Props, State> {
                               }}
                             >
                               <DownloadOutlined />
-                              Download all meshes in group
+                              Download all meshes
                             </div>
                           ),
                         }
@@ -1325,7 +1332,7 @@ class SegmentsView extends React.Component<Props, State> {
                     />
                   ) : (
                     /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
-                       This has a major performance impact. */
+                    This has a major performance impact. */
                     <AutoSizer defaultHeight={500}>
                       {({ height, width }) => (
                         <div
@@ -1406,6 +1413,24 @@ class SegmentsView extends React.Component<Props, State> {
 
     this.props.onUpdateSegmentGroups(newSegmentGroups, this.props.visibleSegmentationLayer.name);
   }
+
+  doesGroupHaveAnyMeshes = (groupId: number): boolean => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return false;
+    const segmentGroup = this.getSegmentsOfGroup(groupId);
+    if (segmentGroup == null) return false;
+    let bool = false;
+    segmentGroup.forEach((segment) => {
+      if (
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
+          segment.id
+        ] != null
+      ) {
+        bool = true;
+      }
+    });
+    return bool;
+  };
 
   onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {
     const { node, dragNode } = dropInfo;

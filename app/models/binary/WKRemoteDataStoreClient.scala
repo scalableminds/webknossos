@@ -67,10 +67,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   def addDataSource(organizationName: String,
                     datasetName: String,
-                    dataSource: GenericDataSource[DataLayer]): Fox[Unit] =
+                    dataSource: GenericDataSource[DataLayer],
+                    userToken: String): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
-        .addQueryString("token" -> "") //TODO which token?
+        .addQueryString("token" -> userToken)
         .put(dataSource)
     } yield ()
 

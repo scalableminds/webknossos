@@ -587,9 +587,7 @@ class AuthenticationController @Inject()(
                                                isOrganizationOwner = true) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)
-                    dataStoreToken <- bearerTokenAuthenticatorService
-                      .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
-                      .toFox
+                    dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
                       .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {

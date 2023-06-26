@@ -25,7 +25,7 @@ import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
-import oxalis.security.WkEnv
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.libs.json.{Json, OFormat}
 import utils.ObjectId
 
@@ -49,9 +49,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                           dataVaultService: DataVaultService,
                                           organizationDAO: OrganizationDAO,
                                           dataStoreDAO: DataStoreDAO,
+                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                           rpc: RPC)
     extends FoxImplicits
     with LazyLogging {
+
+  private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
@@ -80,13 +83,14 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
   def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
                           parameters: List[ExploreRemoteDatasetParameters],
-                          organizationId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
+                          user: User)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(organizationId)
+      organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       datasetName <- parameters.headOption.flatMap(_.autoAddDatasetName) ?~> "no dataset name supplied"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
-      _ <- client.addDataSource(organization.name, datasetName, dataSource)
+      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
+      _ <- client.addDataSource(organization.name, datasetName, dataSource, userToken)
     } yield ()
 
   private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {

@@ -44,6 +44,7 @@ import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import { Store } from "oxalis/singletons";
 
 const { Sider } = Layout;
 
@@ -89,18 +90,19 @@ const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 function FloatingMobileControls() {
   return (
-    <div style={{ position: "absolute", left: 36, bottom: 36, zIndex: 100000 }}>
+    <div style={{ position: "absolute", left: 72, bottom: 72, zIndex: 100000 }}>
       <Space>
         <Button
           size="large"
           type="primary"
           shape="circle"
+          style={{ width: 80, height: 80 }}
           onClick={() => layoutEmitter.emit("toggleBorder", "left")}
           icon={
             <img
               alt="Toggle left sidebar"
               src="/assets/images/icon-sidebar-hide-left-bright.svg"
-              style={{ filter: "brightness(10)" }}
+              style={{ filter: "brightness(10)", transform: "scale(2)" }}
             />
           }
         />
@@ -108,12 +110,13 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
+          style={{ width: 80, height: 80 }}
           onClick={() => layoutEmitter.emit("toggleBorder", "right")}
           icon={
             <img
               alt="Toggle right sidebar"
               src="/assets/images/icon-sidebar-hide-right-bright.svg"
-              style={{ filter: "brightness(10)" }}
+              style={{ filter: "brightness(10)", transform: "scale(2)" }}
             />
           }
         />
@@ -121,7 +124,8 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
-          icon={<CaretUpOutlined />}
+          style={{ width: 80, height: 80 }}
+          icon={<CaretUpOutlined style={{ transform: "scale(2)" }} />}
           onClick={() => {
             return MoveHandlers.moveW(1, true);
           }}
@@ -130,7 +134,8 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
-          icon={<CaretDownOutlined />}
+          style={{ width: 80, height: 80 }}
+          icon={<CaretDownOutlined style={{ transform: "scale(2)" }} />}
           onClick={() => {
             return MoveHandlers.moveW(-1, true);
           }}
@@ -139,6 +144,7 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
+          style={{ width: 80, height: 80 }}
           onClick={() => layoutEmitter.emit("toggleMaximize")}
           icon={
             <div
@@ -147,6 +153,7 @@ function FloatingMobileControls() {
                   "transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAUCAYAAABiS3YzAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAB3RJTUUH3wsOCAciLIHE4wAAAEdJREFUOMvtkksOADAERGl6b5x8eoBqo6E7b+kzJiBqqmEvaGaINIsIhydFRG8185RQVTD7RgC87yTrdPw4VIvWMzMf0DQ7CzmmFh3I1FWCAAAAAElFTkSuQmCC) no-repeat center",
                 height: "100%",
                 filter: "brightness(1000)",
+                transform: "scale(2)",
               }}
             />
           }
@@ -206,7 +213,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       }
     }
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
-    window.removeEventListener("touchstart", this.handleTouchStart);
+    window.removeEventListener("touchstart", this.handleTouch);
     window.removeEventListener("mouseover", this.handleMouseOver);
 
     const refreshMessageContainer = document.createElement("div");
@@ -245,11 +252,24 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
     initializeInputCatcherSizes();
     window.addEventListener("resize", this.debouncedOnLayoutChange);
-    window.addEventListener("touchstart", this.handleTouchStart);
+    window.addEventListener("touchstart", this.handleTouch);
     window.addEventListener("mouseover", this.handleMouseOver, false);
+
+    if (window.screen.width < 1024) {
+      // Simply assume mobile.
+      const { left, right } = Store.getState().uiInformation.borderOpenStatus;
+      if (left) {
+        layoutEmitter.emit("toggleBorder", "left");
+      }
+      if (right) {
+        layoutEmitter.emit("toggleBorder", "right");
+      }
+      // Immediately show mobile buttons
+      this.handleTouch();
+    }
   };
 
-  handleTouchStart = () => {
+  handleTouch = () => {
     this.lastTouchTimeStamp = Date.now();
     return this.setState({ showFloatingMobileButtons: true });
   };

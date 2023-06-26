@@ -178,8 +178,9 @@ class AuthenticationController @Inject()(
                     authenticator <- combinedAuthenticatorService.create(loginInfo)
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
-                    _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
-                      emailVerificationService.assertUserHasVerifiedEmail(user)(GlobalAccessContext, ec))
+                    _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
+                      .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec)) ?~> Messages(
+                      "user.email.notVerified")
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                     _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
                   } yield result

@@ -279,7 +279,7 @@ POST          /credentials/s3AccessKey                                          
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential
 
 # Email verification
-GET           /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
+POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
 POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail
 
 # Voxelytics

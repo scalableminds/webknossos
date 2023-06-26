@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
@@ -15,7 +16,8 @@ class EmailVerificationService @Inject()(conf: WkConf,
                                          emailVerificationKeyDAO: EmailVerificationKeyDAO,
                                          multiUserDAO: MultiUserDAO,
                                          defaultMails: DefaultMails,
-                                         actorSystem: ActorSystem) {
+                                         actorSystem: ActorSystem)
+    extends LazyLogging {
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -33,29 +35,49 @@ class EmailVerificationService @Inject()(conf: WkConf,
                                                        isUsed = false)
       _ <- emailVerificationKeyDAO.insertOne(evk)
       fullVerificationLink = s"${conf.Http.uri}/verifyEmail/$key"
+      _ = logger.info(s"Sending email verification mail for user with email ${multiUser.email}")
       _ = Mailer ! Send(defaultMails.emailVerificationMail(user, multiUser.email, fullVerificationLink))
     } yield ()
 
   def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
+      emailVerified <- isEmailAlreadyVerifiedByKey(key)
+      _ <- Fox.runIf(!emailVerified)(checkAndVerify(key))
+    } yield ()
+
+  private def isEmailAlreadyVerifiedByKey(key: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
       evk <- emailVerificationKeyDAO.findOneByKey(key) ?~> "user.email.verification.keyInvalid"
+      multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
+    } yield multiUser.isEmailVerified
+
+  private def checkAndVerify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
+    for {
+      evk <- emailVerificationKeyDAO.findOneByKey(key) ?~> "user.email.verification.keyInvalid"
+      multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
       _ <- Fox.bool2Fox(!evk.isUsed) ?~> "user.email.verification.keyUsed"
       _ <- Fox.bool2Fox(evk.validUntil.forall(!_.isPast)) ?~> "user.email.verification.linkExpired"
-      multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> "user.notFound"
       _ <- Fox.bool2Fox(evk.email == multiUser.email) ?~> "user.email.verification.emailDoesNotMatch"
       _ = multiUserDAO.updateEmailVerification(evk._multiUser, verified = true)
       _ <- emailVerificationKeyDAO.markAsUsed(evk._id)
     } yield ()
 
-  def assertUserHasVerifiedEmail(user: User)(
+  def assertEmailVerifiedOrResendVerificationMail(user: User)(
       implicit ctx: DBAccessContext,
       ec: ExecutionContext
   ): Fox[Unit] =
     for {
+      emailVerificationOk <- userHasVerifiedEmail(user)
+      _ <- Fox.runIf(!emailVerificationOk)(sendEmailVerification(user))
+      _ <- Fox.bool2Fox(emailVerificationOk)
+    } yield ()
+
+  private def userHasVerifiedEmail(user: User)(
+      implicit ctx: DBAccessContext
+  ): Fox[Boolean] =
+    for {
       multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser) ?~> "user.notFound"
       endOfGracePeriod: Instant = multiUser.created + conf.WebKnossos.User.EmailVerification.gracePeriod
       overGracePeriod = endOfGracePeriod.isPast
-      _ <- Fox.bool2Fox(
-        !conf.WebKnossos.User.EmailVerification.required || multiUser.isEmailVerified || !overGracePeriod) ?~> "user.email.notVerified"
-    } yield ()
+    } yield !conf.WebKnossos.User.EmailVerification.required || multiUser.isEmailVerified || !overGracePeriod
 }

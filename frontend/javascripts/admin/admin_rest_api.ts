@@ -2477,7 +2477,10 @@ export function requestSingleSignOnLogin() {
 }
 
 export function verifyEmail(key: string) {
-  return Request.receiveJSON(`/api/verifyEmail/${key}`, { showErrorToast: false });
+  return Request.receiveJSON(`/api/verifyEmail/${key}`, {
+    method: "POST",
+    showErrorToast: false,
+  });
 }
 
 export function requestVerificationMail() {

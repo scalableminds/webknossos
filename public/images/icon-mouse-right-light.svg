@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="17"
+   height="28"
+   viewBox="0 0 4.4979165 7.4083335"
+   version="1.1"
+   id="svg5349"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="icon-mouse-right-light.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview5351"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="11.313708"
+     inkscape:cx="8.1759222"
+     inkscape:cy="-3.314563"
+     inkscape:window-width="1920"
+     inkscape:window-height="1068"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs5346" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g7160"
+       transform="matrix(-1,0,0,1,13.661368,-9.1114072)">
+      <path
+         d="m 9.3131346,11.871644 v -0.473086 c 0,-1.158669 0.9406314,-2.0992994 2.0993004,-2.0992994 v 2.5723854 z"
+         style="clip-rule:evenodd;fill:#eeefff;fill-rule:evenodd;stroke:none;stroke-width:0.211667;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+         id="path142" />
+      <path
+         d="m 9.3129835,11.398608 c 0,-1.158668 0.9406315,-2.0992991 2.0993005,-2.0992991 1.15892,0 2.099551,0.9406311 2.099551,2.0992991 v 2.833727 c 0,1.158669 -0.940631,2.099554 -2.099551,2.099554 -1.158669,0 -2.0993005,-0.940885 -2.0993005,-2.099554 z"
+         style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+         id="path138" />
+      <path
+         d="M 9.3131346,11.871644 H 13.511734"
+         style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+         id="path146" />
+      <path
+         d="M 11.412435,11.871644 V 9.2992586"
+         style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+         id="path150" />
+    </g>
+  </g>
+</svg>

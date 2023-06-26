@@ -443,9 +443,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return this.state.isLoading ? null : (
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
-          <Card bordered={false} cover={<i className="drawing drawing-empty-list-annotations" />}>
+          <Card
+            bordered={false}
+            cover={
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <i className="drawing drawing-empty-list-annotations" />
+              </div>
+            }
+            style={{ background: "transparent" }}
+          >
             <Card.Meta
               title="Create an Annotation"
+              style={{ textAlign: "center" }}
               description={
                 <>
                   <p>Create your first annotation by opening a dataset from the datasets page.</p>

@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
   ElementClass,
+  ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.schema.Tables._
@@ -716,6 +717,7 @@ class DataSetDataLayerDAO @Inject()(
         getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(dataSetId, _))
       case _ => List(clearQuery)
     }
+
     for {
       _ <- run(DBIO.sequence(queries))
       _ <- dataSetResolutionsDAO.updateResolutions(dataSetId, source.toUsable.map(_.dataLayers))
@@ -764,8 +766,9 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     for {
       typeParsed <- CoordinateTransformationType.fromString(row.`type`).toFox
       result <- typeParsed match {
-        case CoordinateTransformationType.affine => parseAffine(row.matrix)
-        case _                                   => Fox.failure(s"Unknown coordinate transformation type: ${row.`type`}")
+        case CoordinateTransformationType.affine            => parseAffine(row.matrix)
+        case CoordinateTransformationType.thin_plate_spline => parseThinPlateSpline(row.correspondences)
+        case _                                              => Fox.failure(s"Unknown coordinate transformation type: ${row.`type`}")
       }
     } yield result
 
@@ -773,7 +776,13 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     for {
       matrixString <- matrixRawOpt.toFox
       matrix <- JsonHelper.parseAndValidateJson[List[List[Double]]](matrixString)
-    } yield CoordinateTransformation(CoordinateTransformationType.affine, Some(matrix))
+    } yield CoordinateTransformation(CoordinateTransformationType.affine, Some(matrix), None)
+
+  private def parseThinPlateSpline(correspondencesRawOpt: Option[String]): Fox[CoordinateTransformation] =
+    for {
+      correspondencesString <- correspondencesRawOpt.toFox
+      correspondences <- JsonHelper.parseAndValidateJson[ThinPlateSplineCorrespondences](correspondencesString)
+    } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(dataSetId: ObjectId,
                                             layerName: String): Fox[List[CoordinateTransformation]] =
@@ -781,6 +790,7 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
       rows <- run(
         DatasetLayerCoordinatetransformations
           .filter(r => r._Dataset === dataSetId.id && r.layername === layerName)
+          .sortBy(r => r.insertionorderindex)
           .result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
     } yield rowsParsed
@@ -789,11 +799,17 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     val clearQuery =
       q"DELETE FROM webknossos.dataSet_layer_coordinateTransformations WHERE _dataSet = $dataSetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.coordinateTransformations.getOrElse(List.empty).map { coordinateTransformation: CoordinateTransformation =>
+      layer.coordinateTransformations.getOrElse(List.empty).zipWithIndex.map { tuple =>
         {
-          q"""INSERT INTO webknossos.dataSet_layer_coordinateTransformations(_dataSet, layerName, type, matrix)
-              values($dataSetId, ${layer.name}, ${coordinateTransformation.`type`}, ${Json.toJson(
-            coordinateTransformation.matrix)})""".asUpdate
+          val coordinateTransformation: CoordinateTransformation = tuple._1
+          val insertionOrderIndex = tuple._2
+          q"""INSERT INTO webknossos.dataSet_layer_coordinateTransformations(_dataSet, layerName, type, matrix, correspondences, insertionOrderIndex)
+              values(
+              $dataSetId, ${layer.name}, ${coordinateTransformation.`type`},
+              ${Json.toJson(coordinateTransformation.matrix)},
+              ${Json.toJson(coordinateTransformation.correspondences)},
+              $insertionOrderIndex)
+              """.asUpdate
         }
       }
     }

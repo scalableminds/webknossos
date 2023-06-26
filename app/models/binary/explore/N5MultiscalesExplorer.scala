@@ -10,9 +10,9 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 import net.liftweb.util.Helpers.tryo
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
+class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with FoxImplicits {
 
   override def name: String = "N5 Multiscales"
 

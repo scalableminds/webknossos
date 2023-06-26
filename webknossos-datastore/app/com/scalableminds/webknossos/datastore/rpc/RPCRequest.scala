@@ -10,10 +10,10 @@ import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
+class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with MimeTypes {

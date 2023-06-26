@@ -46,12 +46,7 @@ function extendPricingPlan(organization: APIOrganization) {
     icon: <FieldTimeOutlined style={{ color: "var(--ant-primary-color)" }} />,
     width: 1000,
     content: (
-      <div
-        style={{
-          background:
-            "right -150px / 50% no-repeat url(/assets/images/pricing/background_neurons.jpeg)",
-        }}
-      >
+      <div>
         <p style={{ marginRight: "30%" }}>
           Extend your plan now for uninterrupted access to WEBKNOSSOS.
         </p>
@@ -101,19 +96,14 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
       width={800}
       open
     >
-      <div
-        style={{
-          background:
-            "right -40px / 35% no-repeat url(/assets/images/pricing/background_users.jpeg)",
-        }}
-      >
+      <div className="drawing-upgrade-users">
         <p style={{ marginRight: "30%" }}>
           You can increase the number of users allowed to join your organization by either buying
           single user upgrades or by upgrading your WEBKNOSSOS plan to “Power” for unlimited users.
         </p>
         <div>Add additional user accounts:</div>
         <div>
-          <InputNumber min={1} defaultValue={1} ref={userInputRef} />
+          <InputNumber min={1} defaultValue={1} ref={userInputRef} size="large" />
         </div>
         {ModalInformationFooter}
       </div>
@@ -150,12 +140,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
       width={800}
       open
     >
-      <div
-        style={{
-          background:
-            "right -30px / 35% no-repeat url(/assets/images/pricing/background_evaluation.jpeg)",
-        }}
-      >
+      <div className="drawing-upgrade-storage">
         <p style={{ marginRight: "30%" }}>
           You can increase your storage limit for your organization by either buying additional
           storage upgrades or by upgrading your WEBKNOSSOS plan to “Power” for custom dataset
@@ -301,12 +286,7 @@ function UpgradePricingPlanModal({
       }
       zIndex={10000} // overlay everything
     >
-      <div
-        style={{
-          background:
-            "no-repeat right bottom / contain url(/assets/images/pricing/background_neuron_analysis.svg)",
-        }}
-      >
+      <div>
         <p>{introSentence}</p>
         {modalBody}
         {ModalInformationFooter}

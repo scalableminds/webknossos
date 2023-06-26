@@ -9,7 +9,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 case class MagWithAttributes(mag: MagLocator,
                              remotePath: VaultPath,
@@ -17,6 +17,8 @@ case class MagWithAttributes(mag: MagLocator,
                              boundingBox: BoundingBox)
 
 trait RemoteLayerExplorer extends FoxImplicits {
+
+  implicit def ec: ExecutionContext
 
   def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
 

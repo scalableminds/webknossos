@@ -4,12 +4,16 @@ import { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-
-import DatasetView from "./dataset_view";
+import { Button, Card, Col, Row } from "antd";
+import { Link } from "react-router-dom";
+import * as Utils from "libs/utils";
+import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
-import { useDatasetsInFolderQuery } from "./dataset/queries";
+import features, { getDemoDatasetUrl } from "features";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { useFolderHierarchyQuery, useDatasetsInFolderQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;
@@ -27,6 +31,7 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [folderIdForEditModal, setFolderIdForEditModal] = useState<string | null>(null);
+  const { data: hierarchy } = useFolderHierarchyQuery();
 
   const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
@@ -88,6 +93,109 @@ function DatasetFolderViewInner(props: Props) {
       ),
     );
   }, [context.datasets]);
+
+  const renderNoDatasetsPlaceHolder = () => {
+    const openPublicDatasetCard = (
+      <Col span={7}>
+        <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
+          <Card.Meta
+            title="Open a Demo Dataset"
+            description={
+              <>
+                <p>Check out a published community dataset to experience WEBKNOSSOS in action.</p>
+                <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
+                  <Button style={{ marginTop: 30 }}>Open a Community Dataset</Button>
+                </a>
+              </>
+            }
+          />
+        </Card>
+      </Col>
+    );
+
+    const uploadPlaceholderCard = (
+      <Col span={7}>
+        <Card
+          bordered={false}
+          cover={
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <i className="drawing drawing-empty-list-dataset-upload" />
+            </div>
+          }
+          style={{ background: "transparent" }}
+        >
+          <Card.Meta
+            title="Upload & Import Dataset"
+            style={{ textAlign: "center" }}
+            description={
+              <>
+                <p>
+                  WEBKNOSSOS supports a variety of (remote){" "}
+                  <a
+                    href="https://docs.webknossos.org/webknossos/data_formats.html"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    file formats
+                  </a>{" "}
+                  and is also able to convert them when necessary.
+                </p>
+                <Link to="/datasets/upload">
+                  <Button type="primary" style={{ marginTop: 30 }}>
+                    Open Dataset Upload & Import
+                  </Button>
+                </Link>
+                ,
+              </>
+            }
+          />
+        </Card>
+      </Col>
+    );
+
+    const adminHeader =
+      Utils.isUserAdminOrDatasetManager(props.user) || Utils.isUserTeamManager(props.user) ? (
+        <div
+          className="pull-right"
+          style={{
+            display: "flex",
+          }}
+        >
+          <DatasetRefreshButton context={context} />
+          <DatasetAddButton context={context} />
+        </div>
+      ) : null;
+
+    return (
+      <React.Fragment>
+        <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
+        <Row
+          justify="center"
+          style={{
+            padding: "20px 50px 70px",
+          }}
+          align="middle"
+          gutter={32}
+        >
+          {features().isWkorgInstance ? openPublicDatasetCard : null}
+          {Utils.isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
+        </Row>
+      </React.Fragment>
+    );
+  };
+
+  if (
+    hierarchy != null &&
+    hierarchy.flatItems.length === 1 &&
+    context.datasets.length === 0 &&
+    context.activeFolderId != null &&
+    !context.isLoading &&
+    context.globalSearchQuery == null
+  ) {
+    // Show a placeholder if only the root folder exists and no dataset is available yet
+    // (aka a new, empty organization)
+    return renderNoDatasetsPlaceHolder();
+  }
 
   return (
     <div

@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
@@ -39,7 +39,8 @@ class DSRemoteWebKnossosClient @Inject()(
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends RemoteWebKnossosClient
+)(implicit val ec: ExecutionContext)
+    extends RemoteWebKnossosClient
     with IntervalScheduler
     with LazyLogging
     with FoxImplicits {
@@ -68,12 +69,14 @@ class DSRemoteWebKnossosClient @Inject()(
   def reportUpload(dataSourceId: DataSourceId,
                    dataSetSizeBytes: Long,
                    needsConversion: Boolean,
+                   viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
     for {
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
+        .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()

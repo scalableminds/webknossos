@@ -6,9 +6,9 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSource}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class WebknossosZarrExplorer extends RemoteLayerExplorer {
+class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 

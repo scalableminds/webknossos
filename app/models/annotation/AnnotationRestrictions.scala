@@ -8,9 +8,8 @@ import play.api.libs.json._
 import models.annotation.AnnotationState._
 
 import scala.concurrent._
-import ExecutionContext.Implicits.global
 
-class AnnotationRestrictions {
+class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
   def allowUpdate(user: Option[User]): Fox[Boolean] = Fox.successful(false)
@@ -47,9 +46,8 @@ object AnnotationRestrictions extends FoxImplicits {
     }
 }
 
-class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends FoxImplicits {
-  def restrictEverything =
-    new AnnotationRestrictions()
+class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {

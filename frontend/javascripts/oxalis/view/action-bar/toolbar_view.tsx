@@ -1,4 +1,16 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, MenuProps } from "antd";
+import {
+  Radio,
+  Tooltip,
+  Badge,
+  Space,
+  Popover,
+  RadioChangeEvent,
+  Dropdown,
+  MenuProps,
+  Col,
+  Row,
+  Divider,
+} from "antd";
 import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
@@ -9,6 +21,7 @@ import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_action
 import {
   interpolateSegmentationLayerAction,
   createCellAction,
+  setMousePositionAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   createTreeAction,
@@ -47,9 +60,10 @@ import {
   ToolsWithInterpolationCapabilities,
   InterpolationModeEnum,
   InterpolationMode,
+  Unicode,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
-import Store, { OxalisState } from "oxalis/store";
+import Store, { BrushPresets, OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
@@ -58,6 +72,7 @@ import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_acti
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
+import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -119,6 +134,10 @@ function toggleOverwriteMode(overwriteMode: OverwriteMode) {
 
 const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
+};
+
+const handleUpdatePresetBrushSizes = (brushSizes: BrushPresets) => {
+  Store.dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
 };
 
 const handleToggleAutomaticMeshRendering = (value: boolean) => {
@@ -529,41 +548,211 @@ function CreateTreeButton() {
   );
 }
 
-function ChangeBrushSizeButton() {
+function BrushPresetButton({
+  name,
+  icon,
+  brushSize,
+  onClick,
+}: {
+  name: string;
+  onClick: () => void;
+  icon: JSX.Element;
+  brushSize: number;
+}) {
+  const { ThinSpace } = Unicode;
+  return (
+    <>
+      <div style={{ textAlign: "center" }}>
+        <ButtonComponent className="without-icon-margin" onClick={onClick}>
+          {icon}
+        </ButtonComponent>
+      </div>
+      <div style={{ textAlign: "center" }}>{name}</div>
+      <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
+        {brushSize}
+        {ThinSpace}vx
+      </div>
+    </>
+  );
+}
+
+export function getDefaultBrushSizes(maximumSize: number, minimumSize: number) {
+  return {
+    small: Math.max(minimumSize, 10),
+    medium: calculateMediumBrushSize(maximumSize),
+    large: maximumSize,
+  };
+}
+
+function ChangeBrushSizePopover() {
+  const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
-  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
+  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+
+  const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+  const presetBrushSizes = useSelector(
+    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
+  );
+  useEffect(() => {
+    if (presetBrushSizes == null) {
+      handleUpdatePresetBrushSizes(defaultBrushSizes);
+    }
+  }, [presetBrushSizes]);
+
+  let smallBrushSize: number, mediumBrushSize: number, largeBrushSize: number;
+  if (presetBrushSizes == null) {
+    smallBrushSize = defaultBrushSizes.small;
+    mediumBrushSize = defaultBrushSizes.medium;
+    largeBrushSize = defaultBrushSizes.large;
+  } else {
+    smallBrushSize = presetBrushSizes?.small;
+    mediumBrushSize = presetBrushSizes?.medium;
+    largeBrushSize = presetBrushSizes?.large;
+  }
+
+  const centerBrushInViewport = () => {
+    const position = getViewportExtents(Store.getState());
+    const activeViewPort = Store.getState().viewModeData.plane.activeViewport;
+    dispatch(
+      setMousePositionAction([position[activeViewPort][0] / 2, position[activeViewPort][1] / 2]),
+    );
+  };
+
+  const items: MenuProps["items"] = [
+    {
+      label: "Assign current brush size to",
+      key: "assignToParent",
+      children: [
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes({
+                  small: brushSize,
+                  medium: mediumBrushSize,
+                  large: largeBrushSize,
+                })
+              }
+            >
+              Small brush
+            </div>
+          ),
+          key: "assignToSmall",
+        },
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes({
+                  small: smallBrushSize,
+                  medium: brushSize,
+                  large: maximumBrushSize,
+                })
+              }
+            >
+              Medium brush
+            </div>
+          ),
+          key: "assignToMedium",
+        },
+        {
+          label: (
+            <div
+              onClick={() =>
+                handleUpdatePresetBrushSizes({
+                  small: smallBrushSize,
+                  medium: mediumBrushSize,
+                  large: brushSize,
+                })
+              }
+            >
+              Large brush
+            </div>
+          ),
+          key: "assignToLarge",
+        },
+      ],
+    },
+    {
+      label: <div onClick={() => handleUpdatePresetBrushSizes(defaultBrushSizes)}>Reset</div>,
+      key: "reset",
+    },
+  ];
+
   return (
     <Tooltip title="Change the brush size">
       <Popover
+        title="Brush Size"
         content={
           <div
             style={{
               width: 230,
             }}
+            onMouseEnter={() => centerBrushInViewport()}
           >
-            <div
-              style={{
-                marginBottom: 8,
-              }}
-            >
-              Set the brush size:
-            </div>
-            <LogSliderSetting
-              label=""
-              roundTo={0}
-              min={userSettings.brushSize.minimum}
-              max={maximumBrushSize}
-              precision={0}
-              spans={[0, 16, 8]}
-              value={brushSize}
-              onChange={handleUpdateBrushSize}
-            />
+            <Row align="middle" style={{ textAlign: "center" }}>
+              <Col>
+                <LogSliderSetting
+                  label=""
+                  roundTo={0}
+                  min={userSettings.brushSize.minimum}
+                  max={maximumBrushSize}
+                  precision={0}
+                  spans={[0, 18, 6]}
+                  value={brushSize}
+                  onChange={handleUpdateBrushSize}
+                />
+              </Col>
+              <Col>
+                <Dropdown
+                  menu={{ items }}
+                  trigger={["click", "contextMenu", "hover"]}
+                  placement="bottomLeft"
+                >
+                  <SettingOutlined />
+                </Dropdown>
+              </Col>
+            </Row>
+            <Divider style={{ marginBottom: 15, marginTop: 15 }} />
+            <Row justify="space-between" align="middle">
+              <Col>
+                <BrushPresetButton
+                  name="Small"
+                  onClick={() => handleUpdateBrushSize(smallBrushSize)}
+                  icon={<i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />}
+                  brushSize={Math.round(smallBrushSize)}
+                />
+              </Col>
+              <Col>
+                <BrushPresetButton
+                  name="Medium"
+                  onClick={() => handleUpdateBrushSize(mediumBrushSize)}
+                  icon={<i className="fas fa-circle fa-sm" />}
+                  brushSize={Math.round(mediumBrushSize)}
+                />
+              </Col>
+              <Col>
+                <BrushPresetButton
+                  name="Large"
+                  onClick={() => handleUpdateBrushSize(largeBrushSize)}
+                  icon={<i className="fas fa-circle fa-lg" />}
+                  brushSize={Math.round(largeBrushSize)}
+                />
+              </Col>
+            </Row>
           </div>
         }
         trigger="click"
+        open={isBrushSizePopoverOpen}
         placement="bottom"
         style={{
           cursor: "pointer",
+        }}
+        onOpenChange={(open: boolean) => {
+          setIsBrushSizePopoverOpen(open);
+          if (open) centerBrushInViewport();
+          else dispatch(setMousePositionAction(null));
         }}
       >
         <ButtonComponent
@@ -584,6 +773,10 @@ function ChangeBrushSizeButton() {
       </Popover>
     </Tooltip>
   );
+}
+
+function calculateMediumBrushSize(maximumBrushSize: number) {
+  return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
 export default function ToolbarView() {
@@ -974,7 +1167,7 @@ function ToolSpecificSettings({
           className="antd-legacy-group"
         >
           {showCreateCellButton ? <CreateCellButton /> : null}
-          {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
+          {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
         </Space>
       ) : null}
 

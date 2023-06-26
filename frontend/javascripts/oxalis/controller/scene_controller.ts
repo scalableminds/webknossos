@@ -462,7 +462,7 @@ class SceneController {
           isHighlighted: false,
         });
         bbCube.getMeshes().forEach((mesh) => {
-          const transformMatrix = getTransformsForLayerOrNull(layer);
+          const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();
             // @ts-ignore

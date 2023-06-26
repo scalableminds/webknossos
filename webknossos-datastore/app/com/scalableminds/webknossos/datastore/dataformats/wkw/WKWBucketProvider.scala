@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Empty, Failure, Full}
 
@@ -35,7 +35,7 @@ class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle 
 
 class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper {
 
-  override def dataVaultServiceOpt: Option[DataVaultService] = None
+  override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[WKWCubeHandle] = {

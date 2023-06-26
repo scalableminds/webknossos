@@ -370,3 +370,6 @@ export enum BLEND_MODES {
   Additive = "Additive",
   Cover = "Cover",
 }
+
+export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const IdentityTransform = { type: "affine", affineMatrix: Identity4x4 } as const;

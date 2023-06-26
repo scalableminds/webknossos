@@ -15,15 +15,15 @@ import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        dataVaultServiceOpt: Option[DataVaultService],
+                        remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         val applicationHealthService: Option[ApplicationHealthService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])
+                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -92,7 +92,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
-          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
+          request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))

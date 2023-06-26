@@ -15,12 +15,25 @@ import {
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
 } from "./coords.glsl";
-import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
+import {
+  inverse,
+  div,
+  isNan,
+  transDim,
+  isFlightMode,
+  formatNumberAsGLSLFloat,
+  almostEq,
+} from "./utils.glsl";
 import compileShader from "./shader_module_system";
 import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
+import TPS3D from "libs/thin_plate_spline";
+import {
+  generateCalculateTpsOffsetFunction,
+  generateTpsInitialization,
+} from "./thin_plate_spline.glsl";
 
 type Params = {
   globalLayerCount: number;
@@ -30,17 +43,8 @@ type Params = {
   resolutionsCount: number;
   datasetScale: Vector3;
   isOrthogonal: boolean;
+  tpsTransformPerLayer: Record<string, TPS3D>;
 };
-
-export function formatNumberAsGLSLFloat(aNumber: number): string {
-  if (aNumber % 1 > 0) {
-    // If it is already a floating point number, we can use toString
-    return aNumber.toString();
-  } else {
-    // Otherwise, append ".0" via toFixed
-    return aNumber.toFixed(1);
-  }
-}
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
@@ -142,6 +146,12 @@ in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
 
+<% _.each(layerNamesWithSegmentation, function(name) {
+  if (tpsTransformPerLayer[name] != null) { %>
+    in vec3 tpsOffsetXYZ_<%= name %>;
+<% }
+}) %>
+
 ${compileShader(
   inverse,
   div,
@@ -158,7 +168,9 @@ ${compileShader(
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentationId : null,
   hasSegmentation ? getCrossHairOverlay : null,
+  almostEq,
 )}
+
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -195,7 +207,12 @@ void main() {
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
 
-      vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+      <% if (tpsTransformPerLayer[name] != null) { %>
+        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
+      <% } else { %>
+        vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+      <% } %>
+
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
@@ -305,6 +322,13 @@ out vec4 worldCoord;
 out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
+<% _.each(layerNamesWithSegmentation, function(name) {
+  if (tpsTransformPerLayer[name] != null) { %>
+  out vec3 tpsOffsetXYZ_<%= name %>;
+<%
+  }
+}) %>
+
 flat out vec2 index;
 flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
@@ -328,12 +352,26 @@ ${compileShader(
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentationId : null,
   getResolution,
+  almostEq,
 )}
 
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
+<% _.each(layerNamesWithSegmentation, function(name) {
+  if (tpsTransformPerLayer[name] != null) { %>
+  <%= generateTpsInitialization(tpsTransformPerLayer, name) %>
+  <%= generateCalculateTpsOffsetFunction(name) %>
+<% }
+}) %>
+
 void main() {
+  <% _.each(layerNamesWithSegmentation, function(name) {
+    if (tpsTransformPerLayer[name] != null) { %>
+    initializeTPSArraysFor<%= name %>();
+  <% }
+  }) %>
+
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
@@ -408,6 +446,16 @@ void main() {
 
   vec3 worldCoordUVW = getWorldCoordUVW();
 
+  <%
+  _.each(layerNamesWithSegmentation, function(name) {
+    if (tpsTransformPerLayer[name] != null) {
+  %>
+    calculateTpsOffsetFor<%= name %>(worldCoordUVW, transWorldCoord);
+  <%
+    }
+  })
+  %>
+
   // Offset the bucket calculation for the current vertex by a voxel to ensure
   // that the provoking vertex (the one that is used by the flat varyings in
   // the corresponding triangle) looks up the correct bucket. Otherwise,
@@ -456,5 +504,7 @@ void main() {
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: false,
+    generateTpsInitialization,
+    generateCalculateTpsOffsetFunction,
   });
 }

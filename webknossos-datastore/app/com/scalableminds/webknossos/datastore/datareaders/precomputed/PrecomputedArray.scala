@@ -2,64 +2,47 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
-import play.api.libs.json.{JsError, JsSuccess, Json}
 
-import java.io.IOException
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
-  @throws[IOException]
-  def open(magPath: VaultPath,
-           dataSourceId: DataSourceId,
-           layerName: String,
-           axisOrderOpt: Option[AxisOrder],
-           channelIndex: Option[Int],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray]): PrecomputedArray = {
-    val headerBytes = (magPath.parent / PrecomputedHeader.FILENAME_INFO).readBytes()
-    if (headerBytes.isEmpty)
-      throw new IOException(
-        "'" + PrecomputedHeader.FILENAME_INFO + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val rootHeader: PrecomputedHeader =
-      Json.parse(headerString).validate[PrecomputedHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as precomputed metadata failed: " + JsError.toJson(errors).toString())
-      }
-
-    val key = magPath.basename
-
-    val scaleHeader: PrecomputedScaleHeader = PrecomputedScaleHeader(
-      rootHeader.getScale(key).getOrElse(throw new IllegalArgumentException(s"Did not find a scale for key $key")),
-      rootHeader)
-    if (scaleHeader.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
-      throw new IllegalArgumentException(
-        f"Chunk size of this Precomputed Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${scaleHeader.bytesPerChunk}")
-    }
-    new PrecomputedArray(
-      magPath,
-      dataSourceId,
-      layerName,
-      scaleHeader,
-      axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-      channelIndex,
-      None,
-      sharedChunkContentsCache,
-    )
-  }
+  def open(
+      magPath: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      axisOrderOpt: Option[AxisOrder],
+      channelIndex: Option[Int],
+      sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+    for {
+      headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
+        .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
+      rootHeader <- JsonHelper.parseAndValidateJson[PrecomputedHeader](headerBytes) ?~> "Could not parse array header"
+      scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
+      scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
+      _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
+    } yield
+      new PrecomputedArray(
+        magPath,
+        dataSourceId,
+        layerName,
+        scaleHeader,
+        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+        channelIndex,
+        None,
+        sharedChunkContentsCache
+      )
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
@@ -154,7 +137,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    Fox.option2Fox(shardPath.readBytes(Some(shardIndexRange)))
+    shardPath.readBytes(Some(shardIndexRange))
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
     // See https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#shard-index-format

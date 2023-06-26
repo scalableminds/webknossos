@@ -524,6 +524,16 @@ export class InputMouse {
 
   isHit(event: MouseEvent) {
     const { pageX, pageY } = event;
+    // Check that the mouse event acts on the specified
+    // target (as an example, this avoids that mouse events
+    // for input catchers are dispatched when a modal is above
+    // the input catchers).
+    // @ts-ignore The `id` property exists on DOM elements
+    if (event?.target?.id !== this.targetId) {
+      return false;
+    }
+    // Check that the mouse event is in the bounding box of the
+    // target element.
     const { left, top, width, height } = this.getElementOffset();
     return left <= pageX && pageX <= left + width && top <= pageY && pageY <= top + height;
   }

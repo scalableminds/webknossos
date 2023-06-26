@@ -183,8 +183,8 @@ class DataSetController @Inject()(userService: UserService,
             None
         }
         _ <- Fox.runOptional(dataSourceOpt) { dataSource =>
-          Fox.runIf(request.body.forall(_.shouldAutoAdd))(
-            exploreRemoteLayerService.addRemoteDatasource(dataSource, request.body, request.identity))
+          Fox.runIf(request.body.forall(_.shouldAutoAdd))(exploreRemoteLayerService
+            .addRemoteDatasource(dataSource, request.body, request.identity)) ?~> "explore.autoAdd.failed"
         }
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
     }

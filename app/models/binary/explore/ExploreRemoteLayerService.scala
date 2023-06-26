@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.{DataStoreDAO, WKRemoteDataStoreClient}
+import models.binary.{DataSetService, DataStoreDAO, WKRemoteDataStoreClient}
 import models.binary.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
@@ -49,6 +49,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                           dataVaultService: DataVaultService,
                                           organizationDAO: OrganizationDAO,
                                           dataStoreDAO: DataStoreDAO,
+                                          dataSetService: DataSetService,
                                           wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                           rpc: RPC)
     extends FoxImplicits
@@ -88,6 +89,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       datasetName <- parameters.headOption.flatMap(_.autoAddDatasetName) ?~> "no dataset name supplied"
+      _ <- dataSetService.assertValidDataSetName(datasetName)
+      _ <- dataSetService.assertNewDataSetName(datasetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
       _ <- client.addDataSource(organization.name, datasetName, dataSource, userToken)

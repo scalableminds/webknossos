@@ -69,7 +69,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     for {
       emailVerificationOk <- userHasVerifiedEmail(user)
       _ <- Fox.runIf(!emailVerificationOk)(sendEmailVerification(user))
-      _ <- Fox.bool2Fox(emailVerificationOk)
+      _ <- Fox.bool2Fox(emailVerificationOk) ?~> "user.email.notVerified"
     } yield ()
 
   private def userHasVerifiedEmail(user: User)(

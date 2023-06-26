@@ -177,8 +177,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageNumber' implicitly has an 'any' typ... Remove this comment to see the full error message
-  fetchNextPage = async (pageNumber) => {
+  fetchNextPage = async (pageNumber: number) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const isFinished = this.state.showFinishedTasks;
     const previousTasks = this.getCurrentModeState().tasks;
@@ -396,7 +395,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Col span="7">
           <Card
             bordered={false}
-            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "25%" }} />}
+            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
           >
             <Card.Meta
               title="Request a New Task"

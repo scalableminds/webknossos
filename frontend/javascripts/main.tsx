@@ -25,6 +25,7 @@ import { setStore, setModel } from "oxalis/singletons";
 import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import checkBrowserFeatures from "libs/browser_feature_check";
 
 setModel(Model);
 setStore(UnthrottledStore);
@@ -88,6 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     throwAssertions: false,
   });
   document.addEventListener("click", googleAnalyticsLogClicks);
+  checkBrowserFeatures();
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
   await Promise.all([loadOrganization()]);
   const containerElement = document.getElementById("main-container");

@@ -11,4 +11,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [102-no-more-wkconnect.sql](conf/evolutions/102-no-more-wkconnect.sql)
-- [103-verify-email.sql](conf/evolutions/103-verify-email.sql)
+- [104-verify-email.sql](conf/evolutions/104-verify-email.sql)

@@ -3,10 +3,18 @@ START TRANSACTION;
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.multiUsers_;
 
-ALTER TABLE webknossos.multiusers
-  DROP COLUMN isEmailVerified;
 
-DROP TABLE webknossos.emailVerificationKeys;
+ALTER TABLE webknossos.multiusers ADD isEmailVerified BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE webknossos.emailVerificationKeys(
+                                               _id CHAR(24) PRIMARY KEY,
+                                               key TEXT NOT NULL,
+                                               email VARCHAR(512) NOT NULL,
+                                               _multiUser CHAR(24) NOT NULL,
+                                               validUntil TIMESTAMPTZ,
+                                               isUsed BOOLEAN NOT NULL DEFAULT false
+);
+
 
 -- Recreate views
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
@@ -20,6 +28,6 @@ FROM webknossos.users_ u
        JOIN webknossos.organizations_ o ON u._organization = o._id
        JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 102;
+UPDATE webknossos.releaseInformation SET schemaVersion = 104;
 
 COMMIT TRANSACTION;

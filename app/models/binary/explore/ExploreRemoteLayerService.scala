@@ -27,7 +27,6 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.libs.json.{Json, OFormat}
-import utils.ObjectId
 
 import java.net.URI
 import javax.inject.Inject

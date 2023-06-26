@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {

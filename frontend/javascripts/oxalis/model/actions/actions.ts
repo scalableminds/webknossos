@@ -29,7 +29,10 @@ export type Action =
   | SegmentationAction
   | ConnectomeAction
   | ProofreadAction
-  | OrganizationAction;
+  | OrganizationAction
+  | ReturnType<typeof wkReadyAction>
+  | ReturnType<typeof sceneControllerReadyAction>
+  | ReturnType<typeof restartSagaAction>;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

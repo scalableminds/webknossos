@@ -1,10 +1,5 @@
 import { Alert, Button, Layout, Space, Tooltip } from "antd";
-import {
-  CaretDownOutlined,
-  CaretUpOutlined,
-  SearchOutlined,
-  WarningFilled,
-} from "@ant-design/icons";
+import { CaretDownOutlined, CaretUpOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
@@ -39,6 +34,7 @@ import {
   setActiveLayout,
   getLastActiveLayout,
   getLayoutConfig,
+  layoutEmitter,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
@@ -87,6 +83,7 @@ type State = {
   contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
+  showFloatingMobileButtons: boolean;
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
@@ -98,8 +95,10 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
+          onClick={() => layoutEmitter.emit("toggleBorder", "left")}
           icon={
             <img
+              alt="Toggle left sidebar"
               src="/assets/images/icon-sidebar-hide-left-bright.svg"
               style={{ filter: "brightness(10)" }}
             />
@@ -109,8 +108,10 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
+          onClick={() => layoutEmitter.emit("toggleBorder", "right")}
           icon={
             <img
+              alt="Toggle right sidebar"
               src="/assets/images/icon-sidebar-hide-right-bright.svg"
               style={{ filter: "brightness(10)" }}
             />
@@ -138,6 +139,7 @@ function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
+          onClick={() => layoutEmitter.emit("toggleMaximize")}
           icon={
             <div
               style={{
@@ -155,6 +157,8 @@ function FloatingMobileControls() {
 }
 
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+  lastTouchTimeStamp: number | null = null;
+
   static getDerivedStateFromError() {
     // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
     // with unforeseeable consequences
@@ -184,6 +188,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuMeshId: null,
       contextMenuMeshIntersectionPosition: null,
       model: layout,
+      showFloatingMobileButtons: false,
     };
   }
 
@@ -201,6 +206,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       }
     }
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
+    window.removeEventListener("touchstart", this.handleTouchStart);
+    window.removeEventListener("mouseover", this.handleMouseOver);
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
@@ -238,6 +245,25 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
     initializeInputCatcherSizes();
     window.addEventListener("resize", this.debouncedOnLayoutChange);
+    window.addEventListener("touchstart", this.handleTouchStart);
+    window.addEventListener("mousemove", this.handleMouseMove, false);
+  };
+
+  handleTouchStart = () => {
+    this.lastTouchTimeStamp = Date.now();
+    console.log("touch start");
+    return this.setState({ showFloatingMobileButtons: true });
+  };
+  handleMouseMove = () => {
+    if (this.lastTouchTimeStamp && Date.now() - this.lastTouchTimeStamp < 1000) {
+      // Ignore mouse move events when they are shortly after touch events because the browser
+      // emulates these events when touch is used.
+      // Also ignore the event when touch was never used, because then the mobile buttons
+      // were never shown, anyway.
+      return;
+    }
+    console.log("mouse move");
+    return this.setState({ showFloatingMobileButtons: false });
   };
 
   showContextMenuAt = (
@@ -370,7 +396,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
-        <FloatingMobileControls />
+        {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && (
           <ContextMenuContainer

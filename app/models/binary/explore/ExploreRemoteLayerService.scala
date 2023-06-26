@@ -32,7 +32,9 @@ import scala.util.Try
 
 case class ExploreRemoteDatasetParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
-                                          credentialSecret: Option[String])
+                                          credentialSecret: Option[String],
+                                          shouldAutoAdd: Boolean,
+                                          autoAddDatasetName: Option[String])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]

@@ -9,10 +9,12 @@ import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.Paths
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class MappingService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   lazy val cache = new ParsedMappingCache(config.Datastore.Cache.Mapping.maxEntries)
 

@@ -10,12 +10,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.{Messages, MessagesProvider}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class DataSourceRepository @Inject()(
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends TemporaryStore[DataSourceId, InboxDataSource](system)
+)(implicit ec: ExecutionContext)
+    extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with LazyLogging
     with FoxImplicits {
 

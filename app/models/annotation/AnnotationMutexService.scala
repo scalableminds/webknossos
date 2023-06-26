@@ -27,7 +27,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                                        wkConf: WkConf,
                                        userDAO: UserDAO,
                                        userService: UserService,
-                                       annotationMutexDAO: AnnotationMutexDAO)
+                                       annotationMutexDAO: AnnotationMutexDAO)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
 
@@ -42,8 +42,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 
-  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId)(
-      implicit ec: ExecutionContext): Fox[MutexResult] =
+  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     this.synchronized {
       for {
         mutexBox <- annotationMutexDAO.findOne(annotationId).futureBox
@@ -69,7 +68,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
       _ <- annotationMutexDAO.upsertOne(mutex.copy(expiry = Instant.in(defaultExpiryTime)))
     } yield MutexResult(canEdit = true, None)
 
-  def publicWrites(mutexResult: MutexResult)(implicit ec: ExecutionContext): Fox[JsObject] =
+  def publicWrites(mutexResult: MutexResult): Fox[JsObject] =
     for {
       userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(GlobalAccessContext))
       userJsonOpt <- Fox.runOptional(userOpt)(user => userService.compactWrites(user))

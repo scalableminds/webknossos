@@ -97,25 +97,13 @@ const shortcuts = [
   },
   {
     key: "3",
-    keybinding: [
-      <img
-        key="move"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-left.svg"
-        alt="Left Mouse Button"
-      />,
-    ],
+    keybinding: [<div key="move" className="keyboard-mouse-icon icon-mouse-left" />],
     action: "Move",
   },
   {
     key: "4",
     keybinding: [
-      <img
-        key="rotate"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-right.svg"
-        alt="Right Mouse Button"
-      />,
+      <div key="rotate" className="keyboard-mouse-icon icon-mouse-right" />,
       "in 3D View",
     ],
     action: "Rotate 3D View",

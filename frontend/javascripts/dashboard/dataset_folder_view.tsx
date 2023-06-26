@@ -179,7 +179,8 @@ function DatasetFolderViewInner(props: Props) {
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
     context.datasets.length === 0 &&
-    context.activeFolderId != null
+    context.activeFolderId != null &&
+    !context.isLoading
   ) {
     // Show a placeholder if only the root folder exists and no dataset is available yet
     // (aka a new, empty organization)

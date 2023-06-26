@@ -182,6 +182,10 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += "Error when exploring as layer set: Empty"
             None
         }
+        _ <- Fox.runOptional(dataSourceOpt) { dataSource =>
+          Fox.runIf(request.body.forall(_.shouldAutoAdd))(
+            exploreRemoteLayerService.addRemoteDatasource(dataSource, request.body, request.identity._organization))
+        }
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
     }
 

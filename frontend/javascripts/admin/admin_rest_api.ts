@@ -1551,6 +1551,7 @@ export async function exploreRemoteDataset(
           remoteUri: uri.trim(),
           credentialIdentifier: credentials.username,
           credentialSecret: credentials.pass,
+          shouldAutoAdd: false
         }))
       : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });

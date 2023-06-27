@@ -15,7 +15,7 @@ import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.file.Path
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
                         maxCacheSize: Int,
@@ -23,7 +23,7 @@ class BinaryDataService(val dataBaseDir: Path,
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         val applicationHealthService: Option[ApplicationHealthService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])
+                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {

@@ -6,13 +6,13 @@ import com.mohiva.play.silhouette.api.{AuthInfo, LoginInfo}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, UserService}
-import javax.inject.Inject
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import javax.inject.Inject
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-class UserAuthInfoRepository @Inject()(userService: UserService, multiUserDAO: MultiUserDAO)
+class UserAuthInfoRepository @Inject()(userService: UserService, multiUserDAO: MultiUserDAO)(
+    implicit ec: ExecutionContext)
     extends AuthInfoRepository {
 
   override def find[T <: AuthInfo](loginInfo: LoginInfo)(implicit tag: ClassTag[T]): Future[Option[T]] =

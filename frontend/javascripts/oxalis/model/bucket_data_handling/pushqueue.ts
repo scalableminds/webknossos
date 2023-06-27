@@ -86,8 +86,7 @@ class PushQueue {
 
     while (this.pendingQueue.size) {
       let batchSize = Math.min(COMPRESSING_BATCH_SIZE, this.pendingQueue.size);
-      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'batch' implicitly has type 'any[]' in so... Remove this comment to see the full error message
-      const batch = [];
+      const batch: DataBucket[] = [];
 
       for (const bucket of this.pendingQueue) {
         if (batchSize <= 0) break;
@@ -97,7 +96,6 @@ class PushQueue {
       }
 
       // fire and forget
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'batch' implicitly has an 'any[]' type.
       this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
     }
 

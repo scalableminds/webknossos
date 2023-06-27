@@ -13,7 +13,6 @@ import play.api.libs.iteratee.Iteratee
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite extends PlaySpec {
@@ -30,15 +29,15 @@ class NMLUnitTestSuite extends PlaySpec {
                              Left(skeletonTracing),
                              None))
     val nmlEnumerator =
-      new NmlWriter().toNmlStream(annotationLayers,
-                                  None,
-                                  None,
-                                  None,
-                                  "testOrganization",
-                                  "http://wk.test",
-                                  "dummy_dataset",
-                                  None,
-                                  None)
+      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(annotationLayers,
+                                                                            None,
+                                                                            None,
+                                                                            None,
+                                                                            "testOrganization",
+                                                                            "http://wk.test",
+                                                                            "dummy_dataset",
+                                                                            None,
+                                                                            None)
     val arrayFuture = Iteratee.flatten(nmlEnumerator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)

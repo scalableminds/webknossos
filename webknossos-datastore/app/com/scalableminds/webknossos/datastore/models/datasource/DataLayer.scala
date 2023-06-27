@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -201,7 +201,7 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 

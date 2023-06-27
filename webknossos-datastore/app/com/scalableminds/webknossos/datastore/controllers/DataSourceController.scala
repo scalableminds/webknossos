@@ -21,8 +21,8 @@ import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
@@ -35,7 +35,7 @@ class DataSourceController @Inject()(
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
     uploadService: UploadService
-)(implicit bodyParsers: PlayBodyParsers)
+)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -202,10 +202,12 @@ Expects:
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(dataSourceId,
-                                                       dataSetSizeBytes,
-                                                       request.body.needsConversion.getOrElse(false),
-                                                       urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebKnossosClient.reportUpload(
+                dataSourceId,
+                dataSetSizeBytes,
+                request.body.needsConversion.getOrElse(false),
+                viaAddRoute = false,
+                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result
@@ -429,6 +431,12 @@ Expects:
             "dataSource.alreadyPresent")
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
                                                   expectExisting = false)
+          _ <- remoteWebKnossosClient.reportUpload(
+            DataSourceId(dataSetName, organizationName),
+            0L,
+            needsConversion = false,
+            viaAddRoute = true,
+            userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
         } yield Ok
       }
     }

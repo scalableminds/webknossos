@@ -5,7 +5,6 @@ import {
   startNucleiInferralJob,
   startNeuronInferralJob,
   startMaterializingVolumeAnnotationJob,
-  startGlobalizeFloodfillsJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -33,13 +32,11 @@ const enum JobNames {
   NEURON_INFERRAL = "neuron inferral",
   NUCLEI_INFERRAL = "nuclei inferral",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize volume annotation",
-  GLOBALIZE_FLODDFILLS = "globalization of the floodfill operation(s)",
 }
 const jobNameToImagePath: Record<JobNames, string | null> = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
   "materialize volume annotation": "materialize_volume_annotation_example.jpg",
-  "globalization of the floodfill operation(s)": null,
 };
 type Props = {
   handleClose: () => void;
@@ -60,6 +57,7 @@ type StartingJobModalProps = Props & {
   suggestedDatasetSuffix: string;
   fixedSelectedLayer?: APIDataLayer | null | undefined;
   title: string;
+  buttonLabel?: string | null;
 };
 
 type LayerSelectionProps = {
@@ -468,7 +466,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">
-            {title}
+            {props.buttonLabel ? props.buttonLabel : title}
           </Button>
         </div>
       </Form>
@@ -476,13 +474,14 @@ function StartingJobModal(props: StartingJobModalProps) {
   );
 }
 
-export function NucleiInferralModal({ handleClose }: Props) {
+export function NucleiSegmentationModal({ handleClose }: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       handleClose={handleClose}
+      buttonLabel="Start AI Segmentation"
       jobName={JobNames.NUCLEI_INFERRAL}
-      title="Start a Nuclei Inferral"
+      title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
         startNucleiInferralJob(
@@ -495,16 +494,16 @@ export function NucleiInferralModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start a job that automatically detects nuclei for this dataset. This job creates a copy
-            of this dataset once it has finished. The new dataset will contain the detected nuclei
-            as a segmentation layer.
+            Start an AI background job to automatically detect and segment all nuclei in this
+            dataset. This AI will create a copy of this dataset containing all the detected nuclei
+            as a new segmentation layer.
           </p>
           <p>
             <b>
-              Note that this feature is still experimental. Nuclei detection currently works best
+              Note that this feature is still experimental. Nuclei detection currently only works
               with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
-              inferral process will automatically use the magnification that matches that resolution
-              best.
+              segmentation process will automatically use the magnification that matches that
+              resolution best.
             </b>
           </p>
         </>
@@ -512,13 +511,14 @@ export function NucleiInferralModal({ handleClose }: Props) {
     />
   );
 }
-export function NeuronInferralModal({ handleClose }: Props) {
+export function NeuronSegmentationModal({ handleClose }: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       handleClose={handleClose}
       jobName={JobNames.NEURON_INFERRAL}
-      title="Start a Neuron Inferral"
+      buttonLabel="Start AI Segmentation"
+      title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
@@ -538,16 +538,16 @@ export function NeuronInferralModal({ handleClose }: Props) {
       description={
         <>
           <p>
-            Start a job that automatically detects the neurons for this dataset. This job creates a
-            copy of this dataset once it has finished. The new dataset will contain the new
-            segmentation which segments the neurons of the dataset.
+            Start an AI background job that automatically detects and segments all neurons in this
+            dataset. The AI will create a copy of this dataset containing the new neuron
+            segmentation.
           </p>
           <p>
             <b>
-              Note that this feature is still experimental and can take a long time. Thus we suggest
-              to use a small bounding box and not the full dataset extent. The neuron detection
-              currently works best with EM data. The best resolution for the process will be chosen
-              automatically.
+              Note that this feature is still experimental and processing can take a long time.
+              Thus, we suggest to use a small bounding box and not the full dataset extent. The
+              neuron detection currently only works with EM data. The best resolution for the
+              process will be chosen automatically.
             </b>
           </p>
         </>
@@ -632,42 +632,6 @@ export function MaterializeVolumeAnnotationModal({
         );
       }}
       description={description}
-    />
-  );
-}
-
-export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  return (
-    <StartingJobModal
-      handleClose={handleClose}
-      title="Start Globalizing of the Floodfill Operation(s)"
-      jobName={JobNames.GLOBALIZE_FLODDFILLS}
-      suggestedDatasetSuffix="with_floodfills"
-      chooseSegmentationLayer
-      jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
-        const volumeLayerName = getReadableNameOfVolumeLayer(segmentationLayer, tracing);
-        const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
-        return startGlobalizeFloodfillsJob(
-          dataset.owningOrganization,
-          dataset.name,
-          baseSegmentationName,
-          volumeLayerName,
-          newDatasetName,
-          tracing.annotationId,
-          tracing.annotationType,
-        );
-      }}
-      description={
-        <p>
-          For this annotation some floodfill operations have not run to completion, because they
-          covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.
-          This job will copy the current dataset, apply the changes of the current volume annotation
-          into the volume layer and use the existing bounding boxes as seeds to continue the
-          remaining floodfill operations (i.e., &quot;globalize&quot; them).
-        </p>
-      }
     />
   );
 }

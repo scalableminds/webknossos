@@ -20,7 +20,7 @@ import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Model, api } from "oxalis/singletons";
 import PlaneView from "oxalis/view/plane_view";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
@@ -63,8 +63,13 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -440,6 +445,37 @@ class PlaneController extends React.PureComponent<Props> {
     );
   }
 
+  getBrushPresetsOrSetDefault(): BrushPresets {
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if (brushPresetsFromStore != null) {
+      return brushPresetsFromStore;
+    } else {
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(
+        maximumBrushSize,
+        userSettings.brushSize.minimum,
+      );
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
+  }
+
+  handleUpdateBrushSize(size: "small" | "medium" | "large") {
+    const brushPresets = this.getBrushPresetsOrSetDefault();
+    switch (size) {
+      case "small":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        break;
+      case "medium":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        break;
+      case "large":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        break;
+    }
+    return;
+  }
+
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {
       "ctrl + i": (event: React.KeyboardEvent) => {
@@ -475,8 +511,12 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
+
     let extendedControls = {
       m: () => setTool(AnnotationToolEnum.MOVE),
+      1: () => this.handleUpdateBrushSize("small"),
+      2: () => this.handleUpdateBrushSize("medium"),
+      3: () => this.handleUpdateBrushSize("large"),
       ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 

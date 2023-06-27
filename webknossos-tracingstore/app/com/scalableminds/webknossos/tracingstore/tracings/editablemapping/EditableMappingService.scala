@@ -230,7 +230,6 @@ class EditableMappingService @Inject()(
                           remoteFallbackLayer: RemoteFallbackLayer,
                           userToken: Option[String]): Fox[EditableMappingInfo] =
     for {
-      before <- Fox.successful(Instant.now)
       closestMaterializedWithVersion <- getClosestMaterialized(editableMappingId, desiredVersion)
       updatedEditableMappingInfo: EditableMappingInfo <- if (desiredVersion == closestMaterializedWithVersion.version)
         Fox.successful(closestMaterializedWithVersion.value)

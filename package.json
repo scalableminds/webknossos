@@ -192,6 +192,7 @@
     "mini-css-extract-plugin": "^2.5.2",
     "minisearch": "^5.0.0",
     "mjs": "^1.0.0",
+    "ml-matrix": "^6.10.4",
     "nanoevents": "^5.1.8",
     "ndarray": "^1.0.19",
     "ndarray-convolve": "^2.0.0",

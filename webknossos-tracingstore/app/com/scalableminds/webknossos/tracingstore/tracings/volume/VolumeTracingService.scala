@@ -33,8 +33,7 @@ import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
@@ -43,6 +42,7 @@ class VolumeTracingService @Inject()(
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
+    implicit val ec: ExecutionContext,
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     editableMappingService: EditableMappingService,
@@ -50,6 +50,7 @@ class VolumeTracingService @Inject()(
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
     val temporaryFileCreator: TemporaryFileCreator,
+    val tracingMigrationService: VolumeTracingMigrationService,
     volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
@@ -74,8 +75,6 @@ class VolumeTracingService @Inject()(
   val tracingStore: FossilDBClient = tracingDataStore.volumes
 
   protected val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
-
-  val tracingMigrationService: VolumeTracingMigrationService.type = VolumeTracingMigrationService
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */

@@ -5,6 +5,7 @@ import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { ServerErrorMessage } from "libs/request";
 import { useHistory } from "react-router-dom";
+import { Store } from "oxalis/singletons";
 
 const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 
@@ -37,7 +38,12 @@ export default function VerifyEmailView({ token }: { token: string }) {
       }
       errorMessage = errorMessage || "Verification failed.";
       const handleResend = async () => {
-        await requestVerificationMail();
+        const { activeUser } = Store.getState();
+        if (activeUser) {
+          await requestVerificationMail();
+        } else {
+          Toast.error("Resending a verification link requires being logged in.");
+        }
         Toast.close(VERIFICATION_ERROR_TOAST_KEY);
       };
       Toast.error(

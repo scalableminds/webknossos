@@ -604,7 +604,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
         }
       }
     }
-    insertSequentiallyTransaction(clearQuery, insertQueries)
+    insertSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
 }
@@ -816,7 +816,7 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
         }
       }
     }
-    insertSequentiallyTransaction(clearQuery, insertQueries)
+    insertSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 }
 
@@ -848,6 +848,6 @@ class DatasetLayerAdditionalCoordinatesDAO @Inject()(sqlClient: SqlClient)(impli
 
       }
     }
-    insertSequentiallyTransaction(clearQuery, insertQueries)
+    insertSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 }

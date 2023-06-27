@@ -69,8 +69,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  def insertSequentiallyTransaction(clearQuery: SqlAction[Int, NoStream, Effect],
-                                    insertQueries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] = {
+  def insertSequentiallyAsTransaction(clearQuery: SqlAction[Int, NoStream, Effect],
+                                      insertQueries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] = {
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
       _ <- run(

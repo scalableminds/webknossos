@@ -1,8 +1,9 @@
 import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
-import { Button, Space } from "antd";
+import { Space } from "antd";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
+import ButtonComponent from "../components/button_component";
 
 const useRepeatedButtonTrigger = (triggerCallback: () => void, repeatDelay: number = 150) => {
   const [isPressed, setIsPressed] = React.useState(false);
@@ -52,7 +53,7 @@ export function FloatingMobileControls() {
   return (
     <div style={{ position: "absolute", left: 48, bottom: 48, zIndex: 1000 }}>
       <Space>
-        <Button
+        <ButtonComponent
           size="large"
           type="primary"
           shape="circle"
@@ -66,7 +67,7 @@ export function FloatingMobileControls() {
             />
           }
         />
-        <Button
+        <ButtonComponent
           size="large"
           type="primary"
           shape="circle"
@@ -80,7 +81,7 @@ export function FloatingMobileControls() {
             />
           }
         />
-        <Button
+        <ButtonComponent
           size="large"
           type="primary"
           shape="circle"
@@ -88,7 +89,7 @@ export function FloatingMobileControls() {
           icon={<CaretUpOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveForwardProps}
         />
-        <Button
+        <ButtonComponent
           size="large"
           type="primary"
           shape="circle"
@@ -96,7 +97,7 @@ export function FloatingMobileControls() {
           icon={<CaretDownOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveBackwardProps}
         />
-        <Button
+        <ButtonComponent
           size="large"
           type="primary"
           shape="circle"

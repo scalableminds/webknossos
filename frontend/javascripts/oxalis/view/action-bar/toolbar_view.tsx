@@ -73,6 +73,7 @@ import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_acti
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -189,9 +190,10 @@ function RadioButtonWithTooltip({
   style: React.CSSProperties;
   value: string;
   onClick?: Function;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <Tooltip title={disabled ? disabledTitle : title}>
+    <Tooltip title={disabled ? disabledTitle : title} onOpenChange={props.onOpenChange}>
       <Radio.Button
         disabled={disabled}
         {...props}
@@ -222,6 +224,7 @@ function ToolRadioButton({
   style: React.CSSProperties;
   value: string;
   onClick?: Function;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
     <RadioButtonWithTooltip
@@ -818,6 +821,7 @@ const TOOL_NAMES = {
 };
 
 export default function ToolbarView() {
+  const dispatch = useDispatch();
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
@@ -1128,6 +1132,11 @@ export default function ToolbarView() {
             }
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.PROOFREAD}
+            onOpenChange={(open: boolean) => {
+              if (open) {
+                dispatch(ensureLayerMappingsAreLoadedAction());
+              }
+            }}
           >
             <i
               className="fas fa-clipboard-check"

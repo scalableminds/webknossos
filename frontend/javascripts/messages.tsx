@@ -236,6 +236,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Activate an agglomerate file mapping to load a skeleton for a segment.",
   "tracing.agglomerate_skeleton.no_agglomerate_file_active":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
+    "Checking for agglomerate files...",
   "tracing.agglomerate_skeleton.no_agglomerate_file_available":
     "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":

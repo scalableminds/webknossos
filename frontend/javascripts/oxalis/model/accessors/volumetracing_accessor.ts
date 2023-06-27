@@ -590,6 +590,10 @@ const AGGLOMERATE_STATES = {
     value: false,
     reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
   },
+  NO_AGGLOMERATE_FILES_LOADED_YET: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet"],
+  },
   YES: {
     value: true,
     reason: "",
@@ -637,7 +641,11 @@ export function hasAgglomerateMapping(state: OxalisState) {
     return AGGLOMERATE_STATES.NO_SEGMENTATION;
   }
 
-  if ((segmentation.agglomerates?.length ?? 0) === 0) {
+  if (segmentation.agglomerates == null) {
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILES_LOADED_YET;
+  }
+
+  if (segmentation.agglomerates.length === 0) {
     return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_AVAILABLE;
   }
 

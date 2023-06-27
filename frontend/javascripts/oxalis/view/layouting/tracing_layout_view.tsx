@@ -180,7 +180,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     window.addEventListener("touchstart", this.handleTouch);
     window.addEventListener("mouseover", this.handleMouseOver, false);
 
-    if (window.screen.width < 1024) {
+    if (window.screen.width <= 1080) {
       // Simply assume mobile.
       const { left, right } = Store.getState().uiInformation.borderOpenStatus;
       if (left) {

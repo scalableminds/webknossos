@@ -48,6 +48,8 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   maybeFetchMeshFilesAction,
+  refreshIsosurfaceAction,
+  removeIsosurfaceAction,
   triggerIsosurfaceDownloadAction,
   triggerIsosurfacesDownloadAction,
   updateCurrentMeshFileAction,
@@ -867,12 +869,46 @@ class SegmentsView extends React.Component<Props, State> {
     const segmentGroupToChangeColor = this.getSegmentsOfGroup(groupId);
     if (segmentGroupToChangeColor == null || visibleSegmentationLayer == null) return;
 
-    segmentGroupToChangeColor.forEach((segment) =>
-      Store.dispatch(
-        updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),
-      ),
+    const actionArray = segmentGroupToChangeColor.map((segment) =>
+      updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),
     );
+
+    Store.dispatch(batchUpdateGroupsAndSegmentsAction(actionArray));
   }
+
+  handleRefreshMeshes = (groupId: number) => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
+    const segmentGroup = this.getSegmentsOfGroup(groupId);
+    if (segmentGroup == null) return;
+
+    segmentGroup.forEach((segment) => {
+      if (
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
+          segment.id
+        ] != null
+      ) {
+        Store.dispatch(refreshIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+      }
+    });
+  };
+
+  handleRemoveMeshes = (groupId: number) => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
+    const segmentGroup = this.getSegmentsOfGroup(groupId);
+    if (segmentGroup == null) return;
+
+    segmentGroup.forEach((segment) => {
+      if (
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
+          segment.id
+        ] != null
+      ) {
+        Store.dispatch(removeIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+      }
+    });
+  };
 
   handleChangeMeshVisibility = (layerName: string, groupId: number, isVisible: boolean) => {
     const { visibleSegmentationLayer } = this.props;
@@ -1203,6 +1239,46 @@ class SegmentsView extends React.Component<Props, State> {
                       ),
                     },
                     this.getLoadMeshesMenuItem(id),
+                    this.state != null && this.doesGroupHaveAnyMeshes(id)
+                      ? {
+                          key: "reloadMeshes",
+                          label: (
+                            <div
+                              onClick={() => {
+                                if (this.props.visibleSegmentationLayer == null) {
+                                  // Satisfy TS
+                                  return;
+                                }
+                                this.handleRefreshMeshes(id);
+                                this.handleSegmentDropdownMenuVisibility(id, false);
+                              }}
+                            >
+                              <ReloadOutlined />
+                              Refresh all meshes
+                            </div>
+                          ),
+                        }
+                      : null,
+                    this.state != null && this.doesGroupHaveAnyMeshes(id)
+                      ? {
+                          key: "removeMeshes",
+                          label: (
+                            <div
+                              onClick={() => {
+                                if (this.props.visibleSegmentationLayer == null) {
+                                  // Satisfy TS
+                                  return;
+                                }
+                                this.handleRemoveMeshes(id);
+                                this.handleSegmentDropdownMenuVisibility(id, false);
+                              }}
+                            >
+                              <DeleteOutlined />
+                              Remove all meshes
+                            </div>
+                          ),
+                        }
+                      : null,
                     this.state != null && this.doesGroupHaveAnyMeshes(id)
                       ? {
                           key: "showMeshesOfGroup",

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import akka.actor.ActorSystem
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
@@ -47,7 +47,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       }
     }
 
-  def insert(id: K, t: V, to: Option[FiniteDuration] = None): Unit = {
+  def insert(id: K, t: V, to: Option[FiniteDuration] = None)(implicit ec: ExecutionContext): Unit = {
     map.synchronized {
       map += (id -> t)
     }

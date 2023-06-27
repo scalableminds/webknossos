@@ -1,12 +1,12 @@
 import * as THREE from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_shaders.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
 export const NodeTypes = {
   INVALID: 0.0,
   NORMAL: 1.0,

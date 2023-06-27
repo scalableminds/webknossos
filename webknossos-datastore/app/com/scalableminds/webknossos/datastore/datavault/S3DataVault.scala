@@ -4,7 +4,8 @@ import com.amazonaws.auth.{
   AWSCredentialsProvider,
   AWSStaticCredentialsProvider,
   AnonymousAWSCredentials,
-  BasicAWSCredentials
+  BasicAWSCredentials,
+  EnvironmentVariableCredentialsProvider
 }
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
@@ -102,9 +103,10 @@ object S3DataVault {
       case Some(s3AccessKeyCredential: S3AccessKeyCredential) =>
         new AWSStaticCredentialsProvider(
           new BasicAWSCredentials(s3AccessKeyCredential.accessKeyId, s3AccessKeyCredential.secretAccessKey))
+      case None if sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_ACCESS_KEY") =>
+        new EnvironmentVariableCredentialsProvider
       case None =>
         new AnonymousAWSCredentialsProvider
-
     }
 
   private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential]): AmazonS3 =

@@ -354,12 +354,6 @@ class JobService @Inject()(wkConf: WkConf,
               "Volume Annotation Merged",
               "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard."
             ))
-        case JobCommand.globalize_floodfills =>
-          Some(
-            genericEmailTemplate(
-              "Globalize Flood Fill",
-              "The flood fill operations have been extended to the whole dataset. The result is available as a new dataset in your dashboard."
-            ))
         case JobCommand.compute_mesh_file =>
           Some(
             genericEmailTemplate(
@@ -368,7 +362,7 @@ class JobService @Inject()(wkConf: WkConf,
             ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"
-      // some jobs, e.g. "globalize flood fill"/"find largest segment ideas", do not require an email notification
+      // some jobs, e.g. "find largest segment ideas", do not require an email notification
       _ = Mailer ! Send(emailTemplate)
     } yield ()
 

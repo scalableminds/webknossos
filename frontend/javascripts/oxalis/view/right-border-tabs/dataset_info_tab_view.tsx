@@ -1,10 +1,10 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Button, Dropdown } from "antd";
-import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
+import { Tooltip, Typography, Tag } from "antd";
+import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React from "react";
+import React, { CSSProperties, ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -20,28 +20,20 @@ import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import features from "features";
+
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import {
-  NucleiInferralModal,
-  NeuronInferralModal,
-} from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
 import { mayUserEditDataset } from "libs/utils";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-
-const enum StartableJobsEnum {
-  NUCLEI_INFERRAL = "nuclei inferral",
-  NEURON_INFERRAL = "neuron inferral",
-}
+import Title from "antd/lib/typography/Title";
+import { MarkdownModal } from "../components/markdown_modal";
+import { getVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 
 type StateProps = {
-  tracing: Tracing;
+  annotation: Tracing;
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
@@ -55,8 +47,8 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  showJobsDetailsModal: StartableJobsEnum | null | undefined;
   owningOrganizationDisplayName: string | null;
+  isMarkdownModalOpen: boolean;
 };
 const shortcuts = [
   {
@@ -105,30 +97,19 @@ const shortcuts = [
   },
   {
     key: "3",
-    keybinding: [
-      <img
-        key="move"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-left.svg"
-        alt="Left Mouse Button"
-      />,
-    ],
+    keybinding: [<div key="move" className="keyboard-mouse-icon icon-mouse-left" />],
     action: "Move",
   },
   {
     key: "4",
     keybinding: [
-      <img
-        key="rotate"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-right.svg"
-        alt="Right Mouse Button"
-      />,
+      <div key="rotate" className="keyboard-mouse-icon icon-mouse-right" />,
       "in 3D View",
     ],
     action: "Rotate 3D View",
   },
 ];
+
 export function convertPixelsToNm(
   lengthInPixel: number,
   zoomValue: number,
@@ -136,6 +117,7 @@ export function convertPixelsToNm(
 ): number {
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
+
 export function convertNmToPixels(
   lengthInNm: number,
   zoomValue: number,
@@ -153,9 +135,8 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
       <tr>
         <td
           style={{
-            paddingRight: 4,
+            paddingRight: 20,
             paddingTop: 10,
-            verticalAlign: "top",
           }}
         >
           <img
@@ -183,8 +164,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       <tr>
         <td
           style={{
-            paddingRight: 4,
-            verticalAlign: "top",
+            paddingRight: 20,
           }}
         >
           <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
@@ -201,10 +181,10 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
       <tr>
         <td
           style={{
-            paddingRight: 4,
+            paddingRight: 20,
           }}
         >
-          <i className="fas fa-building fa-xl" />
+          <i className="fas fa-building fa-xl" style={{ color: "var(--ant-primary)" }} />
         </td>
         <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
       </tr>
@@ -214,7 +194,7 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
 
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
-    showJobsDetailsModal: null,
+    isMarkdownModalOpen: false,
     owningOrganizationDisplayName: null,
   };
 
@@ -222,8 +202,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.props.setAnnotationName(newName);
   };
 
-  setAnnotationDescription = (newDescription: string) => {
-    this.props.setAnnotationDescription(newDescription);
+  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
+    this.props.setAnnotationDescription(evt.target.value);
   };
 
   componentDidMount(): void {
@@ -238,35 +218,97 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     console.log(this.state.owningOrganizationDisplayName);
   }
 
-  getTracingStatistics() {
-    const statsMaybe = getStats(this.props.tracing);
-    return this.props.tracing.skeleton != null ? (
-      <div>
-        <p>Number of Trees: {statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</p>
-        <p>Number of Nodes: {statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</p>
-        <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
-        <p>
-          Number of Branch Points:{" "}
-          {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
-        </p>
+  getAnnotationStatistics() {
+    if (this.props.isDatasetViewMode) return null;
+
+    const statsMaybe = getStats(this.props.annotation);
+    const treeCount = statsMaybe.map((stats) => stats.treeCount).getOrElse(null);
+    const nodeCount = statsMaybe.map((stats) => stats.nodeCount).getOrElse(null);
+    const edgeCount = statsMaybe.map((stats) => stats.edgeCount).getOrElse(null);
+    const branchpointCount = statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null);
+
+    const volumeAnnotations = getVolumeTracings(this.props.annotation);
+    const segmentCount = volumeAnnotations.reduce(
+      (count, volumeAnnotation) => count + volumeAnnotation.segments.entryCount,
+      0,
+    );
+
+    return (
+      <div className="info-tab-block">
+        <p className="sidebar-label">Statistics</p>
+        <table className="annotation-stats-table">
+          <tbody>
+            <tr>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-skeletons.svg"
+                  alt="Skeletons"
+                />
+              </td>
+              <td>
+                <Tooltip
+                  placement="left"
+                  title={
+                    <>
+                      <p>Nodes: {nodeCount}</p>
+                      <p>Edges: {edgeCount}</p>
+                      <p>Branchpoints: {branchpointCount}</p>
+                    </>
+                  }
+                >
+                  {treeCount} Skeletons
+                </Tooltip>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-segments.svg"
+                  alt="Segments"
+                />
+              </td>
+              <td>
+                <Tooltip
+                  placement="left"
+                  title="For technical reasons, only segments that were manually annotated or
+                      interacted with are counted towards this statistic. Segmentation layers
+                      created from automated workflows (also known as fallback layers) are not currently
+                      considered."
+                >
+                  {segmentCount} Segments
+                </Tooltip>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    ) : null;
+    );
   }
 
   getKeyboardShortcuts() {
     return this.props.isDatasetViewMode ? (
-      <div
-        style={{
-          marginBottom: 25,
-        }}
-      >
+      <div className="info-tab-block">
+        <Title level={5}>Keyboard Shortcuts</Title>
+        <p>
+          Find the complete list of shortcuts in the{" "}
+          <a
+            target="_blank"
+            href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+            rel="noopener noreferrer"
+          >
+            documentation
+          </a>
+          .
+        </p>
         <table className="shortcut-table">
           <tbody>
             {shortcuts.map((shortcut) => (
               <tr key={shortcut.key}>
                 <td
                   style={{
-                    width: 200,
+                    width: 170,
                   }}
                 >
                   {shortcut.keybinding}
@@ -276,136 +318,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             ))}
           </tbody>
         </table>
-        <a
-          target="_blank"
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
-          rel="noopener noreferrer"
-          style={{
-            fontSize: 14,
-          }}
-        >
-          More shortcuts…
-        </a>
       </div>
     ) : null;
   }
-
-  getOrganizationLogo() {
-    if (!this.props.dataset.logoUrl) {
-      return null;
-    }
-
-    return this.props.isDatasetViewMode ? (
-      <img
-        style={{
-          maxHeight: 250,
-          maxWidth: "100%",
-          objectFit: "contain",
-        }}
-        src={this.props.dataset.logoUrl}
-        alt={`${this.props.dataset.owningOrganization} Logo`}
-      />
-    ) : null;
-  }
-
-  getProcessingJobsMenu = () => {
-    const { dataset } = this.props;
-
-    if (!dataset.jobsEnabled) {
-      return (
-        <tr>
-          <td
-            style={{
-              paddingRight: 4,
-              paddingTop: 10,
-              verticalAlign: "top",
-            }}
-          >
-            <StarOutlined className="info-tab-icon" width={24} height={24} />
-          </td>
-          <td>
-            <Tooltip title="Dataset Processing features are only available for datasets hosted natively and not on other datastores.">
-              <Button
-                disabled
-                type="link"
-                style={{
-                  padding: 0,
-                }}
-              >
-                Process Dataset
-              </Button>
-            </Tooltip>
-          </td>
-        </tr>
-      );
-    }
-
-    const jobMenuItems: MenuItemType[] = [
-      {
-        key: "start_nuclei_inferal",
-        onClick: () =>
-          this.setState({
-            showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL,
-          }),
-        label: (
-          <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
-            Start Nuclei Inferral
-          </Tooltip>
-        ),
-      },
-    ];
-
-    if (this.props.activeUser?.isSuperUser) {
-      jobMenuItems.push({
-        key: "start_neuron_inferral",
-        onClick: () =>
-          this.setState({
-            showJobsDetailsModal: StartableJobsEnum.NEURON_INFERRAL,
-          }),
-        label: (
-          <Tooltip title="Start a job that automatically reconstructs neurons for this dataset.">
-            Start Neuron Inferral
-          </Tooltip>
-        ),
-      });
-    }
-
-    return (
-      <tr>
-        <td
-          style={{
-            paddingRight: 4,
-            paddingTop: 10,
-            verticalAlign: "top",
-          }}
-        >
-          <StarOutlined
-            className="info-tab-icon"
-            style={{
-              fontSize: 18,
-            }}
-          />
-        </td>
-        <Dropdown
-          menu={{ items: jobMenuItems }}
-          overlayStyle={{
-            minWidth: "unset",
-          }}
-        >
-          <td>
-            <Button
-              type="link"
-              style={{
-                padding: 0,
-              }}
-            >
-              Process Dataset
-            </Button>
-          </td>
-        </Dropdown>
-      </tr>
-    );
-  };
 
   getDatasetName() {
     const {
@@ -419,27 +334,30 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <Tooltip title="Edit dataset settings">
-          <Button
-            type="text"
-            icon={<SettingOutlined />}
-            href={`/datasets/${owningOrganization}/${datasetName}/edit`}
-            className="transparent-background-on-hover"
-            target="_blank"
-          />
+          <Link
+            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            style={{ paddingLeft: 3 }}
+          >
+            <Typography.Text type="secondary">
+              <SettingOutlined />
+            </Typography.Text>
+          </Link>
         </Tooltip>
       ) : null;
 
     if (this.props.isDatasetViewMode) {
       return (
-        <div>
-          <p
+        <div className="info-tab-block">
+          <div
             style={{
               wordWrap: "break-word",
             }}
           >
-            <strong>{displayName || datasetName}</strong>
+            <Title level={5} style={{ display: "initial" }}>
+              {displayName || datasetName}
+            </Title>
             {getEditSettingsIcon()}
-          </p>
+          </div>
           {datasetDescription ? (
             <div
               style={{
@@ -461,8 +379,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <p>
-        Dataset:{" "}
+      <div className="info-tab-block">
+        <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
           to={`/datasets/${owningOrganization}/${datasetName}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
@@ -472,89 +390,117 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         >
           {datasetName}
         </Link>
-        {getEditSettingsIcon()}
-      </p>
+      </div>
     );
   }
 
-  getTracingName() {
+  getAnnotationName() {
     if (this.props.isDatasetViewMode) return null;
-    let annotationTypeLabel;
-    const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "[unnamed]";
+
+    const annotationName = this.props.annotation.name || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
-      annotationTypeLabel = (
-        <span>
-          {annotationType} : {this.props.task.id}
-        </span>
-      );
-    } else if (!this.props.mayEditAnnotation) {
-      // For readonly tracings display the non-editable explorative tracing name
-      annotationTypeLabel = <span>Annotation: {tracingName}</span>;
-    } else {
-      // Or display the editable explorative tracing name
-      annotationTypeLabel = (
-        <span
-          style={{
-            display: "inline-flex",
-          }}
-        >
-          Annotation:
-          <EditableTextLabel
-            value={tracingName}
-            onChange={this.setAnnotationName}
-            label="Annotation Name"
-          />
-        </span>
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Task ID</p>
+          {this.props.task.id}
+        </div>
       );
     }
 
-    const tracingDescription = this.props.tracing.description || "[no description]";
-    let descriptionEditField;
+    if (!this.props.mayEditAnnotation) {
+      // For readonly annotations display the non-editable annotation name
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Annotation Name</p>
+          {annotationName}
+        </div>
+      );
+    }
+
+    // Or display the editable annotation name
+    return (
+      <div className="info-tab-block">
+        <p className="sidebar-label">Annotation Name</p>
+        <Typography.Text editable={{ onChange: this.setAnnotationName }}>
+          {annotationName}
+        </Typography.Text>
+      </div>
+    );
+  }
+  getAnnotationDescription() {
+    if (this.props.isDatasetViewMode) return null;
+
+    const annotationDescription = this.props.annotation.description || "[no description]";
+    const isDescriptionEmpty = this.props.annotation.description === "";
+    const description = isDescriptionEmpty ? (
+      annotationDescription
+    ) : (
+      <Markdown
+        source={annotationDescription}
+        container={"span"}
+        options={{
+          html: false,
+          breaks: true,
+          linkify: true,
+        }}
+      />
+    );
+    const buttonStylesForMarkdownRendering: CSSProperties = isDescriptionEmpty
+      ? {}
+      : {
+          position: "absolute",
+          right: 10,
+          bottom: 0,
+        };
 
     if (this.props.mayEditAnnotation) {
-      descriptionEditField = (
-        <span
-          style={{
-            display: "inline-flex",
-          }}
-        >
-          Description:
-          <EditableTextLabel
-            value={tracingDescription}
-            onChange={this.setAnnotationDescription}
-            rows={4}
-            markdown
+      return (
+        <div className="info-tab-block">
+          <p className="sidebar-label">Description</p>
+          <Typography.Text style={{ position: "relative" }}>
+            {description}
+            <Tooltip title="Edit">
+              <div
+                role="button"
+                className="ant-typography-edit"
+                style={{
+                  display: "inline-block",
+                  ...buttonStylesForMarkdownRendering,
+                }}
+                onClick={() =>
+                  this.setState({
+                    isMarkdownModalOpen: true,
+                  })
+                }
+              >
+                <EditOutlined />
+              </div>
+            </Tooltip>
+          </Typography.Text>
+          <MarkdownModal
             label="Annotation Description"
+            source={annotationDescription}
+            isOpen={this.state.isMarkdownModalOpen}
+            onOk={() => this.setState({ isMarkdownModalOpen: false })}
+            onChange={this.setAnnotationDescription}
           />
-        </span>
-      );
-    } else {
-      descriptionEditField = (
-        <span
-          style={{
-            verticalAlign: "top",
-          }}
-        >
-          Description:
-          <Markdown
-            source={tracingDescription}
-            options={{
-              html: false,
-              breaks: true,
-              linkify: true,
-            }}
-          />
-        </span>
+        </div>
       );
     }
 
     return (
-      <div>
-        <div>{annotationTypeLabel}</div>
-        <div>{descriptionEditField}</div>
+      <div className="info-tab-block">
+        <p className="sidebar-label">Description</p>
+        <Markdown
+          source={annotationDescription}
+          options={{
+            html: false,
+            breaks: true,
+            linkify: true,
+          }}
+        />
       </div>
     );
   }
@@ -568,148 +514,145 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner, contributors } = this.props.tracing;
+    const { owner, contributors } = this.props.annotation;
 
     if (!owner) {
       return null;
     }
 
-    const contributorsString =
+    const contributorTags =
       contributors.length > 0
-        ? contributors.map((user) => formatUserName(activeUser, user)).join(", ")
-        : "none";
+        ? contributors.map((user) => (
+            <Tag key={user.id} color="blue">
+              {formatUserName(activeUser, user)}
+            </Tag>
+          ))
+        : [
+            <Tag key="None" color="blue">
+              None
+            </Tag>,
+          ];
 
     return (
-      <div>
-        <div>Owner: {formatUserName(activeUser, owner)}</div>
-        <div>
-          Contributors: {contributorsString}
-          <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
-            <InfoCircleOutlined
-              style={{
-                marginLeft: 6,
-              }}
-            />
-          </Tooltip>
+      <>
+        <div className="info-tab-block">
+          <p className="sidebar-label">Owner</p>
+          <p>
+            <Tag color="blue">{formatUserName(activeUser, owner)}</Tag>
+          </p>
         </div>
-      </div>
+        <div className="info-tab-block">
+          <p className="sidebar-label">
+            Contributors
+            <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+              <InfoCircleOutlined
+                style={{
+                  marginLeft: 6,
+                }}
+              />
+            </Tooltip>
+          </p>
+          <p>{contributorTags}</p>
+        </div>
+      </>
     );
   }
 
-  renderSelectedStartingJobsModal() {
-    const handleClose = () =>
-      this.setState({
-        showJobsDetailsModal: null,
-      });
+  getResolutionInfo() {
+    const { dataset, annotation, activeResolutionInfo } = this.props;
+    const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
+      activeResolutionInfo;
 
-    if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_INFERRAL) {
-      return <NucleiInferralModal handleClose={handleClose} />;
-    } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NEURON_INFERRAL) {
-      return <NeuronInferralModal handleClose={handleClose} />;
-    }
+    const resolutionUnion = getResolutionUnion(dataset);
+    return representativeResolution != null ? (
+      <Tooltip
+        title={
+          <div>
+            Rendered magnification per layer:
+            <ul>
+              {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
 
-    return null;
+                return (
+                  <li key={layerName}>
+                    {readableName}: {mag ? mag.join("-") : "none"}
+                  </li>
+                );
+              })}
+            </ul>
+            Available resolutions:
+            <ul>
+              {resolutionUnion.map((mags) => (
+                <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+              ))}
+            </ul>
+          </div>
+        }
+        placement="left"
+      >
+        <tr>
+          <td
+            style={{
+              paddingRight: 4,
+              paddingTop: 8,
+            }}
+          >
+            <img
+              className="info-tab-icon"
+              src="/assets/images/icon-downsampling.svg"
+              alt="Resolution"
+            />
+          </td>
+          <td
+            style={{
+              paddingRight: 4,
+              paddingTop: 8,
+            }}
+          >
+            {representativeResolution.join("-")}
+            {isActiveResolutionGlobal ? "" : "*"}{" "}
+          </td>
+        </tr>
+      </Tooltip>
+    ) : null;
   }
 
   render() {
-    const { dataset, tracing, activeResolutionInfo, activeUser } = this.props;
-    const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
-      activeResolutionInfo;
-    const resolutionUnion = getResolutionUnion(dataset);
-    const resolutionInfo =
-      representativeResolution != null ? (
-        <Tooltip
-          title={
-            <div>
-              Rendered magnification per layer:
-              <ul>
-                {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                  const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+    const { dataset } = this.props;
 
-                  return (
-                    <li key={layerName}>
-                      {readableName}: {mag ? mag.join("-") : "none"}
-                    </li>
-                  );
-                })}
-              </ul>
-              Available resolutions:
-              <ul>
-                {resolutionUnion.map((mags) => (
-                  <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-                ))}
-              </ul>
-            </div>
-          }
-          placement="left"
-        >
-          <tr>
-            <td
-              style={{
-                paddingRight: 4,
-                paddingTop: 10,
-                verticalAlign: "top",
-              }}
-            >
-              <img
-                className="info-tab-icon"
-                src="/assets/images/icon-downsampling.svg"
-                alt="Resolution"
-              />
-            </td>
-            <td
-              style={{
-                paddingRight: 4,
-                paddingTop: 10,
-                verticalAlign: "top",
-              }}
-            >
-              {representativeResolution.join("-")}
-              {isActiveResolutionGlobal ? "" : "*"}{" "}
-            </td>
-          </tr>
-        </Tooltip>
-      ) : null;
     return (
       <div className="flex-overflow padded-tab-content">
-        <div className="info-tab-block">
-          {this.getTracingName()}
-          {this.getDatasetName()}
-          {this.maybePrintOwnerAndContributors()}
-        </div>
+        {this.getAnnotationName()}
+        {this.getAnnotationDescription()}
+        {this.getDatasetName()}
+        {this.maybePrintOwnerAndContributors()}
 
         <div className="info-tab-block">
+          <p className="sidebar-label">Dimensions</p>
           <table
             style={{
               fontSize: 14,
+              marginLeft: 4,
             }}
           >
             <tbody>
               {this.maybePrintOrganization()}
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
-              {resolutionInfo}
-
-              {features().jobsEnabled &&
-              activeUser != null &&
-              (activeUser.isDatasetManager || activeUser.isAdmin)
-                ? this.getProcessingJobsMenu()
-                : null}
+              {this.getResolutionInfo()}
             </tbody>
           </table>
-          {this.renderSelectedStartingJobsModal()}
         </div>
 
-        <div className="info-tab-block">{this.getTracingStatistics()}</div>
+        {this.getAnnotationStatistics()}
         {this.getKeyboardShortcuts()}
-        {this.getOrganizationLogo()}
       </div>
     );
   }
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  tracing: state.tracing,
+  annotation: state.tracing,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
@@ -719,8 +662,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  setAnnotationName(tracingName: string) {
-    dispatch(setAnnotationNameAction(tracingName));
+  setAnnotationName(annotationName: string) {
+    dispatch(setAnnotationNameAction(annotationName));
   },
 
   setAnnotationDescription(comment: string) {

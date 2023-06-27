@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3 } from "oxalis/constants";
+import constants, { Identity4x4, Vector3 } from "oxalis/constants";
 import test from "ava";
 import defaultState from "oxalis/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
@@ -115,7 +115,7 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     resolutions,
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    accessors.Identity4x4,
+    Identity4x4,
     accessors._getDummyFlycamMatrix(scale),
   );
 

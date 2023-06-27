@@ -185,45 +185,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runGlobalizeFloodfills(
-      organizationName: String,
-      dataSetName: String,
-      fallbackLayerName: String,
-      annotationId: String,
-      annotationType: String,
-      newDatasetName: String,
-      volumeLayerName: Option[String]
-  ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      log(Some(slackNotificationService.noticeFailedJobRequest)) {
-        for {
-          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.globalizeFloodfill.notAllowed.organization" ~> FORBIDDEN
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-            "dataSet.notFound",
-            dataSetName) ~> NOT_FOUND
-          command = JobCommand.globalize_floodfills
-          commandArgs = Json.obj(
-            "organization_name" -> organizationName,
-            "dataset_name" -> dataSetName,
-            "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
-            "user_auth_token" -> userAuthToken.id,
-            "annotation_id" -> annotationId,
-            "annotation_type" -> annotationType,
-            "new_dataset_name" -> newDatasetName,
-            "volume_layer_name" -> volumeLayerName
-          )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunGlobalizeFloodfills"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
-      }
-    }
-
   def runExportTiffJob(organizationName: String,
                        dataSetName: String,
                        bbox: String,

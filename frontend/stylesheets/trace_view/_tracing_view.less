@@ -216,30 +216,11 @@
   }
 }
 
-.info-tab-block {
-  p {
-    margin-bottom: 0px;
-  }
-  margin-bottom: 12px;
-
-  .info-tab-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .fa-building{
-    opacity: 0.85;
-    text-align: center;
-    width: 24px;
-    height: 24px;
-  }
-}
-
 .keyboard-key-icon {
-  border: 2px solid @border-color-base;
-  border-radius: 2px;
-  min-width: 26px;
-  min-height: 26px;
+  background-image: url(/assets/images/icon-keyboard-key-light.svg);
+  background-repeat: no-repeat;
+  width: 26px;
+  height: 26px;
   margin: 4px;
   display: inline-block;
   text-align: center;
@@ -247,6 +228,7 @@
   vertical-align: middle;
   line-height: 24px;
   font-weight: bold;
+  color: @primary-color;
 }
 
 .keyboard-key-icon-small {
@@ -263,9 +245,21 @@
 }
 
 .keyboard-mouse-icon {
-  max-width: 18px;
-  max-height: 28px;
+  width: 17px;
+  height: 28px;
   margin: 4px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.icon-mouse-left {
+  background-image: url("/assets/images/icon-mouse-left-light.svg");
+  margin-left: 0;
+}
+
+.icon-mouse-right {
+  background-image: url("/assets/images/icon-mouse-right-light.svg");
+  margin-left: 0;
 }
 
 span.keyboard-key-icon:first-child,
@@ -274,15 +268,9 @@ img.keyboard-mouse-icon:first-child {
 }
 
 .shortcut-table {
-  margin-right: 20px;
   margin-top: 25px;
   max-width: 500px;
   font-size: 14px;
-
-  tr {
-    border-bottom: 1px solid @border-color-base;
-    border-top: 1px solid @border-color-base;
-  }
 }
 
 #portal-navbarTracingSlot {

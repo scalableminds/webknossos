@@ -17,7 +17,7 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
+import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
@@ -25,8 +25,9 @@ import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
-import { Identity4x4 } from "./flycam_accessor";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
+import estimateAffine from "libs/estimate_affine";
+import TPS3D from "libs/thin_plate_spline";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -647,29 +648,69 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-function _getTransformsForLayerOrNull(layer: APIDataLayer): Matrix4x4 | null {
-  if (!layer.coordinateTransformations) {
+type Transform =
+  | { type: "affine"; affineMatrix: Matrix4x4 }
+  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; scaledTpsInv: TPS3D };
+
+function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer): Transform | null {
+  let coordinateTransformations = layer.coordinateTransformations;
+  if (!coordinateTransformations) {
     return null;
   }
-  if (layer.coordinateTransformations.length > 1) {
+  if (coordinateTransformations.length > 1) {
     console.error(
       "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
     );
     return null;
   }
-  if (layer.coordinateTransformations[0].type !== "affine") {
-    console.error(
-      "Data layer has defined a coordinate transform that is not affine. This is currently not supported and ignored",
-    );
-    return null;
+  const transformation = coordinateTransformations[0];
+  const { type } = transformation;
+
+  if (type === "affine") {
+    const nestedMatrix = transformation.matrix;
+    return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
+  } else if (type === "thin_plate_spline") {
+    let { source, target } = transformation.correspondences;
+    const affineMatrix = estimateAffine(source, target).to1DArray() as any as Matrix4x4;
+
+    source = source.map((point) => V3.scale3(point, dataset.dataSource.scale));
+    target = target.map((point) => V3.scale3(point, dataset.dataSource.scale));
+
+    return {
+      type,
+      affineMatrix,
+      scaledTpsInv: new TPS3D(target, source),
+    };
   }
-  const nestedMatrix = layer.coordinateTransformations[0].matrix;
-  return nestedToFlatMatrix(nestedMatrix);
+
+  console.error(
+    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
+  );
+  return null;
 }
 
-export const getTransformsForLayerOrNull = _.memoize(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(layer: APIDataLayer): Matrix4x4 {
-  return getTransformsForLayerOrNull(layer) || Identity4x4;
+function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
+  let cachedA: A | null = null;
+  let cacheForA: Map<B, T> = new Map();
+  return (a: A, b: B): T => {
+    if (a !== cachedA) {
+      cachedA = a;
+      cacheForA = new Map();
+    }
+    if (!cacheForA.has(b)) {
+      cacheForA.set(b, fn(a, b));
+    }
+    const res = cacheForA.get(b);
+    if (res === undefined) {
+      throw new Error("Error in caching logic.");
+    }
+    return res;
+  };
+}
+
+export const getTransformsForLayerOrNull = memoizeWithTwoKeys(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(dataset: APIDataset, layer: APIDataLayer): Transform {
+  return getTransformsForLayerOrNull(dataset, layer) || IdentityTransform;
 }
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {

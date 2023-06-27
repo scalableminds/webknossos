@@ -9,7 +9,7 @@ import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object TracingIds {
@@ -22,6 +22,8 @@ trait TracingService[T <: GeneratedMessage]
     with LazyLogging
     with ColorGenerator
     with BoundingBoxMerger {
+
+  implicit val ec: ExecutionContext
 
   private val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 
@@ -57,10 +59,10 @@ trait TracingService[T <: GeneratedMessage]
 
   def currentVersion(tracing: T): Long
 
-  def transactionBatchKey(tracingId: String,
-                          transactionidOpt: Option[String],
-                          transactionGroupindexOpt: Option[Int],
-                          version: Long) =
+  private def transactionBatchKey(tracingId: String,
+                                  transactionidOpt: Option[String],
+                                  transactionGroupindexOpt: Option[Int],
+                                  version: Long) =
     s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
 
   protected def temporaryIdKey(tracingId: String) =
@@ -105,7 +107,7 @@ trait TracingService[T <: GeneratedMessage]
   def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
-  def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
+  private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
     tracingMigrationService.migrateTracing(tracingFox).flatMap {
       case (tracing, hasChanged) =>
         if (hasChanged)
@@ -167,7 +169,7 @@ trait TracingService[T <: GeneratedMessage]
     }
   }
 
-  def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
+  private def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
     s"handledGroup___${tracingId}___${transactionId}___$version"
 
   def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =

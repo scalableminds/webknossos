@@ -2,6 +2,10 @@
 
 In this tutorial, you will discover how to efficiently manage and share your data in WEBKNOSSOS. You will learn how to effortlessly upload your data, securely store it, and easily share it with your collaborators using a simple link. I will also guide you through the process of granting access permissions to designated collaborator teams, and show you how to work collaboratively on annotations. Finally, I will explain how you can make your data publicly available and share it with the wider world. Let’s dive in and unlock the power of data collaboration!
 
+Here is full tutorial video, alternatively continue reading below.
+
+![youtube-video](https://www.youtube.com/embed/ZvUJrv86w8w)
+
 ## Dataset Upload
 
 To add a dataset, go to the “Dataset” tab and click on “Add Dataset”. Give your dataset a name, choose which teams will have access to it, and a target folder to organize the dataset into a collection.

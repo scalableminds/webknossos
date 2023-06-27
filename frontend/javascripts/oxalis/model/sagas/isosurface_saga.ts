@@ -74,7 +74,7 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
-import { BlobReader, BlobWriter, TextReader, Writer, ZipWriter } from "@zip.js/zip.js";
+import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;

@@ -50,7 +50,6 @@ import {
   maybeFetchMeshFilesAction,
   refreshIsosurfaceAction,
   removeIsosurfaceAction,
-  triggerIsosurfaceDownloadAction,
   triggerIsosurfacesDownloadAction,
   updateCurrentMeshFileAction,
   updateIsosurfaceVisibilityAction,

@@ -1082,7 +1082,7 @@ export function disableViewportMetatag() {
     return;
   }
 
-  viewport.setAttribute("content", "");
+  // viewport.setAttribute("content", "");
 }
 
 /**

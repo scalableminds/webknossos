@@ -42,15 +42,15 @@ const moveForward = () => {
 };
 const moveBackward = () => MoveHandlers.moveW(-1, true);
 
-const BUTTON_STYLE = { width: 120, height: 120 };
-const ICON_TRANSFORM_VALUE = "scale(3)";
+const BUTTON_STYLE = { width: 80, height: 80 };
+const ICON_TRANSFORM_VALUE = "scale(2)";
 
 export function FloatingMobileControls() {
   const moveForwardProps = useRepeatedButtonTrigger(moveForward);
   const moveBackwardProps = useRepeatedButtonTrigger(moveBackward);
 
   return (
-    <div style={{ position: "absolute", left: 72, bottom: 72, zIndex: 100000 }}>
+    <div style={{ position: "absolute", left: 48, bottom: 48, zIndex: 1000 }}>
       <Space>
         <Button
           size="large"

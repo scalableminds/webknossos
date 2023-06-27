@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(104);
 COMMIT TRANSACTION;
 
 
@@ -154,6 +154,15 @@ CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
   matrix JSONB,
   correspondences JSONB,
   insertionOrderIndex INT
+);
+
+CREATE TABLE webknossos.dataSet_layer_additionalCoordinates(
+   _dataSet CHAR(24) NOT NULL,
+   layerName VARCHAR(256) NOT NULL,
+   name VARCHAR(256) NOT NULL,
+   lowerBound INT NOT NULL,
+   upperBound INT NOT NULL,
+   index INT NOT NULL
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(
@@ -735,6 +744,8 @@ ALTER TABLE webknossos.folder_paths
 ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataSet_layer_coordinateTransformations
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
+ALTER TABLE webknossos.dataSet_layer_additionalCoordinates
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

@@ -146,12 +146,6 @@ object LayerViewConfiguration {
   implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 
-case class AdditionalCoordinate(name: String, bounds: Array[Int], index: Int)
-
-object AdditionalCoordinate {
-  implicit val jsonFormat: Format[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
-}
-
 trait DataLayerLike {
 
   def name: String
@@ -173,7 +167,7 @@ trait DataLayerLike {
   def coordinateTransformations: Option[List[CoordinateTransformation]]
 
   // n-dimensional datasets = 3-dimensional datasets with additional coordinates
-  def additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+  def additionalCoordinates: Option[Seq[AdditionalCoordinate]]
 
   def additionalCoordinateMap: Map[String, AdditionalCoordinate] =
     additionalCoordinates match {
@@ -292,7 +286,8 @@ case class AbstractDataLayer(
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -306,7 +301,8 @@ object AbstractDataLayer {
       layer.elementClass,
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
-      layer.coordinateTransformations
+      layer.coordinateTransformations,
+      layer.additionalCoordinates
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -322,7 +318,8 @@ case class AbstractSegmentationLayer(
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -338,7 +335,8 @@ object AbstractSegmentationLayer {
       layer.mappings,
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
-      layer.coordinateTransformations
+      layer.coordinateTransformations,
+      layer.additionalCoordinates
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

@@ -110,7 +110,7 @@ case class NgffMultiscalesItem(
       NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
     ),
     datasets: List[NgffDataset]
-  ) {
+) {
 
   def getAdditionalCoordsFromAxes: Seq[AdditionalCoordinate] = {
     val defaultAxes = List("c", "x", "y", "z")
@@ -119,7 +119,7 @@ case class NgffMultiscalesItem(
         Some(AdditionalCoordinate(name = axisAndIndex._1.name, bounds = Array(0, 0), index = axisAndIndex._2))
       } else {
         None
-      })
+    })
   }
 }
 

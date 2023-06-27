@@ -92,6 +92,7 @@ case class VolumeTracingLayer(
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
+  override def additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 
   private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 
@@ -117,4 +118,5 @@ case class VolumeTracingLayer(
 
   override def containsResolution(resolution: Vec3Int) =
     true // allow requesting buckets of all resolutions. database takes care of missing.
+
 }

@@ -261,7 +261,6 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
   };
-  unbind: (() => void) | null = null;
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
@@ -534,7 +533,6 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.bindToEvents();
     getSceneController().startPlaneMode();
     this.planeView.start();
     this.initKeyboard();
@@ -550,23 +548,7 @@ class PlaneController extends React.PureComponent<Props> {
 
     getSceneController().stopPlaneMode();
     this.planeView.stop();
-    this.stopListening();
     this.isStarted = false;
-  }
-
-  bindToEvents(): void {
-    this.unbind = this.planeView.emitter.on("render", this.onPlaneViewRender);
-  }
-
-  stopListening(): void {
-    if (this.unbind != null) {
-      this.unbind();
-      this.unbind = null;
-    }
-  }
-
-  onPlaneViewRender(): void {
-    getSceneController().update();
   }
 
   changeMoveValue(delta: number): void {

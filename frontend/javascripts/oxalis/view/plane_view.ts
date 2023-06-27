@@ -15,7 +15,6 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
-import { createNanoEvents, Emitter } from "nanoevents";
 
 const createDirLight = (
   position: Vector3,
@@ -37,7 +36,6 @@ let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
-  emitter: Emitter;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
@@ -48,7 +46,6 @@ class PlaneView {
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.emitter = createNanoEvents();
     this.throttledPerformIsosurfaceHitTest = _.throttle(
       this.performIsosurfaceHitTest,
       ISOSURFACE_HOVER_THROTTLING_DELAY,
@@ -56,7 +53,7 @@ class PlaneView {
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
-    const cameras: any = {};
+    const cameras = {} as OrthoViewMap<THREE.OrthographicCamera>;
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
@@ -106,7 +103,7 @@ class PlaneView {
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
     if (forceRender || this.needsRerender) {
       const { renderer, scene } = SceneController;
-      this.emitter.emit("render");
+      SceneController.update();
       const storeState = Store.getState();
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),

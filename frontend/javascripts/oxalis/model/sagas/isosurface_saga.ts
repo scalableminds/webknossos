@@ -995,7 +995,7 @@ function* downloadIsosurfaceCellsAsZIP(
     });
     yield all(promises);
     const result = yield* call([zipWriter, zipWriter.close]);
-    saveAs(result, "test.zip");
+    saveAs(result, "mesh-export.zip");
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
     console.error(exception);

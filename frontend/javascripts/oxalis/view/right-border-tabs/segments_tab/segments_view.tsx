@@ -49,6 +49,7 @@ import {
 import {
   maybeFetchMeshFilesAction,
   triggerIsosurfaceDownloadAction,
+  triggerIsosurfacesDownloadAction,
   updateCurrentMeshFileAction,
   updateIsosurfaceVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -950,15 +951,15 @@ class SegmentsView extends React.Component<Props, State> {
     if (segmentGroup == null) return;
 
     if (visibleSegmentationLayer != null) {
-      const segmentArray = segmentGroup.map((segment) => {{cellname: segment.name ? segment.name : "mesh", segmentId: segment.id, layerName: visibleSegmentationLayer.name}
+      const segmentArray = segmentGroup.map((segment) => {
+        return {
+          cellName: segment.name ? segment.name : "mesh",
+          segmentId: segment.id,
+          layerName: visibleSegmentationLayer.name,
+        };
       });
-      Store.dispatch(
-        triggerIsosurfaceDownloadAction(
-          segment.name ? segment.name : "mesh",
-          segment.id,
-          visibleSegmentationLayer.name,
-          ),
-        }
+      Store.dispatch(triggerIsosurfacesDownloadAction(segmentArray));
+    }
   };
 
   handleDeleteGroup = (id: number) => {

@@ -26,5 +26,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the dataset search which was broken when only the root folder existed. [#7177](https://github.com/scalableminds/webknossos/pull/7177)
 
 ### Removed
+- Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)
 
 ### Breaking Changes

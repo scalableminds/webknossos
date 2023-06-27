@@ -2316,10 +2316,10 @@
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.2.tgz#d291c6a4e97989b5c61d9acf396ae4fe133a718d"
   integrity sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==
 
-"@zip.js/zip.js@^2.6.81":
-  version "2.6.81"
-  resolved "https://registry.yarnpkg.com/@zip.js/zip.js/-/zip.js-2.6.81.tgz#c3c9618a8e02f3a24d359a0a14d46985fea971f5"
-  integrity sha512-VXrwa5fthYq74sIZsHarCFVSwnKdispTd/WQBgcNEuB9X0N3L5s8odRCjx9Zw6XsvpG5krqB4ZN4X0lLMyjgDA==
+"@zip.js/zip.js@^2.7.17":
+  version "2.7.17"
+  resolved "https://registry.yarnpkg.com/@zip.js/zip.js/-/zip.js-2.7.17.tgz#b72444181493a9a480720b5832f760ead0ba423f"
+  integrity sha512-Y7GSkZTHaol4AC4pSsnxuw2LnYrI+j2VZsPwnARocLYzmRW7qnUAZ20rWeNeJNH6yfag56UdbxztYyxpuazUCQ==
 
 JSONStream@^1.0.3, JSONStream@^1.0.4:
   version "1.3.5"

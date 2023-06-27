@@ -36,6 +36,7 @@ type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
 export type UpdateIsosurfaceVisibilityAction = ReturnType<typeof updateIsosurfaceVisibilityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerIsosurfaceDownloadAction = ReturnType<typeof triggerIsosurfaceDownloadAction>;
+export type TriggerIsosurfacesDownloadAction = ReturnType<typeof triggerIsosurfacesDownloadAction>;
 export type RefreshIsosurfacesAction = ReturnType<typeof refreshIsosurfacesAction>;
 export type RefreshIsosurfaceAction = ReturnType<typeof refreshIsosurfaceAction>;
 export type StartedLoadingIsosurfaceAction = ReturnType<typeof startedLoadingIsosurfaceAction>;
@@ -221,6 +222,14 @@ export const triggerIsosurfaceDownloadAction = (
     cellName,
     segmentId,
     layerName,
+  } as const);
+
+export const triggerIsosurfacesDownloadAction = (
+  surfaceArray: { cellName: string; segmentId: number; layerName: string }[],
+) =>
+  ({
+    type: "TRIGGER_ISOSURFACES_DOWNLOAD",
+    surfaceArray,
   } as const);
 
 export const refreshIsosurfacesAction = () =>

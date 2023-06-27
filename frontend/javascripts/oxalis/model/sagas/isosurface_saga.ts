@@ -38,10 +38,11 @@ import {
   addPrecomputedIsosurfaceAction,
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
+  TriggerIsosurfacesDownloadAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { actionChannel, takeEvery, call, take, race, put } from "typed-redux-saga";
+import { actionChannel, takeEvery, call, take, race, put, all } from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeIsosurface,
@@ -73,6 +74,7 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { BlobReader, BlobWriter, TextReader, Writer, ZipWriter } from "@zip.js/zip.js";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -962,8 +964,51 @@ function* downloadIsosurfaceCellById(
   }
 }
 
+function* downloadIsosurfaceCellsAsZIP(
+  arrayOfCells: { cellName: string; segmentId: number; layerName: string }[],
+): Saga<void> {
+  const { segmentMeshController } = getSceneController();
+  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
+  try {
+    const promises = arrayOfCells.map((element) => {
+      const geometry = segmentMeshController.getIsosurfaceGeometryInBestLOD(
+        element.segmentId,
+        element.layerName,
+      );
+
+      if (geometry == null) {
+        const errorMessage = messages["tracing.not_isosurface_available_to_download"];
+        Toast.error(errorMessage, {
+          sticky: false,
+        });
+        return;
+      }
+      const stlDataViews = exportToStl(geometry);
+      // Encode isosurface and cell id property
+      const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
+      isosurfaceMarker.forEach((marker, index) => {
+        stlDataViews[0].setUint8(index, marker);
+      });
+      stlDataViews[0].setUint32(segmentIdIndex, element.segmentId, true);
+      const stlDataReader = new BlobReader(new Blob(stlDataViews));
+      return zipWriter.add(`${element.cellName}-${element.segmentId}.stl`, stlDataReader);
+    });
+    yield all(promises);
+    const result = yield* call([zipWriter, zipWriter.close]);
+    saveAs(result, "test.zip");
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error);
+    console.error(exception);
+    Toast.error("Could not export to STL. See console for details");
+  }
+}
+
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
   yield* call(downloadIsosurfaceCellById, action.cellName, action.segmentId, action.layerName);
+}
+
+function* downloadIsosurfaceCells(action: TriggerIsosurfacesDownloadAction): Saga<void> {
+  yield* call(downloadIsosurfaceCellsAsZIP, action.surfaceArray);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -1035,6 +1080,7 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
+  yield* takeEvery("TRIGGER_ISOSURFACES_DOWNLOAD", downloadIsosurfaceCells);
   yield* takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield* takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);

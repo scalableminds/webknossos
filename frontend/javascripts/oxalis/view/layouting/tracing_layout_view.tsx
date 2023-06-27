@@ -1,50 +1,50 @@
-import { Alert, Button, Layout, Space, Tooltip } from "antd";
-import { CaretDownOutlined, CaretUpOutlined, WarningFilled } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import * as React from "react";
-import _ from "lodash";
+import { WarningFilled } from "@ant-design/icons";
+import { Alert, Layout, Tooltip } from "antd";
+import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import type { ViewMode, Vector3, OrthoView } from "oxalis/constants";
+import Toast from "libs/toast";
+import { document, location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import CrossOriginApi from "oxalis/api/cross_origin_api";
+import type { OrthoView, Vector3, ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import type { ControllerStatus } from "oxalis/controller";
+import OxalisController from "oxalis/controller";
+import MergerModeController from "oxalis/controller/merger_mode_controller";
+import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { Store } from "oxalis/singletons";
+import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import OxalisController from "oxalis/controller";
-import type { ControllerStatus } from "oxalis/controller";
-import MergerModeController from "oxalis/controller/merger_mode_controller";
-import Toast from "libs/toast";
-import TracingView from "oxalis/view/tracing_view";
-import VersionView from "oxalis/view/version_view";
-import messages from "messages";
-import { document, location } from "libs/window";
-import ErrorHandling from "libs/error_handling";
-import CrossOriginApi from "oxalis/api/cross_origin_api";
 import {
-  recalculateInputCatcherSizes,
   initializeInputCatcherSizes,
+  recalculateInputCatcherSizes,
 } from "oxalis/view/input_catcher";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
-  storeLayoutConfig,
-  setActiveLayout,
   getLastActiveLayout,
   getLayoutConfig,
   layoutEmitter,
+  setActiveLayout,
+  storeLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
-import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import TracingView from "oxalis/view/tracing_view";
+import VersionView from "oxalis/view/version_view";
+import * as React from "react";
+import { connect } from "react-redux";
+import { RouteComponentProps, withRouter } from "react-router-dom";
+import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
-import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { Store } from "oxalis/singletons";
+import FlexLayoutWrapper from "./flex_layout_wrapper";
+import { FloatingMobileControls } from "./floating_mobile_controls";
 
 const { Sider } = Layout;
 
@@ -87,122 +87,6 @@ type State = {
   showFloatingMobileButtons: boolean;
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
-
-type TriggerCallback = () => void;
-
-const useTriggerRepeatedly = (triggerCallback: TriggerCallback) => {
-  const [isPressed, setIsPressed] = React.useState(false);
-
-  React.useEffect(() => {
-    let timerId: NodeJS.Timeout;
-
-    if (isPressed) {
-      const trigger = () => {
-        timerId = setTimeout(() => {
-          triggerCallback();
-          trigger();
-        }, 200); // Adjust the delay between triggers as needed
-      };
-
-      trigger();
-    }
-
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [isPressed, triggerCallback]);
-
-  const onTouchStart = (event: React.TouchEvent<any>) => {
-    console.log("onTouchStart");
-    setIsPressed(true);
-  };
-
-  const onTouchEnd = () => {
-    console.log("onTouchEnd");
-    setIsPressed(false);
-  };
-
-  return { onTouchStart, onTouchEnd };
-};
-
-function FloatingMobileControls() {
-  const moveForward = () => {
-    return MoveHandlers.moveW(1, true);
-  };
-  const moveForwardProps = useTriggerRepeatedly(moveForward);
-
-  return (
-    <div style={{ position: "absolute", left: 72, bottom: 72, zIndex: 100000 }}>
-      <Space>
-        <Button
-          size="large"
-          type="primary"
-          shape="circle"
-          style={{ width: 80, height: 80 }}
-          onClick={() => layoutEmitter.emit("toggleBorder", "left")}
-          icon={
-            <img
-              alt="Toggle left sidebar"
-              src="/assets/images/icon-sidebar-hide-left-bright.svg"
-              style={{ filter: "brightness(10)", transform: "scale(2)" }}
-            />
-          }
-        />
-        <Button
-          size="large"
-          type="primary"
-          shape="circle"
-          style={{ width: 80, height: 80 }}
-          onClick={() => layoutEmitter.emit("toggleBorder", "right")}
-          icon={
-            <img
-              alt="Toggle right sidebar"
-              src="/assets/images/icon-sidebar-hide-right-bright.svg"
-              style={{ filter: "brightness(10)", transform: "scale(2)" }}
-            />
-          }
-        />
-        <Button
-          size="large"
-          type="primary"
-          shape="circle"
-          style={{ width: 80, height: 80 }}
-          icon={<CaretUpOutlined style={{ transform: "scale(2)" }} />}
-          onClick={moveForward}
-          {...moveForwardProps}
-        />
-        <Button
-          size="large"
-          type="primary"
-          shape="circle"
-          style={{ width: 80, height: 80 }}
-          icon={<CaretDownOutlined style={{ transform: "scale(2)" }} />}
-          onClick={() => {
-            return MoveHandlers.moveW(-1, true);
-          }}
-        />
-        <Button
-          size="large"
-          type="primary"
-          shape="circle"
-          style={{ width: 80, height: 80 }}
-          onClick={() => layoutEmitter.emit("toggleMaximize")}
-          icon={
-            <div
-              style={{
-                background:
-                  "transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAUCAYAAABiS3YzAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAB3RJTUUH3wsOCAciLIHE4wAAAEdJREFUOMvtkksOADAERGl6b5x8eoBqo6E7b+kzJiBqqmEvaGaINIsIhydFRG8185RQVTD7RgC87yTrdPw4VIvWMzMf0DQ7CzmmFh3I1FWCAAAAAElFTkSuQmCC) no-repeat center",
-                height: "100%",
-                filter: "brightness(1000)",
-                transform: "scale(2)",
-              }}
-            />
-          }
-        />
-      </Space>
-    </div>
-  );
-}
 
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;

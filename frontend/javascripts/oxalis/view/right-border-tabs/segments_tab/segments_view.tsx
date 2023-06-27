@@ -782,7 +782,7 @@ class SegmentsView extends React.Component<Props, State> {
   );
 
   getToastForMissingLocations = (groupId: number) => {
-    const segmentsWithoutPosition = this.getSegmentsWithMissingLocation(groupId); // TODO
+    const segmentsWithoutPosition = this.getSegmentsWithMissingLocation(groupId);
     if (segmentsWithoutPosition.length > 0) {
       console.log(`Segments with unknown positions: ${segmentsWithoutPosition}`);
       return Toast.info(
@@ -979,7 +979,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   downloadAllMeshesForGroup = (groupId: number) => {
-    // TODO ZIP if more than one
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const segmentGroup = this.getSegmentsOfGroup(groupId);

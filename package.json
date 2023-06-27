@@ -154,7 +154,7 @@
     "@types/pngjs": "^6.0.1",
     "@types/three": "^0.142.0",
     "@use-it/interval": "^1.0.0",
-    "@zip.js/zip.js": "^2.7.17",
+    "@zip.js/zip.js": "^2.6.81",
     "ansi-to-react": "^6.1.6",
     "antd": "^4.24.8",
     "backbone-events-standalone": "^0.2.7",

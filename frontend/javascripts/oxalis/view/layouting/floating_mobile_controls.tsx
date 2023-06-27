@@ -1,4 +1,4 @@
-import { CaretDownOutlined, CaretUpOutlined } from "@ant-design/icons";
+import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import { Button, Space } from "antd";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
@@ -42,6 +42,9 @@ const moveForward = () => {
 };
 const moveBackward = () => MoveHandlers.moveW(-1, true);
 
+const BUTTON_STYLE = { width: 120, height: 120 };
+const ICON_TRANSFORM_VALUE = "scale(3)";
+
 export function FloatingMobileControls() {
   const moveForwardProps = useRepeatedButtonTrigger(moveForward);
   const moveBackwardProps = useRepeatedButtonTrigger(moveBackward);
@@ -53,13 +56,13 @@ export function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
-          style={{ width: 80, height: 80 }}
+          style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit("toggleBorder", "left")}
           icon={
             <img
               alt="Toggle left sidebar"
               src="/assets/images/icon-sidebar-hide-left-bright.svg"
-              style={{ filter: "brightness(10)", transform: "scale(2)" }}
+              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }
         />
@@ -67,13 +70,13 @@ export function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
-          style={{ width: 80, height: 80 }}
+          style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit("toggleBorder", "right")}
           icon={
             <img
               alt="Toggle right sidebar"
               src="/assets/images/icon-sidebar-hide-right-bright.svg"
-              style={{ filter: "brightness(10)", transform: "scale(2)" }}
+              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }
         />
@@ -81,35 +84,25 @@ export function FloatingMobileControls() {
           size="large"
           type="primary"
           shape="circle"
-          style={{ width: 80, height: 80 }}
-          icon={<CaretUpOutlined style={{ transform: "scale(2)" }} />}
+          style={BUTTON_STYLE}
+          icon={<CaretUpOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveForwardProps}
         />
         <Button
           size="large"
           type="primary"
           shape="circle"
-          style={{ width: 80, height: 80 }}
-          icon={<CaretDownOutlined style={{ transform: "scale(2)" }} />}
+          style={BUTTON_STYLE}
+          icon={<CaretDownOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveBackwardProps}
         />
         <Button
           size="large"
           type="primary"
           shape="circle"
-          style={{ width: 80, height: 80 }}
+          style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit("toggleMaximize")}
-          icon={
-            <div
-              style={{
-                background:
-                  "transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAUCAYAAABiS3YzAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAB3RJTUUH3wsOCAciLIHE4wAAAEdJREFUOMvtkksOADAERGl6b5x8eoBqo6E7b+kzJiBqqmEvaGaINIsIhydFRG8185RQVTD7RgC87yTrdPw4VIvWMzMf0DQ7CzmmFh3I1FWCAAAAAElFTkSuQmCC) no-repeat center",
-                height: "100%",
-                filter: "brightness(1000)",
-                transform: "scale(2)",
-              }}
-            />
-          }
+          icon={<ExpandAltOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
         />
       </Space>
     </div>

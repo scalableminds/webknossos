@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)
+- Improved support for touch devices by adding floating buttons for easier navigation and layout changes. [#7178](https://github.com/scalableminds/webknossos/pull/7178)
 
 ### Fixed
 

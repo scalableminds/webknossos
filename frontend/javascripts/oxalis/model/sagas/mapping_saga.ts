@@ -98,7 +98,7 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
 
-  if (!("mappings" in layerInfo)) {
+  if (layerInfo.category === "color") {
     throw new Error("loadLayerMappings was called with a color layer.");
   }
 

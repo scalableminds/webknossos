@@ -1,5 +1,6 @@
 import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import { Space, Tooltip } from "antd";
+import { useRepeatedButtonTrigger } from "libs/react_hooks";
 import { OrthoViews, OrthoViewsToName } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { OxalisState } from "oxalis/store";
@@ -7,39 +8,6 @@ import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
 import { useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
-
-const useRepeatedButtonTrigger = (triggerCallback: () => void, repeatDelay: number = 150) => {
-  const [isPressed, setIsPressed] = React.useState(false);
-
-  React.useEffect(() => {
-    let timerId: NodeJS.Timeout;
-
-    if (isPressed) {
-      const trigger = () => {
-        timerId = setTimeout(() => {
-          triggerCallback();
-          trigger();
-        }, repeatDelay);
-      };
-
-      trigger();
-    }
-
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [isPressed, triggerCallback]);
-
-  const onTouchStart = () => {
-    setIsPressed(true);
-  };
-
-  const onTouchEnd = () => {
-    setIsPressed(false);
-  };
-
-  return { onClick: triggerCallback, onTouchStart, onTouchEnd };
-};
 
 const moveForward = () => {
   return MoveHandlers.moveW(1, true);

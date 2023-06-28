@@ -90,6 +90,39 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   return keyPressed;
 }
 
+export function useRepeatedButtonTrigger(triggerCallback: () => void, repeatDelay: number = 150) {
+  const [isPressed, setIsPressed] = useState(false);
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout;
+
+    if (isPressed) {
+      const trigger = () => {
+        timerId = setTimeout(() => {
+          triggerCallback();
+          trigger();
+        }, repeatDelay);
+      };
+
+      trigger();
+    }
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [isPressed, triggerCallback]);
+
+  const onTouchStart = () => {
+    setIsPressed(true);
+  };
+
+  const onTouchEnd = () => {
+    setIsPressed(false);
+  };
+
+  return { onClick: triggerCallback, onTouchStart, onTouchEnd };
+}
+
 export function useSearchParams() {
   const location = useLocation();
   return Object.fromEntries(new URLSearchParams(location.search).entries());

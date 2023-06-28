@@ -9,6 +9,7 @@ import type {
   ServerTracing,
   ServerEditableMapping,
   APICompoundType,
+  AdditionalCoordinateWithBounds,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -71,6 +72,7 @@ import {
   setPositionAction,
   setZoomStepAction,
   setRotationAction,
+  setAdditionalCoordinates,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -401,7 +403,39 @@ function initializeDataset(
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
+  initializeAdditionalCoordinates(mutableDataset);
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
+}
+
+function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
+  const unifiedAdditionalCoordinates: Record<
+    string,
+    Omit<AdditionalCoordinateWithBounds, "index">
+  > = {};
+  for (const layer of mutableDataset.dataSource.dataLayers) {
+    const { additionalCoordinates } = layer;
+
+    for (const additionalCoordinate of additionalCoordinates) {
+      const { name, bounds } = additionalCoordinate;
+      if (additionalCoordinate.name in unifiedAdditionalCoordinates) {
+        const existingBounds = unifiedAdditionalCoordinates[name].bounds;
+        unifiedAdditionalCoordinates[name].bounds = [
+          Math.min(bounds[0], existingBounds[0]),
+          Math.max(bounds[1], existingBounds[1]),
+        ];
+      } else {
+        unifiedAdditionalCoordinates[name] = {
+          name,
+          bounds,
+        };
+      }
+    }
+  }
+  const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
+    ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
+  );
+
+  Store.dispatch(setAdditionalCoordinates(initialAdditionalCoordinates));
 }
 
 function initializeSettings(

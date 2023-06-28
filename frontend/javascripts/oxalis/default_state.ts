@@ -192,8 +192,7 @@ const defaultState: OxalisState = {
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
-    // todop: initialize to null? ensure that its set correctly after model initialization then.
-    additionalCoords: [{ name: "t", value: 0 }],
+    additionalCoords: [],
   },
   viewModeData: {
     plane: {

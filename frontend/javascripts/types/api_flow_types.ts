@@ -39,12 +39,18 @@ export type APIMapping = {
   readonly colors?: Array<number>;
   readonly hideUnmappedIds?: boolean;
 };
+export type AdditionalCoordinateWithBounds = {
+  bounds: [number, number];
+  index: number;
+  name: string;
+};
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
+  readonly additionalCoordinates: Array<AdditionalCoordinateWithBounds>;
   readonly coordinateTransformations?: Array<
     | {
         type: "affine";

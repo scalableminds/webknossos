@@ -80,6 +80,7 @@ const volumeTracingLayer: APISegmentationLayer = {
   elementClass: serverVolumeTracing.elementClass,
   largestSegmentId: serverVolumeTracing.largestSegmentId,
   tracingId: volumeTracing.tracingId,
+  additionalCoordinates: [],
 };
 const initialState = update(defaultState, {
   tracing: {

@@ -121,12 +121,12 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
   };
 
   render() {
-    const { style, autoSize, ...props } = _.omit(this.props, [
-      "onChange",
-      "value",
-      "changeOnlyOnBlur",
-      "allowDecimals",
-    ]);
+    const {
+      style,
+      autoSize,
+      vectorLength: _vectorLength,
+      ...props
+    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
 
     return (
       <InputComponent

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { ElementClass } from "types/api_flow_types";
+import type { AdditionalCoordinateWithBounds, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
@@ -61,15 +61,13 @@ class CubeEntry {
 const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
-type AdditionalCoordsSpec = Record<string, { bounds: [number, number]; index: number }> | null;
-
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
-  additionalCoords: AdditionalCoordsSpec;
+  additionalCoordsBounds: Record<string, AdditionalCoordinateWithBounds>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pushQueue' has no initializer and is not... Remove this comment to see the full error message
@@ -99,7 +97,7 @@ class DataCube {
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
     layerBBox: BoundingBox,
-    additionalCoords: AdditionalCoordsSpec,
+    additionalCoordsBounds: AdditionalCoordinateWithBounds[],
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
@@ -109,7 +107,7 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
-    this.additionalCoords = additionalCoords;
+    this.additionalCoordsBounds = _.keyBy(additionalCoordsBounds, "name");
 
     this.cubes = {};
     this.buckets = [];
@@ -227,6 +225,14 @@ class DataCube {
       if (resolution == null) {
         return null;
       }
+
+      for (const dim of dims || []) {
+        const { bounds } = this.additionalCoordsBounds[dim.name];
+        if (dim.value < bounds[0] || dim.value >= bounds[1]) {
+          return null;
+        }
+      }
+
       const zoomedCubeBoundary: Vector3 = [
         Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * resolution[0])) + 1,
         Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * resolution[1])) + 1,

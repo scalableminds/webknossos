@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import app from "app";
 import Maybe from "data.maybe";
@@ -82,8 +80,6 @@ class SceneController {
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
   constructor() {
-    _.extend(this, BackboneEvents);
-
     this.current = 0;
     this.isPlaneVisible = {
       [OrthoViews.PLANE_XY]: true,
@@ -401,14 +397,14 @@ class SceneController {
       plane.setDisplayCrosshair(value);
     }
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
     const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   setInterpolation(value: boolean): void {
@@ -416,7 +412,7 @@ class SceneController {
       plane.setLinearInterpolationEnabled(value);
     }
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   getRootNode(): THREE.Object3D {

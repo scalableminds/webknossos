@@ -815,7 +815,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     await clearCache(this.props.dataset, layerName);
     this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
-    window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 

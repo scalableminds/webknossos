@@ -16,7 +16,7 @@ class Api {
    */
   constructor(oxalisModel: OxalisModel) {
     this.readyPromise = new Promise((resolve) => {
-      app.vent.listenTo(app.vent, "webknossos:ready", resolve);
+      app.vent.on("webknossos:ready", resolve);
     });
     this.model = oxalisModel;
   }

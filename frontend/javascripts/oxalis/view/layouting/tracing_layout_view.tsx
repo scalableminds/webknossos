@@ -42,6 +42,7 @@ import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
+import app from "app";
 
 const { Sider } = Layout;
 
@@ -213,8 +214,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
     recalculateInputCatcherSizes();
-    // @ts-ignore
-    window.needsRerender = true;
+    app.vent.emit("rerender");
 
     if (model != null) {
       this.setState({

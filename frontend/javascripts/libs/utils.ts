@@ -1074,16 +1074,6 @@ export function getWindowBounds(): [number, number] {
   return [width, height];
 }
 
-export function disableViewportMetatag() {
-  const viewport = document.querySelector("meta[name=viewport]");
-
-  if (!viewport) {
-    return;
-  }
-
-  // viewport.setAttribute("content", "");
-}
-
 /**
  * Deep diff between two object, using lodash
  * @param  {Object} object Object compared

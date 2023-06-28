@@ -87,7 +87,6 @@ import {
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
-import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
@@ -471,7 +470,9 @@ export function* floodFill(): Saga<void> {
       yield* put(
         addUserBoundingBoxAction({
           boundingBox: coveredBoundingBox,
-          name: getBBoxNameForPartialFloodfill(oldSegmentIdAtSeed, activeCellId, seedPosition),
+          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+            ",",
+          )}, timestamp=${new Date().getTime()})`,
           color: Utils.getRandomColor(),
           isVisible: true,
         }),

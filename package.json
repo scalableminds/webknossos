@@ -158,7 +158,6 @@
     "@zip.js/zip.js": "^2.6.81",
     "ansi-to-react": "^6.1.6",
     "antd": "^4.24.8",
-    "backbone-events-standalone": "^0.2.7",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",

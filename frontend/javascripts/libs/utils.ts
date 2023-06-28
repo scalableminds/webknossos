@@ -755,7 +755,7 @@ const areEventListenerOptionsSupported = _.once(() => {
 
 // https://stackoverflow.com/questions/25248286/native-js-equivalent-to-jquery-delegation#
 export function addEventListenerWithDelegation(
-  element: HTMLElement,
+  element: HTMLElement | Document,
   eventName: string,
   delegateSelector: string,
   handlerFunc: (...args: Array<any>) => any,
@@ -1055,15 +1055,11 @@ export function getWindowBounds(): [number, number] {
     width = window.innerWidth;
     height = window.innerHeight;
   } else if (
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     document.documentElement &&
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     (document.documentElement.clientWidth || document.documentElement.clientHeight)
   ) {
     // IE 6+ in 'standards compliant mode'
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     width = document.documentElement.clientWidth;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     height = document.documentElement.clientHeight;
   } else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
     // IE 4 compatible
@@ -1075,7 +1071,6 @@ export function getWindowBounds(): [number, number] {
 }
 
 export function disableViewportMetatag() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
   const viewport = document.querySelector("meta[name=viewport]");
 
   if (!viewport) {

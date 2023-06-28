@@ -41,6 +41,7 @@ import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
   viewMode: ViewMode;
@@ -213,8 +214,6 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
-        // @ts-ignore
-        window.needsRerender = true;
       },
       // Delete active node and recenter last node
       "shift + space": () => {

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 case class CachedCube(
     organization: String,
@@ -44,7 +44,7 @@ class DataCubeCache(val maxEntries: Int)
     * returns it.
     */
   def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[DataCubeHandle])(
-      f: DataCubeHandle => Fox[T]): Fox[T] = {
+      f: DataCubeHandle => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube(): Fox[T] = {

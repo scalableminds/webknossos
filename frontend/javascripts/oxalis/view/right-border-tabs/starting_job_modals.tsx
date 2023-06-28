@@ -5,7 +5,6 @@ import {
   startNucleiInferralJob,
   startNeuronInferralJob,
   startMaterializingVolumeAnnotationJob,
-  startGlobalizeFloodfillsJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -33,13 +32,11 @@ const enum JobNames {
   NEURON_INFERRAL = "neuron inferral",
   NUCLEI_INFERRAL = "nuclei inferral",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize volume annotation",
-  GLOBALIZE_FLODDFILLS = "globalization of the floodfill operation(s)",
 }
 const jobNameToImagePath: Record<JobNames, string | null> = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
   "materialize volume annotation": "materialize_volume_annotation_example.jpg",
-  "globalization of the floodfill operation(s)": null,
 };
 type Props = {
   handleClose: () => void;
@@ -635,42 +632,6 @@ export function MaterializeVolumeAnnotationModal({
         );
       }}
       description={description}
-    />
-  );
-}
-
-export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  return (
-    <StartingJobModal
-      handleClose={handleClose}
-      title="Start Globalizing of the Floodfill Operation(s)"
-      jobName={JobNames.GLOBALIZE_FLODDFILLS}
-      suggestedDatasetSuffix="with_floodfills"
-      chooseSegmentationLayer
-      jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
-        const volumeLayerName = getReadableNameOfVolumeLayer(segmentationLayer, tracing);
-        const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
-        return startGlobalizeFloodfillsJob(
-          dataset.owningOrganization,
-          dataset.name,
-          baseSegmentationName,
-          volumeLayerName,
-          newDatasetName,
-          tracing.annotationId,
-          tracing.annotationType,
-        );
-      }}
-      description={
-        <p>
-          For this annotation some floodfill operations have not run to completion, because they
-          covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.
-          This job will copy the current dataset, apply the changes of the current volume annotation
-          into the volume layer and use the existing bounding boxes as seeds to continue the
-          remaining floodfill operations (i.e., &quot;globalize&quot; them).
-        </p>
-      }
     />
   );
 }

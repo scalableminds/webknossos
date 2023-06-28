@@ -45,7 +45,7 @@ export class ContourGeometry {
   addEdgePoint(pos: Vector3) {
     this.vertexBuffer.push(pos);
     this.finalizeMesh();
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   finalizeMesh() {
@@ -184,7 +184,7 @@ export class QuickSelectGeometry {
     // the quick select tool is not currently used to draw a rectangle.
     this.rectangle.visible = !V3.isEqual(endPosition, startPosition);
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   adaptVisibilityForRendering(flycamPosition: Vector3, thirdDim: 0 | 1 | 2) {

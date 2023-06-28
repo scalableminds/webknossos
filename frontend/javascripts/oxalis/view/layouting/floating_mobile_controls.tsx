@@ -1,8 +1,11 @@
 import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
-import { Space } from "antd";
+import { Space, Tooltip } from "antd";
+import { OrthoViews, OrthoViewsToName } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import { OxalisState } from "oxalis/store";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
+import { useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
 
 const useRepeatedButtonTrigger = (triggerCallback: () => void, repeatDelay: number = 150) => {
@@ -49,9 +52,15 @@ const ICON_TRANSFORM_VALUE = "scale(1)";
 export function FloatingMobileControls() {
   const moveForwardProps = useRepeatedButtonTrigger(moveForward);
   const moveBackwardProps = useRepeatedButtonTrigger(moveBackward);
+  const activeViewport = useSelector(
+    (store: OxalisState) => store.viewModeData.plane.activeViewport,
+  );
 
   return (
-    <div style={{ position: "absolute", left: 8, bottom: 28, zIndex: 1000 }}>
+    <div
+      className="floating-buttons-bar"
+      style={{ position: "absolute", left: 8, bottom: 28, zIndex: 1000 }}
+    >
       <Space>
         <ButtonComponent
           size="large"
@@ -86,6 +95,7 @@ export function FloatingMobileControls() {
           type="primary"
           shape="circle"
           style={BUTTON_STYLE}
+          disabled={activeViewport === OrthoViews.TDView}
           icon={<CaretUpOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveForwardProps}
         />
@@ -94,6 +104,7 @@ export function FloatingMobileControls() {
           type="primary"
           shape="circle"
           style={BUTTON_STYLE}
+          disabled={activeViewport === OrthoViews.TDView}
           icon={<CaretDownOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
           {...moveBackwardProps}
         />
@@ -105,6 +116,11 @@ export function FloatingMobileControls() {
           onClick={() => layoutEmitter.emit("toggleMaximize")}
           icon={<ExpandAltOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
         />
+        <Tooltip title="The navigation and maximization button refers to the active viewport. A viewport can be activated by tapping on it.">
+          <ButtonComponent size="large" shape="circle" style={BUTTON_STYLE}>
+            {OrthoViewsToName[activeViewport]}
+          </ButtonComponent>
+        </Tooltip>
       </Space>
     </div>
   );

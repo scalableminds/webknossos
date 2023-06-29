@@ -29,6 +29,7 @@ import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constan
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -61,6 +62,16 @@ function escape(string: string): string {
     .replace(/\n/g, "&#xa;");
 }
 
+function unescape(string: string): string {
+  return string
+    .replaceAll("&#xa;", "\n")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+}
+
 function mapColorToComponents(color: Vector3) {
   return {
     "color.r": color[0],
@@ -89,8 +100,15 @@ function serializeTag(
   closed: boolean = true,
 ): string {
   return `<${name} ${Object.keys(properties)
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
-    .map((key) => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
+    .map((key) => {
+      let valueStr = "";
+      const value = properties[key];
+      if (value != null) {
+        valueStr = escape(value.toString());
+      }
+
+      return `${key}="${valueStr}"`;
+    })
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
@@ -291,12 +309,17 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
     const position = node.position.map(Math.floor);
+    const maybeProperties =
+      (node.additionalCoords?.length || 0) === 0
+        ? {}
+        : { additionalCoords: JSON.stringify(node.additionalCoords) };
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
       x: Math.trunc(position[0]),
       y: Math.trunc(position[1]),
       z: Math.trunc(position[2]),
+      ...maybeProperties,
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
@@ -400,6 +423,18 @@ function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: nu
   }
 
   return Number.parseFloat(obj[key]);
+}
+
+function _parseJSON(obj: Record<string, string>, key: string, defaultValue?: number[]): Object {
+  if (obj[key] == null || obj[key].length === 0) {
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  return JSON.parse(unescape(obj[key]));
 }
 
 function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
@@ -694,8 +729,7 @@ export function parseNml(nmlString: string): Promise<{
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
-              // todop: dont hardcode (parsing nmls)
-              additionalCoords: null,
+              additionalCoords: _parseJSON(attr, "additionalCoords", []) as AdditionalCoordinate[],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),

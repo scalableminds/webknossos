@@ -10,7 +10,6 @@ import { localeCompareBy } from "libs/utils";
 
 type ArtifactTableEntry = {
   artifactName: string;
-  artifactSize: string;
   taskName: string;
   fileSize: number;
   inodes: string;
@@ -38,7 +37,6 @@ export default function DiskUsageList({
     }
     return Object.entries(artifacts[taskGroup.taskName]).map(([artifactName, artifact]) => ({
       artifactName,
-      artifactSize: formatCountToDataAmountUnit(artifact.fileSize),
       fileSize: artifact.fileSize,
       taskName: taskGroup.taskName,
       inodes: artifact.inodeCount.toLocaleString(),
@@ -66,8 +64,9 @@ export default function DiskUsageList({
     },
     {
       title: "File Size",
-      dataIndex: "artifactSize",
-      key: "artifactSize",
+      dataIndex: "fileSize",
+      key: "fileSize",
+      render: (fileSize, _record) => formatCountToDataAmountUnit(fileSize),
       sorter: (a, b) => a.fileSize - b.fileSize,
       defaultSortOrder: "descend",
     },

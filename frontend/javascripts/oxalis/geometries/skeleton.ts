@@ -507,7 +507,7 @@ class Skeleton {
       id,
       this.nodes,
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
-        const { attributes } = buffer.geometry;
+        const attributes = buffer.geometry.attributes as Record<string, THREE.BufferAttribute>;
         (attributes.position as THREE.BufferAttribute).set(node.position, index * 3);
 
         if (node.additionalCoords) {
@@ -528,7 +528,6 @@ class Skeleton {
         attributes.nodeId.array[index] = node.id;
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.treeId.array[index] = treeId;
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(BufferAttribute | InterleavedBufferAttribut... Remove this comment to see the full error message
         return _.values(attributes);
       },
     );

@@ -42,8 +42,8 @@ class EdgeShader {
     listenToStoreProperty(
       (storeState) => storeState.flycam.additionalCoords,
       (additionalCoords) => {
-        _.each(additionalCoords, (val, idx) => {
-          this.uniforms[`currentAdditionalCoord_${idx}`].value = val;
+        _.each(additionalCoords, (coord, idx) => {
+          this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
         });
       },
       true,

@@ -166,7 +166,8 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   timestamp: Date.now(),
   bitDepth: 8,
   interpolation: false,
-  // todop
+  // Don't assume any additionalCoords here, because no 4D connectomes are
+  // known yet.
   additionalCoords: null,
 });
 

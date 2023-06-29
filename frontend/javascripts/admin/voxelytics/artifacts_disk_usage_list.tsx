@@ -35,6 +35,9 @@ export default function DiskUsageList({
           .filter((artifactTableEntry) => artifactTableEntry != null),
       );
     }
+    if (!artifacts[taskGroup.taskName]) {
+      return [];
+    }
     return Object.entries(artifacts[taskGroup.taskName]).map(([artifactName, artifact]) => ({
       artifactName,
       fileSize: artifact.fileSize,

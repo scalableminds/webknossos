@@ -1,6 +1,7 @@
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
+  AdditionalCoordinateWithBounds,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -609,6 +610,36 @@ function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
 }
 
 export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
+
+export function getUnifiedAdditionalCoordinates(
+  mutableDataset: APIDataset,
+): Record<string, Omit<AdditionalCoordinateWithBounds, "index">> {
+  const unifiedAdditionalCoordinates: Record<
+    string,
+    Omit<AdditionalCoordinateWithBounds, "index">
+  > = {};
+  for (const layer of mutableDataset.dataSource.dataLayers) {
+    const { additionalCoordinates } = layer;
+
+    for (const additionalCoordinate of additionalCoordinates) {
+      const { name, bounds } = additionalCoordinate;
+      if (additionalCoordinate.name in unifiedAdditionalCoordinates) {
+        const existingBounds = unifiedAdditionalCoordinates[name].bounds;
+        unifiedAdditionalCoordinates[name].bounds = [
+          Math.min(bounds[0], existingBounds[0]),
+          Math.max(bounds[1], existingBounds[1]),
+        ];
+      } else {
+        unifiedAdditionalCoordinates[name] = {
+          name,
+          bounds,
+        };
+      }
+    }
+  }
+
+  return unifiedAdditionalCoordinates;
+}
 
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.

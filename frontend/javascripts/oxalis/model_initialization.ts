@@ -29,6 +29,7 @@ import {
   getSegmentationLayers,
   getLayerByName,
   getSegmentationLayerByName,
+  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
@@ -408,29 +409,7 @@ function initializeDataset(
 }
 
 function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
-  const unifiedAdditionalCoordinates: Record<
-    string,
-    Omit<AdditionalCoordinateWithBounds, "index">
-  > = {};
-  for (const layer of mutableDataset.dataSource.dataLayers) {
-    const { additionalCoordinates } = layer;
-
-    for (const additionalCoordinate of additionalCoordinates) {
-      const { name, bounds } = additionalCoordinate;
-      if (additionalCoordinate.name in unifiedAdditionalCoordinates) {
-        const existingBounds = unifiedAdditionalCoordinates[name].bounds;
-        unifiedAdditionalCoordinates[name].bounds = [
-          Math.min(bounds[0], existingBounds[0]),
-          Math.max(bounds[1], existingBounds[1]),
-        ];
-      } else {
-        unifiedAdditionalCoordinates[name] = {
-          name,
-          bounds,
-        };
-      }
-    }
-  }
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
     ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
   );

@@ -29,6 +29,7 @@ import {
   doesSupportVolumeWithFallback,
   getVisibleSegmentationLayer,
   getMappingInfoForSupportedLayer,
+  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinates } from "oxalis/model/actions/flycam_actions";
@@ -64,6 +65,9 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
+  const additionalCoordinatesWithBounds = useSelector((state: OxalisState) =>
+    getUnifiedAdditionalCoordinates(state.dataset),
+  );
   const additionalCoords = useSelector((state: OxalisState) => state.flycam.additionalCoords);
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
@@ -91,24 +95,27 @@ function AdditionalCoordinatesInputView() {
     <Popover
       content={
         <div>
-          {additionalCoords.map((coord, idx) => (
-            <NumberSliderSetting
-              label={coord.name}
-              key={coord.name}
-              min={0}
-              max={100}
-              value={coord.value}
-              spans={[2, 19, 3]}
-              onChange={(newCoord) => {
-                const newCoords = additionalCoords.slice();
-                newCoords[idx] = {
-                  ...newCoords[idx],
-                  value: newCoord,
-                };
-                changeAdditionalCoordinates(newCoords);
-              }}
-            />
-          ))}
+          {additionalCoords.map((coord, idx) => {
+            const { bounds } = additionalCoordinatesWithBounds[coord.name];
+            return (
+              <NumberSliderSetting
+                label={coord.name}
+                key={coord.name}
+                min={bounds[0]}
+                max={bounds[1]}
+                value={coord.value}
+                spans={[2, 18, 4]}
+                onChange={(newCoord) => {
+                  const newCoords = additionalCoords.slice();
+                  newCoords[idx] = {
+                    ...newCoords[idx],
+                    value: newCoord,
+                  };
+                  changeAdditionalCoordinates(newCoords);
+                }}
+              />
+            );
+          })}
         </div>
       }
     >

@@ -617,7 +617,7 @@ export class InputMouse {
     if (this.lastScale != null) {
       const delta = evt.scale - this.lastScale;
       this.lastScale = evt.scale;
-      this.emitter.emit("pinch", 10 * delta);
+      this.emitter.emit("pinch", 10 * delta, this.position);
     }
   };
 

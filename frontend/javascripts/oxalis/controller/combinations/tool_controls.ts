@@ -134,7 +134,10 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
-      pinch: (delta: number) => MoveHandlers.zoom(delta, true),
+      pinch: (delta: number, center: Point2) => {
+        MoveHandlers.setMousePosition(center);
+        MoveHandlers.zoom(delta, true);
+      },
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
         MoveHandlers.setMousePosition(null);

@@ -14,7 +14,7 @@ const moveForward = () => {
 };
 const moveBackward = () => MoveHandlers.moveW(-1, true);
 
-const BUTTON_STYLE = {};
+const BUTTON_STYLE = { userSelect: "none" } as const;
 const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {

@@ -12,6 +12,7 @@ import {
   Tooltip,
   Select,
   MenuProps,
+  Modal,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -24,7 +25,6 @@ import {
   FieldTimeOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
-import ColorHash from "color-hash";
 
 import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -43,12 +43,13 @@ import {
   formatDistanceStrict,
   formatDurationStrict,
 } from "libs/format_utils";
-import DAGView from "./dag_view";
+import DAGView, { colorHasher } from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
 import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -355,6 +356,19 @@ export default function TaskListView({
     a.click();
   }
 
+  function showArtifactsDiskUsageList() {
+    Modal.info({
+      title: "Disk Usage of Artifacts",
+      content: (
+        <ArtifactsDiskUsageList
+          tasksWithHierarchy={tasksWithHierarchy}
+          artifacts={report.artifacts}
+        />
+      ),
+      width: "75%",
+    });
+  }
+
   async function downloadWorkflowYAML() {
     try {
       const a = document.createElement("a");
@@ -404,8 +418,6 @@ export default function TaskListView({
     }
   }
 
-  const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
-
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -424,6 +436,7 @@ export default function TaskListView({
             "Download Log"
           ),
       },
+      { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
     ],
   };
 

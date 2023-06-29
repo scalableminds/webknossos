@@ -14,7 +14,7 @@ const moveForward = () => {
 };
 const moveBackward = () => MoveHandlers.moveW(-1, true);
 
-const BUTTON_STYLE = { userSelect: "none" } as const;
+const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
 const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
@@ -27,7 +27,7 @@ export function FloatingMobileControls() {
   return (
     <div
       className="floating-buttons-bar"
-      style={{ position: "absolute", left: 8, bottom: 28, zIndex: 1000 }}
+      style={{ position: "fixed", left: 8, bottom: 28, zIndex: 1000 }}
     >
       <Space>
         <ButtonComponent

@@ -120,6 +120,27 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
     });
   };
 
+  handleOnKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const { selectionStart, value } = event.target as HTMLInputElement;
+      const vec = Utils.stringToNumberArray(value) as T;
+
+      // count commas before the selection to obtain the index
+      const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(
+        (el: string) => el === ",",
+      ).length;
+      if (event.key === "ArrowUp") {
+        vec[vectorIndex] += 1;
+      } else {
+        vec[vectorIndex] -= 1;
+      }
+      this.props.onChange(vec);
+      const text = vec.join(", ");
+      this.setState({ text });
+    }
+  };
+
   render() {
     const {
       style,
@@ -134,6 +155,7 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.text}
+        onKeyDown={this.handleOnKeyDown}
         style={
           autoSize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }

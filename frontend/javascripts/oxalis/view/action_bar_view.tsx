@@ -73,10 +73,14 @@ function AdditionalCoordinatesInputView() {
   };
   const changeAdditionalCoordinatesFromVector = (values: number[]) => {
     if (additionalCoords != null) {
-      additionalCoords.map((el, index) => ({
-        ...el,
-        value: values[index],
-      }));
+      dispatch(
+        setAdditionalCoordinates(
+          additionalCoords.map((el, index) => ({
+            ...el,
+            value: values[index],
+          })),
+        ),
+      );
     }
   };
 

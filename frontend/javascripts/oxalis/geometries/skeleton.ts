@@ -35,14 +35,12 @@ type BufferCollection = {
   material: THREE.RawShaderMaterial;
 };
 
-// todop: dont hardcode
-const additionalCoordLength = 2;
-
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 const NodeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
 
+    const additionalCoordLength = (Store.getState().flycam.additionalCoords ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
@@ -70,6 +68,7 @@ const EdgeBufferHelperType = {
       new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
     );
 
+    const additionalCoordLength = (Store.getState().flycam.additionalCoords ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
@@ -111,7 +110,7 @@ class Skeleton {
   stopStoreListening: () => void;
 
   constructor(
-    skeletonTracingSelectorFn: (arg0: OxalisState) => Maybe<SkeletonTracing>,
+    skeletonTracingSelectorFn: (state: OxalisState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;

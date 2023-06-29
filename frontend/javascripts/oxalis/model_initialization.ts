@@ -9,7 +9,6 @@ import type {
   ServerTracing,
   ServerEditableMapping,
   APICompoundType,
-  AdditionalCoordinateWithBounds,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {

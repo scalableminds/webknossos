@@ -694,7 +694,7 @@ export function parseNml(nmlString: string): Promise<{
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
-              // todop: dont hardcode
+              // todop: dont hardcode (parsing nmls)
               additionalCoords: null,
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),

@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -238,9 +239,38 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_ADDITIONAL_COORDINATES": {
+      const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(state.dataset);
+      const expectedAdditionalCoordinatesCount = Object.keys(unifiedAdditionalCoordinates).length;
+
+      // In case the specified additional coordinates don't cover all existing additional
+      // coordinates, add the missing coordinates back.
+      // This *should* not happen, but in case of a bug somewhere, it's better to guard
+      // against this here (for example, if a skeleton node doesn't have the necessary
+      // additional coordinates, the UI shouldn't forget about the other additional
+      // coordinates).
+      let { values } = action;
+      if (action.values == null || action.values.length != expectedAdditionalCoordinatesCount) {
+        values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+          const existingAdditionalCoords = state.flycam.additionalCoords;
+          const fallbackValue =
+            (existingAdditionalCoords != null ? existingAdditionalCoords[index]?.value : null) ??
+            Math.floor((bounds[1] - bounds[0]) / 2);
+          if (values) {
+            const specifiedValue = values.find((element) => element.name === name);
+            if (specifiedValue) {
+              return {
+                name,
+                value: specifiedValue.value,
+              };
+            }
+          }
+          return { name, value: fallbackValue };
+        });
+      }
+
       return update(state, {
         flycam: {
-          additionalCoords: { $set: action.values },
+          additionalCoords: { $set: values },
         },
       });
     }

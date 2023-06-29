@@ -185,12 +185,15 @@ class DataCube {
     return mappedId != null ? mappedId : idToMap;
   }
 
-  private getCubeKey(zoomStep: number, dims: AdditionalCoordinate[] | undefined | null) {
-    return [zoomStep, ...(dims ?? []).map((el) => el.value)].join("-");
+  private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
+    const relevantCoords = (allCoords ?? []).filter(
+      (coord) => this.additionalCoordsBounds[coord.name] != null,
+    );
+    return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
 
-  isWithinBounds([x, y, z, zoomStep, dims]: BucketAddress): boolean {
-    const cube = this.getOrCreateCubeEntry(zoomStep, dims);
+  isWithinBounds([x, y, z, zoomStep, coords]: BucketAddress): boolean {
+    const cube = this.getOrCreateCubeEntry(zoomStep, coords);
     if (cube == null) {
       return false;
     }
@@ -198,13 +201,13 @@ class DataCube {
     return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
   }
 
-  getBucketIndexAndCube([x, y, z, zoomStep, dims]: BucketAddress): [
+  getBucketIndexAndCube([x, y, z, zoomStep, coords]: BucketAddress): [
     number | null | undefined,
     CubeEntry | null,
   ] {
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
-    const cube = this.getOrCreateCubeEntry(zoomStep, dims);
+    const cube = this.getOrCreateCubeEntry(zoomStep, coords);
 
     if (cube != null) {
       const { boundary } = cube;
@@ -217,19 +220,21 @@ class DataCube {
 
   getOrCreateCubeEntry(
     zoomStep: number,
-    dims: AdditionalCoordinate[] | null | undefined,
+    coords: AdditionalCoordinate[] | null | undefined,
   ): CubeEntry | null {
-    const cubeKey = this.getCubeKey(zoomStep, dims);
+    const cubeKey = this.getCubeKey(zoomStep, coords);
     if (this.cubes[cubeKey] == null) {
       const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
       if (resolution == null) {
         return null;
       }
 
-      for (const dim of dims || []) {
-        const { bounds } = this.additionalCoordsBounds[dim.name];
-        if (dim.value < bounds[0] || dim.value >= bounds[1]) {
-          return null;
+      for (const coord of coords || []) {
+        if (coord.name in this.additionalCoordsBounds) {
+          const { bounds } = this.additionalCoordsBounds[coord.name];
+          if (coord.value < bounds[0] || coord.value >= bounds[1]) {
+            return null;
+          }
         }
       }
 

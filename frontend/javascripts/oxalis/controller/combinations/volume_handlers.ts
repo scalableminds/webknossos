@@ -77,7 +77,12 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     globalPos,
   );
   // Make sure the corresponding bucket is loaded
-  await api.data.getDataValue(segmentationLayerName, globalPos, renderedZoomStepForCameraPosition);
+  await api.data.getDataValue(
+    segmentationLayerName,
+    globalPos,
+    renderedZoomStepForCameraPosition,
+    additionalCoords,
+  );
   return segmentationCube.getMappedDataValue(
     globalPos,
     additionalCoords,

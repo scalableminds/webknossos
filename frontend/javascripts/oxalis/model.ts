@@ -225,9 +225,9 @@ export class OxalisModel {
       globalMousePosition,
     );
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
-    const getIdForPos = (pos, usableZoomStep) => {
-      const id = cube.getDataValue(pos, null, usableZoomStep);
+    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
+      const additionalCoords = Store.getState().flycam.additionalCoords;
+      const id = cube.getDataValue(pos, additionalCoords, null, usableZoomStep);
       return {
         id: cube.mapId(id),
         unmappedId: id,

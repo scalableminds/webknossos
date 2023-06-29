@@ -37,7 +37,7 @@ import {
   mergeAgglomerate,
   UpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { Model, api } from "oxalis/singletons";
+import { Model, api, Store } from "oxalis/singletons";
 import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,
@@ -644,8 +644,10 @@ function* prepareSplitOrMerge(
   const agglomerateFileMag = resolutionInfo.getLowestResolution();
   const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
 
-  const getDataValue = (position: Vector3) =>
-    api.data.getDataValue(layerName, position, agglomerateFileZoomstep);
+  const getDataValue = (position: Vector3) => {
+    const { additionalCoords } = Store.getState().flycam;
+    return api.data.getDataValue(layerName, position, agglomerateFileZoomstep, additionalCoords);
+  };
 
   return { layerName, agglomerateFileMag, getDataValue };
 }

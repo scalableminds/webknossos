@@ -1392,8 +1392,6 @@ class DataApi {
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<number> {
-    // todop: check callers
-
     let zoomStep;
 
     if (_zoomStep != null) {

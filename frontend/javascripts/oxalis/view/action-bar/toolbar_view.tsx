@@ -1127,7 +1127,7 @@ export default function ToolbarView() {
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
             }
             disabled={
-              isAgglomerateMappingEnabled.value ||
+              !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
             style={NARROW_BUTTON_STYLE}

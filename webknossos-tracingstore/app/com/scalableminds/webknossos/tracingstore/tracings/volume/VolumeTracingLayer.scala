@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSourceDescriptorService}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -23,12 +23,13 @@ import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  override def dataVaultServiceOpt: Option[DataVaultService] = None
+  override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
 
-class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
+class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+    extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
@@ -44,7 +45,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
     bucketStreamWithVersion(layer, version)
 }
 
-class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+    extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
@@ -78,7 +80,8 @@ case class VolumeTracingLayer(
     userToken: Option[String],
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
-  implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
+  implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+  implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits {
 
@@ -102,7 +105,7 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     volumeBucketProvider

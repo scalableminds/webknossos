@@ -89,7 +89,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)
+                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {

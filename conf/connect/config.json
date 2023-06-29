@@ -1,7 +1,0 @@
-{
-    "server": {"host": "0.0.0.0", "port": 8000, "url": "http://localhost:8000"},
-    "datastore": {"name": "connect", "key": "secret-key"},
-    "webknossos": {"url": "http://localhost:9000"},
-    "backends": {"neuroglancer": {}},
-    "datasets_path": "data/datasets.json"
-}

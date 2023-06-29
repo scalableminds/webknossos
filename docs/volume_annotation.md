@@ -65,16 +65,18 @@ This button opens up a modal that starts a long-running job which will materiali
 
 See the section on [proofreading](./proof_reading.md).
 
-### Volume Flood Fills
+### AI Quick Select
+The built-in quick select tools allows you draw a a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you.
 
-WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
+The feature is based on the [Segment Anything Model](https://arxiv.org/abs/2304.02643) and works across a wide range of imaging modalities.
 
-- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
-- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
+The AI quick select tool in combination with the volume interpolation feature speeds ups annotation workflows significantly.
 
-Due to performance reasons, 3D flood-fills only work in a small, local bounding box. WEBKNOSSOS will add a bounding box around the affected area. To truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a WEBKNOSSOS job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
+![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_AI_quick_select.mp4)
 
-Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as a new dataset in your dashboard.
+To use the AI quick selection tool, select it from the tool bar at the top of the screen. Make sure the AI option is toggled (default setting) otherwise the quick select tool will default to using flood-fills which depending on your situation is also very handy.
+
+![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/05_interpolating.mp4)
 
 ### Volume Interpolation
 
@@ -92,6 +94,16 @@ Similar to the above interpolation feature, you can also extrude the currently a
 This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12).
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
 
+### Volume Flood Fills
+
+WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
+
+- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
+- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
+
+Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
+For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
+
 ### Mappings / On-Demand Agglomeration
 
 With WEBKNOSSOS it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation.
@@ -106,30 +118,6 @@ Mapping files are stored as JSON or HDF5 files. [Read the section on data format
 
 <!-- ![An example of applying a mapping file to agglomerate individual segments from an automated over-segmentation. WEBKNOSSOS applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
-### Download File Format
-
-Volume annotations can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
-The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
-Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
-
-!!!info
-In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
-Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
-
-```
-volumetracing.zip # A ZIP file containing the volume annotation
-├─ data.zip # Container for WKW dataset
-│ └─ 1 # Magnification step folder
-│   ├─ z48
-│   │ ├─ y5444
-│   │ │ └─ x5748.wkw # Actual WKW bucket file (32^3 voxel)
-│   │ └─ y5445/...
-│   ├─ z49/...
-│   └─ header.wkw # Information about the WKW files
-└─ volumetracing.nml # Annotation metadata NML file
-```
-
-After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB, and other languages](https://github.com/scalableminds/webknossos-wrap/).
 
 ## Hybrid Annotations
 
@@ -140,5 +128,4 @@ With hybrid annotations, you can use an existing skeleton as a guide to support 
 Alternatively, comments on skeleton nodes can be used to label/mark specific cells and positions during a volume annotation.
 
 WEBKNOSSOS also supports pure skeleton or pure volume annotations for dedicated tasks/projects or backward compatibility.
-Those can be converted to a hybrid annotation, by clicking the `Convert to Hybrid` button in the info tab.
-This conversion cannot be reversed.
+Those can be converted to a hybrid annotation, by adding a volume/skeleton layer by clicking the `Add Volume Annotation Layer` button in the left-hand layers tab.

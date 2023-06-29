@@ -1,5 +1,5 @@
 # [WEBKNOSSOS](https://webknossos.org/)
-<img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
+<img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/logo-icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
 WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
 * Fly through your data for fast skeletonization and proof-reading

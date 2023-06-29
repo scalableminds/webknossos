@@ -286,6 +286,13 @@ export type DatasetLayerConfiguration = {
   readonly gammaCorrectionValue: number;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
+
+export type BrushPresets = {
+  readonly small: number;
+  readonly medium: number;
+  readonly large: number;
+};
+
 export type DatasetConfiguration = {
   readonly fourBit: boolean;
   readonly interpolation: boolean;
@@ -334,6 +341,7 @@ export type UserConfiguration = {
   readonly centerNewNode: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
+  readonly presetBrushSizes: BrushPresets | null;
   readonly rotateValue: number;
   readonly sortCommentsAsc: boolean;
   readonly sortTreesByName: boolean;
@@ -488,6 +496,8 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
+  readonly showAINucleiSegmentationModal: boolean;
+  readonly showAINeuronSegmentationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;

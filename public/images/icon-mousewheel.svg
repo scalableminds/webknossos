@@ -1,16 +1,62 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 172 279" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-194.1,-144.364)">
-        <path d="M359.054,230.341C359.054,186.752 323.666,151.364 280.077,151.364C236.489,151.364 201.1,186.752 201.1,230.341L201.1,336.399C201.1,379.988 236.489,415.376 280.077,415.376C323.666,415.376 359.054,379.988 359.054,336.399L359.054,230.341Z" style="fill:none;stroke:rgb(77,77,77);stroke-width:14px;"/>
-    </g>
-    <g transform="matrix(0.256014,0,0,0.243219,14.2734,35.1815)">
-        <path d="M359.054,234.496C359.054,188.614 323.666,151.364 280.077,151.364C236.489,151.364 201.1,188.614 201.1,234.496L201.1,332.245C201.1,378.126 236.489,415.376 280.077,415.376C323.666,415.376 359.054,378.126 359.054,332.245L359.054,234.496Z" style="fill:none;stroke:rgb(77,77,77);stroke-width:56.07px;"/>
-    </g>
-    <g transform="matrix(1,0,0,0.660982,-194.1,-27.2088)">
-        <path d="M259.858,120.696L280.077,87.801L300.296,119.523" style="fill:none;stroke:rgb(77,77,77);stroke-width:16.52px;"/>
-    </g>
-    <g transform="matrix(-1,-1.22465e-16,8.09469e-17,-0.660982,366.054,235.414)">
-        <path d="M259.858,120.696L280.077,87.801L300.296,119.523" style="fill:none;stroke:rgb(77,77,77);stroke-width:16.52px;"/>
-    </g>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="17"
+   height="28"
+   viewBox="0 0 4.4979165 7.4083335"
+   version="1.1"
+   id="svg5349"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="icon-mousewheel.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview5351"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="22.627417"
+     inkscape:cx="11.114835"
+     inkscape:cy="12.882602"
+     inkscape:window-width="1920"
+     inkscape:window-height="1068"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs5346" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       d="m 0.149532,2.287176 c 0,-1.158668 0.940631,-2.099299 2.0993,-2.099299 1.15892,0 2.099552,0.940631 2.099552,2.099299 v 2.833727 c 0,1.158669 -0.940632,2.099554 -2.099552,2.099554 -1.158669,0 -2.0993,-0.940885 -2.0993,-2.099554 z"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       id="path122" />
+    <path
+       d="M 1.6811054,1.7998068 2.2485759,1.230526 2.8190651,1.7998068"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       id="path126" />
+    <path
+       d="M 2.8160607,3.6265806 2.2485903,4.1958613 1.6781011,3.6265806"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       id="path130" />
+    <ellipse
+       cx="2.2490449"
+       cy="2.7316446"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.211667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       id="circle134"
+       rx="0.42892316"
+       ry="0.58837533" />
+  </g>
 </svg>

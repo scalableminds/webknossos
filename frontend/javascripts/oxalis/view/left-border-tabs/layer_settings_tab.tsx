@@ -789,7 +789,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (foundPosition && foundResolution) {
       const layer = getLayerByName(dataset, layerName, true);
-      const transformMatrix = getTransformsForLayerOrNull(layer);
+      const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);
         // Transform the found position according to the matrix.
@@ -815,7 +815,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     await clearCache(this.props.dataset, layerName);
     this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
-    window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 

@@ -27,9 +27,10 @@ In particular, the following file formats are supported:
 - Single-file images (tif, czi, nifti, raw)
 - KNOSSOS file hierarchy 
 
-Note, for datasets in the Zarr, N5 and Neuroglancer Precomputed formats uploading and automatic conversion are not supported.
-Instead, they can be directly streamed from an HTTP server or the cloud.
-See the page on [datasets](./datasets.md) for uploading and configuring these formats.
+!!!info
+    Note, for datasets in the Zarr, N5 and Neuroglancer Precomputed formats uploading and automatic conversion are not supported.
+    Instead, they can be directly streamed from an HTTP server or the cloud.
+    See the page on [datasets](./datasets.md) for uploading and configuring these formats.
 
 #### Single-Layer Image File Sequence
 When uploading multiple image files, these files are sorted numerically, and each one is interpreted as one section within a 3D dataset.
@@ -245,6 +246,32 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
   + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `float` (32-bit) or `double` (64-bit).
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
+
+#### Download "Volume Annotation" File Format
+
+Volume annotations can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
+The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
+Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
+
+!!!info
+    In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
+    Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
+
+```
+volumetracing.zip # A ZIP file containing the volume annotation
+├─ data.zip # Container for WKW dataset
+│ └─ 1 # Magnification step folder
+│   ├─ z48
+│   │ ├─ y5444
+│   │ │ └─ x5748.wkw # Actual WKW bucket file (32^3 voxel)
+│   │ └─ y5445/...
+│   ├─ z49/...
+│   └─ header.wkw # Information about the WKW files
+└─ volumetracing.nml # Annotation metadata NML file
+```
+
+After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python and MATLAB](./tooling.md).
+
 
 ### Converting with WEBKNOSSOS Cuber
 

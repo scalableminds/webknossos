@@ -4,12 +4,13 @@ import com.scalableminds.util.cache.AlfuCache
 
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
 /*
  * The BinaryDataService needs to be instantiated as singleton to provide a shared DataCubeCache.
@@ -18,11 +19,12 @@ import javax.inject.Inject
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
-                                        agglomerateService: AgglomerateService,
-                                        applicationHealthService: ApplicationHealthService,
-                                        dataVaultService: DataVaultService,
-                                        datasetErrorLoggingService: DatasetErrorLoggingService)
+class BinaryDataServiceHolder @Inject()(
+    config: DataStoreConfig,
+    agglomerateService: AgglomerateService,
+    applicationHealthService: ApplicationHealthService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
@@ -44,7 +46,7 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
     Paths.get(config.Datastore.baseFolder),
     config.Datastore.Cache.DataCube.maxEntries,
     Some(agglomerateService),
-    Some(dataVaultService),
+    Some(remoteSourceDescriptorService),
     Some(applicationHealthService),
     Some(sharedChunkContentsCache),
     Some(datasetErrorLoggingService)

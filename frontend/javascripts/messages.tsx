@@ -47,6 +47,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   useLegacyBindings: "Classic Controls",
   blendMode: "Blend Mode",
   renderWatermark: "Logo in Screenshots",
+  antialiasRendering: "Antialiasing",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -77,6 +78,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   blendMode:
     "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
+  antialiasRendering: "Antialias rendering (can impact performance)",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { document } from "libs/window";
+import { Store } from "oxalis/singletons";
 let renderer: THREE.WebGLRenderer | null = null;
 
 function getRenderer(): THREE.WebGLRenderer {
@@ -20,7 +21,7 @@ function getRenderer(): THREE.WebGLRenderer {
           // This caused 1-fragment-wide stripes in the rendering output. Debugging the shader code
           // showed that the bucket addresses which are passed from vertex to fragment shader
           // were interpolated sometimes. Therefore, antialiasing is disabled for now.
-          antialias: false,
+          antialias: Store.getState().userConfiguration.antialiasRendering,
         })
       : {}
   ) as THREE.WebGLRenderer;

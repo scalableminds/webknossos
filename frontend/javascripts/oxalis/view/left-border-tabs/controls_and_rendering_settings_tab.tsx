@@ -44,6 +44,12 @@ type ControlsAndRenderingSettingsTabProps = {
   dataset: APIDataset;
 };
 
+function askUserToReload() {
+  Toast.warning("Please reload the page to allow the changes to take full effect.", {
+    sticky: true,
+  });
+}
+
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -184,9 +190,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take full effect.", {
-      sticky: true,
-    });
+    askUserToReload();
     this.onChangeUser.gpuMemoryFactor(gpuFactor);
   };
 
@@ -352,6 +356,26 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               </SwitchSetting>
             </div>
           )}
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.antialiasRendering}>
+                {settingsLabels.antialiasRendering}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.antialiasRendering}
+            onChange={(arg) => {
+              askUserToReload();
+              this.onChangeUser.antialiasRendering(arg);
+            }}
+          >
+            {this.props.userConfiguration.antialiasRendering && (
+              <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
+                <ExclamationCircleOutlined
+                  style={{ marginLeft: 8, color: "red", verticalAlign: "middle" }}
+                />
+              </Tooltip>
+            )}
+          </SwitchSetting>
           <SwitchSetting
             label={
               <Tooltip title={settingsTooltips.renderMissingDataBlack}>

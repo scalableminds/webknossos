@@ -351,7 +351,8 @@ class UserService @Inject()(conf: WkConf,
         "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
-        "isSuperUser" -> multiUser.isSuperUser
+        "isSuperUser" -> multiUser.isSuperUser,
+        "isEmailVerified" -> multiUser.isEmailVerified,
       )
     }
   }

@@ -24,7 +24,7 @@ export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
 
-export function keys<T extends string | number | symbol>(o: Record<T, any>): T[] {
+export function keys<T extends string>(o: Record<T, any>): T[] {
   return Object.keys(o) as Array<keyof typeof o>;
 }
 

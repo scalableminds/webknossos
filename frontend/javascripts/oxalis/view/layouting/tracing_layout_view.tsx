@@ -197,7 +197,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   handleTouch = () => {
     this.lastTouchTimeStamp = Date.now();
-    return this.setState({ showFloatingMobileButtons: true });
+    this.setState({ showFloatingMobileButtons: true });
   };
 
   handleMouseOver = () => {
@@ -208,7 +208,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // were never shown, anyway.
       return;
     }
-    return this.setState({ showFloatingMobileButtons: false });
+
+    this.setState({ showFloatingMobileButtons: false });
+    this.lastTouchTimeStamp = null;
   };
 
   showContextMenuAt = (

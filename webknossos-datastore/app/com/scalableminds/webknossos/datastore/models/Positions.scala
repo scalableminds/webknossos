@@ -94,7 +94,8 @@ case class BucketPosition(
     )
 
   def hasNegativeComponent: Boolean =
-    voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent
+    voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent || AdditionalCoordinateRequest
+      .anyValueNegative(additionalCoordinates)
 
   def toVec3IntProto: Vec3IntProto = Vec3IntProto(bucketX, bucketY, bucketZ)
 

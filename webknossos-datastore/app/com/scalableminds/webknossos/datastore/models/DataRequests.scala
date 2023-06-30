@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.webknossos.datastore.geometry.AdditionalCoordinateProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import play.api.libs.json.{Json, OFormat}
@@ -76,4 +77,17 @@ case class AdditionalCoordinateRequest(
 
 object AdditionalCoordinateRequest {
   implicit val jsonFormat: OFormat[AdditionalCoordinateRequest] = Json.format[AdditionalCoordinateRequest]
+
+  def toProto(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Seq[AdditionalCoordinateProto] =
+    acOpt match {
+      case Some(additionalCoordinateRequests) =>
+        additionalCoordinateRequests.map(ac => AdditionalCoordinateProto(ac.name, ac.value))
+      case None => Seq()
+    }
+
+  def anyValueNegative(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Boolean =
+    acOpt match {
+      case Some(additionalCoordinateRequests) => additionalCoordinateRequests.exists(_.value < 0)
+      case None                               => false
+    }
 }

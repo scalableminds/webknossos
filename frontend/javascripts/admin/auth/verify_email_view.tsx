@@ -34,13 +34,13 @@ function showVerificationErrorToast(errorMessage: string) {
 export function showVerificationReminderToast() {
   Toast.warning(
     <>
-      Your email address is not verified yet. Please check your emails or
+      Your email address is not verified yet. Please check your emails or{" "}
       <a href="#" type="link" onClick={handleResendVerificationEmail}>
         resend the verification email
       </a>{" "}
       to avoid being locked out.
     </>,
-    { key: VERIFICATION_ERROR_TOAST_KEY },
+    { key: VERIFICATION_ERROR_TOAST_KEY, sticky: true },
   );
 }
 

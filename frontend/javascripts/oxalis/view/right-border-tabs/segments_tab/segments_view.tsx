@@ -1022,10 +1022,10 @@ class SegmentsView extends React.Component<Props, State> {
   handleRefreshMeshes = (groupId: number) => {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return;
+    //TODO I didnt find a better way to call the visiblesegmentationlayer. one other way would be to pass it into the function. but thats not useful for functions below-
+    // so my solution is a little more code duplication. putting it higher up isnt really a solution.
 
-    segmentGroup.forEach((segment) => {
+    this.handlePerSegment(groupId, (segment) => {
       if (
         Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
           segment.id
@@ -1039,10 +1039,7 @@ class SegmentsView extends React.Component<Props, State> {
   handleRemoveMeshes = (groupId: number) => {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return;
-
-    segmentGroup.forEach((segment) => {
+    this.handlePerSegment(groupId, (segment) => {
       if (
         Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
           segment.id
@@ -1054,12 +1051,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleChangeMeshVisibility = (layerName: string, groupId: number, isVisible: boolean) => {
-    const { visibleSegmentationLayer } = this.props;
-    if (visibleSegmentationLayer == null) return;
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return;
-
-    segmentGroup.forEach((segment) => {
+    this.handlePerSegment(groupId, (segment) => {
       if (Store.getState().localSegmentationData[layerName].isosurfaces[segment.id] != null) {
         Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible));
       }
@@ -1073,12 +1065,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleLoadMeshesAdHoc = (groupId: number) => {
-    const { visibleSegmentationLayer } = this.props;
-    if (visibleSegmentationLayer == null) return;
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return;
-
-    segmentGroup.forEach((segment) => {
+    this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
       this.props.loadAdHocMesh(segment.id, segment.somePosition);
     });
@@ -1100,13 +1087,16 @@ class SegmentsView extends React.Component<Props, State> {
     return segmentIdsWithoutPosition.sort();
   };
 
-  handleLoadMeshesFromFile = (groupId: number) => {
+  handlePerSegment(groupId: number, callback: (s: Segment) => void) {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const segmentGroup = this.getSegmentsOfGroup(groupId);
     if (segmentGroup == null) return;
+    segmentGroup.forEach(callback);
+  }
 
-    segmentGroup.forEach((segment) => {
+  handleLoadMeshesFromFile = (groupId: number) => {
+    this.handlePerSegment(groupId, (segment: Segment) => {
       if (segment.somePosition == null || this.props.currentMeshFile == null) return;
       this.props.loadPrecomputedMesh(
         segment.id,
@@ -1123,6 +1113,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   downloadAllMeshesForGroup = (groupId: number) => {
+    let segmentArray;
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const segmentGroup = this.getSegmentsOfGroup(groupId);

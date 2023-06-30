@@ -67,7 +67,7 @@ import {
 
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
-import VerifyEmailView from "admin/auth/verify_email_view";
+import VerifyEmailView, { showVerificationReminderToast } from "admin/auth/verify_email_view";
 
 const { Content } = Layout;
 
@@ -171,6 +171,12 @@ class ReactRouter extends React.Component<Props> {
       />
     );
   };
+
+  componentDidMount() {
+    if (this.props.activeUser && !this.props.activeUser.isEmailVerified) {
+      showVerificationReminderToast();
+    }
+  }
 
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = coalesce(TracingTypeEnum, match.params.type);

@@ -7,7 +7,42 @@ import { ServerErrorMessage } from "libs/request";
 import { useHistory } from "react-router-dom";
 import { Store } from "oxalis/singletons";
 
-const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
+export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
+
+export const handleResendVerificationEmail = async () => {
+  const { activeUser } = Store.getState();
+  if (activeUser) {
+    await requestVerificationMail();
+  } else {
+    Toast.error("Resending a verification link requires being logged in.");
+  }
+  Toast.close(VERIFICATION_ERROR_TOAST_KEY);
+};
+
+function showVerificationErrorToast(errorMessage: string) {
+  Toast.error(
+    <>
+      {errorMessage}{" "}
+      <a href="#" type="link" onClick={handleResendVerificationEmail}>
+        Resend verification email.
+      </a>
+    </>,
+    { sticky: true, key: VERIFICATION_ERROR_TOAST_KEY },
+  );
+}
+
+export function showVerificationReminderToast() {
+  Toast.warning(
+    <>
+      Your email address is not verified yet. Please check your emails or
+      <a href="#" type="link" onClick={handleResendVerificationEmail}>
+        resend the verification email
+      </a>{" "}
+      to avoid being locked out.
+    </>,
+    { key: VERIFICATION_ERROR_TOAST_KEY },
+  );
+}
 
 export default function VerifyEmailView({ token }: { token: string }) {
   const history = useHistory();
@@ -24,8 +59,6 @@ export default function VerifyEmailView({ token }: { token: string }) {
   );
 
   useEffect(() => {
-    console.log("exception", exception);
-    console.log("result", result);
     if (result) {
       Toast.success("Successfully verified your email.");
     }
@@ -37,24 +70,8 @@ export default function VerifyEmailView({ token }: { token: string }) {
           .join(" ");
       }
       errorMessage = errorMessage || "Verification failed.";
-      const handleResend = async () => {
-        const { activeUser } = Store.getState();
-        if (activeUser) {
-          await requestVerificationMail();
-        } else {
-          Toast.error("Resending a verification link requires being logged in.");
-        }
-        Toast.close(VERIFICATION_ERROR_TOAST_KEY);
-      };
-      Toast.error(
-        <>
-          {errorMessage}{" "}
-          <a href="#" type="link" onClick={handleResend}>
-            Resend verification email.
-          </a>
-        </>,
-        { sticky: true, key: VERIFICATION_ERROR_TOAST_KEY },
-      );
+
+      showVerificationErrorToast(errorMessage);
     }
 
     if (result || exception) {

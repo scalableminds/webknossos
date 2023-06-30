@@ -794,6 +794,27 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  getSetGroupColorMenuItem = (id: number): ItemType => {
+    const isEditingDisabled = !this.props.allowUpdate;
+    return {
+      key: "changeGroupColor",
+      disabled: isEditingDisabled,
+      label: (
+        <ChangeColorMenuItemContent
+          title="Change Group Color"
+          isDisabled={isEditingDisabled}
+          onSetColor={(color) => {
+            if (getVisibleSegmentationLayer == null) {
+              return;
+            }
+            this.setGroupColor(id, color);
+          }}
+          rgb={[0.5, 0.5, 0.5]}
+        />
+      ),
+    };
+  };
+
   getLoadMeshesMenuItem = (id: number): ItemType => {
     if (this.props.currentMeshFile != null) {
       return {
@@ -863,10 +884,133 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  getReloadMenuItem = (groupId: number): ItemType => {
+    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
+      ? {
+          key: "reloadMeshes",
+          label: (
+            <div
+              onClick={() => {
+                if (this.props.visibleSegmentationLayer == null) {
+                  return;
+                }
+                this.handleRefreshMeshes(groupId);
+                this.handleSegmentDropdownMenuVisibility(groupId, false);
+              }}
+            >
+              <ReloadOutlined />
+              Refresh all meshes
+            </div>
+          ),
+        }
+      : null;
+  };
+
+  getRemoveMeshes = (groupId: number): ItemType => {
+    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
+      ? {
+          key: "removeMeshes",
+          label: (
+            <div
+              onClick={() => {
+                if (this.props.visibleSegmentationLayer == null) {
+                  // Satisfy TS
+                  return;
+                }
+                this.handleRemoveMeshes(groupId);
+                this.handleSegmentDropdownMenuVisibility(groupId, false);
+              }}
+            >
+              <DeleteOutlined />
+              Remove all meshes
+            </div>
+          ),
+        }
+      : null;
+  };
+
+  getDownLoadMeshesItem = (groupId: number): ItemType => {
+    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
+      ? {
+          key: "downloadAllMeshes",
+          label: (
+            <div
+              onClick={() => {
+                if (this.props.visibleSegmentationLayer == null) {
+                  // Satisfy TS
+                  return;
+                }
+                this.downloadAllMeshesForGroup(groupId);
+                this.handleSegmentDropdownMenuVisibility(groupId, false);
+              }}
+            >
+              <DownloadOutlined />
+              Download all meshes
+            </div>
+          ),
+        }
+      : null;
+  };
+
+  getMoveSegementsHereItem = (groupId: number): ItemType => {
+    return this.state.selectedSegmentId != null
+      ? {
+          key: "moveHere",
+          onClick: () => {
+            if (
+              this.state.selectedSegmentId == null ||
+              this.props.visibleSegmentationLayer == null
+            ) {
+              // Satisfy TS
+              return;
+            }
+            this.props.updateSegment(
+              this.state.selectedSegmentId,
+              { groupId },
+              this.props.visibleSegmentationLayer.name,
+              true,
+            );
+            this.handleSegmentDropdownMenuVisibility(groupId, false);
+          },
+          disabled: !this.props.allowUpdate,
+          icon: <ArrowRightOutlined />,
+          label: "Move active segment here",
+        }
+      : null;
+  };
+
+  getShowMeshesItem = (groupId: number): ItemType => {
+    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
+      ? {
+          key: "showMeshesOfGroup",
+          label: (
+            <div
+              onClick={() => {
+                if (this.props.visibleSegmentationLayer == null) {
+                  // Satisfy TS
+                  return;
+                }
+                this.handleChangeMeshVisibility(
+                  this.props.visibleSegmentationLayer.name,
+                  groupId,
+                  !this.state.areSegmentsInGroupVisible[groupId],
+                );
+                this.handleSegmentDropdownMenuVisibility(groupId, false);
+              }}
+            >
+              <i className="fas fa-dice-d20" />
+              {this.state.areSegmentsInGroupVisible[groupId] ? "Hide" : "Show"} all meshes
+            </div>
+          ),
+        }
+      : null;
+  };
+
   setGroupColor(groupId: number, color: Vector3) {
     const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
     const segmentGroupToChangeColor = this.getSegmentsOfGroup(groupId);
-    if (segmentGroupToChangeColor == null || visibleSegmentationLayer == null) return;
+    if (segmentGroupToChangeColor == null) return;
 
     const actionArray = segmentGroupToChangeColor.map((segment) =>
       updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),
@@ -1219,133 +1363,12 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
-                    {
-                      key: "changeGroupColor",
-                      disabled: isEditingDisabled,
-                      label: (
-                        <ChangeColorMenuItemContent
-                          title="Change Group Color"
-                          isDisabled={isEditingDisabled}
-                          onSetColor={(color) => {
-                            if (getVisibleSegmentationLayer == null) {
-                              return;
-                            }
-                            this.setGroupColor(id, color);
-                          }}
-                          rgb={[0.5, 0.5, 0.5]}
-                        />
-                      ),
-                    },
+                    this.getSetGroupColorMenuItem(id),
                     this.getLoadMeshesMenuItem(id),
-                    this.state != null && this.doesGroupHaveAnyMeshes(id)
-                      ? {
-                          key: "reloadMeshes",
-                          label: (
-                            <div
-                              onClick={() => {
-                                if (this.props.visibleSegmentationLayer == null) {
-                                  // Satisfy TS
-                                  return;
-                                }
-                                this.handleRefreshMeshes(id);
-                                this.handleSegmentDropdownMenuVisibility(id, false);
-                              }}
-                            >
-                              <ReloadOutlined />
-                              Refresh all meshes
-                            </div>
-                          ),
-                        }
-                      : null,
-                    this.state != null && this.doesGroupHaveAnyMeshes(id)
-                      ? {
-                          key: "removeMeshes",
-                          label: (
-                            <div
-                              onClick={() => {
-                                if (this.props.visibleSegmentationLayer == null) {
-                                  // Satisfy TS
-                                  return;
-                                }
-                                this.handleRemoveMeshes(id);
-                                this.handleSegmentDropdownMenuVisibility(id, false);
-                              }}
-                            >
-                              <DeleteOutlined />
-                              Remove all meshes
-                            </div>
-                          ),
-                        }
-                      : null,
-                    this.state != null && this.doesGroupHaveAnyMeshes(id)
-                      ? {
-                          key: "showMeshesOfGroup",
-                          label: (
-                            <div
-                              onClick={() => {
-                                if (this.props.visibleSegmentationLayer == null) {
-                                  // Satisfy TS
-                                  return;
-                                }
-                                this.handleChangeMeshVisibility(
-                                  this.props.visibleSegmentationLayer.name,
-                                  id,
-                                  !this.state.areSegmentsInGroupVisible[id],
-                                );
-                                this.handleSegmentDropdownMenuVisibility(id, false);
-                              }}
-                            >
-                              <i className="fas fa-dice-d20" />
-                              {this.state.areSegmentsInGroupVisible[id] ? "Hide" : "Show"} all
-                              meshes
-                            </div>
-                          ),
-                        }
-                      : null,
-                    this.state != null && this.doesGroupHaveAnyMeshes(id)
-                      ? {
-                          key: "downloadAllMeshes",
-                          label: (
-                            <div
-                              onClick={() => {
-                                if (this.props.visibleSegmentationLayer == null) {
-                                  // Satisfy TS
-                                  return;
-                                }
-                                this.downloadAllMeshesForGroup(id);
-                                this.handleSegmentDropdownMenuVisibility(id, false);
-                              }}
-                            >
-                              <DownloadOutlined />
-                              Download all meshes
-                            </div>
-                          ),
-                        }
-                      : null,
-                    this.state.selectedSegmentId != null
-                      ? {
-                          key: "moveHere",
-                          onClick: () => {
-                            if (
-                              this.state.selectedSegmentId == null ||
-                              this.props.visibleSegmentationLayer == null
-                            ) {
-                              // Satisfy TS
-                              return;
-                            }
-                            this.props.updateSegment(
-                              this.state.selectedSegmentId,
-                              { groupId: id },
-                              this.props.visibleSegmentationLayer.name,
-                              true,
-                            );
-                            this.handleSegmentDropdownMenuVisibility(id, false);
-                          },
-                          disabled: isEditingDisabled,
-                          icon: <ArrowRightOutlined />,
-                          label: "Move active segment here",
-                        }
-                      : null,
+                    this.getReloadMenuItem(id),
+                    this.getRemoveMeshes(id),
+                    this.getDownLoadMeshesItem(id),
+                    this.getMoveSegementsHereItem(id),
                   ],
                 };
 

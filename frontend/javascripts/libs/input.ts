@@ -18,7 +18,7 @@ import { createNanoEvents, Emitter } from "nanoevents";
 // Each input method is contained in its own module. We tried to
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by libraries in the background.
-const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
+export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;

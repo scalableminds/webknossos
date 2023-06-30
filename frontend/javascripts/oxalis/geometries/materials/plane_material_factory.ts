@@ -627,8 +627,7 @@ class PlaneMaterialFactory {
           if (updatedLayerVisibility) {
             this.recomputeShaders();
           }
-          // TODO: Needed?
-          app.vent.trigger("rerender");
+          app.vent.emit("rerender");
         },
         true,
       ),
@@ -862,8 +861,7 @@ class PlaneMaterialFactory {
     this.material.fragmentShader = newFragmentShaderCode;
     this.material.vertexShader = newVertexShaderCode;
     this.material.needsUpdate = true;
-    // @ts-ignore
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }, RECOMPILATION_THROTTLE_TIME);
 
   getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {

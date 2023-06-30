@@ -1290,27 +1290,6 @@ function startSegmentationAnnotationDependentJob(
   });
 }
 
-export function startGlobalizeFloodfillsJob(
-  organizationName: string,
-  datasetName: string,
-  fallbackLayerName: string,
-  volumeLayerName: string | null | undefined,
-  newDatasetName: string,
-  annotationId: string,
-  annotationType: APIAnnotationType,
-): Promise<APIJob> {
-  return startSegmentationAnnotationDependentJob(
-    "globalizeFloodfills",
-    organizationName,
-    datasetName,
-    fallbackLayerName,
-    volumeLayerName,
-    newDatasetName,
-    annotationId,
-    annotationType,
-  );
-}
-
 export function startMaterializingVolumeAnnotationJob(
   organizationName: string,
   datasetName: string,

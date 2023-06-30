@@ -43,6 +43,7 @@ message VolumeTracing {
     optional bool mappingIsEditable = 18;
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
+    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
 }
 
 message SegmentGroup {

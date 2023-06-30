@@ -57,7 +57,7 @@ case class UpdateTracingVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
     info: Option[String] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None
+    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None
 ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =

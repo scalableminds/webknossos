@@ -146,9 +146,11 @@ Make sure that the PostgreSQL and Redis services are running before you start th
 
 ## Upgrades
 
-For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration guide](MIGRATIONS.released.md).
+When pulling newer versions, please check the changelog ([released](CHANGELOG.released.md) and [unreleased](CHANGELOG.unreleased.md)) and migration guide ([released](MIGRATIONS.released.md) and [unreleased](MIGRATIONS.unreleased.md)).
 
-## Tests
+Note: If the postgres schema changed, you may see compilation errors in the form of `value * is not a member of com.scalableminds.webknossos.schema.Tables.*` – run the SQL migrations from the guide or reset your database with `yarn refresh-schema` and restart the server to fix those.
+
+## Tests and Tools
 
 ```bash
 # Frontend linting
@@ -161,7 +163,7 @@ yarn format-frontend
 yarn format-backend
 
 # Frontend type checking
-yarn flow
+yarn tsc
 
 # Frontend tests
 yarn test-verbose
@@ -169,3 +171,5 @@ yarn test-verbose
 # End-to-end tests
 docker compose run e2e-tests
 ```
+
+For more commands, see the `scripts` section in [package.json](package.json).

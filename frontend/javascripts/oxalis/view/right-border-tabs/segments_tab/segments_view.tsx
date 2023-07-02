@@ -934,7 +934,8 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.tree.current.scrollTo({ key: selectedElement.key });
-    if ("color" in selectedElement) {
+    const isASegment = "color" in selectedElement;
+    if (isASegment) {
       this.onSelectSegment(selectedElement);
     }
   };

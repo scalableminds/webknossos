@@ -948,14 +948,7 @@ function* downloadIsosurfaceCellById(
   }
 
   try {
-    const stlDataViews = exportToStl(geometry);
-    // Encode isosurface and cell id property
-    const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
-    isosurfaceMarker.forEach((marker, index) => {
-      stlDataViews[0].setUint8(index, marker);
-    });
-    stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
-    const blob = new Blob(stlDataViews);
+    const blob = getStlBlob(geometry, segmentId);
     yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
@@ -965,12 +958,12 @@ function* downloadIsosurfaceCellById(
 }
 
 function* downloadIsosurfaceCellsAsZIP(
-  arrayOfCells: { cellName: string; segmentId: number; layerName: string }[],
+  cells: { cellName: string; segmentId: number; layerName: string }[],
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   try {
-    const promises = arrayOfCells.map((element) => {
+    const promises = cells.map((element) => {
       const geometry = segmentMeshController.getIsosurfaceGeometryInBestLOD(
         element.segmentId,
         element.layerName,
@@ -983,14 +976,7 @@ function* downloadIsosurfaceCellsAsZIP(
         });
         return;
       }
-      const stlDataViews = exportToStl(geometry);
-      // Encode isosurface and cell id property
-      const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
-      isosurfaceMarker.forEach((marker, index) => {
-        stlDataViews[0].setUint8(index, marker);
-      });
-      stlDataViews[0].setUint32(segmentIdIndex, element.segmentId, true);
-      const stlDataReader = new BlobReader(new Blob(stlDataViews));
+      const stlDataReader = new BlobReader(getStlBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.cellName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(promises);
@@ -1002,6 +988,17 @@ function* downloadIsosurfaceCellsAsZIP(
     Toast.error("Could not export to STL. See console for details");
   }
 }
+
+const getStlBlob = (geometry: THREE.Group, segmentId: number): Blob => {
+  const stlDataViews = exportToStl(geometry);
+  // Encode isosurface and cell id property
+  const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
+  isosurfaceMarker.forEach((marker, index) => {
+    stlDataViews[0].setUint8(index, marker);
+  });
+  stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+  return new Blob(stlDataViews);
+};
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
   yield* call(downloadIsosurfaceCellById, action.cellName, action.segmentId, action.layerName);

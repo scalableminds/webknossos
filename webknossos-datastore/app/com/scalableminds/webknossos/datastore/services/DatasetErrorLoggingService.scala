@@ -7,10 +7,12 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class DatasetErrorLoggingService @Inject()(val lifecycle: ApplicationLifecycle,
-                                           @Named("webknossos-datastore") val system: ActorSystem)
+class DatasetErrorLoggingService @Inject()(
+    val lifecycle: ApplicationLifecycle,
+    @Named("webknossos-datastore") val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
 

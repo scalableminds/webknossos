@@ -4,6 +4,6 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 
 object CoordinateTransformationType extends ExtendedEnumeration {
   type CoordinateTransformationType = Value
-  val affine: CoordinateTransformationType = Value
+  val affine, thin_plate_spline: CoordinateTransformationType = Value
 
 }

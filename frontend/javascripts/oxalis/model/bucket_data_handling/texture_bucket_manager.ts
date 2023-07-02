@@ -14,6 +14,7 @@ import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import app from "app";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -242,8 +243,7 @@ export default class TextureBucketManager {
 
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
-      // @ts-ignore
-      window.needsRerender = true;
+      app.vent.emit("rerender");
     }
 
     window.requestAnimationFrame(() => {

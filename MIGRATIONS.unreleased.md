@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...HEAD)
 
 ### Postgres Evolutions:
+- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)

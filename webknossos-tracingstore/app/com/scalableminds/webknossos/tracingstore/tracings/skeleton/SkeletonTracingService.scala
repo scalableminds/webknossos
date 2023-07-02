@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
+import com.scalableminds.webknossos.tracingstore.tracings.{SkeletonTracingMigrationService, TracingType, _}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Empty, Full}
@@ -21,7 +21,8 @@ class SkeletonTracingService @Inject()(
     val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
     val handledGroupIdStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val uncommittedUpdatesStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
+    val uncommittedUpdatesStore: TracingStoreRedisStore,
+    val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -30,8 +31,6 @@ class SkeletonTracingService @Inject()(
   val tracingType: TracingType.Value = TracingType.skeleton
 
   val tracingStore: FossilDBClient = tracingDataStore.skeletons
-
-  val tracingMigrationService: SkeletonTracingMigrationService.type = SkeletonTracingMigrationService
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 

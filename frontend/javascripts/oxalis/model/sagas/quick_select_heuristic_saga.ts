@@ -123,8 +123,13 @@ export function* prepareQuickSelect(
   const volumeLayer = yield* select((state) =>
     getSegmentationLayerForTracing(state, volumeTracing),
   );
-
-  if (!_.isEqual(getTransformsForLayer(colorLayer), getTransformsForLayer(volumeLayer))) {
+  const dataset = yield* select((state) => state.dataset);
+  if (
+    !_.isEqual(
+      getTransformsForLayer(dataset, colorLayer),
+      getTransformsForLayer(dataset, volumeLayer),
+    )
+  ) {
     Toast.warning(
       "Quick select is currently not supported if the color and volume layer use different transforms.",
     );

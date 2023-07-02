@@ -132,8 +132,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
         marginBottom: 20,
       }}
       bodyStyle={{
-        background:
-          "linear-gradient(rgba(85, 96, 255,  0.8), rgba(85, 96, 255,  0.7)), url(/assets/images/pricing/background_neuron_meshes.jpeg) 10% center / 120% no-repeat",
+        background: "#5660ff",
         color: "white",
       }}
     >

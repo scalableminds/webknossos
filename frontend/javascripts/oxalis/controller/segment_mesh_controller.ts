@@ -76,7 +76,7 @@ export default class SegmentMeshController {
       .onUpdate(function onUpdate() {
         // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         meshMaterial.opacity = this.opacity;
-        app.vent.trigger("rerender");
+        app.vent.emit("rerender");
       })
       .start();
     return mesh;

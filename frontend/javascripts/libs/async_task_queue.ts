@@ -1,6 +1,5 @@
 /* eslint-disable no-await-in-loop */
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
+import { createNanoEvents, Emitter } from "nanoevents";
 import _ from "lodash";
 import Deferred from "libs/deferred";
 import * as Utils from "libs/utils";
@@ -18,19 +17,13 @@ class AsyncTaskQueue {
   tasks: Array<AsyncTask> = [];
   deferreds: Map<AsyncTask, Deferred<void, any>> = new Map();
   doneDeferred: Deferred<void, any> = new Deferred();
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'nextArguments' has no initializer and is... Remove this comment to see the full error message
-  nextArguments: Array<any>;
   retryCount: number = 0;
   running: boolean = false;
   failed: boolean = false;
-  // Copied from backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
-  on: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
+  emitter: Emitter;
 
   constructor(maxRetry: number = 3, retryTimeMs: number = 1000, failureEventThreshold: number = 3) {
-    _.extend(this, BackboneEvents);
+    this.emitter = createNanoEvents();
 
     this.maxRetry = maxRetry;
     this.retryTimeMs = retryTimeMs;
@@ -112,7 +105,7 @@ class AsyncTaskQueue {
         const response = await currentTask();
         // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'AsyncTask | undefined' is not as... Remove this comment to see the full error message
         this.signalResolve(currentTask, response);
-        this.trigger("success");
+        this.emitter.emit("success");
       } catch (error) {
         this.retryCount++;
         // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'AsyncTask | undefined' is not as... Remove this comment to see the full error message
@@ -120,7 +113,7 @@ class AsyncTaskQueue {
 
         if (this.retryCount > this.failureEventThreshold) {
           console.error("AsyncTaskQueue failed with error", error);
-          this.trigger("failure", this.retryCount);
+          this.emitter.emit("failure", this.retryCount);
         }
 
         if (this.retryCount >= this.maxRetry) {
@@ -140,6 +133,10 @@ class AsyncTaskQueue {
     this.running = false;
     this.doneDeferred.resolve();
     this.doneDeferred = new Deferred();
+  }
+
+  on(event: string | number, cb: (...args: any) => void) {
+    this.emitter.on(event, cb);
   }
 }
 

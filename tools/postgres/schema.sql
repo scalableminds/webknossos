@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(102);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
 COMMIT TRANSACTION;
 
 
@@ -151,7 +151,9 @@ CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
   _dataSet CHAR(24) NOT NULL,
   layerName VARCHAR(256) NOT NULL,
   type VARCHAR(256) NOT NULL,
-  matrix JSONB
+  matrix JSONB,
+  correspondences JSONB,
+  insertionOrderIndex INT
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(

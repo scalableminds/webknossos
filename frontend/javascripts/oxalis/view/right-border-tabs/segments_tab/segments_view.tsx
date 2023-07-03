@@ -1348,6 +1348,7 @@ class SegmentsView extends React.Component<Props, State> {
                     this.getLoadMeshesMenuItem(id),
                     this.getReloadMenuItem(id),
                     this.getRemoveMeshes(id),
+                    this.getShowMeshesItem(id),
                     this.getDownLoadMeshesItem(id),
                     this.getMoveSegementsHereItem(id),
                   ],

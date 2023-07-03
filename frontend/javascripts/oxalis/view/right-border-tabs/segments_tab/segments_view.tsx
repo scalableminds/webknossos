@@ -363,11 +363,15 @@ class SegmentsView extends React.Component<Props, State> {
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
     // Insert the segments into the corresponding groups and create a
     // groupTree object that can be rendered using the antd Tree component
-    const { segments, segmentGroups } = nextProps;
+    const { segments, segmentGroups, isosurfaces } = nextProps;
+    if (segments == null) {
+      return {
+        prevProps: nextProps,
+      };
+    }
     if (
-      segments != null &&
-      (prevState.prevProps?.segments !== segments ||
-        prevState.prevProps?.segmentGroups !== segmentGroups)
+      prevState.prevProps?.segments !== segments ||
+      prevState.prevProps?.segmentGroups !== segmentGroups
     ) {
       const groupToSegmentsMap = createGroupToSegmentsMap(segments);
       const rootGroup = {
@@ -382,11 +386,34 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         prevProps: nextProps,
       };
-    } else {
+    }
+    if (prevState.prevProps?.isosurfaces !== isosurfaces) {
+      //if any segment is invisible, set to false
+      const newVisibleMap: { [groupId: number]: boolean } = {};
+      segmentGroups.forEach((group) => {
+        let value = true;
+        const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+        const segmentsOfG = groupToSegmentsMap[group.groupId];
+        if (segmentsOfG == null) return;
+        const segmentSum: number[] = segmentsOfG.map((i) => {
+          const segmentIsosurface = isosurfaces[i.id];
+          if (segmentIsosurface == null) return 1; //only care about explicitly invisible (not unloaded) meshes
+          return isosurfaces[i.id].isVisible ? 1 : 0;
+        });
+        if (segmentSum.reduce((a, b) => a + b, 0) < segmentsOfG.length) {
+          //at least one is invisible
+          value = false;
+        }
+        newVisibleMap[group.groupId] = value;
+      });
       return {
+        areSegmentsInGroupVisible: newVisibleMap,
         prevProps: nextProps,
       };
     }
+    return {
+      prevProps: nextProps,
+    };
   }
 
   async pollJobData(): Promise<void> {

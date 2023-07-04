@@ -9,7 +9,7 @@ import { mod } from "libs/utils";
 const InputGroup = Input.Group;
 type Props<S> = {
   data: Array<S>;
-  searchKey: keyof S;
+  searchKey: keyof S | ((item: S) => string);
   onSelect: (arg0: S) => void;
   children: React.ReactNode;
   provideShortcut?: boolean;
@@ -23,19 +23,24 @@ type State = {
 export default class AdvancedSearchPopover<
   S extends Record<string, any>,
 > extends React.PureComponent<Props<S>, State> {
-  state = {
+  state: State = {
     isVisible: false,
     searchQuery: "",
     currentPosition: null,
   };
 
   getAvailableOptions = memoizeOne(
-    (data: Array<S>, searchQuery: string, searchKey: keyof S): Array<S> =>
-      searchQuery !== ""
+    (data: Array<S>, searchQuery: string, searchKey: Props<S>["searchKey"]): Array<S> => {
+      const searchKeyFn =
+        typeof searchKey === "string"
+          ? (element: S) => element[searchKey]
+          : (searchKey as (s: S) => string);
+      return searchQuery !== ""
         ? data.filter(
-            (datum) => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
+            (datum) => searchKeyFn(datum).toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
           )
-        : [],
+        : [];
+    },
   );
 
   selectNextOptionWithOffset = (offset: number) => {
@@ -52,21 +57,17 @@ export default class AdvancedSearchPopover<
     if (currentPosition == null) {
       // If there was no previous currentPosition for the current search query,
       // set currentPosition to an initial value.
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
       currentPosition = offset >= 0 ? -1 : numberOfAvailableOptions;
     }
 
     // It can happen that currentPosition > availableOptions.length if trees are deleted.
     // In that case taking the min ensures that the last available option is treated as
     // selected and then the offset is added.
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition = Math.min(currentPosition, numberOfAvailableOptions - 1);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition = mod(currentPosition + offset, numberOfAvailableOptions);
     this.setState({
       currentPosition,
     });
-    // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
     this.props.onSelect(availableOptions[currentPosition]);
   };
 
@@ -97,7 +98,6 @@ export default class AdvancedSearchPopover<
     const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
     const numberOfAvailableOptions = availableOptions.length;
     // Ensure that currentPosition to not higher than numberOfAvailableOptions.
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
@@ -166,7 +166,6 @@ export default class AdvancedSearchPopover<
                         currentPosition: null,
                       })
                     }
-                    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                     addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
                     autoFocus
                   />

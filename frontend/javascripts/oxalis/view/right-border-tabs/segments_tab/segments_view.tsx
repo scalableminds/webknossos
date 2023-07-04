@@ -361,59 +361,59 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    // Insert the segments into the corresponding groups and create a
-    // groupTree object that can be rendered using the antd Tree component
     const { segments, segmentGroups, isosurfaces } = nextProps;
     if (segments == null) {
-      return {
-        prevProps: nextProps,
-      };
+      return { prevProps: nextProps };
     }
+    let updateStateObject = {
+      prevProps: nextProps,
+      groupTree: prevState.groupTree,
+      areSegmentsInGroupVisible: prevState.areSegmentsInGroupVisible,
+    };
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const rootGroup = {
+      name: "Root",
+      groupId: MISSING_GROUP_ID,
+      key: MISSING_GROUP_ID,
+      children: segmentGroups,
+    };
     if (
       prevState.prevProps?.segments !== segments ||
       prevState.prevProps?.segmentGroups !== segmentGroups
     ) {
-      const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-      const rootGroup = {
-        name: "Root",
-        groupId: MISSING_GROUP_ID,
-        key: MISSING_GROUP_ID,
-        children: nextProps.segmentGroups,
-      };
-
+      // Insert the segments into the corresponding groups and create a
+      // groupTree object that can be rendered using the antd Tree component
       const generatedGroupTree = constructTreeData([rootGroup], groupToSegmentsMap);
-      return {
+      updateStateObject = {
+        ...updateStateObject,
         groupTree: generatedGroupTree,
-        prevProps: nextProps,
       };
     }
     if (prevState.prevProps?.isosurfaces !== isosurfaces) {
-      //if any segment is invisible, set to false
+      //if any segment is invisible, set visibility false, so that the first action is to make all meshes visible
       const newVisibleMap: { [groupId: number]: boolean } = {};
-      segmentGroups.forEach((group) => {
-        let value = true;
-        const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-        const segmentsOfG = groupToSegmentsMap[group.groupId];
-        if (segmentsOfG == null) return;
-        const segmentSum: number[] = segmentsOfG.map((i) => {
-          const segmentIsosurface = isosurfaces[i.id];
+      const segmentGroupsWithRoot = [...segmentGroups, rootGroup];
+      segmentGroupsWithRoot.forEach((group) => {
+        let isVisible = true;
+        const segmentsOfGroup = groupToSegmentsMap[group.groupId];
+        if (segmentsOfGroup == null) return;
+        const visibilityOfSegments: number[] = segmentsOfGroup.map((segment) => {
+          const segmentIsosurface = isosurfaces[segment.id];
           if (segmentIsosurface == null) return 1; //only care about explicitly invisible (not unloaded) meshes
-          return isosurfaces[i.id].isVisible ? 1 : 0;
+          return isosurfaces[segment.id].isVisible ? 1 : 0;
         });
-        if (segmentSum.reduce((a, b) => a + b, 0) < segmentsOfG.length) {
-          //at least one is invisible
-          value = false;
+        if (visibilityOfSegments.reduce((a, b) => a + b, 0) < segmentsOfGroup.length) {
+          //at least one is invisible, so first option is to make every mesh visible
+          isVisible = false;
         }
-        newVisibleMap[group.groupId] = value;
+        newVisibleMap[group.groupId] = isVisible;
       });
       return {
+        ...updateStateObject,
         areSegmentsInGroupVisible: newVisibleMap,
-        prevProps: nextProps,
       };
     }
-    return {
-      prevProps: nextProps,
-    };
+    return updateStateObject;
   }
 
   async pollJobData(): Promise<void> {
@@ -842,7 +842,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getColorOfFirstSegmentOrNull = (groupId: number) => {
     const maybeGroupSegments = this.getSegmentsOfGroup(groupId);
-    if (maybeGroupSegments == null || maybeGroupSegments[0].color == null) {
+    if (maybeGroupSegments == null || maybeGroupSegments[0]?.color == null) {
       return [0.5, 0.5, 0.5] as Vector3;
     }
     return maybeGroupSegments[0].color;
@@ -1071,10 +1071,12 @@ class SegmentsView extends React.Component<Props, State> {
       }
     });
 
-    const copyOfState = this.state.areSegmentsInGroupVisible;
-    copyOfState[groupId] = isVisible;
+    const newSegmentsInGroupVisible = {
+      ...this.state.areSegmentsInGroupVisible,
+      [groupId]: isVisible,
+    };
     this.setState({
-      areSegmentsInGroupVisible: copyOfState,
+      areSegmentsInGroupVisible: newSegmentsInGroupVisible,
     });
   };
 

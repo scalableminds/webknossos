@@ -123,7 +123,7 @@ trait VolumeTracingDownsampling
     val data: List[VersionedKeyValuePair[Array[Byte]]] =
       tracingDataStore.volumeData.getMultipleKeys(None, Some(tracingId))
     data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
-      val bucketPositionOpt = parseBucketKey(keyValuePair.key).map(_._2)
+      val bucketPositionOpt = parseBucketKey(keyValuePair.key, dataLayer.additionalCoordinates).map(_._2)
       bucketPositionOpt.foreach { bucketPosition =>
         if (bucketPosition.mag == sourceMag) {
           bucketDataMap(bucketPosition) = decompressIfNeeded(keyValuePair.value,

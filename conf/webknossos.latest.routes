@@ -241,7 +241,7 @@ POST          /pricing/requestStorage                                           
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
-GET           /termsOfService/acceptanceNeeded                                                            controllers.OrganizationController.getSecurityTxt
+GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded
 
 # Timelogging
 GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
@@ -276,6 +276,10 @@ GET           /shortLinks/byKey/:key                                            
 POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential
+
+# Email verification
+POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
+POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail
 
 # Voxelytics
 POST          /voxelytics/workflows                                                             controllers.VoxelyticsController.storeWorkflow

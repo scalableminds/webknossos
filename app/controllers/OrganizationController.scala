@@ -127,6 +127,14 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     } yield Ok
   }
 
+  def getSecurityTxt: Action[AnyContent] = Action {
+    addNoCacheHeaderFallback(if (conf.WebKnossos.SecurityTxt.enabled) {
+      Ok(conf.WebKnossos.SecurityTxt.content)
+    } else {
+      NotFound
+    })
+  }
+
   def update(organizationName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(organizationUpdateReads) {
       case (displayName, newUserMailingList) =>

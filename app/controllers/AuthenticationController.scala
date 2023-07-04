@@ -129,7 +129,7 @@ class AuthenticationController @Inject()(
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
                          registerBrainDB: Boolean = false,
-                         verifyEmail: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
+                         isEmailVerified: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
     val passwordInfo: PasswordInfo =
       password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
     for {
@@ -141,7 +141,7 @@ class AuthenticationController @Inject()(
                                  passwordInfo,
                                  isAdmin = false,
                                  isOrganizationOwner = false,
-                                 emailVerified = verifyEmail) ?~> "user.creation.failed"
+                                 isEmailVerified = isEmailVerified) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -536,7 +536,7 @@ class AuthenticationController @Inject()(
                                oidc.family_name,
                                autoActivate = true,
                                None,
-                               verifyEmail = true) // Assuming email verification was done by OIDC provider
+                               isEmailVerified = true) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(loginInfo)
@@ -597,7 +597,7 @@ class AuthenticationController @Inject()(
                       passwordHasher.hash(signUpData.password),
                       isAdmin = true,
                       isOrganizationOwner = true,
-                      emailVerified = false
+                      isEmailVerified = false
                     ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)

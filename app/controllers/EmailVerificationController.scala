@@ -3,7 +3,6 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
-import io.swagger.annotations.ApiOperation
 import models.user.EmailVerificationService
 import oxalis.security.WkEnv
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -17,14 +16,12 @@ class EmailVerificationController @Inject()(emailVerificationService: EmailVerif
     extends Controller
     with FoxImplicits {
 
-  @ApiOperation(value = "")
   def verify(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       _ <- emailVerificationService.verify(key)(GlobalAccessContext, ec)
     } yield Ok
   }
 
-  @ApiOperation(value = "")
   def requestVerificationMail: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- emailVerificationService.sendEmailVerification(request.identity)

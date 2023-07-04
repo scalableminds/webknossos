@@ -93,7 +93,7 @@ class UserService @Inject()(conf: WkConf,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean,
              isOrganizationOwner: Boolean,
-             emailVerified: Boolean): Fox[User] = {
+             isEmailVerified: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -103,7 +103,7 @@ class UserService @Inject()(conf: WkConf,
         email,
         passwordInfo,
         isSuperUser = false,
-        isEmailVerified = emailVerified
+        isEmailVerified = isEmailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -125,7 +125,7 @@ class UserService @Inject()(conf: WkConf,
         isUnlisted = false,
         lastTaskTypeId = None
       )
-      _ <- Fox.runIf(!emailVerified)(emailVerificationService.sendEmailVerification(user))
+      _ <- Fox.runIf(!isEmailVerified)(emailVerificationService.sendEmailVerification(user))
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
     } yield user

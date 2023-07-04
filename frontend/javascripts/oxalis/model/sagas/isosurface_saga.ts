@@ -74,7 +74,7 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
-import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
+import Zip from "libs/zipjs_wrapper";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -961,7 +961,7 @@ function* downloadIsosurfaceCellsAsZIP(
   cells: { cellName: string; segmentId: number; layerName: string }[],
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
+  const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
   try {
     const promises = cells.map((element) => {
       const geometry = segmentMeshController.getIsosurfaceGeometryInBestLOD(
@@ -976,12 +976,12 @@ function* downloadIsosurfaceCellsAsZIP(
         });
         return;
       }
-      const stlDataReader = new BlobReader(getStlBlob(geometry, element.segmentId));
+      const stlDataReader = new Zip.BlobReader(getStlBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.cellName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(promises);
     const result = yield* call([zipWriter, zipWriter.close]);
-    yield* call(saveAs, result, "mesh-export.zip");
+    yield* call(Zip.saveAs, result, "mesh-export.zip");
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
     console.error(exception);

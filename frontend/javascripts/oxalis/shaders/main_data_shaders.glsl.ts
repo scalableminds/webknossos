@@ -37,6 +37,7 @@ import {
 
 type Params = {
   globalLayerCount: number;
+  orderedLayerNames: string[];
   colorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
@@ -202,60 +203,87 @@ void main() {
 
   // Get Color Value(s)
   vec3 color_value  = vec3(0.0);
-  <% _.each(colorLayerNames, function(name, layerIndex) { %>
-    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
-    if (<%= name %>_effective_alpha > 0.) {
-      // Get grayscale value for <%= name %>
+  <% _.each(orderedLayerNames, function(name, layerIndex) { %>
+    <% if (colorLayerNames.indexOf(name) >= 0) { %>
+      float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
+      if (<%= name %>_effective_alpha > 0.) {
+        // Get grayscale value for <%= name %>
 
-      <% if (tpsTransformPerLayer[name] != null) { %>
-        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
-      <% } else { %>
-        vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
-      <% } %>
-
-      if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
-        MaybeFilteredColor maybe_filtered_color =
-          getMaybeFilteredColorOrFallback(
-            <%= formatNumberAsGLSLFloat(layerIndex) %>,
-            <%= name %>_data_texture_width,
-            <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
-            transformedCoordUVW,
-            false,
-            fallbackGray,
-            !<%= name %>_has_transform
-          );
-        bool used_fallback = maybe_filtered_color.used_fallback_color;
-        color_value = maybe_filtered_color.color.rgb;
-        <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
-          // Workaround for 16-bit color layers
-          color_value = vec3(color_value.g * 256.0 + color_value.r);
+        <% if (tpsTransformPerLayer[name] != null) { %>
+          vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
+        <% } else { %>
+          vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
         <% } %>
-        // Keep the color in bounds of min and max
-        color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-        // Scale the color value according to the histogram settings.
-        // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
-        // via mixing.
-        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-        color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
-        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+        if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
+          MaybeFilteredColor maybe_filtered_color =
+            getMaybeFilteredColorOrFallback(
+              <%= formatNumberAsGLSLFloat(layerIndex) %>,
+              <%= name %>_data_texture_width,
+              <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
+              transformedCoordUVW,
+              false,
+              fallbackGray,
+              !<%= name %>_has_transform
+            );
+          bool used_fallback = maybe_filtered_color.used_fallback_color;
+          color_value = maybe_filtered_color.color.rgb;
+          <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
+            // Workaround for 16-bit color layers
+            color_value = vec3(color_value.g * 256.0 + color_value.r);
+          <% } %>
+          // Keep the color in bounds of min and max
+          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          // Scale the color value according to the histogram settings.
+          // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
+          // via mixing.
+          float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
+          color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
-        // Maybe invert the color using the inverting_factor
-        color_value = abs(color_value - <%= name %>_is_inverted);
-        // Catch the case where max == min would causes a NaN value and use black as a fallback color.
-        color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        color_value = color_value * <%= name %>_alpha * <%= name %>_color;
-        // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
-        // so the fallback color does not cover other colors.
-        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
-        // Calculating the cover color for the current layer in case blendMode == 1.0.
-        vec4 additive_color = blendLayersAdditive(data_color, layer_color);
-        // Calculating the cover color for the current layer in case blendMode == 0.0.
-        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
-        // Choose color depending on blendMode.
-        data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
+          color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+
+          // Maybe invert the color using the inverting_factor
+          color_value = abs(color_value - <%= name %>_is_inverted);
+          // Catch the case where max == min would causes a NaN value and use black as a fallback color.
+          color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
+          color_value = color_value * <%= name %>_alpha * <%= name %>_color;
+          // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
+          // so the fallback color does not cover other colors.
+          vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
+          // Calculating the cover color for the current layer in case blendMode == 1.0.
+          vec4 additive_color = blendLayersAdditive(data_color, layer_color);
+          // Calculating the cover color for the current layer in case blendMode == 0.0.
+          vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
+          // Choose color depending on blendMode.
+          data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
+        }
       }
-    }
+    <% } else { %>
+      <% const segmentationName = name %>
+      // Color map (<= to fight rounding mistakes)
+      if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+        // Increase cell opacity when cell is hovered or if it is the active activeCell
+        bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
+          && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
+        bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
+           && activeCellIdHigh == <%= segmentationName%>_id_high;
+        // Highlight cell only if it's hovered or active during proofreading
+        // and if segmentation opacity is not zero
+        float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
+        float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
+        gl_FragColor = mix(
+          data_color,
+          vec4(convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), 1.0),
+          <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
+        );
+      }
+      vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+      <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+      data_color = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+      // Unsure whether to keep this. This makes a segmentation layer everywhere as "covering".
+      data_color.a = 1.0;
+  
+    <% } %>
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);
   data_color.a = 1.0;
@@ -265,28 +293,7 @@ void main() {
   <% if (hasSegmentation) { %>
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
-    // Color map (<= to fight rounding mistakes)
-    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
-      // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
-         && activeCellIdHigh == <%= segmentationName%>_id_high;
-      // Highlight cell only if it's hovered or active during proofreading
-      // and if segmentation opacity is not zero
-      float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
-      float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
-      gl_FragColor = vec4(mix(
-        data_color.rgb,
-        convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
-        <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
-      ), 1.0);
-    }
-    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
-    gl_FragColor.a = 1.0;
-
+      
   <% }) %>
 
   // This will only have an effect in proofreading mode

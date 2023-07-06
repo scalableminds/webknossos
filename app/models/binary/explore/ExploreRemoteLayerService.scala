@@ -87,8 +87,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
     } yield dataSource
 
   def addRemoteDatasource(dataSource: GenericDataSource[DataLayer], datasetName: String, user: User)(
-      implicit ctx: DBAccessContext,
-      ec: ExecutionContext): Fox[Unit] =
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed

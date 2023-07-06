@@ -152,6 +152,7 @@ const DragHandle = SortableHandle(() => (
     style={{
       display: "inline-flex",
       justifyContent: "center",
+      cursor: "grab",
       alignItems: "center",
     }}
   >
@@ -159,7 +160,6 @@ const DragHandle = SortableHandle(() => (
       style={{
         display: "inline-block",
         marginRight: 8,
-        cursor: "grab",
       }}
     />
   </div>
@@ -1084,6 +1084,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
+    // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
+    document.body.classList.remove("grabbing");
     const { layerOrder } = this.props.userConfiguration;
     const movedElement = layerOrder[oldIndex];
     const newLayerOrder = update(layerOrder, {
@@ -1121,7 +1123,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       state.task === null;
     return (
       <div className="tracing-settings-menu">
-        <SortableLayerSettingsContainer onSortEnd={this.onSortLayerSettingsEnd} useDragHandle>
+        <SortableLayerSettingsContainer
+          onSortEnd={this.onSortLayerSettingsEnd}
+          onSortStart={() => document.body.classList.add("grabbing")}
+          useDragHandle
+        >
           {layerSettings}
         </SortableLayerSettingsContainer>
         {this.getSkeletonLayer()}

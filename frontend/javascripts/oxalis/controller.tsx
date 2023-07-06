@@ -2,8 +2,6 @@ import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import { APIAnnotationTypeEnum, APICompoundType } from "types/api_flow_types";
@@ -74,8 +72,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
   componentDidMount() {
-    _.extend(this, BackboneEvents);
-
     // The annotation view should be rendered without the special mobile-friendly
     // viewport meta tag.
     Utils.disableViewportMetatag();
@@ -180,7 +176,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.initTaskScript();
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type '(Win... Remove this comment to see the full error message
     window.webknossos = new ApiLoader(Model);
-    app.vent.trigger("webknossos:ready");
+    app.vent.emit("webknossos:ready");
     Store.dispatch(wkReadyAction());
     setTimeout(() => {
       // Give wk (sagas and bucket loading) a bit time to catch air before

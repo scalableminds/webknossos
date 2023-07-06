@@ -209,8 +209,6 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       await api.data.reloadBuckets(layerName);
     });
     await Promise.all(reloadAllLayersPromises);
-    // @ts-ignore
-    window.needsRerender = true;
     Toast.success("Successfully reloaded data of all layers.");
   };
 

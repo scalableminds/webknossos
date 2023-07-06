@@ -101,9 +101,8 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
-Due to performance reasons, 3D flood-fills only work in a small, local bounding box. WEBKNOSSOS will add a bounding box around the affected area. To truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a WEBKNOSSOS job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
-
-Check the [`Processing Jobs` page](./jobs.md) from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as a new dataset in your dashboard.
+Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
+For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
 
 ### Mappings / On-Demand Agglomeration
 

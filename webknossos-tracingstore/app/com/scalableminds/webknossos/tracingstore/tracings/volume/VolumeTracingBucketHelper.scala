@@ -13,7 +13,7 @@ import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.annotation.tailrec
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
@@ -106,6 +106,8 @@ trait VolumeTracingBucketHelper
     with DataConverter
     with BucketKeys
     with VolumeBucketReversionHelper {
+
+  implicit def ec: ExecutionContext
 
   // used to store compound annotations
   private val temporaryVolumeDataTimeout: FiniteDuration = 70 minutes

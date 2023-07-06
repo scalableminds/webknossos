@@ -14,7 +14,7 @@ const addEventListener = (
 export const alert = typeof window === "undefined" ? console.log.bind(console) : window.alert;
 export const document =
   typeof window === "undefined" || !window.document
-    ? {
+    ? ({
         getElementById: () => null,
         body: null,
         activeElement: typeof HTMLElement === "undefined" ? undefined : HTMLElement,
@@ -26,7 +26,7 @@ export const document =
         ): HTMLElementTagNameMap[K] => {
           throw new Error("Cannot createElement, because no HTML context exists.");
         },
-      }
+      } as any as Document)
     : window.document;
 // See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311
 const dummyLocation = {

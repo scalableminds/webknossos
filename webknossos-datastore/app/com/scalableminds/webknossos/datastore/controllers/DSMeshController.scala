@@ -9,7 +9,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
@@ -17,7 +17,7 @@ class DSMeshController @Inject()(
     dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
     dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     binaryDataServiceHolder: BinaryDataServiceHolder
-)(implicit bodyParsers: PlayBodyParsers)
+)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
-
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
@@ -18,7 +17,7 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(uploadId: String,
                                     name: String,
@@ -60,7 +59,7 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
-                              runningUploadMetadataStore: DataStoreRedisStore)
+                              runningUploadMetadataStore: DataStoreRedisStore)(implicit ec: ExecutionContext)
     extends LazyLogging
     with DataSetDeleter
     with DirectoryConstants
@@ -99,7 +98,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
-  def uploadDirectory(organizationName: String, uploadId: String): Path =
+  private def uploadDirectory(organizationName: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)
 
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
@@ -121,7 +120,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
-  def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
+  private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
 
   def handleUploadChunk(uploadFileId: String,

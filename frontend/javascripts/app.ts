@@ -1,12 +1,18 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import window from "libs/window";
+import { createNanoEvents } from "nanoevents";
 
 class OxalisApplication {
-  vent = Object.assign({}, BackboneEvents);
+  // This event emitter is currently only used for two types of events:
+  // 1) webknossos:ready
+  //    When WK is done with initialization, the front-end API can be constructed.
+  // 2) rerender
+  //    Most of the time, rendering happens when something in the Store changes. However,
+  //    sometimes the store is not updated, but something in the ThreeJS scene is. In these
+  //    cases an explicit rerender can be triggered with this event.
+  vent = createNanoEvents();
 }
 
 const app = new OxalisApplication();
-// @ts-expect-error ts-migrate(2339) FIXME: Property 'app' does not exist on type '(Window & t... Remove this comment to see the full error message
-window.app = app;
+(window as any).app = app;
+
 export default app;

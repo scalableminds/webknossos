@@ -115,9 +115,18 @@ function DatasetFolderViewInner(props: Props) {
 
     const uploadPlaceholderCard = (
       <Col span={7}>
-        <Card bordered={false} cover={<i className="drawing drawing-empty-list-dataset-upload" />}>
+        <Card
+          bordered={false}
+          cover={
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <i className="drawing drawing-empty-list-dataset-upload" />
+            </div>
+          }
+          style={{ background: "transparent" }}
+        >
           <Card.Meta
             title="Upload & Import Dataset"
+            style={{ textAlign: "center" }}
             description={
               <>
                 <p>
@@ -180,7 +189,8 @@ function DatasetFolderViewInner(props: Props) {
     hierarchy.flatItems.length === 1 &&
     context.datasets.length === 0 &&
     context.activeFolderId != null &&
-    !context.isLoading
+    !context.isLoading &&
+    context.globalSearchQuery == null
   ) {
     // Show a placeholder if only the root folder exists and no dataset is available yet
     // (aka a new, empty organization)

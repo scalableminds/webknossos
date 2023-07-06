@@ -9,9 +9,9 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class ZarrArrayExplorer extends RemoteLayerExplorer {
+class ZarrArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 

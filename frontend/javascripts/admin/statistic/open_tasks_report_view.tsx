@@ -93,7 +93,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               width={200}
             />
             <Column
-              title="# Potentially Available Tasks"
+              title="# Available Tasks"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
               sorter={Utils.compareBy(typeHint, (task) => task.totalAssignments)}

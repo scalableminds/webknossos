@@ -1,10 +1,12 @@
-import { Spin, Table, Card } from "antd";
+import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
 import * as React from "react";
 import type { APIOpenTasksReport } from "types/api_flow_types";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TeamSelectionForm from "./team_selection_form";
+import { InfoCircleOutlined } from "@ant-design/icons";
+
 const { Column } = Table;
 const typeHint: APIOpenTasksReport[] = [];
 type State = {
@@ -46,7 +48,21 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
     return (
       <div className="container">
         <h3>Pending Tasks</h3>
-
+        <Typography.Paragraph type="secondary">
+          This list provides an overview of all users and any potential projects and task
+          assignments that they may qualify for. Task availibity for each user is determined by
+          criteria such as assigned user experiences, team memberships, the number of pending task
+          instances, etc. Each task is only assigned to a user once.
+          <a
+            href="https://docs.webknossos.org/webknossos/tasks.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined style={{ marginLeft: 10 }} />
+            </Tooltip>
+          </a>
+        </Typography.Paragraph>
         <Card>
           <TeamSelectionForm onChange={(team) => this.fetchData(team.id)} />
         </Card>
@@ -75,21 +91,36 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               width={200}
             />
             <Column
-              title="# Assignments"
+              title="# Potentially Available Tasks"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
               sorter={Utils.compareBy(typeHint, (task) => task.totalAssignments)}
               width={150}
             />
             <Column
-              title=""
+              title="Potentially Available Tasks By Project"
               key="content"
-              render={(_text, item) =>
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                Object.keys(item.assignmentsByProjects)
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                  .map((key) => `${key} (${item.assignmentsByProjects[key]})`)
-                  .join(", ")
+              render={(_text, item: APIOpenTasksReport) =>
+                Object.keys(item.assignmentsByProjects).map((key) => {
+                  const [projectName, experience] = key.split("/");
+                  return (
+                    <div key={key}>
+                      <Tooltip
+                        title={
+                          <span>
+                            There are potentially {item.assignmentsByProjects[key]} tasks from the
+                            project <i>{projectName}</i> available for automatic assignment for this
+                            user because they match the configured assignment criteria; especially
+                            the required experience level <i>{experience}</i>.
+                          </span>
+                        }
+                      >
+                        {projectName}: {item.assignmentsByProjects[key]}
+                      </Tooltip>
+                      <Tag style={{ marginLeft: 6 }}>{experience}</Tag>
+                    </div>
+                  );
+                })
               }
             />
           </Table>

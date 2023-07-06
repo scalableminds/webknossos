@@ -47,7 +47,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
   render() {
     return (
       <div className="container">
-        <h3>Pending Tasks</h3>
+        <h3>Available Task Assignments</h3>
         <Typography.Paragraph type="secondary">
           This list provides an overview of all users and any potential projects and task
           assignments that they may qualify for. Task availibity for each user is determined by

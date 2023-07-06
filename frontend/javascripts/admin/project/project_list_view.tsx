@@ -305,7 +305,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 width={250}
               />
               <Column
-                title="Open Assignments"
+                title="Pending Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
                 sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}

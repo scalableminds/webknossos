@@ -45,7 +45,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
   render() {
     return (
       <div className="container">
-        <h3>Open Tasks</h3>
+        <h3>Pending Tasks</h3>
 
         <Card>
           <TeamSelectionForm onChange={(team) => this.fetchData(team.id)} />

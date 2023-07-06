@@ -288,7 +288,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_LAYER_ORDER": {
       const { layers } = action;
-      return updateKey(state, "userConfiguration", { layerOrder: layers });
+      return updateKey(state, "datasetConfiguration", { layerOrder: layers });
     }
 
     default: // pass;

@@ -179,15 +179,14 @@ export async function initialize(
     dataset,
     initialDatasetSettings,
   );
+  const initialDatasetSettingsWithLayerOrder = ensureDatasetSettingsHasLayerOrder(
+    annotationSpecificDatasetSettings,
+  );
   const enforcedInitialUserSettings =
     enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
-  const initialUserSettingsWithLayerOrder = ensureUserConfigurationHasLayerOrder(
-    enforcedInitialUserSettings,
-    dataset,
-  );
   initializeSettings(
-    initialUserSettingsWithLayerOrder,
-    annotationSpecificDatasetSettings,
+    enforcedInitialUserSettings,
+    initialDatasetSettingsWithLayerOrder,
     initialDatasetSettings,
   );
   let initializationInformation = null;
@@ -789,17 +788,19 @@ function enforcePricingRestrictionsOnUserConfiguration(
   return userConfiguration;
 }
 
-function ensureUserConfigurationHasLayerOrder(
-  userConfiguration: UserConfiguration,
-  dataset: APIDataset,
-): UserConfiguration {
-  if (userConfiguration.layerOrder == null) {
+function ensureDatasetSettingsHasLayerOrder(
+  datasetConfiguration: DatasetConfiguration,
+): DatasetConfiguration {
+  if (datasetConfiguration.layerOrder == null) {
     return {
-      ...userConfiguration,
-      layerOrder: dataset.dataSource.dataLayers.map((layer) => layer.name),
+      ...datasetConfiguration,
+      layerOrder: _.keys(datasetConfiguration.layers),
     };
   }
-  return userConfiguration;
+  const onlyExistingLayers = datasetConfiguration.layerOrder.filter(
+    (layerName) => layerName in datasetConfiguration.layers,
+  );
+  return { ...datasetConfiguration, layerOrder: onlyExistingLayers };
 }
 
 function applyAnnotationSpecificViewConfiguration(

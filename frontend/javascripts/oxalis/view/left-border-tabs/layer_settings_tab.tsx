@@ -1086,7 +1086,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
     // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
     document.body.classList.remove("grabbing");
-    const { layerOrder } = this.props.userConfiguration;
+    const { layerOrder } = this.props.datasetConfiguration;
     const movedElement = layerOrder[oldIndex];
     const newLayerOrder = update(layerOrder, {
       $splice: [
@@ -1098,8 +1098,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   render() {
-    const { layers } = this.props.datasetConfiguration;
-    const { layerOrder } = this.props.userConfiguration;
+    const { layers, layerOrder } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
 
     const layerSettings = layerOrder.map((layerName, index) => {

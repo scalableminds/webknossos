@@ -100,7 +100,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               width={150}
             />
             <Column
-              title="Potentially Available Tasks By Project"
+              title="Available Tasks by Project"
               key="content"
               render={(_text, item: APIOpenTasksReport) =>
                 Object.keys(item.assignmentsByProjects).map((key) => {

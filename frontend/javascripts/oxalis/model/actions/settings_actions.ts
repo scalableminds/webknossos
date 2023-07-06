@@ -27,6 +27,7 @@ export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
+type setLayerOrderAction = ReturnType<typeof setLayerOrderAction>;
 
 export type SettingAction =
   | UpdateUserSettingAction
@@ -44,7 +45,8 @@ export type SettingAction =
   | SetHideUnmappedIdsAction
   | SetHistogramDataForLayerAction
   | ReloadHistogramAction
-  | InitializeGpuSetupAction;
+  | InitializeGpuSetupAction
+  | setLayerOrderAction;
 
 export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
   propertyName: Key,
@@ -233,3 +235,6 @@ export const initializeGpuSetupAction = (
     gpuFactor,
     maximumLayerCountToRender,
   } as const);
+
+export const setLayerOrderAction = (layers: Array<string>) =>
+  ({ type: "SET_LAYER_ORDER", layers } as const);

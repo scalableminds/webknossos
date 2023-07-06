@@ -11,11 +11,14 @@ import {
   LockOutlined,
   UnlockOutlined,
   EllipsisOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
+import update from "immutability-helper";
+import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import {
   APIAnnotationTypeEnum,
   APIDataLayer,
@@ -74,6 +77,7 @@ import {
   updateLayerSettingAction,
   dispatchClipHistogramAsync,
   reloadHistogramAction,
+  setLayerOrderAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
@@ -117,6 +121,7 @@ type DatasetSettingsProps = {
   histogramData: HistogramDataForAllLayers;
   onChangeRadius: (value: number) => void;
   onChangeShowSkeletons: (arg0: boolean) => void;
+  onChangeLayerOrder: (layerOrder: string[]) => void;
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
@@ -137,6 +142,28 @@ type State = {
   segmentationLayerWasPreselected: boolean | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
+
+const SortableLayerSettingsContainer = SortableContainer(({ children }: { children: any }) => {
+  return <div>{children}</div>;
+});
+
+const DragHandle = SortableHandle(() => (
+  <div
+    style={{
+      display: "inline-flex",
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <MenuOutlined
+      style={{
+        display: "inline-block",
+        marginRight: 8,
+        cursor: "grab",
+      }}
+    />
+  </div>
+));
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -443,6 +470,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
+        <DragHandle />
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -706,53 +734,59 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getLayerSettings = (
-    layerName: string,
-    layerConfiguration: DatasetLayerConfiguration | null | undefined,
-    isColorLayer: boolean = true,
-  ) => {
-    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
-    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
-      return null;
-    }
+  LayerSettings = SortableElement(
+    ({
+      layerName,
+      layerConfiguration,
+      isColorLayer,
+    }: {
+      layerName: string;
+      layerConfiguration: DatasetLayerConfiguration | null | undefined;
+      isColorLayer: boolean;
+    }) => {
+      // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+      if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
+        return null;
+      }
 
-    const elementClass = getElementClass(this.props.dataset, layerName);
-    const { isDisabled, isInEditMode } = layerConfiguration;
-    return (
-      <div key={layerName}>
-        {this.getLayerSettingsHeader(
-          isDisabled,
-          isColorLayer,
-          isInEditMode,
-          layerName,
-          elementClass,
-          layerConfiguration,
-        )}
-        {isDisabled ? null : (
-          <div
-            style={{
-              marginBottom: 30,
-              marginLeft: 10,
-            }}
-          >
-            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
-              ? this.getHistogram(layerName, layerConfiguration)
-              : null}
-            <NumberSliderSetting
-              label="Opacity"
-              min={0}
-              max={100}
-              value={layerConfiguration.alpha}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
-            />
-            {isColorLayer
-              ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getSegmentationSpecificSettings(layerName)}
-          </div>
-        )}
-      </div>
-    );
-  };
+      const elementClass = getElementClass(this.props.dataset, layerName);
+      const { isDisabled, isInEditMode } = layerConfiguration;
+      return (
+        <div key={layerName}>
+          {this.getLayerSettingsHeader(
+            isDisabled,
+            isColorLayer,
+            isInEditMode,
+            layerName,
+            elementClass,
+            layerConfiguration,
+          )}
+          {isDisabled ? null : (
+            <div
+              style={{
+                marginBottom: 30,
+                marginLeft: 10,
+              }}
+            >
+              {isHistogramSupported(elementClass) && layerName != null && isColorLayer
+                ? this.getHistogram(layerName, layerConfiguration)
+                : null}
+              <NumberSliderSetting
+                label="Opacity"
+                min={0}
+                max={100}
+                value={layerConfiguration.alpha}
+                onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              />
+              {isColorLayer
+                ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
+                : this.getSegmentationSpecificSettings(layerName)}
+            </div>
+          )}
+        </div>
+      );
+    },
+  );
 
   handleFindData = async (
     layerName: string,
@@ -1049,22 +1083,36 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
+  onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
+    const { layerOrder } = this.props.userConfiguration;
+    const movedElement = layerOrder[oldIndex];
+    const newLayerOrder = update(layerOrder, {
+      $splice: [
+        [oldIndex, 1],
+        [newIndex, 0, movedElement],
+      ],
+    });
+    this.props.onChangeLayerOrder(newLayerOrder);
+  };
+
   render() {
     const { layers } = this.props.datasetConfiguration;
+    const { layerOrder } = this.props.userConfiguration;
+    const LayerSettings = this.LayerSettings;
 
-    // Show color layer(s) first and then the segmentation layer(s).
-    const layerSettings = _.sortBy(
-      _.entries(layers).map((entry) => {
-        const [layerName, layer] = entry;
-        const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
-        return {
-          layerName,
-          layer,
-          isColorLayer,
-        };
-      }),
-      (el) => !el.isColorLayer,
-    ).map((el) => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
+    const layerSettings = layerOrder.map((layerName, index) => {
+      const layer = layers[layerName];
+      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
+      return (
+        <LayerSettings
+          key={layerName}
+          layerName={layerName}
+          layerConfiguration={layer}
+          isColorLayer={isColorLayer}
+          index={index}
+        />
+      );
+    });
 
     const state = Store.getState();
     const canBeMadeHybrid =
@@ -1073,7 +1121,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       state.task === null;
     return (
       <div className="tracing-settings-menu">
-        {layerSettings}
+        <SortableLayerSettingsContainer onSortEnd={this.onSortLayerSettingsEnd} useDragHandle>
+          {layerSettings}
+        </SortableLayerSettingsContainer>
         {this.getSkeletonLayer()}
 
         {this.props.tracing.restrictions.allowUpdate &&
@@ -1188,6 +1238,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   reloadHistogram(layerName: string) {
     dispatch(reloadHistogramAction(layerName));
+  },
+  onChangeLayerOrder(layerOrder: string[]) {
+    dispatch(setLayerOrderAction(layerOrder));
   },
 });
 

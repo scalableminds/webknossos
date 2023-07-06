@@ -181,8 +181,12 @@ export async function initialize(
   );
   const enforcedInitialUserSettings =
     enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
-  initializeSettings(
+  const initialUserSettingsWithLayerOrder = ensureUserConfigurationHasLayerOrder(
     enforcedInitialUserSettings,
+    dataset,
+  );
+  initializeSettings(
+    initialUserSettingsWithLayerOrder,
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
@@ -780,6 +784,19 @@ function enforcePricingRestrictionsOnUserConfiguration(
     return {
       ...userConfiguration,
       renderWatermark: true,
+    };
+  }
+  return userConfiguration;
+}
+
+function ensureUserConfigurationHasLayerOrder(
+  userConfiguration: UserConfiguration,
+  dataset: APIDataset,
+): UserConfiguration {
+  if (userConfiguration.layerOrder == null) {
+    return {
+      ...userConfiguration,
+      layerOrder: dataset.dataSource.dataLayers.map((layer) => layer.name),
     };
   }
   return userConfiguration;

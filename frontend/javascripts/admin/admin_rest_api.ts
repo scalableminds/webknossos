@@ -1530,12 +1530,8 @@ export async function exploreRemoteDataset(
           remoteUri: uri.trim(),
           credentialIdentifier: credentials.username,
           credentialSecret: credentials.pass,
-          shouldAutoAdd: true,
-          autoAddDatasetName: "autoAdded"
         }))
-      : remoteUris.map((uri) => ({ remoteUri: uri.trim(),
-          shouldAutoAdd: true,
-          autoAddDatasetName: "autoAdded" })),
+      : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
   });
   if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");

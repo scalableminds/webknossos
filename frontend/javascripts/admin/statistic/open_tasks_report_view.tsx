@@ -49,10 +49,12 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <h3>Available Task Assignments</h3>
         <Typography.Paragraph type="secondary">
-          This list provides an overview of all users and any potential projects and task
-          assignments that they may qualify for. Task availibity for each user is determined by
-          criteria such as assigned user experiences, team memberships, the number of pending task
-          instances, etc. Each task is only assigned to a user once.
+          Select a team to show an overview of its users and the number of available task assigments
+          they qualify for. Task availability for each user is determined by assigned experiences,
+          team memberships, the number of pending task instances, etc. For tasks with multiple
+          instances, each user will get at most one. Note that individual tasks may be listed as
+          available to multiple users here, but each will only be handed to the first user to
+          request it.
           <a
             href="https://docs.webknossos.org/webknossos/tasks.html"
             target="_blank"

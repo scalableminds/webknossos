@@ -14,7 +14,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
-import models.binary.explore.{ExploreRemoteDatasetParameters, ExploreRemoteLayerService}
+import models.binary.explore.{
+  ExploreAndAddRemoteDatasetParameters,
+  ExploreRemoteDatasetParameters,
+  ExploreRemoteLayerService
+}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
@@ -24,7 +28,7 @@ import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
@@ -182,11 +186,21 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += "Error when exploring as layer set: Empty"
             None
         }
-        _ <- Fox.runOptional(dataSourceOpt) { dataSource =>
-          Fox.runIf(request.body.forall(_.shouldAutoAdd))(exploreRemoteLayerService
-            .addRemoteDatasource(dataSource, request.body, request.identity)) ?~> "explore.autoAdd.failed"
-        }
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
+    sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
+      val reportMutable = ListBuffer[String]()
+      val adaptedParameters = ExploreRemoteDatasetParameters(request.body.remoteUri, None, None)
+      for {
+        dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
+                                                                        request.identity,
+                                                                        reportMutable)
+        _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "explore.zeroLayers"
+        _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource, request.body.datasetName, request.identity) ?~> "explore.autoAdd.failed"
+      } yield Ok
     }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

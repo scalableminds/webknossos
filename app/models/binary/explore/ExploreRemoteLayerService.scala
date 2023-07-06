@@ -36,12 +36,17 @@ import scala.util.Try
 
 case class ExploreRemoteDatasetParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
-                                          credentialSecret: Option[String],
-                                          shouldAutoAdd: Boolean,
-                                          autoAddDatasetName: Option[String])
+                                          credentialSecret: Option[String])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
+}
+
+case class ExploreAndAddRemoteDatasetParameters(remoteUri: String, datasetName: String)
+
+object ExploreAndAddRemoteDatasetParameters {
+  implicit val jsonFormat: OFormat[ExploreAndAddRemoteDatasetParameters] =
+    Json.format[ExploreAndAddRemoteDatasetParameters]
 }
 
 class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
@@ -81,13 +86,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       )
     } yield dataSource
 
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
-                          parameters: List[ExploreRemoteDatasetParameters],
-                          user: User)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
+  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer], datasetName: String, user: User)(
+      implicit ctx: DBAccessContext,
+      ec: ExecutionContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      datasetName <- parameters.headOption.flatMap(_.autoAddDatasetName) ?~> "no dataset name supplied"
       _ <- dataSetService.assertValidDataSetName(datasetName)
       _ <- dataSetService.assertNewDataSetName(datasetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)

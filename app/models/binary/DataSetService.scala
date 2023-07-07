@@ -4,21 +4,11 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSourceId,
-  GenericDataSource,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
-
-import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
@@ -28,6 +18,7 @@ import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -41,7 +32,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
-                               val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits

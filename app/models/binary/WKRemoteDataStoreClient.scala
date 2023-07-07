@@ -11,13 +11,13 @@ import play.utils.UriEncoding
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
-  def requestDataLayerThumbnail(organizationName: String,
-                                dataSet: DataSet,
-                                dataLayerName: String,
-                                width: Int,
-                                height: Int,
-                                zoom: Option[Double],
-                                center: Option[Vec3Int]): Fox[Array[Byte]] = {
+  def getDataLayerThumbnail(organizationName: String,
+                            dataSet: DataSet,
+                            dataLayerName: String,
+                            width: Int,
+                            height: Int,
+                            zoom: Option[Double],
+                            center: Option[Vec3Int]): Fox[Array[Byte]] = {
     logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)

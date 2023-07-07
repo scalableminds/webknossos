@@ -9,7 +9,9 @@ import {
   ArrowRightOutlined,
   CloudDownloadOutlined,
   DownloadOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -100,6 +102,8 @@ import {
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { ItemType } from "antd/lib/menu/hooks/useItems";
 import { pluralize } from "libs/utils";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import ButtonComponent from "oxalis/view/components/button_component";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -239,6 +243,7 @@ type State = {
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentOrGroupId: number | null | undefined;
   groupTree: TreeNode[];
+  searchableTreeItemList: TreeNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
   areSegmentsInGroupVisible: { [groupId: number]: boolean };
@@ -331,10 +336,17 @@ class SegmentsView extends React.Component<Props, State> {
     activeMeshJobId: null,
     activeDropdownSegmentOrGroupId: null,
     groupTree: [],
+    searchableTreeItemList: [],
     prevProps: null,
     groupToDelete: null,
     areSegmentsInGroupVisible: {},
   };
+  tree: React.RefObject<RcTree>;
+
+  constructor(props: Props) {
+    super(props);
+    this.tree = React.createRef();
+  }
 
   componentDidMount() {
     Store.dispatch(
@@ -365,11 +377,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (segments == null) {
       return { prevProps: nextProps };
     }
-    let updateStateObject = {
-      prevProps: nextProps,
-      groupTree: prevState.groupTree,
-      areSegmentsInGroupVisible: prevState.areSegmentsInGroupVisible,
-    };
+    let updateStateObject;
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
     const rootGroup = {
       name: "Root",
@@ -384,9 +392,27 @@ class SegmentsView extends React.Component<Props, State> {
       // Insert the segments into the corresponding groups and create a
       // groupTree object that can be rendered using the antd Tree component
       const generatedGroupTree = constructTreeData([rootGroup], groupToSegmentsMap);
+
+      // Traverse the tree hierarchy so that we get a list of segments and groups
+      // that is in the same order as the rendered tree. That way, cycling through
+      // the search results will not jump "randomly".
+      const searchableTreeItemList: TreeNode[] = [];
+      function visitAllItems(nodes: Array<TreeNode>, callback: (group: TreeNode) => void) {
+        for (const node of nodes) {
+          callback(node);
+          if ("children" in node) {
+            visitAllItems(node.children, callback);
+          }
+        }
+      }
+      visitAllItems(generatedGroupTree, (item: TreeNode) => {
+        searchableTreeItemList.push(item);
+      });
+
       updateStateObject = {
-        ...updateStateObject,
         groupTree: generatedGroupTree,
+        searchableTreeItemList,
+        prevProps: nextProps,
       };
     }
     if (prevState.prevProps?.isosurfaces !== isosurfaces) {
@@ -409,11 +435,15 @@ class SegmentsView extends React.Component<Props, State> {
         newVisibleMap[group.groupId] = isVisible;
       });
       return {
-        ...updateStateObject,
+        ...updateStateObject, //may be null
+        prevProps: nextProps,
         areSegmentsInGroupVisible: newVisibleMap,
       };
     }
-    return updateStateObject;
+    return {
+      ...updateStateObject,
+      prevProps: nextProps,
+    };
   }
 
   async pollJobData(): Promise<void> {
@@ -1292,6 +1322,17 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
+  handleSearchSelect = (selectedElement: TreeNode) => {
+    if (this.tree?.current == null) {
+      return;
+    }
+    this.tree.current.scrollTo({ key: selectedElement.key });
+    const isASegment = "color" in selectedElement;
+    if (isASegment) {
+      this.onSelectSegment(selectedElement);
+    }
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -1427,7 +1468,24 @@ class SegmentsView extends React.Component<Props, State> {
 
             return (
               <React.Fragment>
-                <div style={{ flex: 0 }}>{this.getMeshesHeader()}</div>
+                <div style={{ flex: 0 }}>
+                  <AdvancedSearchPopover
+                    onSelect={this.handleSearchSelect}
+                    data={this.state.searchableTreeItemList}
+                    searchKey={(item) => item.name ?? `${item.id}` ?? ""}
+                    provideShortcut
+                    targetId={segmentsTabId}
+                  >
+                    <ButtonComponent
+                      size="small"
+                      title="Open the search via CTRL + Shift + F"
+                      style={{ marginRight: 8 }}
+                    >
+                      <SearchOutlined className="without-icon-margin" />
+                    </ButtonComponent>
+                  </AdvancedSearchPopover>
+                  {this.getMeshesHeader()}
+                </div>
                 <div style={{ flex: 1 }}>
                   {isSegmentHierarchyEmpty ? (
                     <Empty
@@ -1474,6 +1532,7 @@ class SegmentsView extends React.Component<Props, State> {
                               flex: "1 1 auto",
                               overflow: "auto", // use hidden when not using virtualization
                             }}
+                            ref={this.tree}
                           />
                         </div>
                       )}

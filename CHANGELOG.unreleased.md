@@ -11,11 +11,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...HEAD)
 
 ### Added
+- Added a modal to the voxelytics workflow view that lists all artifacts with their file size and inode count. This helps identifying the largest artifacts to free disk space. [#7152](https://github.com/scalableminds/webknossos/pull/7152)
 - In order to facilitate changing the brush size in the brush tool, buttons with preset brush sizes were added. These presets are user configurable by assigning the current brush size to any of the preset buttons. Additionally the preset brush sizes can be set with keyboard shortcuts. [#7101](https://github.com/scalableminds/webknossos/pull/7101)
 - Added new graphics and restyled empty dashboards. [#7008](https://github.com/scalableminds/webknossos/pull/7008)
 - Added warning when using WEBKNOSSOS in an outdated browser. [#7165](https://github.com/scalableminds/webknossos/pull/7165)
+- Added a search feature for segments and segment groups. Listed segments/groups can be searched by id and name. [#7175](https://github.com/scalableminds/webknossos/pull/7175)
 - Added support for transformations with thin plate splines. [#7131](https://github.com/scalableminds/webknossos/pull/7131)
 - WEBKNOSSOS can now read S3 remote dataset credentials from environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`. Those will be used, if available, when accessing remote datasets for which no explicit credentials are supplied. [#7170](https://github.com/scalableminds/webknossos/pull/7170)
+- Added security.txt according to [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116). The content is configurable and it can be disabled. [#7182](https://github.com/scalableminds/webknossos/pull/7182)
 - Added batch actions for segment groups, such as changing the color and loading or downloading all corresponding meshes. [#7164](https://github.com/scalableminds/webknossos/pull/7164).
 
 ### Changed

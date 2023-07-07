@@ -1,6 +1,24 @@
 # Publications
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
+## 2023
+* Tri M. Nguyen, Logan A. Thomas, Jeff L. Rhoades, Ilaria Ricchi, Xintong Cindy Yuan, Arlo Sheridan, David G. C. Hildebrand, Jan Funke, Wade G. Regehr & Wei-Chung Allen Lee.  
+  Structured cerebellar connectivity supports resilient pattern separation.  
+  [Nature (2023). DOI: 10.1038/s41586-022-05471-w](https://doi.org/10.1038/s41586-022-05471-w)
+
+* Wan Qing Yu,  Rachael Swanstrom, Crystal L. Sigulinsky, Richard M. Ahlquist, Sharm Knecht, Bryan W. Jones, David M. Berson & Rachel O. Wong.  
+  Distinctive synaptic structural motifs link excitatory retinal interneurons to diverse postsynaptic partner types.  
+  [Cell Reports (2023). DOI: 10.1016/j.celrep.2023.112006](https://doi.org/10.1016/j.celrep.2023.112006)
+
+* Kun Song, Zhihui Feng & Moritz Helmstaedter.  
+  High-contrast en bloc staining of mouse whole-brain and human brain samples for EM-based connectomics.  
+  [Nature Methods (2023). DOI: 10.1101/2022.03.30.486341](https://doi.org/10.1101/2022.03.30.486341)
+
+* Tri Nguyen, Mukul Narwani, Mark Larson, Yicong Li, Shuhan Xie, Hanspeter Pfister, Donglai Wei, Nir Shavit, Lu Mi, Alexandra Pacureanu, Wei-Chung Lee & Aaron T. Kuan.  
+  The XPRESS Challenge: Xray Projectomic Reconstruction -- Extracting Segmentation with Skeletons.  
+  [arXiv (2023). DOI: 10.48550/arXiv.2302.03819](https://doi.org/10.48550/arXiv.2302.03819)
+
+
 ## 2022
 * Sahil Loomba, Jakob Straehle, Vijayan Gangadharan, Natalie Heike, Abdelrahman Khalifa, Alessandro Motta, Niansheng Ju, Meike Sievers, Jens Gempt, Hanno S. Meyer & Moritz Helmstaedter.  
   Connectomic comparison of mouse and human cortex.  
@@ -22,11 +40,24 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 
 * Yuxin Zhang, Tobias Ackels, Alexandra Pacureanu, Marie-Christine Zdora, Anne Bonnin, Andreas T. Schaefer, Carles Bosch.  
   Sample preparation and warping accuracy for correlative multimodal imaging in the mouse olfactory bulb using 2-photon, synchrotron X-ray and volume electron microscopy.  
-  [bioRxiv (2022) DOI: 10.1101/2022.02.18.481045](https://doi.org/10.1101/2022.02.18.481045)
+  [Frontiers in Cell and Development al Biology (2022). DOI: 10.3389/fcell.2022.880696](https://doi.org/10.3389/fcell.2022.880696)
+
+* Daniela Chequer Charan, Yunfeng Hua, Haoyu Wang, Wenqing Huang, Fangfang Wang, Ana Belén Elgoyhen, Kevin M Boergens & Mariano N Di Guilmi.
+  Volume electron microscopy reveals age-related circuit remodeling in the auditory brainstem.  
+  [Frontiers in Cellular Neuroscience (2022). DOI: 10.3389/fncel.2022.1070438](https://doi.org/10.3389/fncel.2022.1070438)
+
+* Yong Fan, Chenhui Huang, Juan Chen, Yanyan Chen, Yan Wang, Zhiguang Yan , Weina Yu, Haibo Wu, Ying Yang, Leit ong Nie, Sijia Huang, Fangfang Wang, H aoyu Wang, Yunfeng Hua, Qifeng Lyu, Yanping Kuang & Ming Lei.  
+  Mutations in CCIN cause teratozoospermia and male infertility.  
+  [Science Bulletin (2022). DOI: 10.1016/j.scib.2022.09.026](https://doi.org/10.1016/j.scib.2022.09.026)
+
+* Anthony Santella, Irina Kolotuev, Caroline Kizilyaprak & Zhirong Bao.  
+  Cross-modality synthesis of EM time series and live fluorescence imaging.  
+  [Elife (2022). DOI: 10.7554/eLife.77918](https://doi.org/10.7554/eLife.77918)  
+  [**View data**](https://wklink.org/1322) in WEBKNOSSOS
 
 
 ## 2021
-* Anjali Gour, Kevin M. Boergens, Natalie Heike, Yunfeng Hua, Philip Laserstein,Kun Song & Moritz Helmstaedter.  
+* Anjali Gour, Kevin M. Boergens, Natalie Heike, Yunfeng Hua, Philip Laserstein, Kun Song & Moritz Helmstaedter.  
   Postnatal connectomic development of inhibition in mouse barrel cortex.  
   [Science (2021) DOI: 10.1126/science.abb4534.](http://dx.doi.org/10.1126/science.abb4534)  
   [**View data**](https://webknossos.org/publication/601801b6d77f39e121656acf) in WEBKNOSSOS.

@@ -8,4 +8,4 @@ Will this also work if
  - The annotation is a compound task/project/tasktype annotation
  - The user is logged out and views a public dataset or annotation
  - User uses dark mode / light mode
- - There is no local datastore/tracingstore module
+ - There is no local datastore/tracingstore module (Compare [instructions to test this locally](https://github.com/scalableminds/webknossos/wiki/Set-up-a-standalone-datastore-locally))

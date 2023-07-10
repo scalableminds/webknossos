@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   GoogleCloudDataVault,
   HttpsDataVault,
   RangeSpecifier,
+  S3DataVault,
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
@@ -45,14 +46,35 @@ class DataVaultTestSuite extends PlaySpec {
       }
 
       "with Google Cloud Storage Vault" should {
+        val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
+        val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
-          val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-          val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
+
           val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(openFoxJustification)
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
         }
+
+        "return empty box" when {
+          "requesting a nox-existent object" in {
+            val result = (vaultPath / "non-existent-key").readBytes()(globalExecutionContext).await()
+            assert(result.isEmpty)
+          }
+        }
+      }
+
+      "with S3 data vault" should {
+        "return empty box" when {
+          "requesting a nox-existent object" in {
+            val uri = new URI("s3://non-existing-bucket/non-existing-object")
+            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+            val vaultPath = new VaultPath(uri, s3DataVault)
+            val result = vaultPath.readBytes()(globalExecutionContext).await()
+            assert(result.isEmpty)
+          }
+        }
+
       }
     }
     "using regular requests" when {

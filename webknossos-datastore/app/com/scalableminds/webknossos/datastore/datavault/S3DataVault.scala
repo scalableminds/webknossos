@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.{
   AWSCredentialsProvider,
   AWSStaticCredentialsProvider,
@@ -9,11 +10,10 @@ import com.amazonaws.auth.{
 }
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.GetObjectRequest
+import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 
 import java.net.URI
@@ -43,16 +43,28 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
+  private def performRequest(request: GetObjectRequest)(implicit ec: ExecutionContext): Fox[S3Object] =
+    try {
+      Fox.successful(client.getObject(request))
+    } catch {
+      case e: AmazonServiceException =>
+        e.getStatusCode match {
+          case 404 => Fox.empty
+          case _   => Fox.failure(e.getMessage)
+        }
+      case e: Exception => Fox.failure(e.getMessage)
+    }
+
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
-      objectKey <- S3DataVault.objectKeyFromUri(path.toUri)
+      objectKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       request = range match {
         case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
         case Complete()      => getRequest(bucketName, objectKey)
       }
-      obj <- tryo(client.getObject(request))
+      obj <- performRequest(request)
       encodingStr = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
       encoding <- Encoding.fromRfc7231String(encodingStr)
     } yield (IOUtils.toByteArray(obj.getObjectContent), encoding)

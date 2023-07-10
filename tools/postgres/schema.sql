@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(104);
 COMMIT TRANSACTION;
 
 
@@ -180,10 +180,10 @@ CREATE TABLE webknossos.dataSet_thumbnails(
   dataLayerName VARCHAR(256),
   width INT NOT NULL,
   height INT NOT NULL,
-  mappingName VARCHAR(256),
+  mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
   image BYTEA NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (_dataSet, dataLayerName, width, height)
+  PRIMARY KEY (_dataSet, dataLayerName, width, height, mappingName)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');

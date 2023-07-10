@@ -12,7 +12,7 @@ import models.configuration.DataSetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsArray, JsObject}
+import play.api.libs.json.JsArray
 import utils.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
@@ -191,10 +191,12 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                       layerName: String,
                       width: Int,
                       height: Int,
-                      mappingName: Option[String],
-                      image: Array[Byte]): Fox[Unit] =
+                      mappingNameOpt: Option[String],
+                      image: Array[Byte]): Fox[Unit] = {
+    val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with emptystring
     for {
-      _ <- run(q"""INSERT INTO webknossos.dataSet_thumbnails (_dataSet, dataLayerName, width, height, image, created)
+      _ <- run(
+        q"""INSERT INTO webknossos.dataSet_thumbnails (_dataSet, dataLayerName, width, height, mappingName, image, created)
                    VALUES($datasetId, $layerName, $width, $height, $mappingName, $image, ${Instant.now})
                    ON CONFLICT (_dataSet, dataLayerName, width, height, mappingName)
                    DO UPDATE SET
@@ -202,6 +204,7 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                      created = ${Instant.now}
     """.asUpdate)
     } yield ()
+  }
 
   def removeAllForDataset(datasetId: ObjectId): Fox[Unit] =
     for {

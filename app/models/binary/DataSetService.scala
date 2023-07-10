@@ -4,8 +4,15 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
@@ -31,6 +38,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
+                               thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
@@ -149,6 +157,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       Fox.successful(foundDataSet._id)
     else
       for {
+        _ <- thumbnailCachingService.removeFromCache(foundDataSet._id)
         _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
                                                                   dataStore.name,
                                                                   dataSource.hashCode,
@@ -169,6 +178,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           s"Replacing dataset ${foundDataSet.name} (status: ${foundDataSet.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
         )
         for {
+          _ <- thumbnailCachingService.removeFromCache(foundDataSet._id)
           _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
                                                                     dataStore.name,
                                                                     dataSource.hashCode,

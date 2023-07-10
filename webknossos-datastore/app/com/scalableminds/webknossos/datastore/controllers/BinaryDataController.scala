@@ -165,7 +165,9 @@ class BinaryDataController @Inject()(
                     width: Int,
                     height: Int,
                     mag: String,
-                    mappingName: Option[String]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    mappingName: Option[String],
+                    intensityMin: Option[Double],
+                    intensityMax: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -189,6 +191,8 @@ class BinaryDataController @Inject()(
           request.cuboid(dataLayer).height,
           imagesPerRow = 1,
           blackAndWhite = false,
+          intensityMin = intensityMin,
+          intensityMax = intensityMax,
           isSegmentation = dataLayer.category == Category.segmentation
         )
         dataWithFallback = if (data.length == 0)

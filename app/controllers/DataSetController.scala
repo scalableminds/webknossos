@@ -61,6 +61,7 @@ class DataSetController @Inject()(userService: UserService,
                                   teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
                                   thumbnailService: ThumbnailService,
+                                  thumbnailCachingService: ThumbnailCachingService,
                                   conf: WkConf,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -79,7 +80,7 @@ class DataSetController @Inject()(userService: UserService,
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction {
-      thumbnailService.removeFromCache(organizationName, dataSetName)
+      thumbnailCachingService.removeFromCache(organizationName, dataSetName)
       Ok
     }
 

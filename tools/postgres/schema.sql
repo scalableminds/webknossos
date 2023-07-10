@@ -175,6 +175,17 @@ CREATE TABLE webknossos.dataSet_lastUsedTimes(
   lastUsedTime TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE webknossos.dataSet_thumbnails(
+  _dataSet CHAR(24) NOT NULL,
+  dataLayerName VARCHAR(256),
+  width INT NOT NULL,
+  height INT NOT NULL,
+  mappingName VARCHAR(256),
+  image BYTEA NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_dataSet, dataLayerName, width, height)
+);
+
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),

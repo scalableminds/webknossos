@@ -16,7 +16,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             dataLayerName: String,
                             mag1BoundingBox: BoundingBox,
                             mag: Vec3Int,
-                            mappingName: Option[String]): Fox[Array[Byte]] = {
+                            mappingName: Option[String],
+                            intensityRangeOpt: Option[(Double, Double)]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Thumbnail called for: $organizationName/${dataSet.name}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
@@ -28,6 +29,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryString("width" -> targetMagBoundingBox.width.toString)
       .addQueryString("height" -> targetMagBoundingBox.height.toString)
       .addQueryStringOptional("mappingName", mappingName)
+      .addQueryStringOptional("intensityMin", intensityRangeOpt.map(_._1.toString))
+      .addQueryStringOptional("intensityMax", intensityRangeOpt.map(_._2.toString))
       .getWithBytesResponse
   }
 

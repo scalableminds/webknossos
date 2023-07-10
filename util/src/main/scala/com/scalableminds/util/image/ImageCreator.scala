@@ -24,8 +24,10 @@ case class ImageCreatorParameters(
     imagesPerColumn: Int = Int.MaxValue,
     imageWidth: Option[Int] = None,
     imageHeight: Option[Int] = None,
+    intensityMin: Option[Double] = None,
+    intensityMax: Option[Double] = None,
     blackAndWhite: Boolean,
-    isSegmentation: Boolean = false
+    isSegmentation: Boolean = false,
 )
 
 object ImageCreator extends LazyLogging {

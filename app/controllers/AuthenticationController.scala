@@ -128,8 +128,7 @@ class AuthenticationController @Inject()(
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
                          registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
-    val passwordInfo: PasswordInfo =
-      password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
+    val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
       user <- userService.insert(organization._id,
                                  email,

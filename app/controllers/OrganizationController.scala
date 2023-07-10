@@ -75,8 +75,7 @@ class OrganizationController @Inject()(
   def create: Action[OrganizationCreationParameters] =
     sil.SecuredAction.async(validateJson[OrganizationCreationParameters]) { implicit request =>
       for {
-        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         ownerId <- userService.getMultiUserId(request.body.ownerId, request.body.ownerEmail)
         org <- organizationService.createOrganization(request.body.orgName, request.body.orgDisplayName)
         _ <- userService.createUserInOrganization(ownerId, org._id, asOwner = true)
@@ -181,8 +180,7 @@ class OrganizationController @Inject()(
   def addUser(organizationName: String): Action[AddUserParameters] =
     sil.SecuredAction.async(validateJson[AddUserParameters]) { implicit request =>
       for {
-        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         multiUserId <- userService.getMultiUserId(request.body.multiUserId, request.body.userEmail)
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName) ~> NOT_FOUND

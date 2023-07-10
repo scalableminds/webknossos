@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
 import models.team._
 import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.TokenDAO
+import oxalis.security.{PasswordHasher, TokenDAO}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
@@ -39,6 +39,7 @@ class UserService @Inject()(conf: WkConf,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
                             defaultMails: DefaultMails,
+                            passwordHasher: PasswordHasher,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
@@ -79,6 +80,12 @@ class UserService @Inject()(conf: WkConf,
     for {
       userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
+    } yield ()
+
+  def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      isSuperUser <- multiUserDAO.findOne(multiUserId).map(_.isSuperUser)
+      _ <- bool2Fox(isSuperUser)
     } yield ()
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
@@ -207,6 +214,9 @@ class UserService @Inject()(conf: WkConf,
 
   private def removeUserFromCache(userId: ObjectId): Unit =
     userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
+
+  def getPasswordInfo(passwordOpt: Option[String]): PasswordInfo =
+    passwordOpt.map(passwordHasher.hash).getOrElse(getOpenIdConnectPasswordInfo)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {

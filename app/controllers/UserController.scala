@@ -475,12 +475,9 @@ class UserController @Inject()(userService: UserService,
   def createInOrganization(organizationName: String): Action[CreateUserInOrganizationParameters] =
     sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
       for {
-        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
-        passwordInfo = request.body.password
-          .map(passwordHasher.hash)
-          .getOrElse(userService.getOpenIdConnectPasswordInfo)
+        passwordInfo = userService.getPasswordInfo(request.body.password)
         user <- userService.insert(organization._id,
                                    request.body.email,
                                    request.body.firstName,

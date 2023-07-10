@@ -134,7 +134,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
         </Modal>
       );
     } else {
-      const title = `All users with open tasks of ${project.name}`;
+      const title = `All users with active tasks for ${project.name}`;
       return (
         <Modal
           title={title}

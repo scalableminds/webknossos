@@ -87,6 +87,14 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     } yield Ok
   }
 
+  def getSecurityTxt: Action[AnyContent] = Action {
+    addNoCacheHeaderFallback(if (conf.WebKnossos.SecurityTxt.enabled) {
+      Ok(conf.WebKnossos.SecurityTxt.content)
+    } else {
+      NotFound
+    })
+  }
+
 }
 
 class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

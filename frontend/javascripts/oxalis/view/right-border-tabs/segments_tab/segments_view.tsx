@@ -1414,13 +1414,13 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
+                    this.getMoveSegementsHereItem(id),
                     this.getSetGroupColorMenuItem(id),
                     this.getLoadMeshesMenuItem(id),
                     this.getReloadMenuItem(id),
                     this.getRemoveMeshes(id),
                     this.getShowMeshesItem(id),
                     this.getDownLoadMeshesItem(id),
-                    this.getMoveSegementsHereItem(id),
                   ],
                 };
 

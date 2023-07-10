@@ -159,12 +159,13 @@ class BinaryDataController @Inject()(
                     organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
+                    x: Int,
+                    y: Int,
+                    z: Int,
                     width: Int,
                     height: Int,
-                    centerX: Option[Int],
-                    centerY: Option[Int],
-                    centerZ: Option[Int],
-                    zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    mag: String,
+                    mappingName: Option[String]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -172,8 +173,14 @@ class BinaryDataController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
-        request = DataRequest(position, width, height, 1)
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
+        request = DataRequest(
+          VoxelPosition(x, y, z, magParsed),
+          width,
+          height,
+          depth = 1,
+          DataServiceRequestSettings(appliedAgglomerate = mappingName)
+        )
         (data, _) <- requestData(dataSource, dataLayer, request)
         params = ImageCreatorParameters(
           dataLayer.bytesPerElement,
@@ -194,6 +201,7 @@ class BinaryDataController @Inject()(
       } yield Ok(outputStream.toByteArray).as(jpegMimeType)
     }
   }
+
   @ApiOperation(hidden = true, value = "")
   def mappingJson(
       token: Option[String],

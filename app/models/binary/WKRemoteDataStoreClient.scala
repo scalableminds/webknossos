@@ -14,18 +14,20 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   def getDataLayerThumbnail(organizationName: String,
                             dataSet: DataSet,
                             dataLayerName: String,
-                            width: Int,
-                            height: Int,
-                            zoom: Option[Double],
-                            center: Option[Vec3Int]): Fox[Array[Byte]] = {
-    logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
+                            mag1BoundingBox: BoundingBox,
+                            mag: Vec3Int,
+                            mappingName: Option[String]): Fox[Array[Byte]] = {
+    val targetMagBoundingBox = mag1BoundingBox / mag
+    logger.debug(s"Thumbnail called for: $organizationName/${dataSet.name}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .addQueryString("width" -> width.toString, "height" -> height.toString)
-      .addQueryStringOptional("zoom", zoom.map(_.toString))
-      .addQueryStringOptional("centerX", center.map(_.x.toString))
-      .addQueryStringOptional("centerY", center.map(_.y.toString))
-      .addQueryStringOptional("centerZ", center.map(_.z.toString))
+      .addQueryString("mag" -> mag.toMagLiteral())
+      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
+      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
+      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
+      .addQueryString("width" -> targetMagBoundingBox.width.toString)
+      .addQueryString("height" -> targetMagBoundingBox.height.toString)
+      .addQueryStringOptional("mappingName", mappingName)
       .getWithBytesResponse
   }
 

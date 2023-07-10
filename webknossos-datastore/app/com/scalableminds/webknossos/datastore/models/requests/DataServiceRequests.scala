@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePositi
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 import java.nio.file.Path
 
-case class DataServiceRequestSettings(halfByte: Boolean,
+case class DataServiceRequestSettings(halfByte: Boolean = false,
                                       appliedAgglomerate: Option[String] = None,
                                       version: Option[Long] = None)
 

@@ -1,10 +1,12 @@
-import { Spin, Table, Card } from "antd";
+import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
 import * as React from "react";
 import type { APIOpenTasksReport } from "types/api_flow_types";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TeamSelectionForm from "./team_selection_form";
+import { InfoCircleOutlined } from "@ant-design/icons";
+
 const { Column } = Table;
 const typeHint: APIOpenTasksReport[] = [];
 type State = {
@@ -45,8 +47,24 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
   render() {
     return (
       <div className="container">
-        <h3>Open Tasks</h3>
-
+        <h3>Available Task Assignments</h3>
+        <Typography.Paragraph type="secondary">
+          Select a team to show an overview of its users and the number of available task assigments
+          they qualify for. Task availability for each user is determined by assigned experiences,
+          team memberships, the number of pending task instances, etc. For tasks with multiple
+          instances, each user will get at most one. Note that individual tasks may be listed as
+          available to multiple users here, but each will only be handed to the first user to
+          request it.
+          <a
+            href="https://docs.webknossos.org/webknossos/tasks.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined style={{ marginLeft: 10 }} />
+            </Tooltip>
+          </a>
+        </Typography.Paragraph>
         <Card>
           <TeamSelectionForm onChange={(team) => this.fetchData(team.id)} />
         </Card>
@@ -75,21 +93,36 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               width={200}
             />
             <Column
-              title="# Assignments"
+              title="# Available Tasks"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
               sorter={Utils.compareBy(typeHint, (task) => task.totalAssignments)}
               width={150}
             />
             <Column
-              title=""
+              title="Available Tasks by Project"
               key="content"
-              render={(_text, item) =>
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                Object.keys(item.assignmentsByProjects)
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                  .map((key) => `${key} (${item.assignmentsByProjects[key]})`)
-                  .join(", ")
+              render={(_text, item: APIOpenTasksReport) =>
+                Object.keys(item.assignmentsByProjects).map((key) => {
+                  const [projectName, experience] = key.split("/");
+                  return (
+                    <div key={key}>
+                      <Tooltip
+                        title={
+                          <span>
+                            There are potentially {item.assignmentsByProjects[key]} tasks from the
+                            project <i>{projectName}</i> available for automatic assignment for this
+                            user because they match the configured assignment criteria; especially
+                            the required experience level <i>{experience}</i>.
+                          </span>
+                        }
+                      >
+                        {projectName}: {item.assignmentsByProjects[key]}
+                      </Tooltip>
+                      <Tag style={{ marginLeft: 6 }}>{experience}</Tag>
+                    </div>
+                  );
+                })
               }
             />
           </Table>

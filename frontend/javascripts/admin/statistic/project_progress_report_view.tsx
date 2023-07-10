@@ -238,7 +238,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title={
                   <Badge
-                    count="Open"
+                    count="Pending"
                     style={{
                       background: colors.open,
                     }}

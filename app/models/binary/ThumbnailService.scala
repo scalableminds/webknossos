@@ -107,8 +107,8 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       .getOrElse(1.0)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)
-    val x = Math.max(0, center.x - width * mag.x / 2)
-    val y = Math.max(0, center.y - height * mag.y / 2)
+    val x = center.x - width * mag.x / 2
+    val y = center.y - height * mag.y / 2
     val z = center.z
     (BoundingBox(Vec3Int(x, y, z), width, height, 1), mag, intensityRangeOpt)
   }
@@ -129,6 +129,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
 
 class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
+  private val cacheEnabled = false
 
   // First cache is in memory, then in postgres.
   // Key: datasetId, layerName, width, height, mappingName
@@ -141,19 +142,21 @@ class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: Th
                 height: Int,
                 mappingName: Option[String],
                 loadFn: Unit => Fox[Array[Byte]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    inMemoryThumbnailCache.getOrLoad(
-      (datasetId, layerName, width, height, mappingName),
-      _ =>
-        for {
-          fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox
-          fromDbOrNew <- fromDbBox match {
-            case Full(fromDb) =>
-              Fox.successful(fromDb)
-            case _ =>
-              loadFn(())
-          }
-        } yield fromDbOrNew
-    )
+    if (cacheEnabled) {
+      inMemoryThumbnailCache.getOrLoad(
+        (datasetId, layerName, width, height, mappingName),
+        _ =>
+          for {
+            fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox
+            fromDbOrNew <- fromDbBox match {
+              case Full(fromDb) =>
+                Fox.successful(fromDb)
+              case _ =>
+                loadFn(())
+            }
+          } yield fromDbOrNew
+      )
+    } else loadFn(())
 
   def removeFromCache(organizationName: String, datasetName: String): Fox[Unit] =
     for {

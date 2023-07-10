@@ -2,11 +2,12 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.image.JPEGWriter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
+import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -184,19 +185,19 @@ class BinaryDataController @Inject()(
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
         (data, _) <- requestData(dataSource, dataLayer, request)
+        intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         params = ImageCreatorParameters(
-          dataLayer.bytesPerElement,
-          request.settings.halfByte,
-          request.cuboid(dataLayer).width,
-          request.cuboid(dataLayer).height,
+          dataLayer.elementClass,
+          useHalfBytes = false,
+          slideWidth = width,
+          slideHeight = height,
           imagesPerRow = 1,
           blackAndWhite = false,
-          intensityMin = intensityMin,
-          intensityMax = intensityMax,
+          intensityRange = intensityRange,
           isSegmentation = dataLayer.category == Category.segmentation
         )
         dataWithFallback = if (data.length == 0)
-          new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
+          new Array[Byte](width * height * dataLayer.bytesPerElement)
         else data
         spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
         firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"

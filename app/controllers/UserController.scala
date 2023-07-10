@@ -6,11 +6,11 @@ import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
-import models.organization.OrganizationService
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WkEnv
+import oxalis.security.{PasswordHasher, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
@@ -29,10 +29,12 @@ class UserController @Inject()(userService: UserService,
                                multiUserDAO: MultiUserDAO,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
+                               organizationDAO: OrganizationDAO,
                                timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
+                               passwordHasher: PasswordHasher,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -459,6 +461,35 @@ class UserController @Inject()(userService: UserService,
         updatedUser <- userDAO.findOne(userIdValidated)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)
+    }
+
+  case class CreateUserInOrganizationParameters(firstName: String,
+                                                lastName: String,
+                                                email: String,
+                                                password: Option[String])
+
+  object CreateUserInOrganizationParameters {
+    implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
+      Json.format[CreateUserInOrganizationParameters]
+  }
+  def createInOrganization(organizationName: String): Action[CreateUserInOrganizationParameters] =
+    sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
+      for {
+        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
+        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
+        passwordInfo = request.body.password
+          .map(passwordHasher.hash)
+          .getOrElse(userService.getOpenIdConnectPasswordInfo)
+        user <- userService.insert(organization._id,
+                                   request.body.email,
+                                   request.body.firstName,
+                                   request.body.lastName,
+                                   isActive = true,
+                                   passwordInfo,
+                                   isAdmin = false,
+                                   isOrganizationOwner = false)
+      } yield Ok(user._id.toString)
     }
 
 }

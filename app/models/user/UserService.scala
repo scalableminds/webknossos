@@ -317,6 +317,46 @@ class UserService @Inject()(conf: WkConf,
       teamMemberships <- teamMembershipsFor(possibleEditee._id)
     } yield otherIsTeamManagerOrAdmin || teamMemberships.isEmpty
 
+  def getMultiUserId(multiUserIdOpt: Option[String], emailOpt: Option[String])(
+      implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      _ <- Fox.bool2Fox(multiUserIdOpt.isDefined || emailOpt.isDefined) ?~> "user.id.orEmailNecessary"
+      ownerId <- (emailOpt, multiUserIdOpt) match {
+        case (_, Some(id)) => Fox.successful(id)
+        case (Some(email), _) =>
+          for {
+            owner <- multiUserDAO.findOneByEmail(email) ?~> "user.notFound"
+          } yield owner._id.toString
+        case _ => Fox.empty ?~> "user.notFound"
+      }
+      id <- ObjectId.fromString(ownerId)
+    } yield id
+
+  def createUserInOrganization(existingMultiUserId: ObjectId, organizationId: ObjectId, asOwner: Boolean)(
+      implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      _ <- organizationDAO.findOne(organizationId) ?~> "organization.notFound"
+      _ <- multiUserDAO.findOne(existingMultiUserId) ?~> "user.notFound"
+      existingUser <- userDAO.findFirstByMultiUser(existingMultiUserId) ?~> "user.notFound"
+      newUserId = ObjectId.generate
+      user = User(
+        newUserId,
+        existingMultiUserId,
+        organizationId,
+        existingUser.firstName,
+        existingUser.lastName,
+        Instant.now,
+        existingUser.userConfiguration,
+        existingUser.loginInfo,
+        isAdmin = false,
+        isOrganizationOwner = asOwner,
+        isDatasetManager = asOwner,
+        isDeactivated = false,
+        isUnlisted = false
+      )
+      _ <- userDAO.insertOne(user)
+    } yield user
+
   def publicWrites(user: User, requestingUser: User): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {

@@ -58,6 +58,7 @@ GET           /users/:id/tasks                                                  
 GET           /users/:id/loggedTime                                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                                 controllers.UserController.usersLoggedTime
 GET           /users/:id/annotations                                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+POST          /users/inOrganization/:organizationName                                           controllers.UserController.createInOrganization(organizationName: String)
 
 # Team
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
@@ -227,12 +228,14 @@ GET           /statistics/users                                                 
 
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list
+POST          /organizations                                                                    controllers.OrganizationController.create
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                                  controllers.OrganizationController.get(organizationName: String)
 PATCH         /organizations/:organizationName                                                  controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                                  controllers.OrganizationController.delete(organizationName: String)
+POST          /organizations/:organizationName/addUser                                          controllers.OrganizationController.addUser(organizationName: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData
 POST          /pricing/requestExtension                                                         controllers.OrganizationController.sendExtendPricingPlanEmail
 POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)

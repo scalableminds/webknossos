@@ -63,6 +63,7 @@ user.notAuthorised=You are not authorized to view this resource. Please log in.
 user.id.notFound=We could not find a user id in the request.
 user.id.invalid=The provided user id is invalid.
 user.creation.failed=Failed to create user
+user.id.orEmailNecessary=Email or id needed to identify user.
 
 oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid

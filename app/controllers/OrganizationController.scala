@@ -13,8 +13,8 @@ import models.team.PricingPlan
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsNull, JsValue, Json, __}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
 import scala.concurrent.duration._
@@ -22,17 +22,18 @@ import oxalis.mail.{DefaultMails, Send}
 
 import scala.concurrent.ExecutionContext
 
-class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
-                                       organizationService: OrganizationService,
-                                       inviteDAO: InviteDAO,
-                                       conf: WkConf,
-                                       userDAO: UserDAO,
-                                       multiUserDAO: MultiUserDAO,
-                                       wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                       userService: UserService,
-                                       defaultMails: DefaultMails,
-                                       actorSystem: ActorSystem,
-                                       sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class OrganizationController @Inject()(
+    organizationDAO: OrganizationDAO,
+    organizationService: OrganizationService,
+    inviteDAO: InviteDAO,
+    conf: WkConf,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    userService: UserService,
+    defaultMails: DefaultMails,
+    actorSystem: ActorSystem,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -63,6 +64,24 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       js <- Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
   }
+
+  case class OrganizationCreationParameters(orgName: Option[String],
+                                            orgDisplayName: String,
+                                            ownerEmail: Option[String],
+                                            ownerId: Option[String])
+  object OrganizationCreationParameters {
+    implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
+  }
+  def create: Action[OrganizationCreationParameters] =
+    sil.SecuredAction.async(validateJson[OrganizationCreationParameters]) { implicit request =>
+      for {
+        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
+        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        ownerId <- userService.getMultiUserId(request.body.ownerId, request.body.ownerEmail)
+        org <- organizationService.createOrganization(request.body.orgName, request.body.orgDisplayName)
+        _ <- userService.createUserInOrganization(ownerId, org._id, asOwner = true)
+      } yield Ok(org.name)
+    }
 
   def getDefault: Action[AnyContent] = Action.async { implicit request =>
     for {
@@ -153,6 +172,23 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
     } yield Ok
   }
+
+  case class AddUserParameters(userEmail: Option[String], multiUserId: Option[String])
+  object AddUserParameters {
+    implicit val jsonFormat: OFormat[AddUserParameters] = Json.format[AddUserParameters]
+  }
+
+  def addUser(organizationName: String): Action[AddUserParameters] =
+    sil.SecuredAction.async(validateJson[AddUserParameters]) { implicit request =>
+      for {
+        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
+        _ <- bool2Fox(isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+        multiUserId <- userService.getMultiUserId(request.body.multiUserId, request.body.userEmail)
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName) ~> NOT_FOUND
+        user <- userService.createUserInOrganization(multiUserId, organization._id, asOwner = false)
+      } yield Ok(user._id.toString)
+    }
 
   private val organizationUpdateReads =
     ((__ \ 'displayName).read[String] and

@@ -234,8 +234,8 @@ class AuthenticationController @Inject()(
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        isSuperuser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        selectedOrganization <- if (isSuperuser)
+        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
+        selectedOrganization <- if (isSuperUser)
           accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationId, workflowHash)
         else
           accessibleBySwitchingForMultiUser(request.identity._multiUser,

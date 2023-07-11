@@ -10,6 +10,8 @@ import {
   CloudDownloadOutlined,
   DownloadOutlined,
   SearchOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -27,6 +29,7 @@ import {
   Modal,
   Popover,
   Select,
+  Space,
   Tooltip,
   Tree,
 } from "antd";
@@ -428,7 +431,7 @@ class SegmentsView extends React.Component<Props, State> {
           if (segmentIsosurface == null) return 1; //only care about explicitly invisible (not unloaded) meshes
           return isosurfaces[segment.id].isVisible ? 1 : 0;
         });
-        if (visibilityOfSegments.reduce((a, b) => a + b, 0) < segmentsOfGroup.length) {
+        if (_.sum(visibilityOfSegments) < segmentsOfGroup.length) {
           //at least one is invisible, so first option is to make every mesh visible
           isVisible = false;
         }
@@ -958,7 +961,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getRemoveMeshes = (groupId: number): ItemType => {
+  getRemoveMeshesMenuItem = (groupId: number): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "removeMeshes",
@@ -977,7 +980,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getDownLoadMeshesItem = (groupId: number): ItemType => {
+  getDownLoadMeshesMenuItem = (groupId: number): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "downloadAllMeshes",
@@ -996,7 +999,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getMoveSegementsHereItem = (groupId: number): ItemType => {
+  getMoveSegementsHereMenuItem = (groupId: number): ItemType => {
     return this.state.selectedSegmentId != null
       ? {
           key: "moveHere",
@@ -1023,7 +1026,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getShowMeshesItem = (groupId: number): ItemType => {
+  getShowMeshesMenuItem = (groupId: number): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "showMeshesOfGroup",
@@ -1042,8 +1045,16 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <i className="fas fa-dice-d20" />
-              {this.state.areSegmentsInGroupVisible[groupId] ? "Hide" : "Show"} all meshes
+              {this.state.areSegmentsInGroupVisible[groupId] ? (
+                <>
+                  <EyeInvisibleOutlined /> Hide
+                </>
+              ) : (
+                <>
+                  <EyeOutlined /> Show
+                </>
+              )}
+              {<Space />}all meshes
             </div>
           ),
         }
@@ -1128,11 +1139,14 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentsWithMissingLocation = (groupId: number): number[] => {
     const segmentGroup = this.getSegmentsOfGroup(groupId);
     if (segmentGroup == null) return [];
-    let segmentIdsWithoutPosition: number[] = [];
-    segmentGroup.forEach((segment) => {
-      if (segment.somePosition == null) segmentIdsWithoutPosition.push(segment.id);
-    });
-    return segmentIdsWithoutPosition.sort();
+    let segmentsWithoutPosition: number[] = segmentGroup.reduce(
+      (segmentsWithoutPositionAcc: number[], segment: Segment) => {
+        segment.somePosition == null && segmentsWithoutPositionAcc.push(segment.id);
+        return segmentsWithoutPositionAcc;
+      },
+      [],
+    );
+    return segmentsWithoutPosition.sort();
   };
 
   handlePerSegment(groupId: number, callback: (s: Segment) => void) {
@@ -1169,14 +1183,14 @@ class SegmentsView extends React.Component<Props, State> {
     if (segmentGroup == null) return;
 
     if (visibleSegmentationLayer != null) {
-      const segmentArray = segmentGroup.map((segment) => {
+      const segmentsArray = segmentGroup.map((segment) => {
         return {
-          cellName: segment.name ? segment.name : "mesh",
+          segmentName: segment.name ? segment.name : "mesh",
           segmentId: segment.id,
           layerName: visibleSegmentationLayer.name,
         };
       });
-      Store.dispatch(triggerIsosurfacesDownloadAction(segmentArray));
+      Store.dispatch(triggerIsosurfacesDownloadAction(segmentsArray));
     }
   };
 
@@ -1310,8 +1324,7 @@ class SegmentsView extends React.Component<Props, State> {
       return null;
     }
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    const segmentsOfGroup = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
-    return segmentsOfGroup;
+    return groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
   };
 
   onRenameStart = () => {
@@ -1414,13 +1427,13 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
-                    this.getMoveSegementsHereItem(id),
+                    this.getMoveSegementsHereMenuItem(id),
                     this.getSetGroupColorMenuItem(id),
                     this.getLoadMeshesMenuItem(id),
                     this.getReloadMenuItem(id),
-                    this.getRemoveMeshes(id),
-                    this.getShowMeshesItem(id),
-                    this.getDownLoadMeshesItem(id),
+                    this.getRemoveMeshesMenuItem(id),
+                    this.getShowMeshesMenuItem(id),
+                    this.getDownLoadMeshesMenuItem(id),
                   ],
                 };
 
@@ -1588,13 +1601,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (segmentGroup == null) return false;
     const isosurfacesOfLayer =
       Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces;
-    let bool = false;
-    segmentGroup.forEach((segment) => {
-      if (isosurfacesOfLayer[segment.id] != null) {
-        bool = true;
-      }
-    });
-    return bool;
+    return segmentGroup.some((segment) => isosurfacesOfLayer[segment.id] != null);
   };
 
   onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {

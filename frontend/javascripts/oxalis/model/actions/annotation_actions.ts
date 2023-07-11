@@ -43,7 +43,7 @@ export type StartedLoadingIsosurfaceAction = ReturnType<typeof startedLoadingIso
 export type FinishedLoadingIsosurfaceAction = ReturnType<typeof finishedLoadingIsosurfaceAction>;
 export type UpdateMeshFileListAction = ReturnType<typeof updateMeshFileListAction>;
 export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFileAction>;
-export type ImportIsosurfaceFromStlAction = ReturnType<typeof importIsosurfaceFromStlAction>;
+export type ImportIsosurfaceFromSTLAction = ReturnType<typeof importIsosurfaceFromSTLAction>;
 export type RemoveIsosurfaceAction = ReturnType<typeof removeIsosurfaceAction>;
 export type AddAdHocIsosurfaceAction = ReturnType<typeof addAdHocIsosurfaceAction>;
 export type AddPrecomputedIsosurfaceAction = ReturnType<typeof addPrecomputedIsosurfaceAction>;
@@ -74,7 +74,7 @@ export type AnnotationActionTypes =
   | FinishedLoadingIsosurfaceAction
   | UpdateMeshFileListAction
   | UpdateCurrentMeshFileAction
-  | ImportIsosurfaceFromStlAction
+  | ImportIsosurfaceFromSTLAction
   | RemoveIsosurfaceAction
   | AddAdHocIsosurfaceAction
   | AddPrecomputedIsosurfaceAction
@@ -213,23 +213,23 @@ export const maybeFetchMeshFilesAction = (
   } as const);
 
 export const triggerIsosurfaceDownloadAction = (
-  cellName: string,
+  segmentName: string,
   segmentId: number,
   layerName: string,
 ) =>
   ({
     type: "TRIGGER_ISOSURFACE_DOWNLOAD",
-    cellName,
+    segmentName,
     segmentId,
     layerName,
   } as const);
 
 export const triggerIsosurfacesDownloadAction = (
-  surfaceArray: { cellName: string; segmentId: number; layerName: string }[],
+  segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ) =>
   ({
     type: "TRIGGER_ISOSURFACES_DOWNLOAD",
-    surfaceArray,
+    segmentsArray,
   } as const);
 
 export const refreshIsosurfacesAction = () =>
@@ -275,7 +275,7 @@ export const updateCurrentMeshFileAction = (
     meshFileName,
   } as const);
 
-export const importIsosurfaceFromStlAction = (layerName: string, buffer: ArrayBuffer) =>
+export const importIsosurfaceFromSTLAction = (layerName: string, buffer: ArrayBuffer) =>
   ({
     type: "IMPORT_ISOSURFACE_FROM_STL",
     layerName,

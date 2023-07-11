@@ -288,6 +288,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
+  "task.tooltip_explain_reset":
+    "This resets a task to its initial state and thereby undoes any annotation work of the assigned user account. The task will remain assigned to this user account for further annotation work.",
+  "task.tooltip_explain_reset_cancel":
+    "This resets a task to its initial state and thereby undoes any annotation work of the assigned user account. Further, the task assignment will be removed from the user's account and recycled into the pool of available tasks for other potential users. The currently assigned user account will not be assigned to this task again by the system (unless he is an Admin).",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
   "dataset.upload_cancel": "The dataset upload was cancelled.",

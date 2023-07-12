@@ -881,9 +881,9 @@ class SegmentsView extends React.Component<Props, State> {
     return maybeGroupSegments[0].color;
   };
 
-  loadAdHocMenuItem = (text: string, id: number, item: JSX.Element | null = null) => {
+  getComputeMeshesAdHocMenuItem = (id: number): ItemType => {
     return {
-      key: "loadAdHoc",
+      key: "computeAdHoc",
       label: (
         <div
           onClick={() => {
@@ -895,51 +895,31 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          {item}
-          {text}
+          <CloudDownloadOutlined /> Compute meshes (ad hoc)
         </div>
       ),
     };
   };
 
-  getLoadMeshesMenuItem = (id: number): ItemType => {
-    if (this.props.currentMeshFile != null) {
-      return {
-        key: "loadMeshesOfGroup",
-        label: (
-          <>
-            <CloudDownloadOutlined />
-            Load all meshes
-          </>
-        ),
-        children: [
-          this.loadAdHocMenuItem("ad hoc", id),
-          {
-            key: "loadByFile",
-            label: (
-              <div
-                onClick={() => {
-                  if (this.props.visibleSegmentationLayer == null) {
-                    return;
-                  }
-                  this.handleLoadMeshesFromFile(id);
-                  this.getToastForMissingLocations(id);
-                  this.handleSegmentDropdownMenuVisibility(id, false);
-                }}
-              >
-                precomputed
-              </div>
-            ),
-          },
-        ],
-      };
-    } else {
-      return this.loadAdHocMenuItem(
-        "Load meshes for segments (ad-hoc)",
-        id,
-        <CloudDownloadOutlined />,
-      );
-    }
+  getLoadMeshesFromFileMenuItem = (id: number): ItemType => {
+    return {
+      key: "loadByFile",
+      disabled: this.props.currentMeshFile == null,
+      label: (
+        <div
+          onClick={() => {
+            if (this.props.visibleSegmentationLayer == null) {
+              return;
+            }
+            this.handleLoadMeshesFromFile(id);
+            this.getToastForMissingLocations(id);
+            this.handleSegmentDropdownMenuVisibility(id, false);
+          }}
+        >
+          <CloudDownloadOutlined /> Load meshes (precomputed)
+        </div>
+      ),
+    };
   };
 
   getReloadMenuItem = (groupId: number): ItemType => {
@@ -1054,7 +1034,7 @@ class SegmentsView extends React.Component<Props, State> {
                   <EyeOutlined /> Show
                 </>
               )}
-              {<Space />}all meshes
+              <Space /> all meshes
             </div>
           ),
         }
@@ -1429,7 +1409,8 @@ class SegmentsView extends React.Component<Props, State> {
                     },
                     this.getMoveSegementsHereMenuItem(id),
                     this.getSetGroupColorMenuItem(id),
-                    this.getLoadMeshesMenuItem(id),
+                    this.getLoadMeshesFromFileMenuItem(id),
+                    this.getComputeMeshesAdHocMenuItem(id),
                     this.getReloadMenuItem(id),
                     this.getRemoveMeshesMenuItem(id),
                     this.getShowMeshesMenuItem(id),

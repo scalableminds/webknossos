@@ -289,7 +289,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "task.tooltip_explain_reset":
-    "This resets a task to its initial state and thereby undoes any annotation work of the assigned user account. The task will remain assigned to this user account for further annotation work.",
+    "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
   "task.tooltip_explain_reset_cancel":
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. Furthermore, the task assignment will be removed from the user’s account and recycled into the pool of available tasks for other users. The currently assigned user will not be assigned to this task again (unless they are an Admin).",
   "dataset.upload_success": "The dataset was uploaded successfully.",

@@ -286,11 +286,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       return updateActiveMapping(state, { mappingName }, layerName);
     }
 
-    case "SET_LAYER_ORDER": {
-      const { layers } = action;
-      return updateKey(state, "datasetConfiguration", { layerOrder: layers });
-    }
-
     default: // pass;
   }
 

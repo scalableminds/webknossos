@@ -259,7 +259,7 @@ void main() {
           data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
         }
       }
-    <% } else { %>
+    <% } else if(hasSegmentation) { %>
       <% const segmentationName = name %>
       vec4 segmentation_color = data_color;
       // Color map (<= to fight rounding mistakes)

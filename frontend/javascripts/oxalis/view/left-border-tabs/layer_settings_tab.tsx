@@ -77,7 +77,6 @@ import {
   updateLayerSettingAction,
   dispatchClipHistogramAsync,
   reloadHistogramAction,
-  setLayerOrderAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
@@ -121,7 +120,6 @@ type DatasetSettingsProps = {
   histogramData: HistogramDataForAllLayers;
   onChangeRadius: (value: number) => void;
   onChangeShowSkeletons: (arg0: boolean) => void;
-  onChangeLayerOrder: (layerOrder: string[]) => void;
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
@@ -1094,7 +1092,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         [newIndex, 0, movedElement],
       ],
     });
-    this.props.onChangeLayerOrder(newLayerOrder);
+    this.props.onChange("layerOrder", newLayerOrder);
   };
 
   render() {
@@ -1243,9 +1241,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   reloadHistogram(layerName: string) {
     dispatch(reloadHistogramAction(layerName));
-  },
-  onChangeLayerOrder(layerOrder: string[]) {
-    dispatch(setLayerOrderAction(layerOrder));
   },
 });
 

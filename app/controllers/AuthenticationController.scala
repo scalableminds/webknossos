@@ -13,7 +13,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import models.voxelytics.VoxelyticsDAO
@@ -36,28 +36,28 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class AuthenticationController @Inject()(
-    actorSystem: ActorSystem,
-    credentialsProvider: CredentialsProvider,
-    passwordHasher: PasswordHasher,
-    userService: UserService,
-    annotationProvider: AnnotationInformationProvider,
-    organizationService: OrganizationService,
-    inviteService: InviteService,
-    inviteDAO: InviteDAO,
-    brainTracing: BrainTracing,
-    mailchimpClient: MailchimpClient,
-    organizationDAO: OrganizationDAO,
-    analyticsService: AnalyticsService,
-    userDAO: UserDAO,
-    dataSetDAO: DataSetDAO,
-    multiUserDAO: MultiUserDAO,
-    defaultMails: DefaultMails,
-    conf: WkConf,
-    annotationDAO: AnnotationDAO,
-    voxelyticsDAO: VoxelyticsDAO,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    openIdConnectClient: OpenIdConnectClient,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                                          actorSystem: ActorSystem,
+                                          credentialsProvider: CredentialsProvider,
+                                          passwordHasher: PasswordHasher,
+                                          userService: UserService,
+                                          annotationProvider: AnnotationInformationProvider,
+                                          organizationService: OrganizationService,
+                                          inviteService: InviteService,
+                                          inviteDAO: InviteDAO,
+                                          brainTracing: BrainTracing,
+                                          mailchimpClient: MailchimpClient,
+                                          organizationDAO: OrganizationDAO,
+                                          analyticsService: AnalyticsService,
+                                          userDAO: UserDAO,
+                                          dataSetDAO: DatasetDAO,
+                                          multiUserDAO: MultiUserDAO,
+                                          defaultMails: DefaultMails,
+                                          conf: WkConf,
+                                          annotationDAO: AnnotationDAO,
+                                          voxelyticsDAO: VoxelyticsDAO,
+                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                          openIdConnectClient: OpenIdConnectClient,
+                                          sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
     with FoxImplicits {

@@ -10,10 +10,10 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.team._
 import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.TokenDAO
@@ -36,7 +36,7 @@ class UserService @Inject()(conf: WkConf,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
-                            dataSetDAO: DataSetDAO,
+                            dataSetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
                             defaultMails: DefaultMails,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
@@ -225,11 +225,11 @@ class UserService @Inject()(conf: WkConf,
     }
 
   def updateDataSetViewConfiguration(
-      user: User,
-      dataSetName: String,
-      organizationName: String,
-      dataSetConfiguration: DataSetViewConfiguration,
-      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+                                      user: User,
+                                      dataSetName: String,
+                                      organizationName: String,
+                                      dataSetConfiguration: DatasetViewConfiguration,
+                                      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
         "dataSet.notFound",

@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.binary.{DataSetDAO, DataStoreDAO}
+import models.binary.{DatasetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
@@ -25,7 +25,7 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 
 case class Job(
     _id: ObjectId,
@@ -267,7 +267,7 @@ class JobService @Inject()(wkConf: WkConf,
                            workerDAO: WorkerDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
-                           dataSetDAO: DataSetDAO,
+                           dataSetDAO: DatasetDAO,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,

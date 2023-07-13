@@ -24,8 +24,8 @@ case class Publication(_id: ObjectId,
                        created: Instant = Instant.now,
                        isDeleted: Boolean = false)
 
-class PublicationService @Inject()(dataSetService: DataSetService,
-                                   dataSetDAO: DataSetDAO,
+class PublicationService @Inject()(dataSetService: DatasetService,
+                                   dataSetDAO: DatasetDAO,
                                    annotationService: AnnotationService,
                                    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
 

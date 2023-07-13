@@ -3,7 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
@@ -18,14 +18,14 @@ import scala.concurrent.ExecutionContext
 
 @Api
 class FolderController @Inject()(
-    folderDAO: FolderDAO,
-    folderService: FolderService,
-    teamDAO: TeamDAO,
-    userService: UserService,
-    teamService: TeamService,
-    dataSetDAO: DataSetDAO,
-    organizationDAO: OrganizationDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+                                  folderDAO: FolderDAO,
+                                  folderService: FolderService,
+                                  teamDAO: TeamDAO,
+                                  userService: UserService,
+                                  teamService: TeamService,
+                                  dataSetDAO: DatasetDAO,
+                                  organizationDAO: OrganizationDAO,
+                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
 
@@ -18,15 +18,15 @@ package object datasource {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]
   }
 
-  object DataSetViewConfiguration {
-    type DataSetViewConfiguration = Map[String, JsValue]
-    implicit val dataSetViewConfigurationFormat: Format[DataSetViewConfiguration] = Format.of[DataSetViewConfiguration]
+  object DatasetViewConfiguration {
+    type DatasetViewConfiguration = Map[String, JsValue]
+    implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
   }
 
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: Vec3Double,
-                                                    defaultViewConfiguration: Option[DataSetViewConfiguration] = None)
+                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)

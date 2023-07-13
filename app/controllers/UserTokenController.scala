@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.binary.{DatasetDAO, DatasetService, DataStoreService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
@@ -38,8 +38,8 @@ object RpcTokenHolder {
 }
 
 @Api
-class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+class UserTokenController @Inject()(dataSetDAO: DatasetDAO,
+                                    dataSetService: DatasetService,
                                     annotationDAO: AnnotationDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,

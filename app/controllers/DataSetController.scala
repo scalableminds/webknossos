@@ -59,14 +59,14 @@ object SegmentAnythingEmbeddingParameters {
 @Api
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
-                                  dataSetService: DataSetService,
+                                  dataSetService: DatasetService,
                                   dataStoreDAO: DataStoreDAO,
-                                  dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
+                                  dataSetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
-                                  dataSetDAO: DataSetDAO,
+                                  dataSetDAO: DatasetDAO,
                                   conf: WkConf,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -110,7 +110,7 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
+      def imageFromCacheIfPossible(dataSet: Dataset, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         dataSetService.thumbnailCache.find(
@@ -254,18 +254,18 @@ class DataSetController @Inject()(userService: UserService,
     } yield addRemoteOriginHeaders(Ok(js))
   }
 
-  private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
+  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[JsObject]] =
     for {
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService.teamManagerMembershipsFor(user._id))
       groupedByOrga = datasets.groupBy(_._organization).toList
-      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[DataSet]) =>
+      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[Dataset]) =>
         for {
           organization <- organizationDAO.findOne(byOrgaTuple._1)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
-          result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[DataSet]) =>
+          result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {
               dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext)
               resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
@@ -317,7 +317,7 @@ class DataSetController @Inject()(userService: UserService,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
-            dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+            dataSetLastUsedTimesDAO.updateForDatasetAndUser(dataSet._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, Some(organization), Some(dataStore))
@@ -514,8 +514,8 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- dataSetService.assertValidDataSetName(dataSetName)
-        _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertValidDatasetName(dataSetName)
+        _ <- dataSetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }
 
@@ -523,7 +523,7 @@ Expects:
   def getOrganizationForDataSet(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
-        organizationId <- dataSetDAO.getOrganizationForDataSet(dataSetName)
+        organizationId <- dataSetDAO.getOrganizationForDataset(dataSetName)
         organization <- organizationDAO.findOne(organizationId)
       } yield Ok(Json.obj("organizationName" -> organization.name))
   }

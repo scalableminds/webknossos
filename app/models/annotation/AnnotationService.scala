@@ -88,8 +88,8 @@ class AnnotationService @Inject()(
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
-    dataSetService: DataSetService,
-    dataSetDAO: DataSetDAO,
+    dataSetService: DatasetService,
+    dataSetDAO: DatasetDAO,
     dataStoreService: DataStoreService,
     tracingStoreService: TracingStoreService,
     tracingStoreDAO: TracingStoreDAO,
@@ -115,7 +115,7 @@ class AnnotationService @Inject()(
 
   val DefaultAnnotationListLimit = 1000
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
+  private def selectSuitableTeam(user: User, dataSet: Dataset): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
       datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
@@ -201,7 +201,7 @@ class AnnotationService @Inject()(
       _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
     } yield ()
 
-  private def createTracingsForExplorational(dataSet: DataSet,
+  private def createTracingsForExplorational(dataSet: Dataset,
                                              dataSource: DataSource,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
                                              datasetOrganizationName: String,
@@ -448,7 +448,7 @@ class AnnotationService @Inject()(
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  private def tracingsFromBase(annotationBase: Annotation, dataSet: DataSet)(
+  private def tracingsFromBase(annotationBase: Annotation, dataSet: Dataset)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(Option[String], Option[String])] =
     for {
@@ -586,7 +586,7 @@ class AnnotationService @Inject()(
     } yield ()
 
   def createFrom(user: User,
-                 dataSet: DataSet,
+                 dataSet: Dataset,
                  annotationLayers: List[AnnotationLayer],
                  annotationType: AnnotationType,
                  name: Option[String],
@@ -780,7 +780,7 @@ class AnnotationService @Inject()(
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
-      _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDataSetAccess"
+      _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDatasetAccess"
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated

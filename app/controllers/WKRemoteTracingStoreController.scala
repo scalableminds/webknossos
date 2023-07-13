@@ -10,7 +10,7 @@ import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, AnnotationInformationProvider, TracingStoreService}
-import models.binary.{DataSetDAO, DataSetService}
+import models.binary.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
 import models.user.time.TimeSpanService
@@ -22,16 +22,16 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreController @Inject()(
-    tracingStoreService: TracingStoreService,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    timeSpanService: TimeSpanService,
-    dataSetService: DataSetService,
-    organizationDAO: OrganizationDAO,
-    userDAO: UserDAO,
-    annotationInformationProvider: AnnotationInformationProvider,
-    analyticsService: AnalyticsService,
-    dataSetDAO: DataSetDAO,
-    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+                                                tracingStoreService: TracingStoreService,
+                                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                                timeSpanService: TimeSpanService,
+                                                dataSetService: DatasetService,
+                                                organizationDAO: OrganizationDAO,
+                                                userDAO: UserDAO,
+                                                annotationInformationProvider: AnnotationInformationProvider,
+                                                analyticsService: AnalyticsService,
+                                                dataSetDAO: DatasetDAO,
+                                                annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -107,7 +107,7 @@ class WKRemoteTracingStoreController @Inject()(
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
+            dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
             "dataSet.noAccess",

@@ -12,7 +12,7 @@ import play.utils.UriEncoding
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
   def requestDataLayerThumbnail(organizationName: String,
-                                dataSet: DataSet,
+                                dataSet: Dataset,
                                 dataLayerName: String,
                                 width: Int,
                                 height: Int,
@@ -30,7 +30,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def getLayerData(organizationName: String,
-                   dataset: DataSet,
+                   dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int): Fox[Array[Byte]] = {
@@ -49,7 +49,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .getWithBytesResponse
   }
 
-  def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(organizationName: String, dataSet: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)

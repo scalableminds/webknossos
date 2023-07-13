@@ -33,23 +33,23 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
-    dataSetService: DataSetService,
-    dataStoreService: DataStoreService,
-    dataStoreDAO: DataStoreDAO,
-    analyticsService: AnalyticsService,
-    userService: UserService,
-    organizationDAO: OrganizationDAO,
-    usedStorageService: UsedStorageService,
-    dataSetDAO: DataSetDAO,
-    userDAO: UserDAO,
-    folderDAO: FolderDAO,
-    jobDAO: JobDAO,
-    multiUserDAO: MultiUserDAO,
-    credentialDAO: CredentialDAO,
-    mailchimpClient: MailchimpClient,
-    slackNotificationService: SlackNotificationService,
-    conf: WkConf,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                                             dataSetService: DatasetService,
+                                             dataStoreService: DataStoreService,
+                                             dataStoreDAO: DataStoreDAO,
+                                             analyticsService: AnalyticsService,
+                                             userService: UserService,
+                                             organizationDAO: OrganizationDAO,
+                                             usedStorageService: UsedStorageService,
+                                             dataSetDAO: DatasetDAO,
+                                             userDAO: UserDAO,
+                                             folderDAO: FolderDAO,
+                                             jobDAO: JobDAO,
+                                             multiUserDAO: MultiUserDAO,
+                                             credentialDAO: CredentialDAO,
+                                             mailchimpClient: MailchimpClient,
+                                             slackNotificationService: SlackNotificationService,
+                                             conf: WkConf,
+                                             wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
 
@@ -69,8 +69,8 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
             bool2Fox(usedStorageBytes <= includedStorage)) ?~> "dataSet.upload.storageExceeded" ~> FORBIDDEN
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- dataSetService.assertValidDataSetName(uploadInfo.name)
-          _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
+          _ <- dataSetService.assertValidDatasetName(uploadInfo.name)
+          _ <- dataSetService.assertNewDatasetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
           folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"

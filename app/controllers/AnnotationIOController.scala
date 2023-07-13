@@ -33,7 +33,7 @@ import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{Dataset, DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
@@ -49,23 +49,23 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Api
 class AnnotationIOController @Inject()(
-    nmlWriter: NmlWriter,
-    annotationDAO: AnnotationDAO,
-    projectDAO: ProjectDAO,
-    dataSetDAO: DataSetDAO,
-    organizationDAO: OrganizationDAO,
-    dataSetService: DataSetService,
-    userService: UserService,
-    taskDAO: TaskDAO,
-    taskTypeDAO: TaskTypeDAO,
-    tracingStoreService: TracingStoreService,
-    temporaryFileCreator: TemporaryFileCreator,
-    annotationService: AnnotationService,
-    analyticsService: AnalyticsService,
-    conf: WkConf,
-    sil: Silhouette[WkEnv],
-    provider: AnnotationInformationProvider,
-    annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
+                                        nmlWriter: NmlWriter,
+                                        annotationDAO: AnnotationDAO,
+                                        projectDAO: ProjectDAO,
+                                        dataSetDAO: DatasetDAO,
+                                        organizationDAO: OrganizationDAO,
+                                        dataSetService: DatasetService,
+                                        userService: UserService,
+                                        taskDAO: TaskDAO,
+                                        taskTypeDAO: TaskTypeDAO,
+                                        tracingStoreService: TracingStoreService,
+                                        temporaryFileCreator: TemporaryFileCreator,
+                                        annotationService: AnnotationService,
+                                        analyticsService: AnalyticsService,
+                                        conf: WkConf,
+                                        sil: Silhouette[WkEnv],
+                                        provider: AnnotationInformationProvider,
+                                        annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -202,7 +202,7 @@ Expects:
   private def findDataSetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
       volumeTracings: List[VolumeTracing],
-      wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[DataSet] =
+      wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
     for {
       dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationNameOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
@@ -213,7 +213,7 @@ Expects:
              } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
+        dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
       } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
@@ -269,7 +269,7 @@ Expects:
   }
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
-                                                 dataSet: DataSet): Fox[List[List[UploadedVolumeLayer]]] =
+                                                 dataSet: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       allAdapted = volumeLayersGrouped.map { volumeLayers =>
@@ -374,7 +374,7 @@ Expects:
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
-    def skeletonToTemporaryFile(dataSet: DataSet,
+    def skeletonToTemporaryFile(dataSet: Dataset,
                                 annotation: Annotation,
                                 organizationName: String): Fox[TemporaryFile] =
       for {
@@ -398,7 +398,7 @@ Expects:
         _ = temporaryFileStream.close()
       } yield nmlTemporaryFile
 
-    def volumeOrHybridToTemporaryFile(dataset: DataSet,
+    def volumeOrHybridToTemporaryFile(dataset: Dataset,
                                       annotation: Annotation,
                                       name: String,
                                       organizationName: String): Fox[TemporaryFile] =
@@ -440,7 +440,7 @@ Expects:
         _ = zipper.close()
       } yield temporaryFile
 
-    def annotationToTemporaryFile(dataSet: DataSet,
+    def annotationToTemporaryFile(dataSet: Dataset,
                                   annotation: Annotation,
                                   name: String,
                                   organizationName: String): Fox[TemporaryFile] =

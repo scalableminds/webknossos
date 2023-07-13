@@ -6,14 +6,14 @@ import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.user.{User, UserService}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
 class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
-                                               dataSetDAO: DataSetDAO,
+                                               dataSetDAO: DatasetDAO,
                                                annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                                userService: UserService)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler

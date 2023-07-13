@@ -14,7 +14,7 @@ import io.swagger.annotations._
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService}
+import models.binary.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
@@ -47,29 +47,29 @@ object AnnotationLayerParameters {
 
 @Api
 class AnnotationController @Inject()(
-    annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO,
-    taskDAO: TaskDAO,
-    userDAO: UserDAO,
-    organizationDAO: OrganizationDAO,
-    dataSetDAO: DataSetDAO,
-    dataSetService: DataSetService,
-    annotationService: AnnotationService,
-    annotationMutexService: AnnotationMutexService,
-    userService: UserService,
-    teamService: TeamService,
-    projectDAO: ProjectDAO,
-    teamDAO: TeamDAO,
-    timeSpanService: TimeSpanService,
-    annotationMerger: AnnotationMerger,
-    tracingStoreService: TracingStoreService,
-    provider: AnnotationInformationProvider,
-    annotationRestrictionDefaults: AnnotationRestrictionDefaults,
-    analyticsService: AnalyticsService,
-    slackNotificationService: SlackNotificationService,
-    mailchimpClient: MailchimpClient,
-    conf: WkConf,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                                      annotationDAO: AnnotationDAO,
+                                      annotationLayerDAO: AnnotationLayerDAO,
+                                      taskDAO: TaskDAO,
+                                      userDAO: UserDAO,
+                                      organizationDAO: OrganizationDAO,
+                                      dataSetDAO: DatasetDAO,
+                                      dataSetService: DatasetService,
+                                      annotationService: AnnotationService,
+                                      annotationMutexService: AnnotationMutexService,
+                                      userService: UserService,
+                                      teamService: TeamService,
+                                      projectDAO: ProjectDAO,
+                                      teamDAO: TeamDAO,
+                                      timeSpanService: TimeSpanService,
+                                      annotationMerger: AnnotationMerger,
+                                      tracingStoreService: TracingStoreService,
+                                      provider: AnnotationInformationProvider,
+                                      annotationRestrictionDefaults: AnnotationRestrictionDefaults,
+                                      analyticsService: AnalyticsService,
+                                      slackNotificationService: SlackNotificationService,
+                                      mailchimpClient: MailchimpClient,
+                                      conf: WkConf,
+                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with UserAwareRequestLogging
     with FoxImplicits {

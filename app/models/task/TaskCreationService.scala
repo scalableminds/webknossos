@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
@@ -39,8 +39,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     annotationDAO: AnnotationDAO,
                                     userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
-                                    dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+                                    dataSetDAO: DatasetDAO,
+                                    dataSetService: DatasetService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -454,7 +454,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     if (allOnSameDatasetIter(requestedTasks, firstDatasetName))
       Fox.successful(firstDatasetName)
     else
-      Fox.failure(Messages("task.notOnSameDataSet"))
+      Fox.failure(Messages("task.notOnSameDataset"))
   }
 
   private def mergeTracingIds(list: List[(Box[TaskParameters], Box[Option[String]])],
@@ -486,7 +486,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet, requestingUser: User)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: Dataset, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {

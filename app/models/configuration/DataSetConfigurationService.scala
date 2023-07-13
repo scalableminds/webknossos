@@ -3,25 +3,25 @@ package models.configuration
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import javax.inject.Inject
-import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO, DataSetService}
+import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService}
 import models.user.{User, UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO}
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 
-class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
+class DataSetConfigurationService @Inject()(dataSetService: DatasetService,
                                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                             userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
-                                            dataSetDAO: DataSetDAO,
-                                            dataSetDataLayerDAO: DataSetDataLayerDAO)(implicit ec: ExecutionContext) {
+                                            dataSetDAO: DatasetDAO,
+                                            dataSetDataLayerDAO: DatasetLayerDAO)(implicit ec: ExecutionContext) {
   def getDataSetViewConfigurationForUserAndDataset(
       requestedVolumeIds: List[String],
       user: User,
       dataSetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
+      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
 
@@ -34,7 +34,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
   def getDataSetViewConfigurationForDataset(
       requestedVolumeIds: List[String],
       dataSetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
+      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
 
@@ -44,14 +44,14 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
       layerConfigurations <- getLayerConfigurations(dataSetLayers, requestedVolumeIds, dataSet)
     } yield buildCompleteDataSetConfiguration(dataSetViewConfiguration, layerConfigurations)
 
-  def getDataSetViewConfigurationFromDefaultAndAdmin(dataSet: DataSet): DataSetViewConfiguration = {
+  def getDataSetViewConfigurationFromDefaultAndAdmin(dataSet: Dataset): DatasetViewConfiguration = {
     val defaultVC = dataSet.defaultViewConfiguration.getOrElse(Map.empty)
     val adminVC = dataSet.adminViewConfiguration.getOrElse(Map.empty)
     defaultVC ++ adminVC
   }
 
   def getCompleteAdminViewConfiguration(dataSetName: String, organizationName: String)(
-      implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
+      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
       dataSetViewConfiguration = getDataSetViewConfigurationFromDefaultAndAdmin(dataSet)
@@ -72,7 +72,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
     }.toMap
 
   private def buildCompleteDataSetConfiguration(dataSetConfiguration: Map[String, JsValue],
-                                                layerConfigurations: Map[String, JsValue]): DataSetViewConfiguration =
+                                                layerConfigurations: Map[String, JsValue]): DatasetViewConfiguration =
     dataSetConfiguration + ("layers" -> Json.toJson(layerConfigurations))
 
   private def getAllLayerDefaultViewConfigForDataSet(
@@ -85,7 +85,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
 
   def getLayerConfigurations(dataSetLayers: List[DataLayerLike],
                              requestedVolumeIds: List[String],
-                             dataSet: DataSet,
+                             dataSet: Dataset,
                              userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {
     val allLayerNames = dataSetLayers.map(_.name) ++ requestedVolumeIds
     (userOpt match {
@@ -99,7 +99,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
     }
   }
 
-  def updateAdminViewConfigurationFor(dataSet: DataSet, rawAdminViewConfiguration: DataSetViewConfiguration)(
+  def updateAdminViewConfigurationFor(dataSet: Dataset, rawAdminViewConfiguration: DatasetViewConfiguration)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val dataSetViewConfiguration = rawAdminViewConfiguration - "layers"
     val layerViewConfigurations =

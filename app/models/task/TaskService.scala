@@ -5,7 +5,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
@@ -16,7 +16,7 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext
 
 class TaskService @Inject()(conf: WkConf,
-                            dataSetDAO: DataSetDAO,
+                            dataSetDAO: DatasetDAO,
                             scriptDAO: ScriptDAO,
                             userService: UserService,
                             annotationDAO: AnnotationDAO,

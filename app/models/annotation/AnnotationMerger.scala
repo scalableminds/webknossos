@@ -7,13 +7,13 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.user.User
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: TracingStoreService)(
+class AnnotationMerger @Inject()(dataSetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(
     implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {

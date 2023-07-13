@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
 import models.annotation.AnnotationDAO
-import models.binary.DataSet
+import models.binary.Dataset
 import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO
@@ -72,7 +72,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       teamsFiltered = removeForeignOrganizationTeams(teams, requestingUser)
     } yield teamsFiltered
 
-  def allowedTeamsForDataset(dataset: DataSet, cumulative: Boolean, requestingUser: Option[User] = None)(
+  def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(
       implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForDataset(dataset, cumulative)
@@ -85,7 +85,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       teamDAO.findAllowedTeamIdsCumulativeForFolder(folderId)
     else teamDAO.findAllowedTeamIdsForFolder(folderId)
 
-  def allowedTeamIdsForDataset(dataset: DataSet, cumulative: Boolean): Fox[List[ObjectId]] =
+  def allowedTeamIdsForDataset(dataset: Dataset, cumulative: Boolean): Fox[List[ObjectId]] =
     if (cumulative)
       for {
         idsForDataset <- teamDAO.findAllowedTeamIdsForDataset(dataset._id)

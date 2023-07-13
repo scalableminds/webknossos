@@ -3,7 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.job._
 import models.organization.OrganizationDAO
 import models.binary.DataStoreDAO
@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext
 
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
-                               dataSetDAO: DataSetDAO,
+                               dataSetDAO: DatasetDAO,
                                jobService: JobService,
                                workerService: WorkerService,
                                workerDAO: WorkerDAO,

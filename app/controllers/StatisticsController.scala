@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
@@ -21,7 +21,7 @@ import scala.concurrent.duration.Duration
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      userDAO: UserDAO,
                                      userService: UserService,
-                                     dataSetDAO: DataSetDAO,
+                                     dataSetDAO: DatasetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)

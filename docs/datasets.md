@@ -174,11 +174,16 @@ Defaults include:
 
 ![Dataset Editing: View Configuration Tab](images/dataset_view_config.jpeg)
 
+Alternatively, these settings can be configured in more intuitive way by opening the dataset in view mode. Change the current view settings to the desired result and save them as the datasets default using the "Save View Configuration as Default" button in the layer settings tab.
+
+![Saving the view configuration in view mode](images/save_view_configuration_in_view_mode.png)
+
 Of course, the defaults can all be overwritten and adjusted once a user opens the dataset in the main WEBKNOSSOS interface and makes changes to any of these settings in his viewports. 
 
-For self-hosted WEBKNOSSOS instances, there are two ways to set default *View Configuration* settings:
+For self-hosted WEBKNOSSOS instances, there are three ways to set default *View Configuration* settings:
 
 - in the web UI as described above
+- while viewing the dataset
 - inside the `datasource_properties.json` on disk
 
 The *View Configuration* from the web UI takes precedence over the `datasource_properties.json`.

@@ -58,7 +58,7 @@ import {
   getWidestResolutions,
   getLayerBoundingBox,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -1061,11 +1061,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           Do you really want to save your current view configuration as the dataset's default?
           <br />
           This will overwrite the current default view configuration.
+          <br />
+          This includes the current camera position, zoom level, interpolation setting and layer
+          settings.
         </>
       ),
       onOk: async () => {
         try {
-          await updateDatasetDefaultConfiguration(dataset, datasetConfiguration);
+          const { flycam } = Store.getState();
+          const position = V3.floor(getPosition(flycam));
+          const zoom = flycam.zoomStep;
+          const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
+            position,
+            zoom,
+          });
+          await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
           Toast.success("Successfully saved the current view configuration saved as default.");
         } catch (error) {
           Toast.error(

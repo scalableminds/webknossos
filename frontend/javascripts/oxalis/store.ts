@@ -297,7 +297,7 @@ export type DatasetConfiguration = {
   readonly fourBit: boolean;
   readonly interpolation: boolean;
   readonly layers: Record<string, DatasetLayerConfiguration>;
-  readonly layerOrder: Array<string>;
+  readonly colorLayerOrder: Array<string>;
   readonly position?: Vector3;
   readonly zoom?: number;
   readonly rotation?: Vector3;

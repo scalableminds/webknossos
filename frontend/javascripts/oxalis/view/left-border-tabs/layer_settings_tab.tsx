@@ -469,7 +469,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
-        {draggingDisabled == undefined || draggingDisabled ? null : <DragHandle />}
+        {draggingDisabled == null || draggingDisabled ? null : <DragHandle />}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -1087,28 +1087,28 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
     // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
     document.body.classList.remove("is-dragging");
-    const { layerOrder } = this.props.datasetConfiguration;
-    const movedElement = layerOrder[oldIndex];
-    newIndex = Math.min(newIndex, layerOrder.length - 1);
-    const newLayerOrder = update(layerOrder, {
+    const { colorLayerOrder } = this.props.datasetConfiguration;
+    const movedElement = colorLayerOrder[oldIndex];
+    newIndex = Math.min(newIndex, colorLayerOrder.length - 1);
+    const newLayerOrder = update(colorLayerOrder, {
       $splice: [
         [oldIndex, 1],
         [newIndex, 0, movedElement],
       ],
     });
-    this.props.onChange("layerOrder", newLayerOrder);
+    this.props.onChange("colorLayerOrder", newLayerOrder);
   };
 
   render() {
-    const { layers, layerOrder } = this.props.datasetConfiguration;
+    const { layers, colorLayerOrder } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
     const SortableLayerSettings = this.SortableLayerSettings;
 
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
-    const colorLayerSettings = layerOrder.map((layerName, index) => {
-      const isSortingDisabled = layerOrder.length < 2;
+    const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
+      const isSortingDisabled = colorLayerOrder.length < 2;
       return (
         <SortableLayerSettings
           key={layerName}
@@ -1141,7 +1141,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div className="tracing-settings-menu">
         <SortableLayerSettingsContainer
           onSortEnd={this.onSortLayerSettingsEnd}
-          onSortStart={() => layerOrder.length > 1 && document.body.classList.add("is-dragging")}
+          onSortStart={() =>
+            colorLayerOrder.length > 1 && document.body.classList.add("is-dragging")
+          }
           useDragHandle
         >
           {colorLayerSettings}

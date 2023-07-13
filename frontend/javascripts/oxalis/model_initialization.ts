@@ -798,18 +798,18 @@ function ensureDatasetSettingsHasLayerOrder(
     isColorLayer(dataset, layerName),
   );
   if (
-    datasetConfiguration.layerOrder == null ||
-    datasetConfiguration.layerOrder.length < colorLayerNames.length
+    datasetConfiguration.colorLayerOrder == null ||
+    datasetConfiguration.colorLayerOrder.length < colorLayerNames.length
   ) {
     return {
       ...datasetConfiguration,
-      layerOrder: colorLayerNames,
+      colorLayerOrder: colorLayerNames,
     };
   }
-  const onlyExistingLayers = datasetConfiguration.layerOrder.filter(
+  const onlyExistingLayers = datasetConfiguration.colorLayerOrder.filter(
     (layerName) => colorLayerNames.indexOf(layerName) >= 0,
   );
-  return { ...datasetConfiguration, layerOrder: onlyExistingLayers };
+  return { ...datasetConfiguration, colorLayerOrder: onlyExistingLayers };
 }
 
 function applyAnnotationSpecificViewConfiguration(

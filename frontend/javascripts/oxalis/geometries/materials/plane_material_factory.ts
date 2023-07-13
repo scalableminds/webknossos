@@ -636,11 +636,11 @@ class PlaneMaterialFactory {
     let oldLayerOrder: Array<string> = [];
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (state) => state.datasetConfiguration.layerOrder,
-        (layerOrder) => {
+        (state) => state.datasetConfiguration.colorLayerOrder,
+        (colorLayerOrder) => {
           let changedLayerOrder =
-            layerOrder.length !== oldLayerOrder.length ||
-            layerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
+            colorLayerOrder.length !== oldLayerOrder.length ||
+            colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
             this.recomputeShaders();
           }
@@ -893,7 +893,8 @@ class PlaneMaterialFactory {
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
-    const sanitizedOrderedColorLayerNames = state.datasetConfiguration.layerOrder.map(sanitizeName);
+    const sanitizedOrderedColorLayerNames =
+      state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),

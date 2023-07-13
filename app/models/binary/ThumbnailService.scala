@@ -2,6 +2,7 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
@@ -25,7 +26,8 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                  dataSetConfigurationService: DataSetConfigurationService,
                                  dataSetDAO: DataSetDAO,
                                  thumbnailDAO: ThumbnailDAO)
-    extends LazyLogging {
+    extends LazyLogging
+    with MimeTypes {
 
   private val DefaultThumbnailWidth = 400
   private val DefaultThumbnailHeight = 400
@@ -87,7 +89,15 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                             mag,
                                             mappingName,
                                             intensityRangeOpt)
-      _ <- thumbnailDAO.upsertThumbnail(dataset._id, layerName, width, height, mappingName, image)
+      _ <- thumbnailDAO.upsertThumbnail(dataset._id,
+                                        layerName,
+                                        width,
+                                        height,
+                                        mappingName,
+                                        image,
+                                        jpegMimeType,
+                                        mag,
+                                        mag1BoundingBox)
     } yield image
 
   private def selectParameters(viewConfiguration: DataSetViewConfiguration,
@@ -129,7 +139,6 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
 
 class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
-  private val cacheEnabled = false
 
   // First cache is in memory, then in postgres.
   // Key: datasetId, layerName, width, height, mappingName
@@ -142,21 +151,19 @@ class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: Th
                 height: Int,
                 mappingName: Option[String],
                 loadFn: Unit => Fox[Array[Byte]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    if (cacheEnabled) {
-      inMemoryThumbnailCache.getOrLoad(
-        (datasetId, layerName, width, height, mappingName),
-        _ =>
-          for {
-            fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox
-            fromDbOrNew <- fromDbBox match {
-              case Full(fromDb) =>
-                Fox.successful(fromDb)
-              case _ =>
-                loadFn(())
-            }
-          } yield fromDbOrNew
-      )
-    } else loadFn(())
+    inMemoryThumbnailCache.getOrLoad(
+      (datasetId, layerName, width, height, mappingName),
+      _ =>
+        for {
+          fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox
+          fromDbOrNew <- fromDbBox match {
+            case Full(fromDb) =>
+              Fox.successful(fromDb)
+            case _ =>
+              loadFn(())
+          }
+        } yield fromDbOrNew
+    )
 
   def removeFromCache(organizationName: String, datasetName: String): Fox[Unit] =
     for {
@@ -178,32 +185,40 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
               layerName: String,
               width: Int,
               height: Int,
-              mappingName: Option[String]): Fox[Array[Byte]] =
+              mappingNameOpt: Option[String]): Fox[Array[Byte]] = {
+    val mappingName = mappingNameOpt.getOrElse("")
     for {
       rows <- run(q"""SELECT image
-           FROM webknossos.dataSet_thumbnails
-           WHERE _dataSet = $datasetId
-           AND dataLayerName = $layerName
-           AND width = $width
-           AND height = $height
-           AND mappingName = $mappingName""".as[Array[Byte]])
+                     FROM webknossos.dataSet_thumbnails
+                     WHERE _dataSet = $datasetId
+                     AND dataLayerName = $layerName
+                     AND width = $width
+                     AND height = $height
+                     AND mappingName = $mappingName""".as[Array[Byte]])
       head <- rows.headOption
     } yield head
+  }
 
   def upsertThumbnail(datasetId: ObjectId,
                       layerName: String,
                       width: Int,
                       height: Int,
                       mappingNameOpt: Option[String],
-                      image: Array[Byte]): Fox[Unit] = {
+                      image: Array[Byte],
+                      mimeType: String,
+                      mag: Vec3Int,
+                      mag1BoundingBox: BoundingBox): Fox[Unit] = {
     val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with emptystring
     for {
-      _ <- run(
-        q"""INSERT INTO webknossos.dataSet_thumbnails (_dataSet, dataLayerName, width, height, mappingName, image, created)
-                   VALUES($datasetId, $layerName, $width, $height, $mappingName, $image, ${Instant.now})
+      _ <- run(q"""INSERT INTO webknossos.dataSet_thumbnails (
+            _dataSet, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)
+                   VALUES($datasetId, $layerName, $width, $height, $mappingName, $image, $mimeType, $mag, $mag1BoundingBox, ${Instant.now})
                    ON CONFLICT (_dataSet, dataLayerName, width, height, mappingName)
                    DO UPDATE SET
                      image = $image,
+                     mimeType = $mimeType,
+                     mag = $mag,
+                     mag1BoundingBox = $mag1BoundingBox,
                      created = ${Instant.now}
     """.asUpdate)
     } yield ()
@@ -216,6 +231,7 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
 
   def removeAllExpired(expiryDuration: FiniteDuration): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.dataSet_thumbnails WHERE created < ${Instant.now - expiryDuration}".asUpdate)
+      num <- run(q"DELETE FROM webknossos.dataSet_thumbnails WHERE created < ${Instant.now - expiryDuration}".asUpdate)
+      _ = logger.info(s"removed $num expired thumbnails")
     } yield ()
 }

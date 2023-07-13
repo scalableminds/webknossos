@@ -204,7 +204,8 @@ void main() {
   // Get Color Value(s)
   vec3 color_value  = vec3(0.0);
   <% _.each(orderedLayerNames, function(name, layerIndex) { %>
-    <% if (colorLayerNames.indexOf(name) >= 0) { %>
+    <% const color_layer_index = colorLayerNames.indexOf(name); %>
+    <% if (color_layer_index >= 0) { %>
       float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
       if (<%= name %>_effective_alpha > 0.) {
         // Get grayscale value for <%= name %>
@@ -218,7 +219,7 @@ void main() {
         if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
           MaybeFilteredColor maybe_filtered_color =
             getMaybeFilteredColorOrFallback(
-              <%= formatNumberAsGLSLFloat(layerIndex) %>,
+              <%= formatNumberAsGLSLFloat(color_layer_index) %>,
               <%= name %>_data_texture_width,
               <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
               transformedCoordUVW,
@@ -260,6 +261,7 @@ void main() {
       }
     <% } else { %>
       <% const segmentationName = name %>
+      vec4 segmentation_color = data_color;
       // Color map (<= to fight rounding mistakes)
       if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
         // Increase cell opacity when cell is hovered or if it is the active activeCell
@@ -271,7 +273,7 @@ void main() {
         // and if segmentation opacity is not zero
         float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
         float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
-        gl_FragColor = mix(
+        data_color = mix(
           data_color,
           vec4(convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), 1.0),
           <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
@@ -279,9 +281,7 @@ void main() {
       }
       vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
       <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-      data_color = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
-      // Unsure whether to keep this. This makes a segmentation layer everywhere as "covering".
-      data_color.a = 1.0;
+      data_color = mix(data_color, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
   
     <% } %>
   <% }) %>
@@ -291,11 +291,6 @@ void main() {
   gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-
-      
-  <% }) %>
-
   // This will only have an effect in proofreading mode
   vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
   gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);

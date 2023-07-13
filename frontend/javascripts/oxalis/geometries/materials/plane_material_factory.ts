@@ -854,7 +854,6 @@ class PlaneMaterialFactory {
   }
 
   recomputeShaders = _.throttle(() => {
-    console.log("recomputing shaders");
     const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;

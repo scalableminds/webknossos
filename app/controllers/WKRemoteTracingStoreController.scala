@@ -108,9 +108,9 @@ class WKRemoteTracingStoreController @Inject()(
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
             dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
-          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
+          } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
-            "dataSet.noAccess",
+            "dataset.noAccess",
             dataSetName) ~> FORBIDDEN
           dataStore <- dataSetService.dataStoreFor(dataSet)
         } yield Ok(Json.toJson(dataStore.url))

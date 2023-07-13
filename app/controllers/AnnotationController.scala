@@ -266,7 +266,7 @@ class AnnotationController @Inject()(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-          "dataSet.notFound",
+          "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
@@ -291,7 +291,7 @@ class AnnotationController @Inject()(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
-          "dataSet.notFound",
+          "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
@@ -576,8 +576,8 @@ class AnnotationController @Inject()(
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
-      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataset.notImported", dataSet.name)
       dataSource <- if (annotation._task.isDefined)
         dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)

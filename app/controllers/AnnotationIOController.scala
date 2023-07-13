@@ -214,16 +214,16 @@ Expects:
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
         dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
-      } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
+      } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
-                                                                                               "dataSet.noAccess.wrongHost",
+                                                                                               "dataset.noAccess.wrongHost",
                                                                                                dataSetName,
                                                                                                wkUrl,
                                                                                                conf.Http.uri)
                                                                                            } else {
                                                                                              Messages(
-                                                                                               "dataSet.noAccess",
+                                                                                               "dataset.noAccess",
                                                                                                dataSetName)
                                                                                            }) ~> FORBIDDEN
     } yield dataSet
@@ -469,7 +469,7 @@ Expects:
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
     } yield {

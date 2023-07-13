@@ -388,7 +388,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
         dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
-          "dataSet.notFound",
+          "dataset.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,

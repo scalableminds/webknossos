@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, MenuProps, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -11,6 +11,7 @@ import {
   LockOutlined,
   UnlockOutlined,
   EllipsisOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -45,6 +46,7 @@ import {
   findDataPositionForVolumeTracing,
   convertToHybridTracing,
   deleteAnnotationLayer,
+  updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
 import {
   getDefaultIntensityRangeOfLayer,
@@ -126,6 +128,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
+  isAdminOrManager: boolean;
 };
 
 type State = {
@@ -1049,6 +1052,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
+  saveViewConfigurationAsDefault = () => {
+    const { dataset, datasetConfiguration } = this.props;
+    Modal.confirm({
+      title: "Save current view configuration as default?",
+      content: (
+        <>
+          Do you really want to save your current view configuration as the dataset's default?
+          <br />
+          This will overwrite the current default view configuration.
+        </>
+      ),
+      onOk: async () => {
+        try {
+          await updateDatasetDefaultConfiguration(dataset, datasetConfiguration);
+          Toast.success("Successfully saved the current view configuration saved as default.");
+        } catch (error) {
+          Toast.error(
+            "Failed to save the current view configuration as default. Please look at the console for more details.",
+          );
+          console.error(error);
+        }
+      },
+    });
+  };
+
   render() {
     const { layers } = this.props.datasetConfiguration;
 
@@ -1103,6 +1131,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Row>
         ) : null}
 
+        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrManager ? (
+          <Row justify="center" align="middle">
+            <Tooltip title="Save the current view configuration as default for all users.">
+              <Button onClick={this.saveViewConfigurationAsDefault}>
+                <SaveOutlined />
+                Save View Configuration as Default
+              </Button>
+            </Tooltip>
+          </Row>
+        ) : null}
+
         {this.state.volumeTracingToDownsample != null ? (
           <DownsampleVolumeModal
             hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
@@ -1141,6 +1180,7 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

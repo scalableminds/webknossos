@@ -381,6 +381,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
+    draggingDisabled?: boolean,
   ) => {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
@@ -468,7 +469,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
-        <DragHandle />
+        {draggingDisabled == undefined || draggingDisabled ? null : <DragHandle />}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -732,59 +733,61 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  LayerSettings = SortableElement(
-    ({
-      layerName,
-      layerConfiguration,
-      isColorLayer,
-    }: {
-      layerName: string;
-      layerConfiguration: DatasetLayerConfiguration | null | undefined;
-      isColorLayer: boolean;
-    }) => {
-      // Ensure that every layer needs a layer configuration and that color layers have a color layer.
-      if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
-        return null;
-      }
+  LayerSettings = ({
+    layerName,
+    layerConfiguration,
+    isColorLayer,
+    draggingDisabled = undefined,
+  }: {
+    layerName: string;
+    layerConfiguration: DatasetLayerConfiguration | null | undefined;
+    isColorLayer: boolean;
+    draggingDisabled?: boolean;
+  }) => {
+    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
+      return null;
+    }
+    const elementClass = getElementClass(this.props.dataset, layerName);
+    const { isDisabled, isInEditMode } = layerConfiguration;
+    return (
+      <div key={layerName}>
+        {this.getLayerSettingsHeader(
+          isDisabled,
+          isColorLayer,
+          isInEditMode,
+          layerName,
+          elementClass,
+          layerConfiguration,
+          draggingDisabled,
+        )}
+        {isDisabled ? null : (
+          <div
+            style={{
+              marginBottom: 30,
+              marginLeft: 10,
+            }}
+          >
+            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
+              ? this.getHistogram(layerName, layerConfiguration)
+              : null}
+            <NumberSliderSetting
+              label="Opacity"
+              min={0}
+              max={100}
+              value={layerConfiguration.alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+            />
+            {isColorLayer
+              ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
+              : this.getSegmentationSpecificSettings(layerName)}
+          </div>
+        )}
+      </div>
+    );
+  };
 
-      const elementClass = getElementClass(this.props.dataset, layerName);
-      const { isDisabled, isInEditMode } = layerConfiguration;
-      return (
-        <div key={layerName}>
-          {this.getLayerSettingsHeader(
-            isDisabled,
-            isColorLayer,
-            isInEditMode,
-            layerName,
-            elementClass,
-            layerConfiguration,
-          )}
-          {isDisabled ? null : (
-            <div
-              style={{
-                marginBottom: 30,
-                marginLeft: 10,
-              }}
-            >
-              {isHistogramSupported(elementClass) && layerName != null && isColorLayer
-                ? this.getHistogram(layerName, layerConfiguration)
-                : null}
-              <NumberSliderSetting
-                label="Opacity"
-                min={0}
-                max={100}
-                value={layerConfiguration.alpha}
-                onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
-              />
-              {isColorLayer
-                ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-                : this.getSegmentationSpecificSettings(layerName)}
-            </div>
-          )}
-        </div>
-      );
-    },
-  );
+  SortableLayerSettings = SortableElement(this.LayerSettings);
 
   handleFindData = async (
     layerName: string,
@@ -1083,9 +1086,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
     // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
-    document.body.classList.remove("grabbing");
+    document.body.classList.remove("is-dragging");
     const { layerOrder } = this.props.datasetConfiguration;
     const movedElement = layerOrder[oldIndex];
+    newIndex = Math.min(newIndex, layerOrder.length - 1);
     const newLayerOrder = update(layerOrder, {
       $splice: [
         [oldIndex, 1],
@@ -1098,17 +1102,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   render() {
     const { layers, layerOrder } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
+    const SortableLayerSettings = this.SortableLayerSettings;
 
-    const layerSettings = layerOrder.map((layerName, index) => {
-      const layer = layers[layerName];
-      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
+    const segmentationLayerNames = Object.keys(layers).filter(
+      (layerName) => !getIsColorLayer(this.props.dataset, layerName),
+    );
+    const colorLayerSettings = layerOrder.map((layerName, index) => {
+      const isSortingDisabled = layerOrder.length < 2;
+      return (
+        <SortableLayerSettings
+          key={layerName}
+          layerName={layerName}
+          layerConfiguration={layers[layerName]}
+          isColorLayer={true}
+          index={index}
+          disabled={isSortingDisabled}
+          draggingDisabled={isSortingDisabled}
+        />
+      );
+    });
+    const segmentationLayerSettings = segmentationLayerNames.map((layerName) => {
       return (
         <LayerSettings
           key={layerName}
           layerName={layerName}
-          layerConfiguration={layer}
-          isColorLayer={isColorLayer}
-          index={index}
+          layerConfiguration={layers[layerName]}
+          isColorLayer={false}
         />
       );
     });
@@ -1122,11 +1141,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div className="tracing-settings-menu">
         <SortableLayerSettingsContainer
           onSortEnd={this.onSortLayerSettingsEnd}
-          onSortStart={() => document.body.classList.add("grabbing")}
+          onSortStart={() => layerOrder.length > 1 && document.body.classList.add("is-dragging")}
           useDragHandle
         >
-          {layerSettings}
+          {colorLayerSettings}
         </SortableLayerSettingsContainer>
+        {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
         {this.props.tracing.restrictions.allowUpdate &&

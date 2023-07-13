@@ -893,22 +893,22 @@ class PlaneMaterialFactory {
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
-    const sanitizedOrderedLayerNames = state.datasetConfiguration.layerOrder.map(sanitizeName);
-    const globalLayerCount = sanitizedOrderedLayerNames.length;
-    if (maximumLayerCountToRender <= 0) {
-      return [[], [], [], globalLayerCount];
-    }
+    const sanitizedOrderedColorLayerNames = state.datasetConfiguration.layerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
+    const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
+    if (maximumLayerCountToRender <= 0) {
+      return [[], [], [], globalLayerCount];
+    }
 
     if (maximumLayerCountToRender >= globalLayerCount) {
       // We can simply render all available layers.
       return [
         colorLayerNames,
         segmentationLayerNames,
-        sanitizedOrderedLayerNames,
+        sanitizedOrderedColorLayerNames,
         globalLayerCount,
       ];
     }
@@ -945,7 +945,7 @@ class PlaneMaterialFactory {
     return [
       sanitizedColorLayerNames,
       sanitizedSegmentationLayerNames,
-      sanitizedOrderedLayerNames,
+      sanitizedOrderedColorLayerNames,
       globalLayerCount,
     ];
   }
@@ -968,7 +968,7 @@ class PlaneMaterialFactory {
 
   getFragmentShaderWithUniforms(): [string, Uniforms] {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, orderedLayerNames, globalLayerCount] =
+    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
@@ -982,7 +982,7 @@ class PlaneMaterialFactory {
     const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({
       globalLayerCount,
-      orderedLayerNames,
+      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
@@ -1008,7 +1008,7 @@ class PlaneMaterialFactory {
 
   getVertexShader(): string {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, orderedLayerNames, globalLayerCount] =
+    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
@@ -1017,7 +1017,7 @@ class PlaneMaterialFactory {
 
     return getMainVertexShader({
       globalLayerCount,
-      orderedLayerNames,
+      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,

@@ -28,6 +28,7 @@ import {
   getSegmentationLayers,
   getLayerByName,
   getSegmentationLayerByName,
+  isColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
@@ -181,6 +182,7 @@ export async function initialize(
   );
   const initialDatasetSettingsWithLayerOrder = ensureDatasetSettingsHasLayerOrder(
     annotationSpecificDatasetSettings,
+    dataset,
   );
   const enforcedInitialUserSettings =
     enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
@@ -790,15 +792,22 @@ function enforcePricingRestrictionsOnUserConfiguration(
 
 function ensureDatasetSettingsHasLayerOrder(
   datasetConfiguration: DatasetConfiguration,
+  dataset: APIDataset,
 ): DatasetConfiguration {
-  if (datasetConfiguration.layerOrder == null) {
+  const colorLayerNames = _.keys(datasetConfiguration.layers).filter((layerName) =>
+    isColorLayer(dataset, layerName),
+  );
+  if (
+    datasetConfiguration.layerOrder == null ||
+    datasetConfiguration.layerOrder.length < colorLayerNames.length
+  ) {
     return {
       ...datasetConfiguration,
-      layerOrder: _.keys(datasetConfiguration.layers),
+      layerOrder: colorLayerNames,
     };
   }
   const onlyExistingLayers = datasetConfiguration.layerOrder.filter(
-    (layerName) => layerName in datasetConfiguration.layers,
+    (layerName) => colorLayerNames.indexOf(layerName) >= 0,
   );
   return { ...datasetConfiguration, layerOrder: onlyExistingLayers };
 }

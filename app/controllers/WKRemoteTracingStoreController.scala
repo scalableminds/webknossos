@@ -22,16 +22,16 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreController @Inject()(
-                                                tracingStoreService: TracingStoreService,
-                                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                                timeSpanService: TimeSpanService,
-                                                dataSetService: DatasetService,
-                                                organizationDAO: OrganizationDAO,
-                                                userDAO: UserDAO,
-                                                annotationInformationProvider: AnnotationInformationProvider,
-                                                analyticsService: AnalyticsService,
-                                                dataSetDAO: DatasetDAO,
-                                                annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    tracingStoreService: TracingStoreService,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    timeSpanService: TimeSpanService,
+    dataSetService: DatasetService,
+    organizationDAO: OrganizationDAO,
+    userDAO: UserDAO,
+    annotationInformationProvider: AnnotationInformationProvider,
+    analyticsService: AnalyticsService,
+    dataSetDAO: DatasetDAO,
+    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

@@ -49,23 +49,23 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Api
 class AnnotationIOController @Inject()(
-                                        nmlWriter: NmlWriter,
-                                        annotationDAO: AnnotationDAO,
-                                        projectDAO: ProjectDAO,
-                                        dataSetDAO: DatasetDAO,
-                                        organizationDAO: OrganizationDAO,
-                                        dataSetService: DatasetService,
-                                        userService: UserService,
-                                        taskDAO: TaskDAO,
-                                        taskTypeDAO: TaskTypeDAO,
-                                        tracingStoreService: TracingStoreService,
-                                        temporaryFileCreator: TemporaryFileCreator,
-                                        annotationService: AnnotationService,
-                                        analyticsService: AnalyticsService,
-                                        conf: WkConf,
-                                        sil: Silhouette[WkEnv],
-                                        provider: AnnotationInformationProvider,
-                                        annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
+    nmlWriter: NmlWriter,
+    annotationDAO: AnnotationDAO,
+    projectDAO: ProjectDAO,
+    dataSetDAO: DatasetDAO,
+    organizationDAO: OrganizationDAO,
+    dataSetService: DatasetService,
+    userService: UserService,
+    taskDAO: TaskDAO,
+    taskTypeDAO: TaskTypeDAO,
+    tracingStoreService: TracingStoreService,
+    temporaryFileCreator: TemporaryFileCreator,
+    annotationService: AnnotationService,
+    analyticsService: AnalyticsService,
+    conf: WkConf,
+    sil: Silhouette[WkEnv],
+    provider: AnnotationInformationProvider,
+    annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits

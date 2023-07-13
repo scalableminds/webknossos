@@ -18,14 +18,14 @@ import scala.concurrent.ExecutionContext
 
 @Api
 class FolderController @Inject()(
-                                  folderDAO: FolderDAO,
-                                  folderService: FolderService,
-                                  teamDAO: TeamDAO,
-                                  userService: UserService,
-                                  teamService: TeamService,
-                                  dataSetDAO: DatasetDAO,
-                                  organizationDAO: OrganizationDAO,
-                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    folderDAO: FolderDAO,
+    folderService: FolderService,
+    teamDAO: TeamDAO,
+    userService: UserService,
+    teamService: TeamService,
+    dataSetDAO: DatasetDAO,
+    organizationDAO: OrganizationDAO,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

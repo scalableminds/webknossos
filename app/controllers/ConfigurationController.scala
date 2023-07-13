@@ -14,11 +14,11 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(
-                                         userService: UserService,
-                                         dataSetService: DatasetService,
-                                         dataSetDAO: DatasetDAO,
-                                         dataSetConfigurationService: DataSetConfigurationService,
-                                         sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    userService: UserService,
+    dataSetService: DatasetService,
+    dataSetDAO: DatasetDAO,
+    dataSetConfigurationService: DataSetConfigurationService,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>

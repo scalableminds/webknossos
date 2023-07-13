@@ -33,23 +33,23 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
-                                             dataSetService: DatasetService,
-                                             dataStoreService: DataStoreService,
-                                             dataStoreDAO: DataStoreDAO,
-                                             analyticsService: AnalyticsService,
-                                             userService: UserService,
-                                             organizationDAO: OrganizationDAO,
-                                             usedStorageService: UsedStorageService,
-                                             dataSetDAO: DatasetDAO,
-                                             userDAO: UserDAO,
-                                             folderDAO: FolderDAO,
-                                             jobDAO: JobDAO,
-                                             multiUserDAO: MultiUserDAO,
-                                             credentialDAO: CredentialDAO,
-                                             mailchimpClient: MailchimpClient,
-                                             slackNotificationService: SlackNotificationService,
-                                             conf: WkConf,
-                                             wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    dataSetService: DatasetService,
+    dataStoreService: DataStoreService,
+    dataStoreDAO: DataStoreDAO,
+    analyticsService: AnalyticsService,
+    userService: UserService,
+    organizationDAO: OrganizationDAO,
+    usedStorageService: UsedStorageService,
+    dataSetDAO: DatasetDAO,
+    userDAO: UserDAO,
+    folderDAO: FolderDAO,
+    jobDAO: JobDAO,
+    multiUserDAO: MultiUserDAO,
+    credentialDAO: CredentialDAO,
+    mailchimpClient: MailchimpClient,
+    slackNotificationService: SlackNotificationService,
+    conf: WkConf,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
 

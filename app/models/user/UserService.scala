@@ -225,11 +225,11 @@ class UserService @Inject()(conf: WkConf,
     }
 
   def updateDataSetViewConfiguration(
-                                      user: User,
-                                      dataSetName: String,
-                                      organizationName: String,
-                                      dataSetConfiguration: DatasetViewConfiguration,
-                                      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+      user: User,
+      dataSetName: String,
+      organizationName: String,
+      dataSetConfiguration: DatasetViewConfiguration,
+      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
         "dataSet.notFound",

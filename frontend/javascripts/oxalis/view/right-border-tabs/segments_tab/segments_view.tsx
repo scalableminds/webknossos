@@ -897,7 +897,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          <DatabaseOutlined /> Compute meshes (ad hoc)
+          <DatabaseOutlined /> Compute Meshes (ad hoc)
         </div>
       ),
     };
@@ -918,7 +918,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          <CloudDownloadOutlined /> Load meshes (precomputed)
+          <CloudDownloadOutlined /> Load Meshes (precomputed)
         </div>
       ),
     };
@@ -936,7 +936,7 @@ class SegmentsView extends React.Component<Props, State> {
               }}
             >
               <ReloadOutlined />
-              Refresh all meshes
+              Refresh Meshes
             </div>
           ),
         }
@@ -955,7 +955,7 @@ class SegmentsView extends React.Component<Props, State> {
               }}
             >
               <DeleteOutlined />
-              Remove all meshes
+              Remove Meshes
             </div>
           ),
         }
@@ -974,7 +974,7 @@ class SegmentsView extends React.Component<Props, State> {
               }}
             >
               <DownloadOutlined />
-              Download all meshes
+              Download Meshes
             </div>
           ),
         }
@@ -1036,7 +1036,7 @@ class SegmentsView extends React.Component<Props, State> {
                   <EyeOutlined /> Show
                 </>
               )}
-              <Space /> all meshes
+              <Space /> Meshes
             </div>
           ),
         }

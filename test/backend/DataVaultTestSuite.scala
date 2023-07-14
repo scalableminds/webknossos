@@ -13,9 +13,10 @@ import com.scalableminds.webknossos.datastore.datavault.{
   S3DataVault,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
+import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
 import org.scalatest.{Failed, Outcome, Succeeded}
+import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
 import scala.collection.immutable.NumericRange
@@ -65,6 +66,26 @@ class DataVaultTestSuite extends PlaySpec {
             assertBoxEmpty(result)
           }
         }
+        "returns failure" when {
+          "requesting invalid range" in {
+            val result = (vaultPath / dataKey)
+              .readBytes(Some(Range.Long(-10, 10, 1)))(globalExecutionContext)
+              .await(handleFoxJustification)
+            assertBoxFailure(result)
+          }
+          "using invalid credentials" in {
+            val vaultPath =
+              new VaultPath(uri,
+                            GoogleCloudDataVault.create(
+                              RemoteSourceDescriptor(
+                                uri,
+                                Some(GoogleServiceAccountCredential("name", JsString("secret"), "user", "org")))))
+            val result = (vaultPath / dataKey)
+              .readBytes(Some(Range.Long(-10, 10, 1)))(globalExecutionContext)
+              .await(handleFoxJustification)
+            assertBoxFailure(result)
+          }
+        }
       }
 
       "with S3 data vault" should {
@@ -77,7 +98,6 @@ class DataVaultTestSuite extends PlaySpec {
             assertBoxEmpty(result)
           }
         }
-
       }
     }
     "using regular requests" when {
@@ -167,12 +187,21 @@ class DataVaultTestSuite extends PlaySpec {
     }
   }
 
-  def assertBoxEmpty(box: Box[Array[Byte]]): Outcome = box match {
-    case Full(_) => Failed()
+  private def assertBoxEmpty(box: Box[Array[Byte]]): Unit = box match {
+    case Full(_) => fail()
     case box: EmptyBox =>
       box match {
-        case Empty            => Succeeded
-        case Failure(_, _, _) => Failed()
+        case Empty            =>
+        case Failure(_, _, _) => fail()
+      }
+  }
+
+  private def assertBoxFailure(box: Box[Array[Byte]]): Unit = box match {
+    case Full(_) => fail()
+    case box: EmptyBox =>
+      box match {
+        case Empty            => fail()
+        case Failure(_, _, _) =>
       }
   }
 }

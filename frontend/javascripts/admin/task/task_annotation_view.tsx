@@ -1,4 +1,4 @@
-import { Dropdown, MenuProps, Modal } from "antd";
+import { Dropdown, MenuProps, Modal, Tooltip } from "antd";
 import {
   EyeOutlined,
   PlayCircleOutlined,
@@ -154,13 +154,21 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           key: `${annotation.id}-reset`,
           onClick: () => this.resetAnnotation(annotation),
           icon: <RollbackOutlined />,
-          label: "Reset",
+          label: (
+            <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
+              Reset
+            </Tooltip>
+          ),
         },
         {
           key: `${annotation.id}-delete`,
           onClick: () => this.deleteAnnotation(annotation),
           icon: <DeleteOutlined />,
-          label: "Reset and Cancel",
+          label: (
+            <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
+              Reset and Cancel
+            </Tooltip>
+          ),
         },
         annotation.state === "Finished"
           ? {

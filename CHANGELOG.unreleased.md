@@ -29,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed rare rendering bug at viewport edge for anisotropic datasets. [#7163](https://github.com/scalableminds/webknossos/pull/7163)
 - Fixed the dataset search which was broken when only the root folder existed. [#7177](https://github.com/scalableminds/webknossos/pull/7177)
+- Correctly use configured fill-value for missing chunks of remote datasets hosted on gcs or s3. [#7198](https://github.com/scalableminds/webknossos/pull/7198)
 
 ### Removed
 - Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)

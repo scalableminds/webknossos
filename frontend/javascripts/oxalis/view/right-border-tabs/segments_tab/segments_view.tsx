@@ -12,7 +12,6 @@ import {
   SearchOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
-  DesktopOutlined,
   DatabaseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
@@ -1060,8 +1059,8 @@ class SegmentsView extends React.Component<Props, State> {
   handleRefreshMeshes = (groupId: number) => {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
-    //TODO I didnt find a better way to call the visiblesegmentationlayer. one other way would be to pass it into the function. but thats not useful for functions below-
-    // so my solution is a little more code duplication. putting it higher up isnt really a solution.
+    //TODO I didnt find a better way to call the visiblesegmentationlayer. one other way would be to pass it into the function. but that's not useful for functions below-
+    // so my solution is a little more code duplication. putting it higher up isn't really a solution.
 
     this.handlePerSegment(groupId, (segment) => {
       if (

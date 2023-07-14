@@ -1180,6 +1180,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
+  const volumeString = "Hello, my name is placy!";
+  infoRows.push(
+    getInfoMenuItem(
+      "volumeInfo",
+      <>
+        <i className="fas fa-flask" /> {volumeString}
+        {copyIconWithTooltip(volumeString, "Copy placy")}
+      </>,
+    ),
+  );
+
   if (distanceToSelection != null) {
     infoRows.push(
       getInfoMenuItem(

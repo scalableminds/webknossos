@@ -958,6 +958,20 @@ export function getNewestVersionForTracing(
   );
 }
 
+export function getSegmentVolume(tracingStoreUrl: string, tracingId: string): Promise<number> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      //TODO delete all these comments!
+      ///volume/:tracingId/segmentStatistics/volume
+      // @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long)
+
+      ///volume/:tracingId/importVolumeData
+      //@com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(token: Option[String], tracingId: String)
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`, //mag und segmentId wohin in route? TODO delete me
+    ).then((obj) => obj.version),
+  );
+}
+
 export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,

@@ -935,8 +935,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <ReloadOutlined />
-              Refresh Meshes
+              <ReloadOutlined /> Refresh Meshes
             </div>
           ),
         }
@@ -954,8 +953,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <DeleteOutlined />
-              Remove Meshes
+              <DeleteOutlined /> Remove Meshes
             </div>
           ),
         }
@@ -973,8 +971,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <DownloadOutlined />
-              Download Meshes
+              <DownloadOutlined /> Download Meshes
             </div>
           ),
         }

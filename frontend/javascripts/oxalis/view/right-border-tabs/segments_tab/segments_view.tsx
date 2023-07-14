@@ -12,6 +12,8 @@ import {
   SearchOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
+  DesktopOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -23,6 +25,7 @@ import {
 import {
   Button,
   ConfigProvider,
+  Divider,
   Dropdown,
   Empty,
   MenuProps,
@@ -859,7 +862,7 @@ class SegmentsView extends React.Component<Props, State> {
       disabled: isEditingDisabled,
       label: (
         <ChangeColorMenuItemContent
-          title="Change Group Color"
+          title="Change Segment Color"
           isDisabled={isEditingDisabled}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
@@ -895,7 +898,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          <CloudDownloadOutlined /> Compute meshes (ad hoc)
+          <DatabaseOutlined /> Compute meshes (ad hoc)
         </div>
       ),
     };
@@ -1408,6 +1411,11 @@ class SegmentsView extends React.Component<Props, State> {
                       label: "Delete group",
                     },
                     this.getMoveSegementsHereMenuItem(id),
+                    {
+                      key: "groupAndMeshActionDivider",
+                      label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
+                      disabled: true,
+                    },
                     this.getSetGroupColorMenuItem(id),
                     this.getLoadMeshesFromFileMenuItem(id),
                     this.getComputeMeshesAdHocMenuItem(id),

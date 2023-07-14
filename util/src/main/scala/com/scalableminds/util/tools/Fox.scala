@@ -329,7 +329,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     */
   @Deprecated
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
-    val box = await(awaitTimeout)
+    val box = await(justification, awaitTimeout)
     box.openOrThrowException(justification)
   }
 
@@ -338,7 +338,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     * Awaits the future and returns the box. Should not be used in production code (therefore marked as Deprecated).
     */
   @Deprecated
-  def await(awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
+  def await(justification: String, awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
     Await.result(futureBox, awaitTimeout)
 
   /**

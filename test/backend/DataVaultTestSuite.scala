@@ -14,6 +14,8 @@ import com.scalableminds.webknossos.datastore.datavault.{
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptor
+import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
+import org.scalatest.{Failed, Outcome, Succeeded}
 import play.api.test.WsTestClient
 
 import scala.collection.immutable.NumericRange
@@ -22,7 +24,7 @@ import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 class DataVaultTestSuite extends PlaySpec {
 
-  val openFoxJustification = "Opening Fox in Unit Test Context"
+  val handleFoxJustification = "Handling Fox in Unit Test Context"
 
   "Data vault" when {
     "using Range requests" when {
@@ -37,7 +39,7 @@ class DataVaultTestSuite extends PlaySpec {
             val bytes =
               (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
                 .readBytes(Some(range))(globalExecutionContext)
-                .get(openFoxJustification)
+                .get(handleFoxJustification)
 
             assert(bytes.length == range.length)
             assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -50,7 +52,7 @@ class DataVaultTestSuite extends PlaySpec {
         val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
 
-          val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(openFoxJustification)
+          val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -58,8 +60,9 @@ class DataVaultTestSuite extends PlaySpec {
 
         "return empty box" when {
           "requesting a nox-existent object" in {
-            val result = (vaultPath / "non-existent-key").readBytes()(globalExecutionContext).await()
-            assert(result.isEmpty)
+            val result =
+              (vaultPath / "non-existent-key").readBytes()(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
           }
         }
       }
@@ -70,8 +73,8 @@ class DataVaultTestSuite extends PlaySpec {
             val uri = new URI("s3://non-existing-bucket/non-existing-object")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)
-            val result = vaultPath.readBytes()(globalExecutionContext).await()
-            assert(result.isEmpty)
+            val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
           }
         }
 
@@ -88,7 +91,7 @@ class DataVaultTestSuite extends PlaySpec {
             val vaultPath = new VaultPath(uri, HttpsDataVault.create(RemoteSourceDescriptor(uri, None), ws))
             val bytes = (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
               .readBytes()(globalExecutionContext)
-              .get(openFoxJustification)
+              .get(handleFoxJustification)
 
             assert(bytes.length == dataLength)
             assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -100,7 +103,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes = (vaultPath / dataKey).readBytes()(globalExecutionContext).get(openFoxJustification)
+          val bytes = (vaultPath / dataKey).readBytes()(globalExecutionContext).get(handleFoxJustification)
 
           assert(bytes.length == dataLength)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -162,5 +165,14 @@ class DataVaultTestSuite extends PlaySpec {
       }
 
     }
+  }
+
+  def assertBoxEmpty(box: Box[Array[Byte]]): Outcome = box match {
+    case Full(_) => Failed()
+    case box: EmptyBox =>
+      box match {
+        case Empty            => Succeeded
+        case Failure(_, _, _) => Failed()
+      }
   }
 }

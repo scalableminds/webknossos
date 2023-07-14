@@ -978,7 +978,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getMoveSegementsHereMenuItem = (groupId: number): ItemType => {
+  getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
     return this.state.selectedSegmentId != null
       ? {
           key: "moveHere",
@@ -1406,7 +1406,7 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
-                    this.getMoveSegementsHereMenuItem(id),
+                    this.getMoveSegmentsHereMenuItem(id),
                     {
                       key: "groupAndMeshActionDivider",
                       label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,

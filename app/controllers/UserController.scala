@@ -463,30 +463,4 @@ class UserController @Inject()(userService: UserService,
       } yield Ok(updatedJs)
     }
 
-  case class CreateUserInOrganizationParameters(firstName: String,
-                                                lastName: String,
-                                                email: String,
-                                                password: Option[String])
-
-  object CreateUserInOrganizationParameters {
-    implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
-      Json.format[CreateUserInOrganizationParameters]
-  }
-  def createInOrganization(organizationName: String): Action[CreateUserInOrganizationParameters] =
-    sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
-      for {
-        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-        organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
-        passwordInfo = userService.getPasswordInfo(request.body.password)
-        user <- userService.insert(organization._id,
-                                   request.body.email,
-                                   request.body.firstName,
-                                   request.body.lastName,
-                                   isActive = true,
-                                   passwordInfo,
-                                   isAdmin = false,
-                                   isOrganizationOwner = false)
-      } yield Ok(user._id.toString)
-    }
-
 }

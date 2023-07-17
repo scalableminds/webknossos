@@ -65,23 +65,6 @@ class OrganizationController @Inject()(
     } yield Ok(Json.toJson(js))
   }
 
-  case class OrganizationCreationParameters(orgName: Option[String],
-                                            orgDisplayName: String,
-                                            ownerEmail: Option[String],
-                                            ownerId: Option[String])
-  object OrganizationCreationParameters {
-    implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
-  }
-  def create: Action[OrganizationCreationParameters] =
-    sil.SecuredAction.async(validateJson[OrganizationCreationParameters]) { implicit request =>
-      for {
-        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-        ownerId <- userService.getMultiUserId(request.body.ownerId, request.body.ownerEmail)
-        org <- organizationService.createOrganization(request.body.orgName, request.body.orgDisplayName)
-        _ <- userService.createUserInOrganization(ownerId, org._id, asOwner = true)
-      } yield Ok(org.name)
-    }
-
   def getDefault: Action[AnyContent] = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"

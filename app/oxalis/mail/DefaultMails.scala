@@ -2,7 +2,7 @@ package oxalis.mail
 
 import models.organization.Organization
 import models.user.User
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import utils.WkConf
 import views._
 
@@ -42,7 +42,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
-      implicit messages: Messages): Mail =
+      implicit mp: MessagesProvider): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to WEBKNOSSOS",

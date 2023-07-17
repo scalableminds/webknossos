@@ -43,9 +43,14 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  private def performRequest(request: GetObjectRequest)(implicit ec: ExecutionContext): Fox[S3Object] =
+  private def performRequest(request: GetObjectRequest)(implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+    var s3objectRef: Option[S3Object] = None // Used for cleanup later (possession of a S3Object requires closing it)
     try {
-      Fox.successful(client.getObject(request))
+      val s3object = client.getObject(request)
+      s3objectRef = Some(s3object)
+      val bytes = IOUtils.toByteArray(s3object.getObjectContent)
+      val encodingStr = Option(s3object.getObjectMetadata.getContentEncoding).getOrElse("")
+      Fox.successful(bytes, encodingStr)
     } catch {
       case e: AmazonServiceException =>
         e.getStatusCode match {
@@ -53,7 +58,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
           case _   => Fox.failure(e.getMessage)
         }
       case e: Exception => Fox.failure(e.getMessage)
+    } finally {
+      s3objectRef match {
+        case Some(obj) => obj.close()
+        case None      =>
+      }
     }
+  }
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
@@ -64,10 +75,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
         case Complete()      => getRequest(bucketName, objectKey)
       }
-      obj <- performRequest(request)
-      encodingStr = Option(obj.getObjectMetadata.getContentEncoding).getOrElse("")
-      encoding <- Encoding.fromRfc7231String(encodingStr)
-    } yield (IOUtils.toByteArray(obj.getObjectContent), encoding)
+      (bytes, encodingString) <- performRequest(request)
+      encoding <- Encoding.fromRfc7231String(encodingString)
+    } yield (bytes, encoding)
 }
 
 object S3DataVault {

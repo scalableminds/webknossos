@@ -3,8 +3,10 @@ import type { AnnotationTool } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import {
+  AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableResolutionForSegmentationTracing,
+  hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -67,7 +69,6 @@ export function isTraceTool(activeTool: AnnotationTool): boolean {
 }
 const disabledSkeletonExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
-const disabledAgglomerateMappingsExplanation = "This dataset does not have agglomerate mappings.";
 
 function _getDisabledInfoWhenVolumeIsDisabled(
   genericDisabledExplanation: string,
@@ -110,7 +111,7 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
-  hasAgglomerateMappings: boolean,
+  agglomerateState: AgglomerateState,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
   activeUser: APIUser | null | undefined,
@@ -162,16 +163,25 @@ function _getDisabledInfoFromArgs(
       explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.PROOFREAD]: {
-      isDisabled: !hasSkeleton || !hasAgglomerateMappings || !isProofReadingToolAllowed,
-      explanation: isProofReadingToolAllowed
-        ? !hasSkeleton
-          ? disabledSkeletonExplanation
-          : disabledAgglomerateMappingsExplanation
-        : getFeatureNotAvailableInPlanMessage(
-            PricingPlanEnum.Power,
-            activeOrganization,
-            activeUser,
-          ),
+      isDisabled: !hasSkeleton || !agglomerateState.value || !isProofReadingToolAllowed,
+      explanation:
+        // The explanations are prioritized according to effort the user has to put into
+        // activating proofreading.
+        // 1) If no agglomerate mapping is available (or activated), the user should know
+        //    about this requirement and be able to set it up (this can be the most difficult
+        //    step).
+        // 2) If a mapping is available, the pricing plan is potentially warned upon.
+        // 3) In the end, a potentially missing skeleton is warned upon (quite rare, because
+        //    most annotations have a skeleton).
+        agglomerateState.value
+          ? isProofReadingToolAllowed
+            ? disabledSkeletonExplanation
+            : getFeatureNotAvailableInPlanMessage(
+                PricingPlanEnum.Power,
+                activeOrganization,
+                activeUser,
+              )
+          : agglomerateState.reason,
     },
   };
 }
@@ -231,14 +241,14 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
   const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
-  const hasAgglomerateMappings = (visibleSegmentationLayer.agglomerates?.length ?? 0) > 0;
+  const agglomerateState = hasAgglomerateMapping(state);
 
   return getDisabledInfoFromArgs(
     hasSkeleton,
     isZoomStepTooHighForBrushing,
     isZoomStepTooHighForTracing,
     isZoomStepTooHighForFilling,
-    hasAgglomerateMappings,
+    agglomerateState,
     genericDisabledExplanation,
     state.activeOrganization,
     state.activeUser,

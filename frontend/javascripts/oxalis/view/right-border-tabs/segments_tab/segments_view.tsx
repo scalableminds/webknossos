@@ -7,12 +7,10 @@ import {
   SettingOutlined,
   ExclamationCircleOutlined,
   ArrowRightOutlined,
-  CloudDownloadOutlined,
   DownloadOutlined,
   SearchOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
-  DatabaseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -420,23 +418,23 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
     if (prevState.prevProps?.isosurfaces !== isosurfaces) {
-      //if any segment is invisible, set visibility false, so that the first action is to make all meshes visible
+      // Derive the areSegmentsInGroupVisible state so that we know per group
+      // if it contains only visible elements. This is used to know whether "Show meshes" or
+      // "Hide meshes" context item should be shown.
+      // If any segment is invisible, set the visibility of the group to false, so that the preferred
+      // action is to make all meshes visible.
       const newVisibleMap: { [groupId: number]: boolean } = {};
       const segmentGroupsWithRoot = [...segmentGroups, rootGroup];
       segmentGroupsWithRoot.forEach((group) => {
-        let isVisible = true;
         const segmentsOfGroup = groupToSegmentsMap[group.groupId];
         if (segmentsOfGroup == null) return;
-        const visibilityOfSegments: number[] = segmentsOfGroup.map((segment) => {
+        const isSomeSegmentLoadedAndInvisible = segmentsOfGroup.some((segment) => {
           const segmentIsosurface = isosurfaces[segment.id];
-          if (segmentIsosurface == null) return 1; //only care about explicitly invisible (not unloaded) meshes
-          return isosurfaces[segment.id].isVisible ? 1 : 0;
+          // Only regard loaded, but invisible meshes
+          return segmentIsosurface != null && !isosurfaces[segment.id].isVisible;
         });
-        if (_.sum(visibilityOfSegments) < segmentsOfGroup.length) {
-          //at least one is invisible, so first option is to make every mesh visible
-          isVisible = false;
-        }
-        newVisibleMap[group.groupId] = isVisible;
+
+        newVisibleMap[group.groupId] = !isSomeSegmentLoadedAndInvisible;
       });
       return {
         ...updateStateObject, //may be null
@@ -1098,14 +1096,6 @@ class SegmentsView extends React.Component<Props, State> {
         Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible));
       }
     });
-
-    const newSegmentsInGroupVisible = {
-      ...this.state.areSegmentsInGroupVisible,
-      [groupId]: isVisible,
-    };
-    this.setState({
-      areSegmentsInGroupVisible: newSegmentsInGroupVisible,
-    });
   };
 
   handleLoadMeshesAdHoc = (groupId: number) => {
@@ -1113,26 +1103,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (segment.somePosition == null) return;
       this.props.loadAdHocMesh(segment.id, segment.somePosition);
     });
-
-    const newSegmentsInGroupVisible = {
-      ...this.state.areSegmentsInGroupVisible,
-      [groupId]: true,
-    };
-    this.setState({
-      areSegmentsInGroupVisible: newSegmentsInGroupVisible,
-    });
   };
 
   getSegmentsWithMissingLocation = (groupId: number): number[] => {
     const segmentGroup = this.getSegmentsOfGroup(groupId);
     if (segmentGroup == null) return [];
-    let segmentsWithoutPosition: number[] = segmentGroup.reduce(
-      (segmentsWithoutPositionAcc: number[], segment: Segment) => {
-        segment.somePosition == null && segmentsWithoutPositionAcc.push(segment.id);
-        return segmentsWithoutPositionAcc;
-      },
-      [],
-    );
+    let segmentsWithoutPosition: number[] = segmentGroup
+      .filter((segment) => segment.somePosition == null)
+      .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
   };
 
@@ -1152,14 +1130,6 @@ class SegmentsView extends React.Component<Props, State> {
         segment.somePosition,
         this.props.currentMeshFile.meshFileName,
       );
-    });
-
-    const newSegmentsInGroupVisible = {
-      ...this.state.areSegmentsInGroupVisible,
-      [groupId]: true,
-    };
-    this.setState({
-      areSegmentsInGroupVisible: newSegmentsInGroupVisible,
     });
   };
 
@@ -1442,8 +1412,7 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open
-                      /* open={this.state.activeDropdownSegmentOrGroupId === id} */ // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
+                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
                       onOpenChange={(isVisible) =>
                         this.handleSegmentDropdownMenuVisibility(id, isVisible)
                       }

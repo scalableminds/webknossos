@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Box, Failure, Full}
 import ucar.ma2.{Array => MultiArray}
 import net.liftweb.util.Helpers.tryo
 
@@ -56,22 +56,22 @@ class BinaryDataService(val dataBaseDir: Path,
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary(isNecessary: Boolean,
                            inputArray: Array[Byte],
-                           conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
-      if (isNecessary) conversionFunc(inputArray) else inputArray
+                           conversionFunc: Array[Byte] => Box[Array[Byte]]): Box[Array[Byte]] =
+      if (isNecessary) conversionFunc(inputArray) else Full(inputArray)
 
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData <- tryo(agglomerateServiceOpt.map { agglomerateService =>
+          mappedData <- agglomerateServiceOpt.map { agglomerateService =>
             convertIfNecessary(
               request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
               data,
               agglomerateService.applyAgglomerate(request)
             )
-          }.getOrElse(data)) ?~> "Failed to apply agglomerate mapping"
-          resultData = convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
+          }.getOrElse(Full(data)) ?~> "Failed to apply agglomerate mapping"
+          resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
         } yield (resultData, index)
     }
 
@@ -190,7 +190,7 @@ class BinaryDataService(val dataBaseDir: Path,
     result
   }
 
-  private def convertToHalfByte(a: Array[Byte]) = {
+  private def convertToHalfByte(a: Array[Byte]): Box[Array[Byte]] = tryo {
     val aSize = a.length
     val compressedSize = (aSize + 1) / 2
     val compressed = new Array[Byte](compressedSize)

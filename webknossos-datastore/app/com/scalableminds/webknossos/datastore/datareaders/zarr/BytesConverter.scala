@@ -2,11 +2,13 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.{ArrayDataType, bytesPerElementFor}
+import net.liftweb.common.Box
+import net.liftweb.util.Helpers.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
 
 object BytesConverter {
-  def toByteArray(array: Object, dataType: ArrayDataType, byteOrder: ByteOrder): Array[Byte] = {
+  def toByteArray(array: Object, dataType: ArrayDataType, byteOrder: ByteOrder): Box[Array[Byte]] = tryo {
     val bytesPerElement = bytesPerElementFor(dataType)
     dataType match {
       case ArrayDataType.u1 | ArrayDataType.i1 =>

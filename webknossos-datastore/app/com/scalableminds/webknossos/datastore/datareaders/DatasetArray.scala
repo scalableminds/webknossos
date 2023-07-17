@@ -44,7 +44,7 @@ class DatasetArray(vaultPath: VaultPath,
   private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
-      asBytes <- tryo(BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN))
+      asBytes <- BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
     } yield asBytes
 
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.

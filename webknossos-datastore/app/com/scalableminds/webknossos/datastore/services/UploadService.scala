@@ -224,7 +224,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
-        _ <- tryo(addLayerAndResolutionDirIfMissing(unpackToDir)).toFox
+        _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
@@ -323,7 +323,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield layerRenamed
   }
 
-  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
+  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
@@ -331,8 +331,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                            silent = false,
                                                            filters = p => p.getFileName.toString == FILENAME_HEADER_WKW)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
-      } yield {
-        if (looksLikeMagDir(listingRelative)) {
+        _ <- if (looksLikeMagDir(listingRelative)) {
           val targetDir = dataSourceDir.resolve("color").resolve("1")
           logger.info(s"Looks like mag dir. Moving to $targetDir")
           PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
@@ -340,9 +339,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           val targetDir = dataSourceDir.resolve("color")
           logger.info(s"Looks like layer dir. Moving to $targetDir")
           PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
-        }
-      }
-    }
+        } else Full(())
+      } yield ()
+    } else Full(())
 
   private def looksLikeMagDir(headerWkwPaths: Seq[Path]): Boolean =
     headerWkwPaths.headOption.exists { oneHeaderWkwPath =>

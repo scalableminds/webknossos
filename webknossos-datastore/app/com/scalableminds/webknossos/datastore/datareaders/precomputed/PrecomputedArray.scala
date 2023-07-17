@@ -14,6 +14,7 @@ import java.nio.ByteBuffer
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
@@ -165,7 +166,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
-  private def parseMinishardIndex(input: Array[Byte]): Seq[(Long, Long, Long)] = {
+  private def parseMinishardIndex(input: Array[Byte]): Box[Seq[(Long, Long, Long)]] = tryo {
     val bytes = decodeMinishardIndex(input)
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
@@ -222,7 +223,7 @@ class PrecomputedArray(vaultPath: VaultPath,
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-      minishardIndex <- tryo(parseMinishardIndex(indexRaw))
+      minishardIndex <- parseMinishardIndex(indexRaw)
     } yield minishardIndex
   }
 

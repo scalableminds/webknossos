@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -24,9 +22,6 @@ type GeometryLike = {
 };
 
 class ArbitraryView {
-  // Copied form backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
@@ -45,12 +40,11 @@ class ArbitraryView {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: THREE.Object3D;
   cameraPosition: Array<number>;
+  unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-
-    _.extend(this, BackboneEvents);
 
     const { scene } = getSceneController();
     // camDistance has to be calculated such that with cam
@@ -80,15 +74,6 @@ class ArbitraryView {
     };
     this.cameraPosition = [0, 0, this.camDistance];
     this.needsRerender = true;
-    app.vent.on("rerender", () => {
-      this.needsRerender = true;
-    });
-    Store.subscribe(() => {
-      // Render in the next frame after the change propagated everywhere
-      window.requestAnimationFrame(() => {
-        this.needsRerender = true;
-      });
-    });
   }
 
   getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
@@ -98,6 +83,21 @@ class ArbitraryView {
   start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
+
+      this.unsubscribeFunctions.push(
+        app.vent.on("rerender", () => {
+          this.needsRerender = true;
+        }),
+      );
+      this.unsubscribeFunctions.push(
+        Store.subscribe(() => {
+          // Render in the next frame after the change propagated everywhere
+          window.requestAnimationFrame(() => {
+            this.needsRerender = true;
+          });
+        }),
+      );
+
       this.group = new THREE.Object3D();
       this.group.add(this.camera);
       getSceneController().rootGroup.add(this.group);
@@ -120,6 +120,11 @@ class ArbitraryView {
 
       getSceneController().rootGroup.remove(this.group);
       window.removeEventListener("resize", this.resizeThrottled);
+
+      for (const fn of this.unsubscribeFunctions) {
+        fn();
+      }
+      this.unsubscribeFunctions = [];
     }
   }
 
@@ -132,8 +137,7 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    if (this.needsRerender || window.needsRerender) {
-      this.trigger("render");
+    if (this.needsRerender) {
       const { camera, geometries } = this;
       const { renderer, scene } = getSceneController();
 
@@ -196,8 +200,6 @@ class ArbitraryView {
       }
 
       this.needsRerender = false;
-      // @ts-ignore
-      window.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);

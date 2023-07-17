@@ -1,6 +1,4 @@
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import dimensions from "oxalis/model/dimensions";
@@ -268,22 +266,10 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
   };
-  storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+
+  storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
-  // Copied from backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
-  listenTo: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'stopListening' has no initializer and is... Remove this comment to see the full error message
-  stopListening: (...args: Array<any>) => any;
 
-  constructor(...args: any) {
-    // @ts-expect-error ts-migrate(2556) FIXME: Expected 1-2 arguments, but got 0 or more.
-    super(...args);
-
-    _.extend(this, BackboneEvents);
-
-    this.storePropertyUnsubscribers = [];
-  }
   componentDidMount() {
     this.input = {
       // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
@@ -309,7 +295,6 @@ class PlaneController extends React.PureComponent<Props> {
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then((el) => {
-        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -588,7 +573,6 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.bindToEvents();
     getSceneController().startPlaneMode();
     this.planeView.start();
     this.initKeyboard();
@@ -604,16 +588,7 @@ class PlaneController extends React.PureComponent<Props> {
 
     getSceneController().stopPlaneMode();
     this.planeView.stop();
-    this.stopListening();
     this.isStarted = false;
-  }
-
-  bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.onPlaneViewRender);
-  }
-
-  onPlaneViewRender(): void {
-    getSceneController().update();
   }
 
   changeMoveValue(delta: number): void {

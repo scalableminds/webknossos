@@ -79,26 +79,33 @@ class AuthenticationController @Inject()(
           (firstName, lastName, email, errors) <- validateNameAndEmail(signUpData.firstName,
                                                                        signUpData.lastName,
                                                                        signUpData.email)
-          _ <- Fox.bool2Fox(errors.isEmpty) ?~> Json
-            .obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> Messages(t)))))
-            .toString()
-          inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
-          organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
-          organization <- organizationService.findOneByInviteByNameOrDefault(inviteBox.toOption, organizationName)(
-            GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
-          _ <- organizationService
-            .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
-          autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-          _ <- createUser(organization,
-                          email,
-                          firstName,
-                          lastName,
-                          autoActivate,
-                          Option(signUpData.password),
-                          inviteBox,
-                          registerBrainDB = true)
+          result <- if (errors.nonEmpty) {
+            Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+          } else {
+            for {
+              _ <- Fox.bool2Fox(errors.isEmpty) ?~> Json
+                .obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> Messages(t)))))
+                .toString()
+
+              inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
+              organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
+              organization <- organizationService.findOneByInviteByNameOrDefault(inviteBox.toOption, organizationName)(
+                GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+              _ <- organizationService
+                .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
+              autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
+              _ <- createUser(organization,
+                              email,
+                              firstName,
+                              lastName,
+                              autoActivate,
+                              Option(signUpData.password),
+                              inviteBox,
+                              registerBrainDB = true)
+            } yield Ok
+          }
         } yield {
-          Ok
+          result
         }
 
       }
@@ -597,19 +604,20 @@ class AuthenticationController @Inject()(
         (firstName, lastName, email, errors) <- validateNameAndEmail(request.body.firstName,
                                                                      request.body.lastName,
                                                                      request.body.email)
-        _ <- Fox.bool2Fox(errors.isEmpty) ?~> errors
-          .map(t => Messages(t))
-          .mkString(",") // How to return a BadRequest here with JSON? (see line 84)
-        user <- createUser(organization,
-                           email,
-                           firstName,
-                           lastName,
-                           request.body.autoActivate.getOrElse(false),
-                           request.body.password,
-                           Empty,
-                           registerBrainDB = true)
+        result <- if (errors.isEmpty) {
+          createUser(organization,
+                     email,
+                     firstName,
+                     lastName,
+                     request.body.autoActivate.getOrElse(false),
+                     request.body.password,
+                     Empty,
+                     registerBrainDB = true).map(u => Ok(u._id.toString))
+        } else {
+          Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+        }
       } yield {
-        Ok(user._id.toString)
+        result
       }
     }
 

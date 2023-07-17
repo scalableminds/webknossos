@@ -157,7 +157,7 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
-import { setLayerTransforms } from "oxalis/model/actions/dataset_actions";
+import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type TransformSpec =
@@ -2049,7 +2049,7 @@ class DataApi {
    * );
    */
   _setLayerTransforms(layerName: string, transforms: Matrix4x4) {
-    Store.dispatch(setLayerTransforms(layerName, Array.from(transforms) as Vector16));
+    Store.dispatch(setLayerTransformsAction(layerName, Array.from(transforms) as Vector16));
   }
 
   /*

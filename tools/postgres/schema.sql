@@ -183,7 +183,7 @@ CREATE TABLE webknossos.dataSet_thumbnails(
   mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
   image BYTEA NOT NULL,
   mimetype VARCHAR(256),
-  sourceMag webknossos.VECTOR3 NOT NULL,
+  mag webknossos.VECTOR3 NOT NULL,
   mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_dataSet, dataLayerName, width, height, mappingName)

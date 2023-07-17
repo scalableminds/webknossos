@@ -31,7 +31,6 @@ import {
   Modal,
   Popover,
   Select,
-  Space,
   Tooltip,
   Tree,
 } from "antd";
@@ -861,9 +860,8 @@ class SegmentsView extends React.Component<Props, State> {
       disabled: isEditingDisabled,
       icon: (
         <i
-          className="fas fa-eye-dropper fa-sm"
+          className="fas fa-eye-dropper fa-sm fa-icon"
           style={{
-            marginRight: 5,
             cursor: "pointer",
           }}
         />
@@ -896,7 +894,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (id: number): ItemType => {
     return {
       key: "computeAdHoc",
-      icon: <DatabaseOutlined />,
+      icon: <i className="fas fa-dice-d20 fa-icon" />,
       label: (
         <div
           onClick={() => {
@@ -918,7 +916,7 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
-      icon: <CloudDownloadOutlined />,
+      icon: <i className="fas fa-dice-d20 fa-icon" />,
       label: (
         <div
           onClick={() => {
@@ -1444,7 +1442,8 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
+                      open
+                      /* open={this.state.activeDropdownSegmentOrGroupId === id} */ // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
                       onOpenChange={(isVisible) =>
                         this.handleSegmentDropdownMenuVisibility(id, isVisible)
                       }

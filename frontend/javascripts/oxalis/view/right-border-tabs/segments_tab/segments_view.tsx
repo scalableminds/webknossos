@@ -859,6 +859,15 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "changeGroupColor",
       disabled: isEditingDisabled,
+      icon: (
+        <i
+          className="fas fa-eye-dropper fa-sm"
+          style={{
+            marginRight: 5,
+            cursor: "pointer",
+          }}
+        />
+      ),
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -870,6 +879,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.setGroupColor(groupId, color);
           }}
           rgb={this.getColorOfFirstSegmentOrNull(groupId)}
+          hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
       ),
     };
@@ -886,6 +896,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (id: number): ItemType => {
     return {
       key: "computeAdHoc",
+      icon: <DatabaseOutlined />,
       label: (
         <div
           onClick={() => {
@@ -897,7 +908,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          <DatabaseOutlined /> Compute Meshes (ad hoc)
+          Compute Meshes (ad hoc)
         </div>
       ),
     };
@@ -907,6 +918,7 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
+      icon: <CloudDownloadOutlined />,
       label: (
         <div
           onClick={() => {
@@ -918,7 +930,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
-          <CloudDownloadOutlined /> Load Meshes (precomputed)
+          Load Meshes (precomputed)
         </div>
       ),
     };
@@ -928,6 +940,7 @@ class SegmentsView extends React.Component<Props, State> {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "reloadMeshes",
+          icon: <ReloadOutlined />,
           label: (
             <div
               onClick={() => {
@@ -935,7 +948,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <ReloadOutlined /> Refresh Meshes
+              Refresh Meshes
             </div>
           ),
         }
@@ -946,6 +959,7 @@ class SegmentsView extends React.Component<Props, State> {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "removeMeshes",
+          icon: <DeleteOutlined />,
           label: (
             <div
               onClick={() => {
@@ -953,7 +967,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <DeleteOutlined /> Remove Meshes
+              Remove Meshes
             </div>
           ),
         }
@@ -964,6 +978,7 @@ class SegmentsView extends React.Component<Props, State> {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "downloadAllMeshes",
+          icon: <DownloadOutlined />,
           label: (
             <div
               onClick={() => {
@@ -971,7 +986,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              <DownloadOutlined /> Download Meshes
+              Download Meshes
             </div>
           ),
         }
@@ -1006,9 +1021,13 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number): ItemType => {
+    const hideOrShowMeshesLabel = this.state.areSegmentsInGroupVisible[groupId]
+      ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
+      : { icon: <EyeOutlined />, text: "Show" };
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "showMeshesOfGroup",
+          icon: hideOrShowMeshesLabel.icon,
           label: (
             <div
               onClick={() => {
@@ -1024,16 +1043,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleSegmentDropdownMenuVisibility(groupId, false);
               }}
             >
-              {this.state.areSegmentsInGroupVisible[groupId] ? (
-                <>
-                  <EyeInvisibleOutlined /> Hide
-                </>
-              ) : (
-                <>
-                  <EyeOutlined /> Show
-                </>
-              )}
-              <Space /> Meshes
+              {hideOrShowMeshesLabel.text} Meshes
             </div>
           ),
         }

@@ -83,6 +83,7 @@ class AuthenticationController @Inject()(
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
           } else {
             for {
+              _ <- Fox.successful(())
               inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
               organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
               organization <- organizationService.findOneByInviteByNameOrDefault(inviteBox.toOption, organizationName)(

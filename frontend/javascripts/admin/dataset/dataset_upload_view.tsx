@@ -493,13 +493,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           const reader = new Zip.ZipReader(new Zip.BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
-          const wkwFile = entries.find((entry: any) =>
+          const wkwFile = entries.find((entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
           );
           const needsConversion = wkwFile == null;
           this.handleNeedsConversionInfo(needsConversion);
 
-          const nmlFile = entries.find((entry: any) =>
+          const nmlFile = entries.find((entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "nml"),
           );
           if (nmlFile) {

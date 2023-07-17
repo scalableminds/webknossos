@@ -1,3 +1,5 @@
+import * as ZipType from "@zip.js/zip.js";
+
 class TransFormStream {}
 
 let mockedWindow = false;
@@ -9,6 +11,6 @@ if (!global.window) {
   mockedWindow = true;
 }
 
-const Zip = require("@zip.js/zip.js");
+const Zip = require("@zip.js/zip.js") as typeof ZipType;
 
 export default Zip;

@@ -82,7 +82,7 @@ class AuthenticationController @Inject()(
           result <- if (errors.nonEmpty) {
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
           } else {
-            for {g
+            for {
               inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
               organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
               organization <- organizationService.findOneByInviteByNameOrDefault(inviteBox.toOption, organizationName)(
@@ -545,36 +545,38 @@ class AuthenticationController @Inject()(
               (firstName, lastName, email, errors) <- validateNameAndEmail(signUpData.firstName,
                                                                            signUpData.lastName,
                                                                            signUpData.email)
-              _ <- Fox.bool2Fox(errors.isEmpty) ?~> Json
-                .obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))
-                .toString()
-              organization <- organizationService.createOrganization(
-                Option(signUpData.organization).filter(_.trim.nonEmpty),
-                signUpData.organizationDisplayName) ?~> "organization.create.failed"
-              user <- userService.insert(organization._id,
-                                         email,
-                                         firstName,
-                                         lastName,
-                                         isActive = true,
-                                         passwordHasher.hash(signUpData.password),
-                                         isAdmin = true,
-                                         isOrganizationOwner = true) ?~> "user.creation.failed"
-              _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-              multiUser <- multiUserDAO.findOne(user._multiUser)
-              dataStoreToken <- bearerTokenAuthenticatorService
-                .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
-                .toFox
-              _ <- organizationService
-                .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
-            } yield {
-              Mailer ! Send(defaultMails
-                .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
-              if (conf.Features.isWkorgInstance) {
-                mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
+              result <- if (errors.nonEmpty) {
+                Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+              } else {
+                for {
+                  organization <- organizationService.createOrganization(
+                    Option(signUpData.organization).filter(_.trim.nonEmpty),
+                    signUpData.organizationDisplayName) ?~> "organization.create.failed"
+                  user <- userService.insert(organization._id,
+                                             email,
+                                             firstName,
+                                             lastName,
+                                             isActive = true,
+                                             passwordHasher.hash(signUpData.password),
+                                             isAdmin = true,
+                                             isOrganizationOwner = true) ?~> "user.creation.failed"
+                  _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+                  multiUser <- multiUserDAO.findOne(user._multiUser)
+                  dataStoreToken <- bearerTokenAuthenticatorService
+                    .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
+                    .toFox
+                  _ <- organizationService
+                    .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
+                } yield {
+                  Mailer ! Send(defaultMails
+                    .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
+                  if (conf.Features.isWkorgInstance) {
+                    mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
+                  }
+                  Ok
+                }
               }
-              Ok
-            }
-
+            } yield result
           case _ => Fox.failure(Messages("organization.create.forbidden"))
         }
       }

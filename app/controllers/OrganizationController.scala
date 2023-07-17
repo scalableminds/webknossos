@@ -13,7 +13,7 @@ import models.team.PricingPlan
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
+import play.api.libs.json.{JsNull, JsValue, Json, __}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
@@ -155,19 +155,15 @@ class OrganizationController @Inject()(
     } yield Ok
   }
 
-  case class AddUserParameters(userEmail: Option[String], multiUserId: Option[String])
-  object AddUserParameters {
-    implicit val jsonFormat: OFormat[AddUserParameters] = Json.format[AddUserParameters]
-  }
-
-  def addUser(organizationName: String): Action[AddUserParameters] =
-    sil.SecuredAction.async(validateJson[AddUserParameters]) { implicit request =>
+  def addUser(organizationName: String): Action[String] =
+    sil.SecuredAction.async(validateJson[String]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-        multiUserId <- userService.getMultiUserId(request.body.multiUserId, request.body.userEmail)
+        multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName) ~> NOT_FOUND
-        user <- userService.createUserInOrganization(multiUserId, organization._id, asOwner = false)
+        user <- userDAO.findFirstByMultiUser(multiUser._id)
+        user <- userService.joinOrganization(user, organization._id, autoActivate = true, isAdmin = false)
       } yield Ok(user._id.toString)
     }
 

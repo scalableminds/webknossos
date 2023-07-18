@@ -421,7 +421,7 @@ function* tryMinCutAtMag(
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],

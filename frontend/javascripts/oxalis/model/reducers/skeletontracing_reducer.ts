@@ -552,8 +552,15 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
-          const { position, rotation, viewport, resolution, treeId, timestamp, additionalCoords } =
-            action;
+          const {
+            position,
+            rotation,
+            viewport,
+            resolution,
+            treeId,
+            timestamp,
+            additionalCoordinates,
+          } = action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -561,7 +568,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 skeletonTracing,
                 tree,
                 position,
-                additionalCoords,
+                additionalCoordinates,
                 rotation,
                 viewport,
                 resolution,

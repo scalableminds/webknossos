@@ -645,8 +645,13 @@ function* prepareSplitOrMerge(
   const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
 
   const getDataValue = (position: Vector3) => {
-    const { additionalCoords } = Store.getState().flycam;
-    return api.data.getDataValue(layerName, position, agglomerateFileZoomstep, additionalCoords);
+    const { additionalCoordinates } = Store.getState().flycam;
+    return api.data.getDataValue(
+      layerName,
+      position,
+      agglomerateFileZoomstep,
+      additionalCoordinates,
+    );
   };
 
   return { layerName, agglomerateFileMag, getDataValue };

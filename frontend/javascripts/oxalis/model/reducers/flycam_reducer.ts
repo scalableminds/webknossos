@@ -251,10 +251,11 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       let { values } = action;
       if (action.values == null || action.values.length !== expectedAdditionalCoordinatesCount) {
         values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
-          const existingAdditionalCoords = state.flycam.additionalCoords;
+          const existingadditionalCoordinates = state.flycam.additionalCoordinates;
           const fallbackValue =
-            (existingAdditionalCoords != null ? existingAdditionalCoords[index]?.value : null) ??
-            Math.floor((bounds[1] - bounds[0]) / 2);
+            (existingadditionalCoordinates != null
+              ? existingadditionalCoordinates[index]?.value
+              : null) ?? Math.floor((bounds[1] - bounds[0]) / 2);
           if (values) {
             const specifiedValue = values.find((element) => element.name === name);
             if (specifiedValue) {
@@ -270,7 +271,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
 
       return update(state, {
         flycam: {
-          additionalCoords: { $set: values },
+          additionalCoordinates: { $set: values },
         },
       });
     }

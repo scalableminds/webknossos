@@ -40,7 +40,7 @@ const NodeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
 
-    const additionalCoordLength = (Store.getState().flycam.additionalCoords ?? []).length;
+    const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
@@ -68,7 +68,7 @@ const EdgeBufferHelperType = {
       new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
     );
 
-    const additionalCoordLength = (Store.getState().flycam.additionalCoords ?? []).length;
+    const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
@@ -347,10 +347,10 @@ class Skeleton {
         }
 
         case "updateNode": {
-          const { treeId, id, radius, position, additionalCoords } = update.value;
+          const { treeId, id, radius, position, additionalCoordinates } = update.value;
           this.updateNodeRadius(treeId, id, radius);
           const tree = skeletonTracing.trees[treeId];
-          this.updateNodePosition(tree, id, position, additionalCoords);
+          this.updateNodePosition(tree, id, position, additionalCoordinates);
           break;
         }
 
@@ -510,12 +510,12 @@ class Skeleton {
         const attributes = buffer.geometry.attributes as Record<string, THREE.BufferAttribute>;
         (attributes.position as THREE.BufferAttribute).set(node.position, index * 3);
 
-        if (node.additionalCoords) {
-          for (const idx of _.range(0, node.additionalCoords.length)) {
-            const attributeAdditionalCoords = buffer.geometry.attributes[
+        if (node.additionalCoordinates) {
+          for (const idx of _.range(0, node.additionalCoordinates.length)) {
+            const attributeadditionalCoordinates = buffer.geometry.attributes[
               `additionalCoord_${idx}`
             ] as THREE.BufferAttribute;
-            attributeAdditionalCoords.set([node.additionalCoords[idx].value], index);
+            attributeadditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
           }
         }
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
@@ -566,7 +566,7 @@ class Skeleton {
     tree: Tree,
     nodeId: number,
     position: Vector3,
-    additionalCoords: AdditionalCoordinate[] | null | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ) {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
@@ -574,12 +574,12 @@ class Skeleton {
       const attribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
       attribute.set(position, index * 3);
 
-      if (additionalCoords) {
-        for (const idx of _.range(0, additionalCoords.length)) {
-          const attributeAdditionalCoords = buffer.geometry.attributes[
+      if (additionalCoordinates) {
+        for (const idx of _.range(0, additionalCoordinates.length)) {
+          const attributeadditionalCoordinates = buffer.geometry.attributes[
             `additionalCoord_${idx}`
           ] as THREE.BufferAttribute;
-          attributeAdditionalCoords.set([additionalCoords[idx].value], index);
+          attributeadditionalCoordinates.set([additionalCoordinates[idx].value], index);
         }
       }
 
@@ -646,14 +646,14 @@ class Skeleton {
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];
-      if (source.additionalCoords && target.additionalCoords) {
-        for (const idx of _.range(0, source.additionalCoords.length)) {
+      if (source.additionalCoordinates && target.additionalCoordinates) {
+        for (const idx of _.range(0, source.additionalCoordinates.length)) {
           const additionalCoordAttribute = attributes[
             `additionalCoord_${idx}`
           ] as THREE.BufferAttribute;
 
-          additionalCoordAttribute.set([source.additionalCoords[idx].value], 2 * index);
-          additionalCoordAttribute.set([target.additionalCoords[idx].value], 2 * index + 1);
+          additionalCoordAttribute.set([source.additionalCoordinates[idx].value], 2 * index);
+          additionalCoordAttribute.set([target.additionalCoordinates[idx].value], 2 * index + 1);
           changedAttributes.push(additionalCoordAttribute);
         }
       }

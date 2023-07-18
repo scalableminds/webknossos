@@ -355,10 +355,10 @@ export function* floodFill(): Saga<void> {
     );
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
     const oldSegmentIdAtSeed = cube.getDataValue(
       seedPosition,
-      additionalCoords,
+      additionalCoordinates,
       null,
       labeledZoomStep,
     );
@@ -395,7 +395,7 @@ export function* floodFill(): Saga<void> {
     } = yield* call(
       { context: cube, fn: cube.floodFill },
       seedPosition,
-      additionalCoords,
+      additionalCoordinates,
       activeCellId,
       dimensionIndices,
       boundingBoxForFloodFill,

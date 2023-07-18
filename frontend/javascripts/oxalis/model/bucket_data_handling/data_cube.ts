@@ -67,7 +67,7 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
-  additionalCoordsBounds: Record<string, AdditionalCoordinateWithBounds>;
+  additionalCoordinatesBounds: Record<string, AdditionalCoordinateWithBounds>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pushQueue' has no initializer and is not... Remove this comment to see the full error message
@@ -97,7 +97,7 @@ class DataCube {
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
     layerBBox: BoundingBox,
-    additionalCoordsBounds: AdditionalCoordinateWithBounds[],
+    additionalCoordinatesBounds: AdditionalCoordinateWithBounds[],
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
@@ -107,7 +107,7 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
-    this.additionalCoordsBounds = _.keyBy(additionalCoordsBounds, "name");
+    this.additionalCoordinatesBounds = _.keyBy(additionalCoordinatesBounds, "name");
 
     this.cubes = {};
     this.buckets = [];
@@ -187,7 +187,7 @@ class DataCube {
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
     const relevantCoords = (allCoords ?? []).filter(
-      (coord) => this.additionalCoordsBounds[coord.name] != null,
+      (coord) => this.additionalCoordinatesBounds[coord.name] != null,
     );
     return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
@@ -230,8 +230,8 @@ class DataCube {
       }
 
       for (const coord of coords || []) {
-        if (coord.name in this.additionalCoordsBounds) {
-          const { bounds } = this.additionalCoordsBounds[coord.name];
+        if (coord.name in this.additionalCoordinatesBounds) {
+          const { bounds } = this.additionalCoordinatesBounds[coord.name];
           if (coord.value < bounds[0] || coord.value >= bounds[1]) {
             return null;
           }

@@ -162,7 +162,7 @@ export const initializeSkeletonTracingAction = (tracing: ServerSkeletonTracing) 
 
 export const createNodeAction = (
   position: Vector3,
-  additionalCoords: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -173,7 +173,7 @@ export const createNodeAction = (
   ({
     type: "CREATE_NODE",
     position,
-    additionalCoords,
+    additionalCoordinates,
     rotation,
     viewport,
     resolution,

@@ -336,7 +336,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,

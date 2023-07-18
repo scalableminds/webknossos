@@ -155,7 +155,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -190,7 +190,7 @@ export function* labelWithVoxelBuffer2D(
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
       min,
       labeledZoomStep,
-      additionalCoords,
+      additionalCoordinates,
     );
 
     if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {

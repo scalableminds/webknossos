@@ -88,7 +88,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     resolutionInfo: ResolutionInfo,
-    additionalCoords: AdditionalCoordinate[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
@@ -110,7 +110,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       areas,
       resolutions,
       false,
-      additionalCoords,
+      additionalCoordinates,
     );
     let queueItemsForFallbackZoomStep: Array<PullQueueItem> = [];
     const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
@@ -126,7 +126,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         areas,
         resolutions,
         true,
-        additionalCoords,
+        additionalCoordinates,
       );
     }
 
@@ -143,7 +143,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
     isFallback: boolean,
-    additionalCoords: AdditionalCoordinate[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: Array<PullQueueItem> = [];
 
@@ -151,7 +151,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       return pullQueue;
     }
 
-    const centerBucket = cube.positionToZoomedAddress(position, additionalCoords, zoomStep);
+    const centerBucket = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     const centerBucket3: Vector3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
     const fallbackPriorityWeight = isFallback ? 50 : 0;
 
@@ -185,7 +185,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
           fallbackPriorityWeight;
 
         pullQueue.push({
-          bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoords ?? []],
+          bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoordinates ?? []],
           priority,
         });
 
@@ -200,7 +200,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
             const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
             pullQueue.push({
-              bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoords ?? []],
+              bucket: [bucket[0], bucket[1], bucket[2], zoomStep, additionalCoordinates ?? []],
               priority: preloadingPriority,
             });
           }

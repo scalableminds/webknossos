@@ -310,9 +310,9 @@ function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
     const position = node.position.map(Math.floor);
     const maybeProperties =
-      (node.additionalCoords?.length || 0) === 0
+      (node.additionalCoordinates?.length || 0) === 0
         ? {}
-        : { additionalCoords: JSON.stringify(node.additionalCoords) };
+        : { additionalCoordinates: JSON.stringify(node.additionalCoordinates) };
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
@@ -729,7 +729,11 @@ export function parseNml(nmlString: string): Promise<{
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
-              additionalCoords: _parseJSON(attr, "additionalCoords", []) as AdditionalCoordinate[],
+              additionalCoordinates: _parseJSON(
+                attr,
+                "additionalCoordinates",
+                [],
+              ) as AdditionalCoordinate[],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),

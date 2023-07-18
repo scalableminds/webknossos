@@ -32,7 +32,7 @@ const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
   position: [id, id, id],
-  additionalCoords: null,
+  additionalCoordinates: null,
   radius: id,
   resolution: 10,
   rotation: [id, id, id],

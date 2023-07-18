@@ -116,7 +116,7 @@ export function createNode(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
   positionFloat: Vector3,
-  additionalCoords: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -139,7 +139,7 @@ export function createNode(
   // Create the new node
   const node: Node = {
     position,
-    additionalCoords,
+    additionalCoordinates,
     radius,
     rotation,
     viewport,
@@ -801,10 +801,11 @@ export function toggleTreeGroupReducer(
 }
 
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
+  debugger;
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
-    additionalCoords: n.additionalCoordinates,
+    additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,

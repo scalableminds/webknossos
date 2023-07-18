@@ -115,12 +115,12 @@ async function createNodeOverwrite(
     return;
   }
 
-  const { position, additionalCoords } = action;
+  const { position, additionalCoordinates } = action;
   const segmentId = await api.data.getDataValue(
     segmentationLayerName,
     position,
     null,
-    additionalCoords,
+    additionalCoordinates,
   );
 
   // If there is no segment id, the node was set outside of all segments.
@@ -144,7 +144,7 @@ async function onCreateNode(
   nodeId: number,
   treeId: number,
   position: Vector3,
-  additionalCoords: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   updateMapping: boolean = true,
 ) {
   const { idMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
@@ -157,7 +157,7 @@ async function onCreateNode(
     segmentationLayerName,
     position,
     null,
-    additionalCoords,
+    additionalCoordinates,
   );
 
   // It can still happen that there are createNode diffing actions for nodes which
@@ -224,7 +224,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
     }
 
     if (segmentId != null && segmentId > 0) {
-      await onCreateNode(mergerModeState, id, treeId, position, node.additionalCoords, false);
+      await onCreateNode(mergerModeState, id, treeId, position, node.additionalCoordinates, false);
     } else if (nodeSegmentMap[id] != null) {
       // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
       delete nodeSegmentMap[id];
@@ -241,7 +241,7 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
     switch (action.name) {
       case "createNode": {
         const { treeId, id: nodeId, position } = action.value;
-        onCreateNode(mergerModeState, nodeId, treeId, position, action.value.additionalCoords);
+        onCreateNode(mergerModeState, nodeId, treeId, position, action.value.additionalCoordinates);
         break;
       }
 

@@ -182,7 +182,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   const boundingBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),

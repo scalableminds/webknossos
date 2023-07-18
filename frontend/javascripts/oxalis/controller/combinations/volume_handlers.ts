@@ -41,7 +41,7 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
   // If the corresponding bucket is not loaded at the moment, the return value will be 0.
   // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
   const layer = Model.getVisibleSegmentationLayer();
-  const { additionalCoords } = Store.getState().flycam;
+  const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
     return 0;
@@ -55,7 +55,7 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
   );
   return segmentationCube.getMappedDataValue(
     globalPos,
-    additionalCoords,
+    additionalCoordinates,
     renderedZoomStepForCameraPosition,
   );
 }
@@ -64,7 +64,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // of the corresponding bucket.
   // See getSegmentIdForPosition if the bucket loading should not be awaited.
   const layer = Model.getVisibleSegmentationLayer();
-  const { additionalCoords } = Store.getState().flycam;
+  const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
     return 0;
@@ -81,11 +81,11 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     segmentationLayerName,
     globalPos,
     renderedZoomStepForCameraPosition,
-    additionalCoords,
+    additionalCoordinates,
   );
   return segmentationCube.getMappedDataValue(
     globalPos,
-    additionalCoords,
+    additionalCoordinates,
     renderedZoomStepForCameraPosition,
   );
 }

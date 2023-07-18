@@ -89,14 +89,14 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
 export function zoomedPositionToZoomedAddress(
   [x, y, z]: Vector3,
   resolutionIndex: number,
-  additionalCoords: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): BucketAddress {
   return [
     Math.floor(x / constants.BUCKET_WIDTH),
     Math.floor(y / constants.BUCKET_WIDTH),
     Math.floor(z / constants.BUCKET_WIDTH),
     resolutionIndex,
-    additionalCoords || [],
+    additionalCoordinates || [],
   ];
 }
 export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vector3 {

@@ -31,18 +31,18 @@ class EdgeShader {
         value: treeColorTexture,
       },
     };
-    const { additionalCoords } = Store.getState().flycam;
+    const { additionalCoordinates } = Store.getState().flycam;
 
-    _.each(additionalCoords, (_val, idx) => {
+    _.each(additionalCoordinates, (_val, idx) => {
       this.uniforms[`currentAdditionalCoord_${idx}`] = {
         value: 0,
       };
     });
 
     listenToStoreProperty(
-      (storeState) => storeState.flycam.additionalCoords,
-      (additionalCoords) => {
-        _.each(additionalCoords, (coord, idx) => {
+      (storeState) => storeState.flycam.additionalCoordinates,
+      (additionalCoordinates) => {
+        _.each(additionalCoordinates, (coord, idx) => {
           this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
         });
       },
@@ -55,7 +55,7 @@ class EdgeShader {
   }
 
   getVertexShader(): string {
-    const { additionalCoords } = Store.getState().flycam;
+    const { additionalCoordinates } = Store.getState().flycam;
 
     return _.template(`
 precision highp float;
@@ -68,14 +68,14 @@ uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
 
-<% _.each(additionalCoords || [], (_coord, idx) => { %>
+<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.each(additionalCoords || [], (_coord, idx) => { %>
+<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -83,7 +83,7 @@ out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% _.each(additionalCoords || [], (_coord, idx) => { %>
+    <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         alpha = 0.;
       }
@@ -102,7 +102,7 @@ void main() {
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     color = texture(treeColors, treeIdToTextureCoordinate).rgb;
-}`)({ additionalCoords });
+}`)({ additionalCoordinates });
   }
 
   getFragmentShader(): string {

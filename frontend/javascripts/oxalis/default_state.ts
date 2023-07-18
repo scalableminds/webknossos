@@ -193,7 +193,7 @@ const defaultState: OxalisState = {
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
-    additionalCoords: [],
+    additionalCoordinates: [],
   },
   viewModeData: {
     plane: {

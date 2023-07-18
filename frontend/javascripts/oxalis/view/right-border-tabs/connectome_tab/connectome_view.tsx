@@ -166,9 +166,9 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   timestamp: Date.now(),
   bitDepth: 8,
   interpolation: false,
-  // Don't assume any additionalCoords here, because no 4D connectomes are
+  // Don't assume any additionalCoordinates here, because no 4D connectomes are
   // known yet.
-  additionalCoords: null,
+  additionalCoordinates: null,
 });
 
 function* mapAndFilterTreeData<R>(

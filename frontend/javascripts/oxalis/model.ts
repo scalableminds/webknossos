@@ -167,7 +167,7 @@ export class OxalisModel {
     position: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
-    const { additionalCoords } = state.flycam;
+    const { additionalCoordinates } = state.flycam;
 
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
     if (position == null) return zoomStep;
@@ -176,7 +176,7 @@ export class OxalisModel {
     // the currently rendered zoom step has to be determined.
     const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
       position,
-      additionalCoords,
+      additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
@@ -187,14 +187,14 @@ export class OxalisModel {
     position: Vector3,
   ): Promise<number> {
     const state = Store.getState();
-    const { additionalCoords } = state.flycam;
+    const { additionalCoordinates } = state.flycam;
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
       position,
-      additionalCoords,
+      additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
@@ -226,8 +226,8 @@ export class OxalisModel {
     );
 
     const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const additionalCoords = Store.getState().flycam.additionalCoords;
-      const id = cube.getDataValue(pos, additionalCoords, null, usableZoomStep);
+      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
         id: cube.mapId(id),
         unmappedId: id,

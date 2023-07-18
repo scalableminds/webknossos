@@ -1403,7 +1403,7 @@ class DataApi {
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoords;
+    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoordinates;
     const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
     // Bucket has been loaded by now or was loaded already

@@ -104,7 +104,7 @@ export function* prefetchForPlaneMode(
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
-  const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
@@ -136,7 +136,7 @@ export function* prefetchForPlaneMode(
           areas,
           resolutions,
           resolutionInfo,
-          additionalCoords,
+          additionalCoordinates,
         );
 
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
@@ -179,7 +179,7 @@ export function* prefetchForArbitraryMode(
   const { lastMatrix, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const { pullQueue, cube } = Model.dataLayers[layer.name];
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
-  const additionalCoords = yield* select((state) => state.flycam.additionalCoords);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   if (
     currentBucketPickerTick !== lastBucketPickerTick &&
@@ -197,7 +197,7 @@ export function* prefetchForArbitraryMode(
           position,
           resolutions,
           resolutionInfo,
-          additionalCoords,
+          additionalCoordinates,
         );
 
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {

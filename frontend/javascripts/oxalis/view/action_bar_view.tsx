@@ -68,7 +68,9 @@ function AdditionalCoordinatesInputView() {
   const additionalCoordinatesWithBounds = useSelector((state: OxalisState) =>
     getUnifiedAdditionalCoordinates(state.dataset),
   );
-  const additionalCoords = useSelector((state: OxalisState) => state.flycam.additionalCoords);
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
@@ -76,10 +78,10 @@ function AdditionalCoordinatesInputView() {
     }
   };
   const changeAdditionalCoordinatesFromVector = (values: number[]) => {
-    if (additionalCoords != null) {
+    if (additionalCoordinates != null) {
       dispatch(
         setAdditionalCoordinates(
-          additionalCoords.map((el, index) => ({
+          additionalCoordinates.map((el, index) => ({
             ...el,
             value: values[index],
           })),
@@ -88,14 +90,14 @@ function AdditionalCoordinatesInputView() {
     }
   };
 
-  if (additionalCoords == null || additionalCoords.length === 0) {
+  if (additionalCoordinates == null || additionalCoordinates.length === 0) {
     return null;
   }
   return (
     <Popover
       content={
         <div>
-          {additionalCoords.map((coord, idx) => {
+          {additionalCoordinates.map((coord, idx) => {
             const { bounds } = additionalCoordinatesWithBounds[coord.name];
             return (
               <NumberSliderSetting
@@ -106,7 +108,7 @@ function AdditionalCoordinatesInputView() {
                 value={coord.value}
                 spans={[2, 18, 4]}
                 onChange={(newCoord) => {
-                  const newCoords = additionalCoords.slice();
+                  const newCoords = additionalCoordinates.slice();
                   newCoords[idx] = {
                     ...newCoords[idx],
                     value: newCoord,
@@ -121,8 +123,8 @@ function AdditionalCoordinatesInputView() {
     >
       <ArbitraryVectorInput
         autoSize
-        vectorLength={additionalCoords.length}
-        value={additionalCoords.map((el) => el.value)}
+        vectorLength={additionalCoordinates.length}
+        value={additionalCoordinates.map((el) => el.value)}
         onChange={changeAdditionalCoordinatesFromVector}
         style={{ marginLeft: 8 }}
       />

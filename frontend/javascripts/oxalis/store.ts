@@ -83,7 +83,7 @@ export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
-  additionalCoords: AdditionalCoordinate[] | null;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
@@ -441,7 +441,7 @@ export type SaveState = {
 export type Flycam = {
   readonly zoomStep: number;
   readonly currentMatrix: Matrix4x4;
-  readonly additionalCoords: AdditionalCoordinate[] | null;
+  readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
 };

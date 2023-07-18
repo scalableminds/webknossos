@@ -106,8 +106,8 @@ function* centerActiveNode(action: Action): Saga<void> {
       } else {
         api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
       }
-      if (activeNode.additionalCoords) {
-        Store.dispatch(setAdditionalCoordinates(activeNode.additionalCoords));
+      if (activeNode.additionalCoordinates) {
+        Store.dispatch(setAdditionalCoordinates(activeNode.additionalCoordinates));
       }
     },
   );

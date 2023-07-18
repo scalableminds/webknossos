@@ -26,7 +26,7 @@ async function getClippingValues(
   const { dataset } = state;
   const { elementClass } = getLayerByName(dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
-  const { additionalCoords } = state.flycam;
+  const { additionalCoordinates } = state.flycam;
 
   // Find a viable resolution to compute the histogram on
   // Ideally, we want to avoid resolutions 1 and 2 to keep
@@ -41,19 +41,19 @@ async function getClippingValues(
         OrthoViews.PLANE_XY,
         layerName,
         desiredResolutionIndex,
-        additionalCoords,
+        additionalCoordinates,
       ),
       api.data.getViewportData(
         OrthoViews.PLANE_XZ,
         layerName,
         desiredResolutionIndex,
-        additionalCoords,
+        additionalCoordinates,
       ),
       api.data.getViewportData(
         OrthoViews.PLANE_YZ,
         layerName,
         desiredResolutionIndex,
-        additionalCoords,
+        additionalCoordinates,
       ),
     ]);
     dataForAllViewPorts = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);

@@ -54,7 +54,7 @@ function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
-  additionalCoords: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): Array<{
   priority: number;
   bucket: DataBucket;
@@ -77,7 +77,7 @@ function consumeBucketsFromArrayBuffer(
       uint32Array[currentBufferIndex + 1],
       uint32Array[currentBufferIndex + 2],
       uint32Array[currentBufferIndex + 3],
-      additionalCoords ?? [],
+      additionalCoordinates ?? [],
     ];
     const priority = uint32Array[currentBufferIndex + 4];
     const bucket = cube.getOrCreateBucket(bucketAddress);
@@ -125,7 +125,7 @@ export default class LayerRenderingManager {
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
-  additionalCoords: AdditionalCoordinate[] | null = null;
+  additionalCoordinates: AdditionalCoordinate[] | null = null;
 
   cuckooTable: CuckooTable | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -208,7 +208,7 @@ export default class LayerRenderingManager {
     const { sphericalCapRadius } = state.userConfiguration;
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
     const rects = getViewportRects(state);
-    const additionalCoords = state.flycam.additionalCoords;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -216,7 +216,7 @@ export default class LayerRenderingManager {
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      !_.isEqual(additionalCoords, this.additionalCoords) ||
+      !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -226,7 +226,7 @@ export default class LayerRenderingManager {
       this.lastRects = rects;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
-      this.additionalCoords = additionalCoords;
+      this.additionalCoordinates = additionalCoordinates;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
@@ -252,7 +252,7 @@ export default class LayerRenderingManager {
             buffer,
             this.cube,
             this.textureBucketManager.maximumCapacity,
-            this.additionalCoords,
+            this.additionalCoordinates,
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);

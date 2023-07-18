@@ -838,7 +838,7 @@ class SegmentsView extends React.Component<Props, State> {
     </>
   );
 
-  getToastForMissingLocations = (groupId: number) => {
+  getToastForMissingPositions = (groupId: number) => {
     const segmentsWithoutPosition = this.getSegmentsWithMissingLocation(groupId);
     if (segmentsWithoutPosition.length > 0) {
       console.log(`Segments with unknown positions: ${segmentsWithoutPosition}`);
@@ -900,7 +900,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleLoadMeshesAdHoc(id);
-            this.getToastForMissingLocations(id);
+            this.getToastForMissingPositions(id);
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
@@ -922,7 +922,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleLoadMeshesFromFile(id);
-            this.getToastForMissingLocations(id);
+            this.getToastForMissingPositions(id);
             this.handleSegmentDropdownMenuVisibility(id, false);
           }}
         >
@@ -1062,8 +1062,6 @@ class SegmentsView extends React.Component<Props, State> {
   handleRefreshMeshes = (groupId: number) => {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
-    //TODO I didnt find a better way to call the visiblesegmentationlayer. one other way would be to pass it into the function. but that's not useful for functions below-
-    // so my solution is a little more code duplication. putting it higher up isn't really a solution.
 
     this.handlePerSegment(groupId, (segment) => {
       if (

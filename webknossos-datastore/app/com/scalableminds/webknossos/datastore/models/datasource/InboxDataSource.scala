@@ -19,6 +19,8 @@ package object inbox {
     def statusOpt: Option[String]
 
     def defaultViewConfiguration: Option[DataSetViewConfiguration]
+
+    def coordinateTransformations: Option[List[CoordinateTransformation]]
   }
 
   object GenericInboxDataSource {
@@ -47,6 +49,8 @@ package object inbox {
     val statusOpt: Option[String] = Some(status)
 
     val defaultViewConfiguration: Option[DataSetViewConfiguration] = None
+
+    val coordinateTransformations: Option[List[CoordinateTransformation]] = None
   }
 
   object UnusableDataSource {

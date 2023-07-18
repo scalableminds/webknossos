@@ -32,7 +32,8 @@ import scala.util.Try
 
 case class ExploreRemoteDatasetParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
-                                          credentialSecret: Option[String])
+                                          credentialSecret: Option[String],
+                                          preferredVoxelSize: Option[Array[Double]])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
@@ -60,10 +61,13 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
       rescaledLayers = rescaledLayersAndVoxelSize._1
       voxelSize = rescaledLayersAndVoxelSize._2
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
+      preferredVoxelSize = urisWithCredentials.flatMap(_.preferredVoxelSize).headOption
+      coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
         renamedLayers,
-        voxelSize
+        voxelSize,
+        coordinateTransformations = coordinateTransformations
       )
     } yield dataSource
 
@@ -105,6 +109,32 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
     for {
       _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
+
+  private def coordinateTransformationForVoxelSize(
+      foundVoxelSize: Vec3Double,
+      preferredVoxelSize: Option[Array[Double]]): Option[List[CoordinateTransformation]] =
+    preferredVoxelSize match {
+      case None => None
+      case Some(asArray) =>
+        Vec3Double.fromArray(asArray) match {
+          case None => None
+          case Some(voxelSize) =>
+            val scaleX = foundVoxelSize.x / voxelSize.x
+            val scaleY = foundVoxelSize.y / voxelSize.y
+            val scaleZ = foundVoxelSize.z / voxelSize.z
+            Some(
+              List(
+                CoordinateTransformation(CoordinateTransformationType.affine,
+                                         matrix = Some(
+                                           List(
+                                             List(scaleX, 0, 0, 0),
+                                             List(0, scaleY, 0, 0),
+                                             List(0, 0, scaleZ, 0),
+                                             List(0, 0, 0, 1)
+                                           )))))
+        }
+
+    }
 
   private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayer, Vec3Double)])(
       implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {

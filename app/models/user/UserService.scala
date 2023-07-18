@@ -193,7 +193,7 @@ class UserService @Inject()(conf: WkConf,
     }
     for {
       oldEmail <- emailFor(user)
-      _ <- multiUserDAO.updateEmail(user._multiUser, email)
+      _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,

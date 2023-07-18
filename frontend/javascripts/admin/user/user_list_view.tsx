@@ -252,7 +252,7 @@ class UserListView extends React.PureComponent<Props, State> {
     const noUsersMessage = (
       <React.Fragment>
         <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
-        {" to join your organization. Share datasets and collaboratively work on anntotiatons."}
+        {" to join your organization. Share datasets and collaboratively work on annotiatons."}
       </React.Fragment>
     );
     return this.state.isLoading ? null : (

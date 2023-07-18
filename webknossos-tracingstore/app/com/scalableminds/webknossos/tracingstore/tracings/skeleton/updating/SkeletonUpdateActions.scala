@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
@@ -211,7 +212,8 @@ case class CreateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -226,7 +228,8 @@ case class CreateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -253,7 +256,8 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -269,7 +273,8 @@ case class UpdateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) =
@@ -331,15 +336,20 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
-                                       info: Option[String] = None)
+                                       info: Option[String] = None,
+                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] =
+                                         None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
-    tracing.copy(editPosition = editPosition,
-                 editRotation = editRotation,
-                 zoomLevel = zoomLevel,
-                 userBoundingBox = userBoundingBox,
-                 activeNodeId = activeNode)
+    tracing.copy(
+      editPosition = editPosition,
+      editRotation = editRotation,
+      zoomLevel = zoomLevel,
+      userBoundingBox = userBoundingBox,
+      activeNodeId = activeNode,
+      editPositionAdditionalCoordinates = AdditionalCoordinateRequest.toProto(editPositionAdditionalCoordinates)
+    )
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))

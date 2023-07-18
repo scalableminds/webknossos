@@ -7,7 +7,7 @@ import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
 
-function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
+export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (
     <div
       style={{

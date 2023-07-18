@@ -5,6 +5,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
 import play.api.libs.json._
@@ -30,7 +31,8 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
                                     base64Data: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
@@ -54,7 +56,8 @@ case class UpdateTracingVolumeAction(
     zoomLevel: Double,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
-    info: Option[String] = None
+    info: Option[String] = None,
+    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None
 ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -215,7 +218,8 @@ case class CreateSegmentVolumeAction(id: Long,
                                      groupId: Option[Int],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None)
+                                     actionAuthorId: Option[String] = None,
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
 
@@ -229,7 +233,13 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
-      Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color), groupId)
+      Segment(id,
+              anchorPosition.map(vec3IntToProto),
+              name,
+              creationTime,
+              colorOptToProto(color),
+              groupId,
+              AdditionalCoordinateRequest.toProto(additionalCoordinates))
     tracing.addSegments(newSegment)
   }
 }
@@ -245,7 +255,8 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      creationTime: Option[Long],
                                      groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None)
+                                     actionAuthorId: Option[String] = None,
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -265,7 +276,8 @@ case class UpdateSegmentVolumeAction(id: Long,
         name = name,
         creationTime = creationTime,
         color = colorOptToProto(color),
-        groupId = groupId
+        groupId = groupId,
+        additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

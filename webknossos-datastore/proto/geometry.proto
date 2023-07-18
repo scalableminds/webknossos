@@ -40,3 +40,8 @@ message NamedBoundingBoxProto {
   optional ColorProto color = 4;
   required BoundingBoxProto boundingBox = 5;
 }
+
+message AdditionalCoordinateProto {
+  required string name = 1;
+  required int32 value = 2;
+}

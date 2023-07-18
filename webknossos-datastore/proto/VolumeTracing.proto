@@ -11,6 +11,7 @@ message Segment {
 	  optional int64 creationTime = 4;
     optional ColorProto color = 5;
     optional int32 groupId = 6;
+    repeated AdditionalCoordinateProto additionalCoordinates = 7;
 }
 
 message VolumeTracing {
@@ -42,6 +43,7 @@ message VolumeTracing {
     optional bool mappingIsEditable = 18;
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
+    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
 }
 
 message SegmentGroup {

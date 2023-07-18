@@ -12,7 +12,11 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinateRequest,
+  BucketPosition,
+  WebKnossosIsosurfaceRequest
+}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -122,7 +126,9 @@ class VolumeTracingService @Inject()(
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
                     largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel
+                    zoomLevel = a.zoomLevel,
+                    editPositionAdditionalCoordinates =
+                      AdditionalCoordinateRequest.toProto(a.editPositionAdditionalCoordinates)
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
@@ -152,7 +158,11 @@ class VolumeTracingService @Inject()(
                            userToken: Option[String]): Fox[VolumeTracing] =
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
-      bucketPosition = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag, None)
+      bucketPosition = BucketPosition(action.position.x,
+                                      action.position.y,
+                                      action.position.z,
+                                      action.mag,
+                                      action.additionalCoordinates)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"

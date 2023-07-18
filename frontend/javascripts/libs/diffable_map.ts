@@ -143,7 +143,7 @@ class DiffableMap<K extends number, V> {
   }
 
   clone(): DiffableMap<K, V> {
-    const newDiffableMap = new DiffableMap();
+    const newDiffableMap = new DiffableMap<K, V>();
     // Clone all chunks
     this.chunks.forEach((map) => {
       newDiffableMap.chunks.push(new Map(map));
@@ -152,7 +152,6 @@ class DiffableMap<K extends number, V> {
     newDiffableMap.setId(this.getId());
     newDiffableMap.entryCount = this.entryCount;
     newDiffableMap.itemsPerBatch = this.itemsPerBatch;
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'DiffableMap<number, unknown>' is not assigna... Remove this comment to see the full error message
     return newDiffableMap;
   }
 
@@ -187,23 +186,20 @@ class DiffableMap<K extends number, V> {
     return returnValue;
   }
 
-  *entries(): Generator<[K, V], void, void> {
+  *entries(): Generator<[K, V], void, undefined> {
     for (const map of this.chunks) {
-      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map;
     }
   }
 
-  *values(): Generator<V, void, void> {
+  *values(): Generator<V, void, undefined> {
     for (const map of this.chunks) {
-      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map.values();
     }
   }
 
-  *keys(): Generator<K, void, void> {
+  *keys(): Generator<K, void, undefined> {
     for (const map of this.chunks) {
-      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map.keys();
     }
   }
@@ -219,14 +215,12 @@ class DiffableMap<K extends number, V> {
   }
 
   toObject(): Record<K, V> {
-    const result = {};
+    const result = {} as Record<K, V>;
 
     for (const [k, v] of this.entries()) {
-      // @ts-expect-error ts-migrate(2536) FIXME: Type 'K' cannot be used to index type '{}'.
       result[k] = v;
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{}' is not assignable to type 'Record<K, V>'... Remove this comment to see the full error message
     return result;
   }
 }

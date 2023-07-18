@@ -13,8 +13,11 @@ import {
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPosition, getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getActiveMagIndexForLayer,
+  getMoveOffset,
+} from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -52,11 +55,7 @@ import type {
   OrthoViewMap,
   AnnotationTool,
 } from "oxalis/constants";
-import constants, {
-  OrthoViewValuesWithoutTDView,
-  OrthoViews,
-  AnnotationToolEnum,
-} from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
@@ -197,20 +196,11 @@ class BoundingBoxKeybindings {
   }
 }
 
-const getMoveValue = (timeFactor: number) => {
-  const state = Store.getState();
-  return (
-    (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxel(state.dataset.dataSource.scale) /
-    constants.FPS
-  );
-};
-
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
   const fn = (timeFactor: number, first: boolean) =>
-    MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
+    MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor) * multiplier, first);
 
   fn.customAdditionalDelayFn = () => {
     // Depending on the float fraction of the current position, we want to
@@ -389,10 +379,10 @@ class PlaneController extends React.PureComponent<Props> {
     });
     this.input.keyboard = new InputKeyboard({
       // Move
-      left: (timeFactor) => MoveHandlers.moveU(-getMoveValue(timeFactor)),
-      right: (timeFactor) => MoveHandlers.moveU(getMoveValue(timeFactor)),
-      up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
-      down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
+      left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
+      right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
+      up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
+      down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
     });
     const {
       baseControls: notLoopedKeyboardControls,

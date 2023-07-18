@@ -1,5 +1,7 @@
+import constants from "oxalis/constants";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 // Adapted from: https://usehooks.com/usePrevious/
 export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
@@ -88,6 +90,52 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   }, []);
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
+}
+
+export function useRepeatedButtonTrigger(
+  triggerCallback: (timeFactor: number, isFirst: boolean) => void,
+  repeatDelay: number = KEYBOARD_BUTTON_LOOP_INTERVAL,
+) {
+  const [isPressed, setIsPressed] = useState(false);
+  const lastTrigger = useRef<number | null>(null);
+
+  useEffect(() => {
+    let timerId: ReturnType<typeof setTimeout>;
+
+    if (isPressed) {
+      const trigger = () => {
+        timerId = setTimeout(() => {
+          // The timeFactor calculation was adapted from buttonLoop() in input.ts
+          const curTime = Date.now();
+          // If no lastTime, assume that desired FPS is met
+          const lastTime = lastTrigger.current ?? curTime - 1000 / constants.FPS;
+          const elapsed = curTime - lastTime;
+
+          triggerCallback((elapsed / 1000) * constants.FPS, lastTrigger.current == null);
+          lastTrigger.current = curTime;
+          trigger();
+        }, repeatDelay);
+      };
+
+      trigger();
+    }
+
+    return () => {
+      lastTrigger.current = null;
+      clearTimeout(timerId);
+    };
+  }, [isPressed, triggerCallback]);
+
+  const onTouchStart = () => setIsPressed(true);
+  const onTouchEnd = () => setIsPressed(false);
+
+  return {
+    // Don't do anything on click to avoid that the trigger
+    // is called twice on touch start.
+    onClick: () => {},
+    onTouchStart,
+    onTouchEnd,
+  };
 }
 
 export function useSearchParams() {

@@ -804,8 +804,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
-    // todop: dont hardcode (reading nodes from server)
-    additionalCoords: [],
+    additionalCoords: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,

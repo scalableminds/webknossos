@@ -90,6 +90,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val version: Int = get[Int]("webKnossos.termsOfService.version")
     }
 
+    object SecurityTxt {
+      val enabled: Boolean = get[Boolean]("webKnossos.securityTxt.enabled")
+      val content: String = get[String]("webKnossos.securityTxt.content")
+    }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
     val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
   }

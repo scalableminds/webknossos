@@ -141,8 +141,7 @@ export default class TextureBucketManager {
       this.layerIndex,
     ]);
 
-    // @ts-ignore
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }
 
   // Takes an array of buckets and ensures that these

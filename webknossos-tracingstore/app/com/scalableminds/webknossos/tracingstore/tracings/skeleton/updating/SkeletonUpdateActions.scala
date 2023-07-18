@@ -212,7 +212,8 @@ case class CreateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -227,7 +228,8 @@ case class CreateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -254,7 +256,8 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -270,7 +273,8 @@ case class UpdateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) =

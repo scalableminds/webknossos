@@ -14,6 +14,7 @@ message Node {
     required int32 bitDepth = 7;
     required bool interpolation = 8;
     required int64 createdTimestamp = 9;
+    repeated AdditionalCoordinateProto additionalCoordinates = 10;
 }
 
 message Edge {

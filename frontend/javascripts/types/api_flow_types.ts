@@ -638,7 +638,7 @@ export type APIUpdateActionBatch = {
 export type ServerNode = {
   id: number;
   position: Point3;
-  additionalCoordiantes: AdditionalCoordinate[];
+  additionalCoordinates: AdditionalCoordinate[];
   rotation: Point3;
   bitDepth: number;
   viewport: number;

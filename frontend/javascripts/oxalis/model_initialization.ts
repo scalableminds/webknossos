@@ -486,6 +486,7 @@ function setupLayerForVolumeTracing(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -523,7 +524,8 @@ function setupLayerForVolumeTracing(
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
-      additionalCoordinates: [],
+      // todop
+      additionalCoordinates: Utils.values(unifiedAdditionalCoordinates),
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;

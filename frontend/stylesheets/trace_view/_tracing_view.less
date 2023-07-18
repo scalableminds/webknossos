@@ -359,7 +359,7 @@ img.keyboard-mouse-icon:first-child {
 
     &:hover {
       border-color: @hover-border !important;
-      z-index: 1;
+      z-index: 1 !important;
     }
 
     &:not(:first-child):hover::before {
@@ -371,7 +371,7 @@ img.keyboard-mouse-icon:first-child {
     &.ant-radio-button-wrapper-disabled,
     &.ant-select-selector-disabled {
       color: fade(@dark-fg, 50%);
-      border-color: @dark-border;
+      border-color: @dark-border !important;
 
       &:hover::before {
         background-color: @dark-border !important;

@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The proofreading tool is always visible now (even when disabled). [#7174](https://github.com/scalableminds/webknossos/pull/7174)
 - Optimized processing of parallel requests (new thread pool configuration, asynchronous FossilDB client), improving performance and reducing idle waiting. [#7139](https://github.com/scalableminds/webknossos/pull/7139)
 - Renamed "open" tasks to "pending" and slightly redesigned the available task assignment view for clarity. [#7187](https://github.com/scalableminds/webknossos/pull/7187)
+- Being the uploader of a dataset no longer grants edit permissions on that dataset. [#7200](https://github.com/scalableminds/webknossos/pull/7200)
 
 ### Fixed
 - Fixed rare rendering bug at viewport edge for anisotropic datasets. [#7163](https://github.com/scalableminds/webknossos/pull/7163)

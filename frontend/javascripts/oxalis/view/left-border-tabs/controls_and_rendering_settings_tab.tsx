@@ -50,6 +50,10 @@ function askUserToReload() {
   });
 }
 
+const PERFORMANCE_WARNING_ICON = (
+  <ExclamationCircleOutlined style={{ marginLeft: 8, color: "orange", verticalAlign: "middle" }} />
+);
+
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -348,9 +352,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               >
                 {this.props.datasetConfiguration.interpolation && (
                   <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
-                    <ExclamationCircleOutlined
-                      style={{ marginLeft: 8, color: "red", verticalAlign: "middle" }}
-                    />
+                    {PERFORMANCE_WARNING_ICON}
                   </Tooltip>
                 )}
               </SwitchSetting>
@@ -370,9 +372,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           >
             {this.props.userConfiguration.antialiasRendering && (
               <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
-                <ExclamationCircleOutlined
-                  style={{ marginLeft: 8, color: "red", verticalAlign: "middle" }}
-                />
+                {PERFORMANCE_WARNING_ICON}
               </Tooltip>
             )}
           </SwitchSetting>

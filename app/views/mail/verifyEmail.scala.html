@@ -1,4 +1,4 @@
-@( name: String, url: String )
+@( name: String, url: String, linkExpiry: String )
 
 @emailBaseTemplate() {
   <p>Hi @name,</p>
@@ -26,7 +26,7 @@
   </div>
   <p>With best regards,<br />your WEBKNOSSOS team</p>
   <p style="margin-top: 20px; color: #888; font-size: 0.6rem;">
-    This link will expire in 5 days. If you did not make this request, please disregard this email.
+    @{linkExpiry}If you did not make this request, please disregard this email.
   </p>
 }
 

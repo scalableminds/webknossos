@@ -1,4 +1,4 @@
-import { Button, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
@@ -10,40 +10,18 @@ import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { StartGlobalizeFloodfillsModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
-import features from "features";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
-import { APISegmentationLayer, APIUser } from "types/api_flow_types";
 import DownloadModalView from "../action-bar/download_modal_view";
-
-// NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
-// That way, bboxes created by the floodfill can be detected as such and
-// a job for globalizing floodfills can be started.
-const GLOBALIZE_FLOODFILL_REGEX =
-  /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
-export function getBBoxNameForPartialFloodfill(
-  oldSegmentIdAtSeed: number,
-  activeCellId: number,
-  seedPosition: Vector3,
-) {
-  return `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-    ",",
-  )}, timestamp=${new Date().getTime()})`;
-}
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const allowUpdate = tracing.restrictions.allowUpdate;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
 
@@ -101,12 +79,6 @@ export default function BoundingBoxTab() {
     setPosition(center);
   }
 
-  const globalizeFloodfillsButtonDisabledReason = getInfoForGlobalizeFloodfill(
-    userBoundingBoxes,
-    activeSegmentationTracingLayer,
-    activeUser,
-  );
-
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -126,27 +98,6 @@ export default function BoundingBoxTab() {
         minWidth: 300,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Tooltip title={globalizeFloodfillsButtonDisabledReason.title}>
-          <Button
-            size="small"
-            style={{
-              marginBottom: 8,
-            }}
-            disabled={globalizeFloodfillsButtonDisabledReason.disabled}
-            onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
-          >
-            <i className="fas fa-fill-drip" />
-            Globalize Flood-Fills
-          </Button>
-        </Tooltip>
-      </div>
-
       {/* In view mode, it's okay to render an empty list, since there will be
           an explanation below, anyway.
       */}
@@ -198,46 +149,6 @@ export default function BoundingBoxTab() {
           initialTab="export"
         />
       ) : null}
-      {isGlobalizeFloodfillsModalVisible ? (
-        <StartGlobalizeFloodfillsModal
-          handleClose={() => setIsGlobalizeFloodfillsModalVisible(false)}
-        />
-      ) : null}
     </div>
   );
-}
-
-function getInfoForGlobalizeFloodfill(
-  userBoundingBoxes: UserBoundingBox[],
-  activeSegmentationTracingLayer: APISegmentationLayer | null | undefined,
-  activeUser: APIUser | null | undefined,
-) {
-  if (!userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null)) {
-    return { disabled: true, title: "No partial floodfills to globalize." };
-  }
-  if (activeSegmentationTracingLayer == null) {
-    return {
-      disabled: true,
-      title:
-        "Partial floodfills can only be globalized when a segmentation annotation layer exists.",
-    };
-  }
-  if (activeUser == null) {
-    return {
-      disabled: true,
-      title: "Partial floodfills can only be globalized as a registered user.",
-    };
-  }
-  if (!features().jobsEnabled) {
-    return {
-      disabled: true,
-      title: "Partial floodfills can only be globalized when a WEBKNOSSOS worker was set up.",
-    };
-  }
-
-  return {
-    disabled: false,
-    title:
-      "For this annotation some floodfill operations have not run to completion, because they covered a too large volume. WEBKNOSSOS can finish these operations via a long-running job.",
-  };
 }

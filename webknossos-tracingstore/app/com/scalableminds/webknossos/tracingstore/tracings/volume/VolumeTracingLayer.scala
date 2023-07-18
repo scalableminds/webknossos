@@ -28,7 +28,8 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
 
-class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
+class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+    extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
@@ -44,7 +45,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
     bucketStreamWithVersion(layer, version)
 }
 
-class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+    extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
@@ -78,7 +80,8 @@ case class VolumeTracingLayer(
     userToken: Option[String],
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
-  implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
+  implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+  implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits {
 

@@ -1,4 +1,4 @@
-import { createNanoEvents } from "nanoevents";
+import { createNanoEvents, Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
 import type { ElementClass } from "types/api_flow_types";
@@ -40,11 +40,7 @@ export const bucketDebuggingFlags = {
 // Exposing this variable allows debugging on deployed systems
 // @ts-ignore
 window.bucketDebuggingFlags = bucketDebuggingFlags;
-type Emitter = {
-  on: (...args: any[]) => any;
-  events: Record<string, any>;
-  emit: (...args: any[]) => any;
-};
+
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
 const warnMergeWithoutPendingOperations = _.throttle(() => {

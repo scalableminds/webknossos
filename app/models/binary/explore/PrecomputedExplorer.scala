@@ -12,9 +12,9 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.{Precomput
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class PrecomputedExplorer extends RemoteLayerExplorer {
+class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =

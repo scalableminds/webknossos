@@ -71,6 +71,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         src="/assets/images/icon-mousewheel.svg"
         alt="Mouse Wheel"
+        title="Mouse Wheel"
       />,
     ],
     action: "Zoom in/out",
@@ -83,6 +84,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         src="/assets/images/icon-mousewheel.svg"
         alt="Mouse Wheel"
+        title="Mouse Wheel"
       />,
       "or",
       <span key="move-2" className="keyboard-key-icon">
@@ -98,11 +100,10 @@ const shortcuts = [
   {
     key: "3",
     keybinding: [
-      <img
+      <div
         key="move"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-left.svg"
-        alt="Left Mouse Button"
+        title="Left Mouse Button Drag"
+        className="keyboard-mouse-icon icon-mouse-left"
       />,
     ],
     action: "Move",
@@ -110,11 +111,10 @@ const shortcuts = [
   {
     key: "4",
     keybinding: [
-      <img
+      <div
         key="rotate"
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-mouse-right.svg"
-        alt="Right Mouse Button"
+        title="Right Mouse Button Drag"
+        className="keyboard-mouse-icon icon-mouse-right"
       />,
       "in 3D View",
     ],

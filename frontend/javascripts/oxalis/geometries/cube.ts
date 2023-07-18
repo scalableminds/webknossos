@@ -135,7 +135,7 @@ class Cube {
     this.initialized = true;
     this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   updatePositionForCrossSections(position: Vector3) {
@@ -176,7 +176,7 @@ class Cube {
     this.getMeshes().forEach((mesh) => {
       mesh.material = this.getLineMaterial();
     });
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   updateForCam(id: OrthoView) {

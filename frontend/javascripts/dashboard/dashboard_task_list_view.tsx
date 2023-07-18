@@ -1,4 +1,4 @@
-import { Button, Modal, Tag, Card, Row, Col, List } from "antd";
+import { Button, Modal, Tag, Card, Row, Col, List, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -278,13 +278,17 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             </AsyncLink>
             <br />
             <LinkButton onClick={() => this.resetTask(annotation)}>
-              <RollbackOutlined />
-              Reset
+              <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
+                <RollbackOutlined />
+                Reset
+              </Tooltip>
             </LinkButton>
             <br />
             <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
-              <DeleteOutlined />
-              Reset and Cancel
+              <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
+                <DeleteOutlined />
+                Reset and Cancel
+              </Tooltip>
             </LinkButton>
             <br />
           </div>
@@ -395,7 +399,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Col span="7">
           <Card
             bordered={false}
-            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "25%" }} />}
+            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
           >
             <Card.Meta
               title="Request a New Task"

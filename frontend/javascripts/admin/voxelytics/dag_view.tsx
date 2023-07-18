@@ -21,6 +21,8 @@ import { OxalisState, Theme } from "oxalis/store";
 import { Button } from "antd";
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 
+export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
+
 const getNodeWidth = (() => {
   const NODE_PADDING = 10;
 
@@ -96,8 +98,6 @@ function getEdgesAndNodes(
 ) {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
   const filteredTaskNames = filteredTasks.map((task) => task.taskName);
 

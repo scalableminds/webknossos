@@ -436,7 +436,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               key="status"
               render={(status, task: APITask) => (
                 <div className="nowrap">
-                  <span title="Open Instances">
+                  <span title="Pending Instances">
                     <PlayCircleOutlined />
                     {status.open}
                   </span>

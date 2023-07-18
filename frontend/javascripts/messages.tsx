@@ -236,8 +236,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
     "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file":
+  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
+    "Checking for agglomerate files...",
+  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":
     "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
@@ -290,6 +294,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
+  "task.tooltip_explain_reset":
+    "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
+  "task.tooltip_explain_reset_cancel":
+    "Resets this task instance to its initial state, undoing any annotation work of the assigned user. Furthermore, the task assignment will be removed from the user’s account and recycled into the pool of available tasks for other users. The currently assigned user will not be assigned to this task again (unless they are an Admin).",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
   "dataset.upload_cancel": "The dataset upload was cancelled.",

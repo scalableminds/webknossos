@@ -70,7 +70,6 @@ class ErrorHandling {
     }
 
     this.throwAssertions = options.throwAssertions;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const metaElement = document.querySelector("meta[name='commit-hash']");
     this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
     this.initializeAirbrake();
@@ -79,12 +78,13 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     if (!scriptTag) throw new Error("failed to initialize airbrake");
-    const projectId = scriptTag.dataset.airbrakeProjectId;
-    const projectKey = scriptTag.dataset.airbrakeProjectKey;
-    const envName = scriptTag.dataset.airbrakeEnvironmentName;
+    // @ts-ignore
+    const { dataset } = scriptTag;
+    const projectId = dataset.airbrakeProjectId;
+    const projectKey = dataset.airbrakeProjectKey;
+    const envName = dataset.airbrakeEnvironmentName;
     this.airbrake = new Notifier({
       projectId,
       projectKey,

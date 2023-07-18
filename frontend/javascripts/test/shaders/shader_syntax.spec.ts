@@ -29,6 +29,7 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    tpsTransformPerLayer: {},
   });
 
   /*
@@ -54,6 +55,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -72,6 +74,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    tpsTransformPerLayer: {},
   });
 
   parser.parse(code);
@@ -90,6 +93,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -108,6 +112,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -125,6 +130,7 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
     resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);

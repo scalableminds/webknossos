@@ -24,7 +24,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
                                    dataSetService: DataSetService,
                                    dataStoreDAO: DataStoreDAO,
                                    rpc: RPC,
-                                   config: WkConf)(implicit ec: ExecutionContext)
+                                   config: WkConf)(implicit val ec: ExecutionContext)
     extends LazyLogging
     with IntervalScheduler {
 

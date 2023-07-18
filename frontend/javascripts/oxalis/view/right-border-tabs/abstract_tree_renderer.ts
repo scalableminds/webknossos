@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Tree } from "oxalis/store";
 import type { Vector2 } from "oxalis/constants";
@@ -81,8 +79,6 @@ class AbstractTreeRenderer {
   }
 
   constructor(canvas: HTMLCanvasElement) {
-    _.extend(this, BackboneEvents);
-
     this.canvas = canvas;
     const ctx = canvas.getContext("2d");
 

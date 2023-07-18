@@ -134,6 +134,11 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
+      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          handleAgglomerateSkeletonAtClick(pos);
+        }
+      },
       pinch: (delta: number) => MoveHandlers.zoom(delta, true),
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
@@ -297,11 +302,6 @@ export class SkeletonTool {
           event,
           showNodeContextMenuAt,
         );
-      },
-      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
-        }
       },
     };
   }

@@ -9,6 +9,7 @@ import type {
   ServerTracing,
   ServerEditableMapping,
   APICompoundType,
+  APISegmentationLayer,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -509,7 +510,7 @@ function setupLayerForVolumeTracing(
     const tracingResolutions: Vector3[] = tracingHasResolutionList
       ? resolutions.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
-    const tracingLayer: APIDataLayer = {
+    const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
       tracingId: tracing.id,
       elementClass: tracing.elementClass,
@@ -517,7 +518,8 @@ function setupLayerForVolumeTracing(
       largestSegmentId: tracing.largestSegmentId,
       boundingBox,
       resolutions: tracingResolutions,
-      mappings: fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : [],
+      mappings:
+        fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
@@ -722,7 +724,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         }
 
         if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"]);
           continue;
         }
 

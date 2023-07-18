@@ -360,6 +360,7 @@ export type UserConfiguration = {
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
+  readonly antialiasRendering: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

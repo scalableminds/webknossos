@@ -242,7 +242,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                 (
                   (u.isAdmin AND u._organization = d._organization) OR
                   u.isDatasetManager OR
-                  d._uploader = u._id OR
                   d._id IN (              -- team manager of team that has access to the dataset
                     SELECT _dataSet
                     FROM webknossos.dataSet_allowedTeams dt

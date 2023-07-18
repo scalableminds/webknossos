@@ -59,6 +59,10 @@ export default function VerifyEmailView({ token }: { token: string }) {
   );
 
   useEffect(() => {
+    Toast.close(VERIFICATION_ERROR_TOAST_KEY);
+  }, []);
+
+  useEffect(() => {
     if (result) {
       Toast.success("Successfully verified your email.");
     }

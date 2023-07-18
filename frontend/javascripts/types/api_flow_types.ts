@@ -50,7 +50,7 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
-  readonly additionalCoordinates: Array<AdditionalCoordinateWithBounds>;
+  readonly additionalCoordinates: Array<AdditionalCoordinateWithBounds> | null;
   readonly coordinateTransformations?: Array<
     | {
         type: "affine";

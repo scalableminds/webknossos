@@ -621,7 +621,7 @@ export function getUnifiedAdditionalCoordinates(
   for (const layer of mutableDataset.dataSource.dataLayers) {
     const { additionalCoordinates } = layer;
 
-    for (const additionalCoordinate of additionalCoordinates) {
+    for (const additionalCoordinate of additionalCoordinates || []) {
       const { name, bounds } = additionalCoordinate;
       if (additionalCoordinate.name in unifiedAdditionalCoordinates) {
         const existingBounds = unifiedAdditionalCoordinates[name].bounds;

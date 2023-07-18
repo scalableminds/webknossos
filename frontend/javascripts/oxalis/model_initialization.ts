@@ -404,8 +404,8 @@ function initializeDataset(
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
-  initializeAdditionalCoordinates(mutableDataset);
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
+  initializeAdditionalCoordinates(mutableDataset);
 }
 
 function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {

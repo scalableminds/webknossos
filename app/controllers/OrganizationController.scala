@@ -13,7 +13,7 @@ import models.team.PricingPlan
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsNull, JsValue, Json, __}
+import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
@@ -64,6 +64,23 @@ class OrganizationController @Inject()(
       js <- Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
   }
+
+  case class OrganizationCreationParameters(organization: Option[String],
+                                            organizationDisplayName: String,
+                                            ownerEmail: String)
+  object OrganizationCreationParameters {
+    implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
+  }
+  def create: Action[OrganizationCreationParameters] =
+    sil.SecuredAction.async(validateJson[OrganizationCreationParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
+        owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
+        org <- organizationService.createOrganization(request.body.organization, request.body.organizationDisplayName)
+        user <- userDAO.findFirstByMultiUser(owner._id)
+        _ <- userService.joinOrganization(user, org._id, autoActivate = true, isAdmin = true)
+      } yield Ok(org.name)
+    }
 
   def getDefault: Action[AnyContent] = Action.async { implicit request =>
     for {

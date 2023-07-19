@@ -91,6 +91,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       suppliedRootName <- pathNames.headOption.toFox
       _ <- bool2Fox(suppliedRootName == root.name) ?~> "pathLiteral.mustStartAtOrganizationRootFolder"
       (existingFolderId, remainingPathNames) = findLowestMatchingFolder(root, foldersWithParents, pathNames)
+      _ = if (remainingPathNames.nonEmpty) {
+        logger.info(s"Creating new folder(s) under $existingFolderId by path literal: $remainingPathNames...")
+      }
       targetFolderId <- createMissingFoldersForPathNames(existingFolderId, remainingPathNames)
     } yield targetFolderId
 

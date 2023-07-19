@@ -49,8 +49,6 @@ import {
   meshV3,
   getMeshfilesForDatasetLayer,
 } from "admin/admin_rest_api";
-import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";

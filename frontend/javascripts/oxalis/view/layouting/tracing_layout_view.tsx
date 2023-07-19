@@ -6,7 +6,7 @@ import { RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
 import _ from "lodash";
 import Request from "libs/request";
-import type { ViewMode, Vector3, OrthoView } from "oxalis/constants";
+import type { Vector3, OrthoView } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";

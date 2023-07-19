@@ -801,7 +801,6 @@ export function toggleTreeGroupReducer(
 }
 
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
-  debugger;
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),

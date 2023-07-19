@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
+import utils.ObjectId
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
@@ -68,10 +69,12 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   def addDataSource(organizationName: String,
                     datasetName: String,
                     dataSource: GenericDataSource[DataLayer],
+                    folderId: Option[ObjectId],
                     userToken: String): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
         .addQueryString("token" -> userToken)
+        .addQueryStringOptional("folderId", folderId.map(_.toString))
         .put(dataSource)
     } yield ()
 

@@ -27,6 +27,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.libs.json.{Json, OFormat}
+import utils.ObjectId
 
 import java.net.URI
 import javax.inject.Inject
@@ -42,7 +43,7 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-case class ExploreAndAddRemoteDatasetParameters(remoteUri: String, datasetName: String)
+case class ExploreAndAddRemoteDatasetParameters(remoteUri: String, datasetName: String, folderPath: Option[String])
 
 object ExploreAndAddRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreAndAddRemoteDatasetParameters] =
@@ -86,8 +87,10 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       )
     } yield dataSource
 
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer], datasetName: String, user: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
+                          datasetName: String,
+                          user: User,
+                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed

@@ -71,6 +71,8 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       _ <- teamDAO.updateAllowedTeamsForFolder(folderId, newTeamIds)
     } yield ()
 
+  def getOrCreateFromPathLiteral(folderPathLiteral: String)(implicit ctx: DBAccessContext): Fox[ObjectId] = ??? // TODO
+
 }
 
 class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

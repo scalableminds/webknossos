@@ -36,6 +36,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import com.scalableminds.util.tools.TristateOptionJsonHelper
+import models.folder.FolderService
 
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
@@ -71,6 +72,7 @@ class DataSetController @Inject()(userService: UserService,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   dataSetDAO: DataSetDAO,
+                                  folderService: FolderService,
                                   conf: WkConf,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -199,7 +201,11 @@ class DataSetController @Inject()(userService: UserService,
                                                                         request.identity,
                                                                         reportMutable)
         _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "explore.zeroLayers"
-        _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource, request.body.datasetName, request.identity) ?~> "explore.autoAdd.failed"
+        folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderService.getOrCreateFromPathLiteral)
+        _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource,
+                                                           request.body.datasetName,
+                                                           request.identity,
+                                                           folderIdOpt) ?~> "explore.autoAdd.failed"
       } yield Ok
     }
 

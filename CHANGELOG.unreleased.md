@@ -35,6 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed rare rendering bug at viewport edge for anisotropic datasets. [#7163](https://github.com/scalableminds/webknossos/pull/7163)
 - Fixed the dataset search which was broken when only the root folder existed. [#7177](https://github.com/scalableminds/webknossos/pull/7177)
 - Correctly use configured fill-value for missing chunks of remote datasets hosted on gcs or s3. [#7198](https://github.com/scalableminds/webknossos/pull/7198)
+- Correctly use configured fill-value for missing chunks of local non-wkw datasets. [#7216](https://github.com/scalableminds/webknossos/pull/7216)
 - Adapted the proofreading docs to reflect the current state of the proofreading tool. [#7212](https://github.com/scalableminds/webknossos/pull/7212)
 
 ### Removed

@@ -32,7 +32,7 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
-import { setAdditionalCoordinates } from "oxalis/model/actions/flycam_actions";
+import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
@@ -74,13 +74,13 @@ function AdditionalCoordinatesInputView() {
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
-      dispatch(setAdditionalCoordinates(values));
+      dispatch(setAdditionalCoordinatesAction(values));
     }
   };
   const changeAdditionalCoordinatesFromVector = (values: number[]) => {
     if (additionalCoordinates != null) {
       dispatch(
-        setAdditionalCoordinates(
+        setAdditionalCoordinatesAction(
           additionalCoordinates.map((el, index) => ({
             ...el,
             value: values[index],

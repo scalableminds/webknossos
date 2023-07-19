@@ -73,7 +73,7 @@ import {
   setPositionAction,
   setZoomStepAction,
   setRotationAction,
-  setAdditionalCoordinates,
+  setAdditionalCoordinatesAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -414,7 +414,7 @@ function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
     ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
   );
 
-  Store.dispatch(setAdditionalCoordinates(initialAdditionalCoordinates));
+  Store.dispatch(setAdditionalCoordinatesAction(initialAdditionalCoordinates));
 }
 
 function initializeSettings(

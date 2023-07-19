@@ -1,4 +1,7 @@
-import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import type {
+  AdditionalCoordinate,
+  SendBucketInfo,
+} from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";
 import type {
   VolumeTracing,
@@ -295,6 +298,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -305,6 +309,7 @@ export function updateSegmentVolumeAction(
     value: {
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,

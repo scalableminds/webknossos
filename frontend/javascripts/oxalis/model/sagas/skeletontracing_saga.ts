@@ -49,7 +49,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
-  setAdditionalCoordinates,
+  setAdditionalCoordinatesAction,
   setPositionAction,
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
@@ -107,7 +107,7 @@ function* centerActiveNode(action: Action): Saga<void> {
         api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
       }
       if (activeNode.additionalCoordinates) {
-        Store.dispatch(setAdditionalCoordinates(activeNode.additionalCoordinates));
+        Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
       }
     },
   );

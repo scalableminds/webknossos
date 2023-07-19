@@ -50,7 +50,10 @@ import {
   maybeFetchMeshFilesAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+} from "oxalis/model/actions/flycam_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -216,6 +219,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
+  },
+
+  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
+    dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
   },
 
   updateSegment(
@@ -555,6 +562,9 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.props.setPosition(segment.somePosition);
+    if (segment.additionalCoordinates) {
+      this.props.setAdditionalCoordinates(segment.additionalCoordinates);
+    }
   };
 
   handleSegmentDropdownMenuVisibility = (segmentId: number, isVisible: boolean) => {
@@ -1007,6 +1017,7 @@ class SegmentsView extends React.Component<Props, State> {
                     loadPrecomputedMesh={this.props.loadPrecomputedMesh}
                     setActiveCell={this.props.setActiveCell}
                     setPosition={this.props.setPosition}
+                    setAdditionalCoordinates={this.props.setAdditionalCoordinates}
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}

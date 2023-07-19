@@ -204,6 +204,7 @@ type Props = {
   ) => void;
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
@@ -217,6 +218,7 @@ function _MeshInfoItem(props: {
   handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
   const dispatch = useDispatch();
 
@@ -245,7 +247,8 @@ function _MeshInfoItem(props: {
     return null;
   }
 
-  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+  const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } =
+    isosurface;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">
@@ -322,6 +325,9 @@ function _MeshInfoItem(props: {
             className={className}
             onClick={() => {
               props.setPosition(seedPosition);
+              if (seedAdditionalCoordinates) {
+                props.setAdditionalCoordinates(seedAdditionalCoordinates);
+              }
             }}
             style={{ marginLeft: 8 }}
           >
@@ -366,6 +372,7 @@ function _SegmentListItem({
   setActiveCell,
   isosurface,
   setPosition,
+  setAdditionalCoordinates,
   loadPrecomputedMesh,
   currentMeshFile,
   onRenameStart,
@@ -582,6 +589,7 @@ function _SegmentListItem({
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
           visibleSegmentationLayer={visibleSegmentationLayer}
           setPosition={setPosition}
+          setAdditionalCoordinates={setAdditionalCoordinates}
         />
       </div>
     </List.Item>

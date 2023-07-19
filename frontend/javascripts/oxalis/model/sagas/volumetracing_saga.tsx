@@ -586,6 +586,7 @@ function* uncachedDiffSegmentLists(
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
+        segment.additionalCoordinates,
         segment.name,
         segment.color,
         segment.groupId,

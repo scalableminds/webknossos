@@ -14,6 +14,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 22,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -60,6 +61,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 32,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -79,6 +81,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 106,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,

@@ -752,12 +752,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
 
       for (const mesh of meshes) {
-        const { segmentId, seedPosition } = mesh;
+        const { segmentId, seedPosition, seedAdditionalCoordinates } = mesh;
 
         if (mesh.isPrecomputed) {
           const { meshFileName } = mesh;
           Store.dispatch(
-            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+            loadPrecomputedMeshAction(
+              segmentId,
+              seedPosition,
+              seedAdditionalCoordinates,
+              meshFileName,
+              effectiveLayerName,
+            ),
           );
         } else {
           const { mappingName, mappingType } = mesh;
@@ -765,6 +771,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
             loadAdHocMeshAction(
               segmentId,
               seedPosition,
+              seedAdditionalCoordinates,
               {
                 mappingName,
                 mappingType,

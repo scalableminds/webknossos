@@ -3,6 +3,7 @@ import { ContourModeEnum } from "oxalis/constants";
 import type {
   EditableMapping,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   VolumeTracing,
@@ -173,6 +174,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
+      additionalCoordinates: [],
       ...oldSegment,
       ...segment,
       somePosition,
@@ -202,7 +204,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-        },
+        } as Segment,
       ]),
     ),
     segmentGroups: tracing.segmentGroups || [],

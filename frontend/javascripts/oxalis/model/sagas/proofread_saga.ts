@@ -62,6 +62,7 @@ import { Tree, VolumeTracing } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import _ from "lodash";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -96,7 +97,12 @@ function proofreadUsingMeshes(): boolean {
 
 let coarselyLoadedSegmentIds: number[] = [];
 
-function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
+function* loadCoarseMesh(
+  layerName: string,
+  segmentId: number,
+  position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
   if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false)
     return;
   const currentMeshFile = yield* select(
@@ -110,7 +116,14 @@ function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3
   ) {
     // If a mesh file is active which was computed without a mapping, use that instead of computing
     // meshes ad-hoc.
-    yield* put(loadPrecomputedMeshAction(segmentId, position, currentMeshFile.meshFileName));
+    yield* put(
+      loadPrecomputedMeshAction(
+        segmentId,
+        position,
+        additionalCoordinates,
+        currentMeshFile.meshFileName,
+      ),
+    );
   } else {
     const mappingInfo = yield* select((state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
@@ -120,7 +133,7 @@ function* loadCoarseMesh(layerName: string, segmentId: number, position: Vector3
     // Load the whole agglomerate mesh in a coarse resolution for performance reasons
     const preferredQuality = proofreadCoarseResolutionIndex();
     yield* put(
-      loadAdHocMeshAction(segmentId, position, {
+      loadAdHocMeshAction(segmentId, position, additionalCoordinates, {
         mappingName,
         mappingType,
         preferredQuality,
@@ -152,7 +165,7 @@ function* checkForAgglomerateSkeletonModification(
 }
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
-  const { position } = action;
+  const { position, additionalCoordinates } = action;
 
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
@@ -168,7 +181,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (!proofreadUsingMeshes()) return;
 
   /* Load a coarse ad hoc mesh of the agglomerate at the click position */
-  yield* call(loadCoarseMesh, layerName, segmentId, position);
+  yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
 function* createEditableMapping(): Saga<void> {
@@ -722,9 +735,25 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
       yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
     }
 
-    yield* call(loadCoarseMesh, layerName, newSourceAgglomerateId, sourceNodePosition);
+    // Segmentations with more than 3 dimensions are currently not compatible
+    // with proofreading. Once such datasets appear, this parameter needs to be
+    // adapted.
+    const additionalCoordinates = undefined;
+    yield* call(
+      loadCoarseMesh,
+      layerName,
+      newSourceAgglomerateId,
+      sourceNodePosition,
+      additionalCoordinates,
+    );
     if (newTargetAgglomerateId !== newSourceAgglomerateId) {
-      yield* call(loadCoarseMesh, layerName, newTargetAgglomerateId, targetNodePosition);
+      yield* call(
+        loadCoarseMesh,
+        layerName,
+        newTargetAgglomerateId,
+        targetNodePosition,
+        additionalCoordinates,
+      );
     }
   }
 }

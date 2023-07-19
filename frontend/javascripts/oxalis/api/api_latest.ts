@@ -1944,6 +1944,7 @@ class DataApi {
     segmentId: number,
     seedPosition: Vector3,
     layerName: string | null | undefined,
+    seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
@@ -1984,7 +1985,13 @@ class DataApi {
     }
 
     Store.dispatch(
-      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+      loadPrecomputedMeshAction(
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        effectiveLayerName,
+      ),
     );
   }
 
@@ -1996,8 +2003,12 @@ class DataApi {
    * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
-  computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition));
+  computeMeshOnDemand(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
   }
 
   /**

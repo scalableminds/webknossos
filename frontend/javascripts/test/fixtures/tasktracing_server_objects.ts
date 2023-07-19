@@ -1,4 +1,5 @@
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -11,6 +12,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 0,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,

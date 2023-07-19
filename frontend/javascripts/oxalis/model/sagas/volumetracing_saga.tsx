@@ -186,12 +186,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
       );
       continue;
     }
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
     yield* put(
       updateSegmentAction(
         activeCellId,
         {
           somePosition: startEditingAction.position,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -290,6 +292,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         activeCellId,
         {
           somePosition: lastPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -444,6 +447,7 @@ export function* floodFill(): Saga<void> {
         volumeTracing.activeCellId,
         {
           somePosition: seedPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -656,12 +660,13 @@ function* ensureSegmentExists(
   }
 
   if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
-    const { seedPosition } = action;
+    const { seedPosition, seedAdditionalCoordinates } = action;
     yield* put(
       updateSegmentAction(
         segmentId,
         {
           somePosition: seedPosition,
+          additionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -671,7 +676,7 @@ function* ensureSegmentExists(
     // This way the most up-to-date position of a cell is used to jump to when a
     // segment is selected in the segment list. Also, the position of the active
     // cell is used in the proofreading mode.
-    const { somePosition } = action;
+    const { somePosition, someAdditionalCoordinates } = action;
 
     if (somePosition == null) {
       // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
@@ -688,6 +693,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           somePosition,
+          additionalCoordinates: someAdditionalCoordinates,
         },
         layerName,
         undefined,

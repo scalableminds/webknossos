@@ -7,6 +7,7 @@ import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -165,18 +166,28 @@ export const finishEditingAction = () =>
     type: "FINISH_EDITING",
   } as const);
 
-export const setActiveCellAction = (segmentId: number, somePosition?: Vector3) =>
+export const setActiveCellAction = (
+  segmentId: number,
+  somePosition?: Vector3,
+  someAdditionalCoordinates?: AdditionalCoordinate[],
+) =>
   ({
     type: "SET_ACTIVE_CELL",
     segmentId,
     somePosition,
+    someAdditionalCoordinates,
   } as const);
 
-export const clickSegmentAction = (segmentId: number, somePosition: Vector3) =>
+export const clickSegmentAction = (
+  segmentId: number,
+  somePosition: Vector3,
+  someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+) =>
   ({
     type: "CLICK_SEGMENT",
     segmentId,
     somePosition,
+    someAdditionalCoordinates,
   } as const);
 
 export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>

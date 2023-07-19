@@ -95,6 +95,7 @@ import {
 } from "../tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -182,16 +183,31 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
-  loadAdHocMesh(segmentId: number, seedPosition: Vector3) {
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition));
+  loadAdHocMesh(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) {
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
   },
 
-  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, meshFileName: string) {
-    dispatch(loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName));
+  loadPrecomputedMesh(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) {
+    dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, seedAdditionalCoordinates, meshFileName),
+    );
   },
 
-  setActiveCell(segmentId: number, somePosition?: Vector3) {
-    dispatch(setActiveCellAction(segmentId, somePosition));
+  setActiveCell(
+    segmentId: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {

@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
@@ -34,7 +35,8 @@ export function handleEndForDrawOrErase() {
 export function handlePickCell(pos: Point2) {
   const storeState = Store.getState();
   const globalPos = calculateGlobalPos(storeState, pos);
-  return handlePickCellFromGlobalPosition(globalPos);
+
+  return handlePickCellFromGlobalPosition(globalPos, storeState.flycam.additionalCoordinates || []);
 }
 export function getSegmentIdForPosition(globalPos: Vector3) {
   // This function will return the currently loaded segment ID for a given position.
@@ -89,11 +91,14 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
-export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
+export function handlePickCellFromGlobalPosition(
+  globalPos: Vector3,
+  additionalCoordinates: AdditionalCoordinate[],
+) {
   const cellId = getSegmentIdForPosition(globalPos);
 
   if (cellId > 0) {
-    Store.dispatch(setActiveCellAction(cellId, globalPos));
+    Store.dispatch(setActiveCellAction(cellId, globalPos, additionalCoordinates));
   }
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {

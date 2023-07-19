@@ -157,10 +157,13 @@ The information is JSON-encoded in the URL fragment and has the following format
   type MappingType = "JSON" | "HDF5";
   type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
   type Vector3 = [number, number, number];
+  // For datasets with more than 3 dimensions
+  type AdditionalCoordinate = { name: string; value: number };
 
   type BaseMeshUrlDescriptor = {|
     +segmentId: number,
     +seedPosition: Vector3,
+    +seedAdditionalCoordinates?: AdditionalCoordinate[];
   |};
   type AdHocMeshUrlDescriptor = {|
     ...BaseMeshUrlDescriptor,

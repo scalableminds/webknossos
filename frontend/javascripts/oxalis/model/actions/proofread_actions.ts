@@ -1,4 +1,5 @@
 import { Vector3 } from "oxalis/constants";
+import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
@@ -10,10 +11,14 @@ export type MinCutAgglomerateWithPositionAction = ReturnType<
 
 export type ProofreadAction = ProofreadAtPositionAction | ClearProofreadingByProductsAction;
 
-export const proofreadAtPosition = (position: Vector3) =>
+export const proofreadAtPosition = (
+  position: Vector3,
+  additionalCoordinates?: AdditionalCoordinate[],
+) =>
   ({
     type: "PROOFREAD_AT_POSITION",
     position,
+    additionalCoordinates,
   } as const);
 
 export const clearProofreadingByProducts = () =>

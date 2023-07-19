@@ -101,6 +101,7 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -113,32 +114,12 @@ type OwnProps = {
   maybeMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   globalPosition: Vector3 | null | undefined;
+  additionalCoordinates: AdditionalCoordinate[] | undefined;
   maybeViewport: OrthoView | null | undefined;
   hideContextMenu: () => void;
 };
-type DispatchProps = {
-  deleteEdge: (arg0: number, arg1: number) => void;
-  mergeTrees: (arg0: number, arg1: number) => void;
-  minCutAgglomerate: (arg0: number, arg1: number) => void;
-  deleteNode: (arg0: number, arg1: number) => void;
-  setActiveNode: (arg0: number) => void;
-  hideTree: (arg0: number) => void;
-  createTree: () => void;
-  addTreesAndGroups: (arg0: MutableTreeMap) => void;
-  hideBoundingBox: (arg0: number) => void;
-  setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
-  setBoundingBoxName: (arg0: number, arg1: string) => void;
-  addNewBoundingBox: (arg0: Vector3) => void;
-  deleteBoundingBox: (arg0: number) => void;
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void;
-  createBranchPoint: (arg0: number, arg1: number) => void;
-  deleteBranchpointById: (arg0: number, arg1: number) => void;
-  performMinCut: (arg0: number, arg1: number | undefined) => void;
-  removeMesh: (arg0: string, arg1: number) => void;
-  hideMesh: (arg0: string, arg1: number) => void;
-  setPosition: (arg0: Vector3) => void;
-  refreshMesh: (arg0: string, arg1: number) => void;
-};
+
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   datasetScale: Vector3;
@@ -746,6 +727,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     volumeTracing,
     activeTool,
     globalPosition,
+    additionalCoordinates,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     viewport,
@@ -786,7 +768,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     }
 
     Store.dispatch(
-      loadPrecomputedMeshAction(segmentId, globalPosition, currentMeshFile.meshFileName),
+      loadPrecomputedMeshAction(
+        segmentId,
+        globalPosition,
+        additionalCoordinates,
+        currentMeshFile.meshFileName,
+      ),
     );
   };
 
@@ -802,7 +789,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition));
+    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -936,7 +923,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "select-cell",
                 onClick: () => {
-                  setActiveCell(segmentIdAtPosition, globalPosition);
+                  setActiveCell(segmentIdAtPosition, globalPosition, additionalCoordinates);
                 },
                 label: (
                   <>
@@ -1323,8 +1310,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(createTreeAction());
   },
 
-  setActiveCell(segmentId: number, somePosition?: Vector3) {
-    dispatch(setActiveCellAction(segmentId, somePosition));
+  setActiveCell(
+    segmentId: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
 
   addNewBoundingBox(center: Vector3) {

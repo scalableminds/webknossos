@@ -687,6 +687,7 @@ type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;

@@ -30,6 +30,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
+import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -48,7 +49,12 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void,
   andCloseContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
@@ -72,7 +78,12 @@ const getLoadPrecomputedMeshMenuItem = (
           return;
         }
         andCloseContextMenu(
-          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+          loadPrecomputedMesh(
+            segment.id,
+            segment.somePosition,
+            segment.additionalCoordinates,
+            currentMeshFile?.meshFileName,
+          ),
         );
       },
       mappingName,
@@ -97,7 +108,11 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment: Segment,
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
+  loadAdHocMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -115,7 +130,9 @@ const getComputeMeshAdHocMenuItem = (
         return;
       }
 
-      andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+      andCloseContextMenu(
+        loadAdHocMesh(segment.id, segment.somePosition, segment.additionalCoordinates),
+      );
     },
     disabled,
     label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
@@ -124,7 +141,11 @@ const getComputeMeshAdHocMenuItem = (
 
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void,
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -134,7 +155,10 @@ const getMakeSegmentActiveMenuItem = (
     : "Make this the active segment ID.";
   return {
     key: "setActiveCell",
-    onClick: () => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition)),
+    onClick: () =>
+      andCloseContextMenu(
+        setActiveCell(segment.id, segment.somePosition, segment.additionalCoordinates || undefined),
+      ),
     disabled,
     label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
   };
@@ -162,9 +186,22 @@ type Props = {
   removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void;
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void;
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void;
+  loadAdHocMesh: (
+    segmentId: number,
+    somePosition: Vector3,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void;
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void;
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void;
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
   currentMeshFile: APIMeshFile | null | undefined;

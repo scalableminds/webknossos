@@ -213,6 +213,7 @@ annotation.downsample.volumeOnly=Downsampling is only possible for volume annota
 annotation.addSegmentIndex.layerNotFound=Could not add segment index to volume annotation (annotation layer not found)
 annotation.addSegmentIndex.explorationalsOnly=Could not add segment index to annotation because it is only allowed for explorational annotations.
 annotation.addSegmentIndex.volumeOnly=Adding segment index is only possible for volume annotation layers.
+annotation.addSegmentIndex.failed=Failed to add segment index.
 annotationType.notFound=Could not find the specified annotation type.
 annotation.cantMergeVolumes=This annotation collection contains volume tracings. Merging volume tracings is not yet supported. Please use download instead.
 annotation.reopen.tooLate=The annotation cannot be reopened anymore, since it has been finished for too long.

@@ -201,7 +201,8 @@ class DataSetController @Inject()(userService: UserService,
                                                                         request.identity,
                                                                         reportMutable)
         _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "explore.zeroLayers"
-        folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderService.getOrCreateFromPathLiteral)
+        folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
+          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "explore.autoAdd.getFolder.failed"
         _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource,
                                                            request.body.datasetName,
                                                            request.identity,

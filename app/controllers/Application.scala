@@ -2,10 +2,12 @@ package controllers
 
 import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
+import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, UserService}
 import oxalis.mail.{DefaultMails, Send}
@@ -25,6 +27,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             organizationDAO: OrganizationDAO,
+                            folderService: FolderService,
                             conf: WkConf,
                             defaultMails: DefaultMails,
                             storeModules: StoreModules,

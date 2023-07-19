@@ -2,7 +2,9 @@ package models.folder
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.schema.Tables._
+import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
@@ -14,6 +16,7 @@ import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 case class Folder(_id: ObjectId, name: String)
@@ -28,7 +31,8 @@ object FolderParameters {
 class FolderService @Inject()(teamDAO: TeamDAO,
                               teamService: TeamService,
                               folderDAO: FolderDAO,
-                              organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
+                              organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
 
@@ -71,8 +75,48 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       _ <- teamDAO.updateAllowedTeamsForFolder(folderId, newTeamIds)
     } yield ()
 
-  def getOrCreateFromPathLiteral(folderPathLiteral: String)(implicit ctx: DBAccessContext): Fox[ObjectId] = ??? // TODO
+  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      organization <- organizationDAO.findOne(organizationId)
+      foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
+      root <- foldersWithParents.find(_._parent.isEmpty).toFox
+      _ <- bool2Fox(folderPathLiteral.startsWith("/")) ?~> "pathLiteral.mustStartWithSlash"
+      pathNames = folderPathLiteral.drop(1).split("/").toList
+      suppliedRootName <- pathNames.headOption.toFox
+      _ <- bool2Fox(suppliedRootName == root.name) ?~> "pathLiteral.mustStartAtOrganizationRootFolder"
+      (existingFolderId, remainingPathNames) = findLowestMatchingFolder(root, foldersWithParents, pathNames)
+      targetFolderId <- createMissingFoldersForPathNames(existingFolderId, remainingPathNames)
+    } yield targetFolderId
 
+  private def findLowestMatchingFolder(root: FolderWithParent,
+                                       foldersWithParents: Seq[FolderWithParent],
+                                       pathNames: List[String]): (ObjectId, List[String]) = {
+
+    @tailrec
+    def findFolderIter(currentParent: FolderWithParent, remainingPathNames: List[String]): (ObjectId, List[String]) = {
+      val nextOpt = foldersWithParents.find(folder =>
+        folder._parent.contains(currentParent._id) && remainingPathNames.headOption.contains(folder.name))
+      nextOpt match {
+        case Some(next) => findFolderIter(next, remainingPathNames.drop(1))
+        case None       => (currentParent._id, remainingPathNames)
+      }
+    }
+
+    findFolderIter(root, pathNames.drop(1))
+  }
+
+  private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(
+      implicit ctx: DBAccessContext): Fox[ObjectId] =
+    remainingPathNames match {
+      case pathNamesHead :: pathNamesTail =>
+        for {
+          newFolder <- Fox.successful(Folder(ObjectId.generate, pathNamesHead))
+          _ <- folderDAO.insertAsChild(parentFolderId, newFolder)
+          folderId <- createMissingFoldersForPathNames(newFolder._id, pathNamesTail)
+        } yield folderId
+      case Nil => Fox.successful(parentFolderId)
+    }
 }
 
 class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

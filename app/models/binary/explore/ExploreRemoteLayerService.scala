@@ -98,7 +98,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       _ <- dataSetService.assertNewDataSetName(datasetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization.name, datasetName, dataSource, userToken)
+      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
     } yield ()
 
   private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {

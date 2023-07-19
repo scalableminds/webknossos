@@ -115,6 +115,7 @@ class FolderController @Inject()(
   def create(parentId: String, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
+      _ <- folderService.assertValidFolderName(name)
       newFolder = Folder(ObjectId.generate, name)
       _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"

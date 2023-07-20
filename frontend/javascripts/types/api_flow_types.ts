@@ -514,7 +514,7 @@ export type APIAvailableTasksReport = {
   readonly id: string;
   readonly user: string;
   readonly totalAvailableTasks: number;
-  readonly availableTasksByProject: Record<string, number>;
+  readonly availableTasksByProjects: Record<string, number>;
 };
 export type APIOrganization = {
   readonly id: string;

@@ -14,7 +14,7 @@ type State = {
   isLoading: boolean;
 };
 
-class OpenTasksReportView extends React.PureComponent<{}, State> {
+class AvailableTasksReportView extends React.PureComponent<{}, State> {
   state: State = {
     data: [],
     isLoading: false,
@@ -30,7 +30,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
         this.setState({
           isLoading: true,
         });
-        const progressData = await getOpenTasksReport(teamId);
+        const progressData = await getAvailableTasksReport(teamId);
         this.setState({
           data: progressData,
         });
@@ -94,30 +94,30 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             />
             <Column
               title="# Available Tasks"
-              dataIndex="totalAssignments"
+              dataIndex="totalAvailableTasks"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy(typeHint, (task) => task.totalAssignments)}
+              sorter={Utils.compareBy(typeHint, (task) => task.totalAvailableTasks)}
               width={150}
             />
             <Column
               title="Available Tasks by Project"
               key="content"
               render={(_text, item: APIAvailableTasksReport) =>
-                Object.keys(item.assignmentsByProjects).map((key) => {
+                Object.keys(item.availableTasksByProjects).map((key) => {
                   const [projectName, experience] = key.split("/");
                   return (
                     <div key={key}>
                       <Tooltip
                         title={
                           <span>
-                            There are potentially {item.assignmentsByProjects[key]} tasks from the
+                            There are potentially {item.availableTasksByProjects[key]} tasks from the
                             project <i>{projectName}</i> available for automatic assignment for this
                             user because they match the configured assignment criteria; especially
                             the required experience level <i>{experience}</i>.
                           </span>
                         }
                       >
-                        {projectName}: {item.assignmentsByProjects[key]}
+                        {projectName}: {item.availableTasksByProjects[key]}
                       </Tooltip>
                       <Tag style={{ marginLeft: 6 }}>{experience}</Tag>
                     </div>
@@ -132,4 +132,4 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
   }
 }
 
-export default OpenTasksReportView;
+export default AvailableTasksReportView;

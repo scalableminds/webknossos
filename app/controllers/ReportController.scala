@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 case class AvailableTaskCountsEntry(id: String,
                                     user: String,
                                     totalAvailableTasks: Int,
-                                    availableTasksByProject: Map[String, Int])
+                                    availableTasksByProjects: Map[String, Int])
 object AvailableTaskCountsEntry {
   implicit val jsonFormat: OFormat[AvailableTaskCountsEntry] = Json.format[AvailableTaskCountsEntry]
 }
@@ -157,12 +157,12 @@ class ReportController @Inject()(reportDAO: ReportDAO,
   private def getAvailableTaskCountsAndProjects(users: Seq[User]): Fox[List[AvailableTaskCountsEntry]] = {
     val foxes = users.map { user =>
       for {
-        pendingTaskCountsByProject <- reportDAO.getAvailableTaskCountsByProjectsFor(user._id)
+        pendingTaskCountsByProjects <- reportDAO.getAvailableTaskCountsByProjectsFor(user._id)
       } yield {
         AvailableTaskCountsEntry(user._id.toString,
                                  user.name,
-                                 pendingTaskCountsByProject.values.sum,
-                                 pendingTaskCountsByProject)
+                                 pendingTaskCountsByProjects.values.sum,
+                                 pendingTaskCountsByProjects)
       }
     }
     Fox.combined(foxes.toList)

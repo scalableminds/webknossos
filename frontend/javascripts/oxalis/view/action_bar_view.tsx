@@ -126,7 +126,8 @@ function AdditionalCoordinatesInputView() {
         vectorLength={additionalCoordinates.length}
         value={additionalCoordinates.map((el) => el.value)}
         onChange={changeAdditionalCoordinatesFromVector}
-        style={{ marginLeft: 8 }}
+        style={{ marginLeft: 10, marginRight: 10 }}
+        addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
       />
     </Popover>
   );

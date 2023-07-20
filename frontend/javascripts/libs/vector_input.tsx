@@ -149,6 +149,11 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
       ...props
     } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
 
+    const { addonBefore } = props;
+    const CHARACTER_WIDTH = 8;
+    const addonBeforeLength =
+      typeof addonBefore === "string" ? 20 + CHARACTER_WIDTH * addonBefore.length : 0;
+
     return (
       <InputComponent
         onChange={this.handleChange}
@@ -157,7 +162,13 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
         value={this.state.text}
         onKeyDown={this.handleOnKeyDown}
         style={
-          autoSize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
+          autoSize
+            ? {
+                ...style,
+                width:
+                  this.getText(this.state.text).length * CHARACTER_WIDTH + 25 + addonBeforeLength,
+              }
+            : style
         }
         {...props}
       />

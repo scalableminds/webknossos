@@ -21,6 +21,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - WEBKNOSSOS can now read S3 remote dataset credentials from environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`. Those will be used, if available, when accessing remote datasets for which no explicit credentials are supplied. [#7170](https://github.com/scalableminds/webknossos/pull/7170)
 - Added security.txt according to [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116). The content is configurable and it can be disabled. [#7182](https://github.com/scalableminds/webknossos/pull/7182)
 - Added tooltips to explain the task actions "Reset" and "Reset and Cancel". [#7201](https://github.com/scalableminds/webknossos/pull/7201)
+- Thumbnail improvements: Thumbnails now use intensity configuration, thumbnails can now be created for float datasets, and they are cached across webknossos restarts. [#7190](https://github.com/scalableminds/webknossos/pull/7190)
+- Added batch actions for segment groups, such as changing the color and loading or downloading all corresponding meshes. [#7164](https://github.com/scalableminds/webknossos/pull/7164).
 
 ### Changed
 - Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)
@@ -29,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Renamed "open" tasks to "pending" and slightly redesigned the available task assignment view for clarity. [#7187](https://github.com/scalableminds/webknossos/pull/7187)
 - Being the uploader of a dataset no longer grants edit permissions on that dataset. [#7200](https://github.com/scalableminds/webknossos/pull/7200)
 - Enabled the "Shift + middle-click" shortcut to load agglomerate skeletons for all tools, not just the Skeleton tool. [#7212](https://github.com/scalableminds/webknossos/pull/7212)
+- Improved support for touch devices by adding floating buttons for easier navigation and layout changes. [#7178](https://github.com/scalableminds/webknossos/pull/7178)
 
 ### Fixed
 - Fixed rare rendering bug at viewport edge for anisotropic datasets. [#7163](https://github.com/scalableminds/webknossos/pull/7163)

@@ -59,7 +59,7 @@ export enum OrthoViews {
   PLANE_XZ = "PLANE_XZ",
   TDView = "TDView",
 }
-export const enum OrthoViewsToName {
+export enum OrthoViewsToName {
   PLANE_XY = "XY",
   PLANE_YZ = "YZ",
   PLANE_XZ = "XZ",

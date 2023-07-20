@@ -4,8 +4,7 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -254,19 +253,11 @@ class ArbitraryController extends React.PureComponent<Props> {
     );
   }
 
-  getVoxelOffset(timeFactor: number): number {
-    const state = Store.getState();
-    const { moveValue3d } = state.userConfiguration;
-    const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
-    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
-  }
-
   move(timeFactor: number): void {
     if (!this.isStarted) {
       return;
     }
-
-    Store.dispatch(moveFlycamAction([0, 0, this.getVoxelOffset(timeFactor)]));
+    Store.dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)]));
     this.moved();
   }
 

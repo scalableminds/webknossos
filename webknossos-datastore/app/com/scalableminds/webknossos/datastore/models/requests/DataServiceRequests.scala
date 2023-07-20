@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 
 import java.nio.file.Path
 
-case class DataServiceRequestSettings(halfByte: Boolean,
+case class DataServiceRequestSettings(halfByte: Boolean = false,
                                       appliedAgglomerate: Option[String] = None,
                                       version: Option[Long] = None,
                                       additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)

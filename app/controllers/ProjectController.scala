@@ -45,8 +45,8 @@ class ProjectController @Inject()(projectService: ProjectService,
       allCounts <- taskDAO.countPendingInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
-          r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
+          pendingInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
+          r <- projectService.publicWritesWithStatus(project, pendingInstancesAndTime._1, pendingInstancesAndTime._2)
         } yield r
       }
     } yield Ok(Json.toJson(js))
@@ -168,8 +168,8 @@ Expects:
       allCounts <- taskDAO.countPendingInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
-          r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
+          pendingInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
+          r <- projectService.publicWritesWithStatus(project, pendingInstancesAndTime._1, pendingInstancesAndTime._2)
         } yield r
       }
     } yield {
@@ -217,8 +217,8 @@ Expects:
         projectIdValidated <- ObjectId.fromString(id)
         project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
         _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
-        openInstancesAndTime <- taskDAO.countPendingInstancesAndTimeForProject(project._id)
-        js <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
+        pendingInstancesAndTime <- taskDAO.countPendingInstancesAndTimeForProject(project._id)
+        js <- projectService.publicWritesWithStatus(project, pendingInstancesAndTime._1, pendingInstancesAndTime._2)
       } yield Ok(js)
     }
 

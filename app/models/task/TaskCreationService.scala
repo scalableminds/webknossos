@@ -264,7 +264,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       TaskParameters(
         nmlFormParams.taskTypeId,
         nmlFormParams.neededExperience,
-        nmlFormParams.openInstances,
+        nmlFormParams.pendingInstances,
         nmlFormParams.projectName,
         nmlFormParams.scriptId,
         bbox,

@@ -23,7 +23,7 @@ object TaskParameters {
 
 case class NmlTaskParameters(taskTypeId: String,
                              neededExperience: Experience,
-                             openInstances: Int,
+                             pendingInstances: Int,
                              projectName: String,
                              scriptId: Option[String],
                              boundingBox: Option[BoundingBox])

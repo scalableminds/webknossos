@@ -1076,7 +1076,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             zoom,
           });
           await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
-          Toast.success("Successfully saved the current view configuration saved as default.");
+          Toast.success("Successfully saved the current view configuration as default.");
         } catch (error) {
           Toast.error(
             "Failed to save the current view configuration as default. Please look at the console for more details.",

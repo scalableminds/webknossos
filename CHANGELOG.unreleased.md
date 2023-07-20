@@ -18,7 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a search feature for segments and segment groups. Listed segments/groups can be searched by id and name. [#7175](https://github.com/scalableminds/webknossos/pull/7175)
 - Added support for transformations with thin plate splines. [#7131](https://github.com/scalableminds/webknossos/pull/7131)
 - WEBKNOSSOS can now read S3 remote dataset credentials from environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`. Those will be used, if available, when accessing remote datasets for which no explicit credentials are supplied. [#7170](https://github.com/scalableminds/webknossos/pull/7170)
-- Added a new button to the layer settings in view only dataset mode to save the current view configuration as the dataset'S default. [#7205](https://github.com/scalableminds/webknossos/pull/7205)
+- Added a new button to the layer settings in view only dataset mode to save the current view configuration as the dataset's default. [#7205](https://github.com/scalableminds/webknossos/pull/7205)
 - Added security.txt according to [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116). The content is configurable and it can be disabled. [#7182](https://github.com/scalableminds/webknossos/pull/7182)
 - Added tooltips to explain the task actions "Reset" and "Reset and Cancel". [#7201](https://github.com/scalableminds/webknossos/pull/7201)
 

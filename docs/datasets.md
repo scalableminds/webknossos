@@ -174,7 +174,7 @@ Defaults include:
 
 ![Dataset Editing: View Configuration Tab](images/dataset_view_config.jpeg)
 
-Alternatively, these settings can be configured in more intuitive way by opening the dataset in view mode. Change the current view settings to the desired result and save them as the datasets default using the "Save View Configuration as Default" button in the layer settings tab.
+Alternatively, these settings can be configured in a more intuitive way by opening the dataset in view mode. Change the current view settings to the desired result and save them as the dataset's default using the "Save View Configuration as Default" button in the layer settings tab.
 
 ![Saving the view configuration in view mode](images/save_view_configuration_in_view_mode.png)
 

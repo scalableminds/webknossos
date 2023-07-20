@@ -104,8 +104,8 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                usableDataSource: GenericDataSource[DataLayerLike],
                                layerName: String,
                                layer: DataLayerLike,
-                               width: Int,
-                               height: Int): (BoundingBox, Vec3Int, Option[(Double, Double)]) = {
+                               targetMagWidth: Int,
+                               targetMagHeigt: Int): (BoundingBox, Vec3Int, Option[(Double, Double)]) = {
     val configuredCenterOpt =
       viewConfiguration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int]))
     val centerOpt =
@@ -117,10 +117,12 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       .getOrElse(1.0)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)
-    val x = center.x - width * mag.x / 2
-    val y = center.y - height * mag.y / 2
+    val mag1Width = targetMagWidth * mag.x
+    val mag1Height = targetMagHeigt * mag.y
+    val x = center.x - mag1Width / 2
+    val y = center.y - mag1Height / 2
     val z = center.z
-    (BoundingBox(Vec3Int(x, y, z), width, height, 1), mag, intensityRangeOpt)
+    (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt)
   }
 
   private def readIntensityRange(viewConfiguration: DataSetViewConfiguration,

@@ -266,7 +266,7 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  openInstances BIGINT NOT NULL,
+  pendingInstances BIGINT NOT NULL,
   tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
@@ -274,7 +274,7 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
+  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
 );
 
 CREATE TABLE webknossos.experienceDomains(
@@ -780,7 +780,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
     IF NEW.totalInstances <> OLD.totalInstances THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
     END IF;
     RETURN NULL;
   END;
@@ -794,7 +794,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
 CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -813,11 +813,11 @@ CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
     END IF;
     IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = NEW._task;
     END IF;
     IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -831,7 +831,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
     END IF;
     RETURN NULL;
   END;

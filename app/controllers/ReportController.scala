@@ -135,7 +135,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     extends Controller
     with FoxImplicits {
 
-  def projectProgressOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def projectProgressReport(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.fromString(teamId)
       _ <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
@@ -143,7 +143,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     } yield Ok(Json.toJson(entries))
   }
 
-  def availableTasksOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def availableTasksReport(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.fromString(teamId)
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND

@@ -63,8 +63,8 @@ GET           /users/:id/annotations                                            
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
 POST          /teams                                                                            controllers.TeamController.create
 DELETE        /teams/:id                                                                        controllers.TeamController.delete(id: String)
-GET           /teams/:id/availableTasksOverview                                                 controllers.ReportController.availableTasksOverview(id: String)
-GET           /teams/:id/progressOverview                                                       controllers.ReportController.projectProgressOverview(id: String)
+GET           /teams/:id/availableTasksReport                                                   controllers.ReportController.availableTasksReport(id: String)
+GET           /teams/:id/projectProgressReport                                                  controllers.ReportController.projectProgressReport(id: String)
 
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational                      controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
@@ -208,7 +208,7 @@ DELETE        /scripts/:id                                                      
 
 # Projects
 GET           /projects                                                                         controllers.ProjectController.list
-GET           /projects/assignments                                                             controllers.ProjectController.listWithStatus
+GET           /projects/withStatus                                                              controllers.ProjectController.listWithStatus
 POST          /projects                                                                         controllers.ProjectController.create
 GET           /projects/byName/:name                                                            controllers.ProjectController.readByName(name: String)
 GET           /projects/:id                                                                     controllers.ProjectController.read(id: String)

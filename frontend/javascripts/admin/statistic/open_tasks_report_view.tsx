@@ -1,16 +1,16 @@
 import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
 import * as React from "react";
-import type { APIOpenTasksReport } from "types/api_flow_types";
-import { getOpenTasksReport } from "admin/admin_rest_api";
+import type { APIAvailableTasksReport } from "types/api_flow_types";
+import { getAvailableTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TeamSelectionForm from "./team_selection_form";
 import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { Column } = Table;
-const typeHint: APIOpenTasksReport[] = [];
+const typeHint: APIAvailableTasksReport[] = [];
 type State = {
-  data: Array<APIOpenTasksReport>;
+  data: Array<APIAvailableTasksReport>;
   isLoading: boolean;
 };
 
@@ -102,7 +102,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             <Column
               title="Available Tasks by Project"
               key="content"
-              render={(_text, item: APIOpenTasksReport) =>
+              render={(_text, item: APIAvailableTasksReport) =>
                 Object.keys(item.assignmentsByProjects).map((key) => {
                   const [projectName, experience] = key.split("/");
                   return (

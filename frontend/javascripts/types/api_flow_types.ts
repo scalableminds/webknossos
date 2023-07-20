@@ -361,8 +361,8 @@ export type APIProjectUpdater = APIProjectTypeBase & {
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;
 };
-export type APIProjectWithAssignments = APIProject & {
-  readonly numberOfOpenAssignments: number;
+export type APIProjectWithStatus = APIProject & {
+  readonly pendingInstances: number;
   readonly tracingTime: number;
 };
 export type APITask = {
@@ -510,11 +510,11 @@ export type APIProjectProgressReport = {
   readonly priority: number;
   readonly billedMilliseconds: number;
 };
-export type APIOpenTasksReport = {
+export type APIAvailableTasksReport = {
   readonly id: string;
   readonly user: string;
-  readonly totalAssignments: number;
-  readonly assignmentsByProjects: Record<string, number>;
+  readonly totalAvailableTasks: number;
+  readonly availableTasksByProject: Record<string, number>;
 };
 export type APIOrganization = {
   readonly id: string;

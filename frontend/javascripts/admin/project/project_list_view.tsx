@@ -19,7 +19,7 @@ import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
 import type {
-  APIProjectWithAssignments,
+  APIProjectWithStatus,
   APIProject,
   APIUser,
   APIUserBase,
@@ -27,7 +27,7 @@ import type {
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getProjectsWithOpenAssignments,
+  getProjectsWithStatus,
   getProjectsForTaskType,
   increaseProjectTaskInstances,
   deleteProject,
@@ -57,10 +57,10 @@ type Props = OwnProps & StateProps;
 
 type State = {
   isLoading: boolean;
-  projects: Array<APIProjectWithAssignments>;
+  projects: Array<APIProjectWithStatus>;
   searchQuery: string;
   isTransferTasksVisible: boolean;
-  selectedProject: APIProjectWithAssignments | null | undefined;
+  selectedProject: APIProjectWithStatus | null | undefined;
   taskTypeName: string | null | undefined;
 };
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -113,7 +113,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
       ]);
       taskTypeName = taskType.summary;
     } else {
-      projects = await getProjectsWithOpenAssignments();
+      projects = await getProjectsWithStatus();
     }
 
     this.setState({
@@ -129,7 +129,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  deleteProject = (project: APIProjectWithAssignments) => {
+  deleteProject = (project: APIProjectWithStatus) => {
     Modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
@@ -154,12 +154,12 @@ class ProjectListView extends React.PureComponent<Props, State> {
   };
 
   mergeProjectWithUpdated = (
-    oldProject: APIProjectWithAssignments,
+    oldProject: APIProjectWithStatus,
     updatedProject: APIProject,
-  ): APIProjectWithAssignments => ({ ...oldProject, ...updatedProject });
+  ): APIProjectWithStatus => ({ ...oldProject, ...updatedProject });
 
   pauseResumeProject = async (
-    project: APIProjectWithAssignments,
+    project: APIProjectWithStatus,
     APICall: (arg0: string) => Promise<APIProject>,
   ) => {
     const updatedProject = await APICall(project.id);
@@ -170,7 +170,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     }));
   };
 
-  increaseProjectTaskInstances = async (project: APIProjectWithAssignments) => {
+  increaseProjectTaskInstances = async (project: APIProjectWithStatus) => {
     Modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
@@ -193,7 +193,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  showActiveUsersModal = async (project: APIProjectWithAssignments) => {
+  showActiveUsersModal = async (project: APIProjectWithStatus) => {
     this.setState({
       selectedProject: project,
       isTransferTasksVisible: true,
@@ -241,10 +241,10 @@ class ProjectListView extends React.PureComponent<Props, State> {
       },
     ];
 
-    const typeHint: Array<APIProjectWithAssignments> = [];
+    const typeHint: Array<APIProjectWithStatus> = [];
     const filteredProjects = Utils.filterWithSearchQueryAND(
       this.state.projects,
-      ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
+      ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
       this.state.searchQuery,
     );
 
@@ -306,11 +306,11 @@ class ProjectListView extends React.PureComponent<Props, State> {
               />
               <Column
                 title="Pending Task Instances"
-                dataIndex="numberOfOpenAssignments"
-                key="numberOfOpenAssignments"
-                sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
+                dataIndex="pendingInstances"
+                key="pendingInstances"
+                sorter={Utils.compareBy(typeHint, (project) => project.pendingInstances)}
                 filters={greaterThanZeroFilters}
-                onFilter={(value, project: APIProjectWithAssignments) => {
+                onFilter={(value, project: APIProjectWithStatus) => {
                   if (value === "0") {
                     return project.tracingTime === 0;
                   }
@@ -330,7 +330,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                   })
                 }
                 filters={greaterThanZeroFilters}
-                onFilter={(value, project: APIProjectWithAssignments) => {
+                onFilter={(value, project: APIProjectWithStatus) => {
                   if (value === "0") {
                     return project.tracingTime === 0;
                   }
@@ -349,7 +349,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                   })),
                   "text",
                 )}
-                onFilter={(value, project: APIProjectWithAssignments) => value === project.team}
+                onFilter={(value, project: APIProjectWithStatus) => value === project.team}
                 filterMultiple
               />
               <Column
@@ -370,7 +370,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                   })),
                   "text",
                 )}
-                onFilter={(value, project: APIProjectWithAssignments) => value === project.owner.id}
+                onFilter={(value, project: APIProjectWithStatus) => value === project.owner.id}
                 filterMultiple
               />
               <Column
@@ -386,7 +386,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 dataIndex="priority"
                 key="priority"
                 sorter={Utils.compareBy(typeHint, (project) => project.priority)}
-                render={(priority, project: APIProjectWithAssignments) =>
+                render={(priority, project: APIProjectWithStatus) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
                 filters={[
@@ -395,7 +395,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     value: "paused",
                   },
                 ]}
-                onFilter={(_value, project: APIProjectWithAssignments) => project.paused}
+                onFilter={(_value, project: APIProjectWithStatus) => project.paused}
               />
               <Column
                 title="Time Limit"
@@ -409,7 +409,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 key="actions"
                 fixed="right"
                 width={200}
-                render={(__, project: APIProjectWithAssignments) => (
+                render={(__, project: APIProjectWithStatus) => (
                   <span>
                     <Link
                       to={`/annotations/CompoundProject/${project.id}`}

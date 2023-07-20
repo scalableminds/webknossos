@@ -1,13 +1,31 @@
 import _ from "lodash";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Form, Input, Checkbox, Alert, InputNumber, Col, Row, Tooltip, Table } from "antd";
+import {
+  Form,
+  Input,
+  Checkbox,
+  Alert,
+  InputNumber,
+  Col,
+  Row,
+  Tooltip,
+  Table,
+  Select,
+  Slider,
+} from "antd";
 import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import { layerViewConfigurations } from "messages";
+import {
+  RecommendedConfiguration,
+  layerViewConfigurations,
+  settings,
+  settingsTooltips,
+} from "messages";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
+import { BLEND_MODES } from "oxalis/constants";
 
 const FormItem = Form.Item;
 
@@ -47,6 +65,28 @@ export default function DatasetSettingsViewConfigTab() {
       };
     },
   );
+  const checkboxSettings = (
+    [
+      ["interpolation", 3],
+      ["fourBit", 3],
+      ["renderMissingDataBlack", 6],
+    ] as Array<[keyof RecommendedConfiguration, number]>
+  ).map(([settingsName, spanWidth]) => (
+    <Col span={spanWidth} key={settingsName}>
+      <FormItem name={["defaultConfiguration", settingsName]} valuePropName="checked" colon={false}>
+        <Checkbox>
+          {settings[settingsName]}{" "}
+          <Tooltip title={settingsTooltips[settingsName]}>
+            <InfoCircleOutlined
+              style={{
+                color: "gray",
+              }}
+            />
+          </Tooltip>
+        </Checkbox>
+      </FormItem>
+    </Col>
+  ));
   return (
     <div>
       <Alert
@@ -86,23 +126,61 @@ export default function DatasetSettingsViewConfigTab() {
             />
           </FormItemWithInfo>
         </Col>
-        <Col span={8}>
-          <FormItem
-            name={["defaultConfiguration", "interpolation"]}
-            valuePropName="checked"
-            label=" "
+        <Col span={6}>
+          <FormItemWithInfo
+            name={["defaultConfiguration", "rotation"]}
+            label="Rotation"
+            info="The default rotation that will be used in oblique and arbitrary view mode."
+          >
+            <Vector3Input />
+          </FormItemWithInfo>
+        </Col>
+        <Col span={3}>
+          <FormItemWithInfo
+            colon={false}
+            name={["defaultConfiguration", "blendMode"]}
+            label={settings.blendMode}
+            info={settingsTooltips.blendMode}
+          >
+            <Select allowClear>
+              <Select.Option value={BLEND_MODES.Additive}>Additive</Select.Option>
+              <Select.Option value={BLEND_MODES.Cover}>Cover</Select.Option>
+            </Select>
+          </FormItemWithInfo>
+        </Col>
+        <Col span={3}>
+          <FormItemWithInfo
+            colon={false}
+            name={["defaultConfiguration", "loadingStrategy"]}
+            label={settings.loadingStrategy}
+            info={settingsTooltips.loadingStrategy}
+          >
+            <Select allowClear>
+              <Select.Option value={"BEST_QUALITY_FIRST"}>Best quality first</Select.Option>
+              <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
+            </Select>
+          </FormItemWithInfo>
+        </Col>
+      </Row>
+      <Row gutter={24}>
+        {checkboxSettings}
+        <Col span={4}>
+          <FormItemWithInfo
+            name={["defaultConfiguration", "segmentationPatternOpacity"]}
+            label={settings.segmentationPatternOpacity}
+            info={settingsTooltips.segmentationPatternOpacity}
             colon={false}
           >
-            <Checkbox>
-              Interpolation{" "}
-              <Tooltip title="If checked, bilinear interpolation will be used when rendering the data.">
-                <InfoCircleOutlined
-                  style={{
-                    color: "gray",
-                  }}
-                />
-              </Tooltip>
-            </Checkbox>
+            <Slider min={0} max={100} step={1} />
+          </FormItemWithInfo>
+        </Col>
+        <Col span={2} style={{ marginLeft: -12 }}>
+          <FormItem
+            name={["defaultConfiguration", "segmentationPatternOpacity"]}
+            colon={false}
+            label=" "
+          >
+            <InputNumber min={0} max={100} step={1} precision={0} />
           </FormItem>
         </Col>
       </Row>

@@ -13,6 +13,7 @@ import {
   EllipsisOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
+import ErrorHandling from "libs/error_handling";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -97,7 +98,13 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
+import {
+  layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  RecommendedConfiguration,
+  settings,
+  settingsTooltips,
+} from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -128,7 +135,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
-  isAdminOrManager: boolean;
+  isAdminOrDatasetManager: boolean;
 };
 
 type State = {
@@ -1054,16 +1061,53 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   saveViewConfigurationAsDefault = () => {
     const { dataset, datasetConfiguration } = this.props;
+    const dataSource: Array<{
+      name: string;
+      description?: string;
+    }> = [{ name: "Position" }, { name: "Zoom" }, { name: "Rotation" }];
+    const additionalData: typeof dataSource = (
+      [
+        "fourBit",
+        "interpolation",
+        "renderMissingDataBlack",
+        "loadingStrategy",
+        "segmentationPatternOpacity",
+        "blendMode",
+      ] as Array<keyof RecommendedConfiguration>
+    ).map((key) => ({
+      name: settings[key] as string,
+      description: settingsTooltips[key],
+    }));
+    dataSource.push(...additionalData);
     Modal.confirm({
       title: "Save current view configuration as default?",
+      width: 700,
       content: (
         <>
           Do you really want to save your current view configuration as the dataset's default?
           <br />
           This will overwrite the current default view configuration.
           <br />
-          This includes the current camera position, zoom level, interpolation setting and layer
-          settings.
+          This includes all color and segmentation layer settings, as well as these additional
+          settings:
+          <br />
+          <br />
+          {dataSource.map((field, index) => {
+            let delimiter = index === dataSource.length - 1 ? "" : ", ";
+            delimiter = index === dataSource.length - 2 ? " and " : delimiter;
+            return field.description ? (
+              <>
+                {field.name}{" "}
+                <Tooltip title={field.description}>
+                  <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
+                </Tooltip>
+                {delimiter}
+              </>
+            ) : (
+              `${field.name}${delimiter}`
+            );
+          })}
+          .
         </>
       ),
       onOk: async () => {
@@ -1081,6 +1125,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           Toast.error(
             "Failed to save the current view configuration as default. Please look at the console for more details.",
           );
+          ErrorHandling.notify(error as Error);
           console.error(error);
         }
       },
@@ -1141,7 +1186,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Row>
         ) : null}
 
-        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrManager ? (
+        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
           <Row justify="center" align="middle">
             <Tooltip title="Save the current view configuration as default for all users.">
               <Button onClick={this.saveViewConfigurationAsDefault}>
@@ -1190,7 +1235,8 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
-  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
+  isAdminOrDatasetManager:
+    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -1,47 +1,50 @@
-import { Alert, Layout, Tooltip } from "antd";
 import { WarningFilled } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import * as React from "react";
-import _ from "lodash";
+import { Alert, Layout, Tooltip } from "antd";
+import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import type { ViewMode, Vector3, OrthoView } from "oxalis/constants";
+import Toast from "libs/toast";
+import { document, location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import CrossOriginApi from "oxalis/api/cross_origin_api";
+import type { OrthoView, Vector3, ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import type { ControllerStatus } from "oxalis/controller";
+import OxalisController from "oxalis/controller";
+import MergerModeController from "oxalis/controller/merger_mode_controller";
+import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { Store } from "oxalis/singletons";
+import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import OxalisController from "oxalis/controller";
-import type { ControllerStatus } from "oxalis/controller";
-import MergerModeController from "oxalis/controller/merger_mode_controller";
-import Toast from "libs/toast";
-import TracingView from "oxalis/view/tracing_view";
-import VersionView from "oxalis/view/version_view";
-import messages from "messages";
-import { document, location } from "libs/window";
-import ErrorHandling from "libs/error_handling";
-import CrossOriginApi from "oxalis/api/cross_origin_api";
 import {
-  recalculateInputCatcherSizes,
   initializeInputCatcherSizes,
+  recalculateInputCatcherSizes,
 } from "oxalis/view/input_catcher";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
-  storeLayoutConfig,
-  setActiveLayout,
   getLastActiveLayout,
   getLayoutConfig,
+  layoutEmitter,
+  setActiveLayout,
+  storeLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
-import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import TracingView from "oxalis/view/tracing_view";
+import VersionView from "oxalis/view/version_view";
+import * as React from "react";
+import { connect } from "react-redux";
+import { RouteComponentProps, withRouter } from "react-router-dom";
+import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
-import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
+import FlexLayoutWrapper from "./flex_layout_wrapper";
+import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
 
 const { Sider } = Layout;
@@ -82,10 +85,13 @@ type State = {
   contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
+  showFloatingMobileButtons: boolean;
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+  lastTouchTimeStamp: number | null = null;
+
   static getDerivedStateFromError() {
     // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
     // with unforeseeable consequences
@@ -115,6 +121,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuMeshId: null,
       contextMenuMeshIntersectionPosition: null,
       model: layout,
+      showFloatingMobileButtons: false,
     };
   }
 
@@ -132,6 +139,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       }
     }
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
+    window.removeEventListener("touchstart", this.handleTouch);
+    window.removeEventListener("mouseover", this.handleMouseOver);
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
@@ -169,6 +178,39 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
     initializeInputCatcherSizes();
     window.addEventListener("resize", this.debouncedOnLayoutChange);
+    window.addEventListener("touchstart", this.handleTouch);
+    window.addEventListener("mouseover", this.handleMouseOver, false);
+
+    if (window.screen.width <= 1080) {
+      // Simply assume mobile.
+      const { left, right } = Store.getState().uiInformation.borderOpenStatus;
+      if (left) {
+        layoutEmitter.emit("toggleBorder", "left");
+      }
+      if (right) {
+        layoutEmitter.emit("toggleBorder", "right");
+      }
+      // Immediately show mobile buttons
+      this.handleTouch();
+    }
+  };
+
+  handleTouch = () => {
+    this.lastTouchTimeStamp = Date.now();
+    this.setState({ showFloatingMobileButtons: true });
+  };
+
+  handleMouseOver = () => {
+    if (this.lastTouchTimeStamp && Date.now() - this.lastTouchTimeStamp < 1000) {
+      // Ignore mouse move events when they are shortly after touch events because the browser
+      // emulates these events when touch is used.
+      // Also ignore the event when touch was never used, because then the mobile buttons
+      // were never shown, anyway.
+      return;
+    }
+
+    this.setState({ showFloatingMobileButtons: false });
+    this.lastTouchTimeStamp = null;
   };
 
   showContextMenuAt = (
@@ -300,6 +342,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
+        {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && (
           <ContextMenuContainer

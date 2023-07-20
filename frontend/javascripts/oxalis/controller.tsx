@@ -72,9 +72,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
   componentDidMount() {
-    // The annotation view should be rendered without the special mobile-friendly
-    // viewport meta tag.
-    Utils.disableViewportMetatag();
     this._isMounted = true;
     Store.dispatch(setIsInAnnotationViewAction(true));
     UrlManager.initialize();

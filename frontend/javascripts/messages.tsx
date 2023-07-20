@@ -47,6 +47,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   useLegacyBindings: "Classic Controls",
   blendMode: "Blend Mode",
   renderWatermark: "Logo in Screenshots",
+  antialiasRendering: "Antialiasing",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -77,6 +78,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   blendMode:
     "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
+  antialiasRendering: "Antialias rendering (can impact performance)",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
@@ -234,8 +236,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
     "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file":
+  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
+    "Checking for agglomerate files...",
+  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":
     "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":

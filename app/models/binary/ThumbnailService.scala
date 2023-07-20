@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
@@ -21,10 +21,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class ThumbnailService @Inject()(dataSetService: DataSetService,
+class ThumbnailService @Inject()(dataSetService: DatasetService,
                                  thumbnailCachingService: ThumbnailCachingService,
-                                 dataSetConfigurationService: DatasetConfigurationService,
-                                 dataSetDAO: DataSetDAO,
+                                 datasetConfigurationService: DatasetConfigurationService,
+                                 datasetDAO: DatasetDAO,
                                  thumbnailDAO: ThumbnailDAO)
     extends LazyLogging
     with MimeTypes {
@@ -44,7 +44,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
@@ -68,11 +68,11 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                                         ctx: DBAccessContext,
                                                         mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
       dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
-      viewConfiguration <- dataSetConfigurationService.getDataSetViewConfigurationForDataset(List.empty,
+      viewConfiguration <- datasetConfigurationService.getDataSetViewConfigurationForDataset(List.empty,
                                                                                              datasetName,
                                                                                              organizationName)(ctx)
       (mag1BoundingBox, mag, intensityRangeOpt) = selectParameters(viewConfiguration,
@@ -100,7 +100,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                         mag1BoundingBox)
     } yield image
 
-  private def selectParameters(viewConfiguration: DataSetViewConfiguration,
+  private def selectParameters(viewConfiguration: DatasetViewConfiguration,
                                usableDataSource: GenericDataSource[DataLayerLike],
                                layerName: String,
                                layer: DataLayerLike,
@@ -125,7 +125,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt)
   }
 
-  private def readIntensityRange(viewConfiguration: DataSetViewConfiguration,
+  private def readIntensityRange(viewConfiguration: DatasetViewConfiguration,
                                  layerName: String): Option[(Double, Double)] =
     for {
       layersJsValue <- viewConfiguration.get("layers")
@@ -139,7 +139,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
 
 }
 
-class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject()(dataSetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.

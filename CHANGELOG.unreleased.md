@@ -22,6 +22,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a new button to the layer settings in view only dataset mode to save the current view configuration as the dataset's default. [#7205](https://github.com/scalableminds/webknossos/pull/7205)
 - Added security.txt according to [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116). The content is configurable and it can be disabled. [#7182](https://github.com/scalableminds/webknossos/pull/7182)
 - Added tooltips to explain the task actions "Reset" and "Reset and Cancel". [#7201](https://github.com/scalableminds/webknossos/pull/7201)
+- Thumbnail improvements: Thumbnails now use intensity configuration, thumbnails can now be created for float datasets, and they are cached across webknossos restarts. [#7190](https://github.com/scalableminds/webknossos/pull/7190)
+- Added batch actions for segment groups, such as changing the color and loading or downloading all corresponding meshes. [#7164](https://github.com/scalableminds/webknossos/pull/7164).
 
 ### Changed
 - Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)

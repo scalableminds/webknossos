@@ -38,6 +38,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
   def clear(): Unit = store.synchronous().invalidateAll()
 
   def keys: Set[K] = store.synchronous().asMap().keySet().asScala.toSet
+
 }
 
 object AlfuCache {

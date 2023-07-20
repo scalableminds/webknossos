@@ -80,7 +80,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -381,7 +381,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
-    draggingDisabled?: boolean,
+    draggingDisabled: boolean = true,
   ) => {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
@@ -469,7 +469,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
-        {draggingDisabled == null || draggingDisabled ? null : <DragHandle />}
+        {draggingDisabled ? null : <DragHandle />}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -737,7 +737,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName,
     layerConfiguration,
     isColorLayer,
-    draggingDisabled = undefined,
+    draggingDisabled = true,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
@@ -1100,21 +1100,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   render() {
-    const { layers, colorLayerOrder } = this.props.datasetConfiguration;
+    const { layers, colorLayerOrder, blendMode } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
     const SortableLayerSettings = this.SortableLayerSettings;
 
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
+    const isSortingDisabled = colorLayerOrder.length < 2 || blendMode === BLEND_MODES.Additive;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
-      const isSortingDisabled = colorLayerOrder.length < 2;
       return (
         <SortableLayerSettings
           key={layerName}
           layerName={layerName}
           layerConfiguration={layers[layerName]}
-          isColorLayer={true}
+          isColorLayer
           index={index}
           disabled={isSortingDisabled}
           draggingDisabled={isSortingDisabled}

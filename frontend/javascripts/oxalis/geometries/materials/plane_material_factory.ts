@@ -642,6 +642,7 @@ class PlaneMaterialFactory {
             colorLayerOrder.length !== oldLayerOrder.length ||
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
+            oldLayerOrder = [...colorLayerOrder];
             this.recomputeShaders();
           }
           app.vent.emit("rerender");

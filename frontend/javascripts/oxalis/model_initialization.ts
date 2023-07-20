@@ -799,18 +799,19 @@ function ensureDatasetSettingsHasLayerOrder(
   const colorLayerNames = _.keys(datasetConfiguration.layers).filter((layerName) =>
     isColorLayer(dataset, layerName),
   );
+  const onlyExistingLayers =
+    datasetConfiguration?.colorLayerOrder?.filter(
+      (layerName) => colorLayerNames.indexOf(layerName) >= 0,
+    ) || [];
   if (
     datasetConfiguration.colorLayerOrder == null ||
-    datasetConfiguration.colorLayerOrder.length < colorLayerNames.length
+    onlyExistingLayers.length < colorLayerNames.length
   ) {
     return {
       ...datasetConfiguration,
       colorLayerOrder: colorLayerNames,
     };
   }
-  const onlyExistingLayers = datasetConfiguration.colorLayerOrder.filter(
-    (layerName) => colorLayerNames.indexOf(layerName) >= 0,
-  );
   return { ...datasetConfiguration, colorLayerOrder: onlyExistingLayers };
 }
 

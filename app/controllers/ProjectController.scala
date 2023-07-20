@@ -42,7 +42,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   def listWithStatus: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       projects <- projectDAO.findAll ?~> "project.list.failed"
-      allCounts <- taskDAO.countOpenInstancesAndTimeByProject
+      allCounts <- taskDAO.countPendingInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
           openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
@@ -165,7 +165,7 @@ Expects:
       taskTypeIdValidated <- ObjectId.fromString(taskTypeId)
       _ <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
-      allCounts <- taskDAO.countOpenInstancesAndTimeByProject
+      allCounts <- taskDAO.countPendingInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
           openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
@@ -217,7 +217,7 @@ Expects:
         projectIdValidated <- ObjectId.fromString(id)
         project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
         _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
-        openInstancesAndTime <- taskDAO.countOpenInstancesAndTimeForProject(project._id)
+        openInstancesAndTime <- taskDAO.countPendingInstancesAndTimeForProject(project._id)
         js <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
       } yield Ok(js)
     }

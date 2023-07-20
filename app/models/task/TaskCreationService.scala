@@ -110,7 +110,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       annotations <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
     } yield {
       val nonCancelledTaskAnnotations = annotations.filter(_.state != AnnotationState.Cancelled)
-      if (task.totalInstances == 1 && task.openInstances == 0 &&
+      if (task.totalInstances == 1 && task.pendingInstances == 0 &&
           nonCancelledTaskAnnotations.nonEmpty &&
           nonCancelledTaskAnnotations.head.state == AnnotationState.Finished)
         Fox.successful(nonCancelledTaskAnnotations.head)
@@ -539,8 +539,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         params.scriptId.map(ObjectId(_)),
         taskTypeIdValidated,
         params.neededExperience.trim,
-        params.openInstances, //all instances are open at this time
-        params.openInstances,
+        params.pendingInstances, //all instances are open at this time
+        params.pendingInstances,
         tracingTime = None,
         boundingBox = params.boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)

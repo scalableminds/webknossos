@@ -85,6 +85,6 @@ class TaskService @Inject()(conf: WkConf,
   def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
     for {
       activeCount <- annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0)
-    } yield CompletionStatus(task.openInstances, activeCount, task.totalInstances - (activeCount + task.openInstances))
+    } yield CompletionStatus(task.pendingInstances, activeCount, task.totalInstances - (activeCount + task.pendingInstances))
 
 }

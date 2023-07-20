@@ -141,7 +141,7 @@ Expects:
         project <- projectDAO.findOne(task._project)
         _ <- Fox
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
+        _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskIdValidated)
         json <- taskService.publicWrites(updatedTask)
       } yield JsonOk(json, Messages("task.editSuccess"))

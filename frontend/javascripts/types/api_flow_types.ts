@@ -320,7 +320,7 @@ export type APITaskType = {
   readonly tracingType: TracingType;
 };
 export type TaskStatus = {
-  readonly open: number;
+  readonly pending: number;
   readonly active: number;
   readonly finished: number;
 };
@@ -504,7 +504,7 @@ export type APIProjectProgressReport = {
   readonly paused: boolean;
   readonly totalTasks: number;
   readonly totalInstances: number;
-  readonly openInstances: number;
+  readonly pendingInstances: number;
   readonly activeInstances: number;
   readonly finishedInstances: number;
   readonly priority: number;

@@ -97,7 +97,7 @@ export function taskToText(task: APITask) {
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map((vector3) =>
     vector3.join(","),
   );
-  const totalNumberOfInstances = status.open + status.active + status.finished;
+  const totalNumberOfInstances = status.pending + status.active + status.finished;
   const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
@@ -337,7 +337,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
         scriptId: task.script ? task.script.id : null,
-        openInstances: task.status.open,
+        pendingInstances: task.status.pending,
       });
 
       const validFormValues = _.omitBy(defaultValues, _.isNull);
@@ -490,7 +490,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     if (
                       taskResponse?.dataSet != null &&
                       _.isEqual(taskResponse.status, {
-                        open: 0,
+                        pending: 0,
                         active: 0,
                         finished: 1,
                       })
@@ -688,7 +688,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </Row>
 
               <FormItem
-                name="openInstances"
+                name="pendingInstances"
                 label={instancesLabel}
                 hasFeedback
                 rules={[

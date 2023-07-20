@@ -86,6 +86,7 @@ export type UrlManagerState = {
   activeNode?: number;
   rotation?: Vector3;
   stateByLayer?: UrlStateByLayer;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -295,6 +296,7 @@ class UrlManager {
       position,
       mode,
       zoomStep,
+      additionalCoordinates: state.flycam.additionalCoordinates,
       ...rotationOptional,
       ...activeNodeOptional,
       ...stateByLayerOptional,

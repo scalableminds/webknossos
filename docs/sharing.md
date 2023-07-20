@@ -204,6 +204,7 @@ The information is JSON-encoded in the URL fragment and has the following format
     activeNode?: number,
     rotation?: Vector3,
     stateByLayer?: UrlStateByLayer,
+    additionalCoordinates?: AdditionalCoordinate[];
   |};
 
   ```

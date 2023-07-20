@@ -667,6 +667,10 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   if (state.stateByLayer != null) {
     applyLayerState(state.stateByLayer);
   }
+
+  if (state.additionalCoordinates != null) {
+    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates))
+  }
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {

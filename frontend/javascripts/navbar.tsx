@@ -279,7 +279,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         key: "/reports/openTasks",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/reports/openTasks">Open Tasks</Link>
+            <Link to="/reports/openTasks">Available Task Assignments</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -739,17 +739,6 @@ function Navbar({
     isHelpMenuOpen,
   );
 
-  const navbarStyle: Record<string, any> = {
-    padding: 0,
-    overflowX: "auto",
-    overflowY: "hidden",
-    position: "fixed",
-    height: navbarHeight,
-    display: "flex",
-    alignItems: "center",
-    whiteSpace: "nowrap",
-  };
-
   const _isAuthenticated = isAuthenticated && activeUser != null;
 
   const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
@@ -826,7 +815,6 @@ function Navbar({
 
   return (
     <Header
-      style={navbarStyle}
       className={classnames("navbar-header", {
         "collapsed-nav-header": collapseAllNavItems,
       })}

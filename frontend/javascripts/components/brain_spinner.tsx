@@ -20,8 +20,8 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
             src="/assets/images/brain.svg"
             alt=""
             style={{
-              width: 375,
-              height: 299,
+              width: "100%",
+              height: "100%",
               marginLeft: "auto",
               marginRight: "auto",
               marginTop: "10%",

@@ -56,6 +56,8 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
+  hasAgglomerateMapping,
+  hasConnectomeFile,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -69,8 +71,6 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  hasAgglomerateMapping,
-  hasConnectomeFile,
   loadAgglomerateSkeletonAtPosition,
   loadSynapsesOfAgglomerateAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";

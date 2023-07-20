@@ -218,7 +218,7 @@ This may be useful when dealing with large datasets that should remain in your d
 scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 [Learn more.](https://scalableminds.com/voxelytics-align)
 
-![Dataset Alignment](https://www.youtube.com/watch?v=yYauIHZcI_4)
+![youtube-video](https://www.youtube.com/embed/yYauIHZcI_4)
 
 ## Sample Datasets
 

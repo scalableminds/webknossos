@@ -174,7 +174,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
-      additionalCoordinates: [],
+      someAdditionalCoordinates: [],
       ...oldSegment,
       ...segment,
       somePosition,
@@ -203,6 +203,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
           somePosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
+          someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
         } as Segment,
       ]),

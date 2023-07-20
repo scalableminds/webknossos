@@ -562,8 +562,8 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.props.setPosition(segment.somePosition);
-    if (segment.additionalCoordinates) {
-      this.props.setAdditionalCoordinates(segment.additionalCoordinates);
+    if (segment.someAdditionalCoordinates) {
+      this.props.setAdditionalCoordinates(segment.someAdditionalCoordinates);
     }
   };
 

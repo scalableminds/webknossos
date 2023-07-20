@@ -221,8 +221,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
-  // todop: rename to someAdditionalCoordinates
-  readonly additionalCoordinates: AdditionalCoordinate[] | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;

@@ -193,7 +193,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         activeCellId,
         {
           somePosition: startEditingAction.position,
-          additionalCoordinates: additionalCoordinates || undefined,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -292,7 +292,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         activeCellId,
         {
           somePosition: lastPosition,
-          additionalCoordinates: additionalCoordinates || undefined,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -447,7 +447,7 @@ export function* floodFill(): Saga<void> {
         volumeTracing.activeCellId,
         {
           somePosition: seedPosition,
-          additionalCoordinates: additionalCoordinates || undefined,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -586,7 +586,7 @@ function* uncachedDiffSegmentLists(
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
-        segment.additionalCoordinates,
+        segment.someAdditionalCoordinates,
         segment.name,
         segment.color,
         segment.groupId,
@@ -667,7 +667,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           somePosition: seedPosition,
-          additionalCoordinates: seedAdditionalCoordinates,
+          someAdditionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -694,7 +694,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           somePosition,
-          additionalCoordinates: someAdditionalCoordinates,
+          someAdditionalCoordinates: someAdditionalCoordinates,
         },
         layerName,
         undefined,

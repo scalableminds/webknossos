@@ -81,7 +81,7 @@ const getLoadPrecomputedMeshMenuItem = (
           loadPrecomputedMesh(
             segment.id,
             segment.somePosition,
-            segment.additionalCoordinates,
+            segment.someAdditionalCoordinates,
             currentMeshFile?.meshFileName,
           ),
         );
@@ -131,7 +131,7 @@ const getComputeMeshAdHocMenuItem = (
       }
 
       andCloseContextMenu(
-        loadAdHocMesh(segment.id, segment.somePosition, segment.additionalCoordinates),
+        loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       );
     },
     disabled,
@@ -157,7 +157,11 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       andCloseContextMenu(
-        setActiveCell(segment.id, segment.somePosition, segment.additionalCoordinates || undefined),
+        setActiveCell(
+          segment.id,
+          segment.somePosition,
+          segment.someAdditionalCoordinates || undefined,
+        ),
       ),
     disabled,
     label: <Tooltip title={title}>Activate Segment ID</Tooltip>,

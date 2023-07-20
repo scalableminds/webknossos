@@ -24,6 +24,10 @@ export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
 
+export function keys<T extends string>(o: Record<T, any>): T[] {
+  return Object.keys(o) as Array<keyof typeof o>;
+}
+
 export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
   return Object.values(o);
 }
@@ -1068,16 +1072,6 @@ export function getWindowBounds(): [number, number] {
   }
 
   return [width, height];
-}
-
-export function disableViewportMetatag() {
-  const viewport = document.querySelector("meta[name=viewport]");
-
-  if (!viewport) {
-    return;
-  }
-
-  viewport.setAttribute("content", "");
 }
 
 /**

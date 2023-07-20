@@ -202,6 +202,12 @@ case class StringArrayValue(v: List[String]) extends SqlValue with SqlEscaping {
   override def debugInfo: String = "{" + v.map(escapeLiteral).mkString(",") + "}"
 }
 
+case class ByteArrayValue(v: Array[Byte]) extends SqlValue {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setBytes(v)
+
+  override def debugInfo: String = s"<${v.length}-byte raw array>"
+}
+
 case class EnumerationArrayValue(v: List[Enumeration#Value], sqlEnumName: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
 

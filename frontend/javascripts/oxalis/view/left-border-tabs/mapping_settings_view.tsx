@@ -6,14 +6,15 @@ import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
-import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerByName,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
-import type { OptionalMappingProperties } from "oxalis/model/actions/settings_actions";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  setLayerMappingsAction,
+} from "oxalis/model/actions/dataset_actions";
 import {
   setMappingEnabledAction,
   setHideUnmappedIdsAction,
@@ -42,19 +43,10 @@ type StateProps = {
   mappingType: MappingType;
   mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
-  setMappingEnabled: (arg0: string, arg1: boolean) => void;
-  setHideUnmappedIds: (arg0: string, arg1: boolean) => void;
-  setAvailableMappingsForLayer: (arg0: string, arg1: Array<string>, arg2: Array<string>) => void;
-  setMapping: (
-    arg0: string,
-    arg1: string | null | undefined,
-    arg2: MappingType,
-    optionalProperties?: OptionalMappingProperties,
-  ) => void;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
-};
+} & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
 type State = {
   // shouldMappingBeEnabled is the UI state which is directly connected to the
@@ -64,7 +56,6 @@ type State = {
   // this.props.isMappingEnabled
   shouldMappingBeEnabled: boolean;
   isRefreshingMappingList: boolean;
-  didRefreshMappingList: boolean;
 };
 
 const needle = "##";
@@ -83,7 +74,6 @@ class MappingSettingsView extends React.Component<Props, State> {
   state = {
     shouldMappingBeEnabled: false,
     isRefreshingMappingList: false,
-    didRefreshMappingList: false,
   };
 
   componentDidMount() {
@@ -101,6 +91,7 @@ class MappingSettingsView extends React.Component<Props, State> {
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
     this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
+
   handleChangeMapping = (packedMappingNameWithCategory: string): void => {
     const [mappingName, mappingType] = unpackMappingNameAndCategory(packedMappingNameWithCategory);
 
@@ -116,35 +107,17 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   async refreshLayerMappings() {
-    if (this.state.didRefreshMappingList || this.state.isRefreshingMappingList) {
-      return;
-    }
-
     const { segmentationLayer } = this.props;
 
     if (!segmentationLayer) {
       return;
     }
 
-    this.setState({
-      isRefreshingMappingList: true,
-    });
-    const params: [string, APIDataset, string] = [
-      this.props.dataset.dataStore.url,
-      this.props.dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-      segmentationLayer.fallbackLayer != null
-        ? segmentationLayer.fallbackLayer
-        : segmentationLayer.name,
-    ];
-    const [mappings, agglomerates] = await Promise.all([
-      getMappingsForDatasetLayer(...params),
-      getAgglomeratesForDatasetLayer(...params),
-    ]);
-    this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings, agglomerates);
-    this.setState({
-      isRefreshingMappingList: false,
-      didRefreshMappingList: true,
-    });
+    if (this.props.segmentationLayer?.mappings != null) {
+      return;
+    }
+
+    this.props.ensureLayerMappingsAreLoaded(segmentationLayer.name);
   }
 
   handleSetMappingEnabled = (shouldMappingBeEnabled: boolean): void => {
@@ -220,15 +193,16 @@ class MappingSettingsView extends React.Component<Props, State> {
                   onChange={this.handleSetMappingEnabled}
                   value={shouldMappingBeEnabled}
                   label="ID Mapping"
-                  loading={this.state.isRefreshingMappingList}
+                  // Assume that the mappings are being loaded if they are null
+                  loading={shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null}
                   disabled={this.props.isEditableMappingActive}
                 />
               </div>
 
               {/*
-          Show mapping-select even when the mapping is disabled but the UI was used before
-          (i.e., mappingName != null)
-          */}
+                Show mapping-select even when the mapping is disabled but the UI was used before
+                (i.e., mappingName != null)
+                */}
               {shouldMappingBeEnabled ? (
                 <Select
                   placeholder="Select mapping"
@@ -267,6 +241,7 @@ const mapDispatchToProps = {
   setAvailableMappingsForLayer: setLayerMappingsAction,
   setHideUnmappedIds: setHideUnmappedIdsAction,
   setMapping: setMappingAction,
+  ensureLayerMappingsAreLoaded: ensureLayerMappingsAreLoadedAction,
 };
 
 function mapStateToProps(state: OxalisState, ownProps: OwnProps) {

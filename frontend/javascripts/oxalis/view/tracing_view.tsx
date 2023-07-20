@@ -74,14 +74,13 @@ export default function TracingView() {
     position: "absolute",
     top: 0,
     left: 0,
-  };
+  } as const;
   return (
     <div onContextMenu={handleContextMenu}>
       <canvas
         ref={registerWebGlCrashHandler}
         key="render-canvas"
         id="render-canvas"
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ width: string; position: string; top: numb... Remove this comment to see the full error message
         style={canvasStyle}
       />
     </div>

@@ -69,22 +69,22 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational                      controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                             controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                         controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
-POST          /datasets                                                                         controllers.DataSetController.create(typ: String)
-POST          /datasets/exploreRemote                                                           controllers.DataSetController.exploreRemoteDataset
-GET           /datasets/disambiguate/:dataSetName/toNew                                         controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/health                                   controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PATCH         /datasets/:organizationName/:dataSetName                                          controllers.DataSetController.update(organizationName: String, dataSetName: String)
-PATCH         /datasets/:organizationName/:dataSetName/updatePartial                            controllers.DataSetController.updatePartial(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/accessList                               controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/sharingToken                             controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
-DELETE        /datasets/:organizationName/:dataSetName/sharingToken                             controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
-PATCH         /datasets/:organizationName/:dataSetName/teams                                    controllers.DataSetController.updateTeams(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail                  controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
-POST          /datasets/:organizationName/:dataSetName/layers/:layer/segmentAnythingEmbedding   controllers.DataSetController.segmentAnythingEmbedding(organizationName: String, dataSetName: String, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
-PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache                      controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/isValidNewName                           controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName                                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
+GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
+POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset
+GET           /datasets/disambiguate/:dataSetName/toNew                                         controllers.DatasetController.getOrganizationForDataSet(dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/health                                   controllers.DatasetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
+PATCH         /datasets/:organizationName/:dataSetName                                          controllers.DatasetController.update(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName/updatePartial                            controllers.DatasetController.updatePartial(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/accessList                               controllers.DatasetController.accessList(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/sharingToken                             controllers.DatasetController.getSharingToken(organizationName: String, dataSetName: String)
+DELETE        /datasets/:organizationName/:dataSetName/sharingToken                             controllers.DatasetController.deleteSharingToken(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName/teams                                    controllers.DatasetController.updateTeams(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail                  controllers.DatasetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int], mappingName: Option[String])
+POST          /datasets/:organizationName/:dataSetName/layers/:layer/segmentAnythingEmbedding   controllers.DatasetController.segmentAnythingEmbedding(organizationName: String, dataSetName: String, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
+PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache                      controllers.DatasetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/isValidNewName                           controllers.DatasetController.isValidNewName(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName                                          controllers.DatasetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot

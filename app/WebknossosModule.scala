@@ -3,7 +3,7 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import controllers.InitialDataService
 import models.analytics.AnalyticsSessionService
 import models.annotation.{AnnotationMutexService, AnnotationStore}
-import models.binary.DatasetService
+import models.binary.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.storage.UsedStorageService
 import models.task.TaskService
@@ -15,7 +15,7 @@ import oxalis.mail.MailchimpTicker
 import oxalis.telemetry.SlackNotificationService
 import utils.sql.SqlClient
 
-class WebKnossosModule extends AbstractModule {
+class WebknossosModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[Startup]).asEagerSingleton()
     bind(classOf[SqlClient]).asEagerSingleton()
@@ -38,5 +38,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[WorkerLivenessService]).asEagerSingleton()
     bind(classOf[LokiClient]).asEagerSingleton()
     bind(classOf[UsedStorageService]).asEagerSingleton()
+    bind(classOf[ThumbnailCachingService]).asEagerSingleton()
   }
 }

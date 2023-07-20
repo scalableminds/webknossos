@@ -14,11 +14,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
-
-import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
@@ -28,6 +25,7 @@ import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
@@ -40,8 +38,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
+                               thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
-                               val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -159,6 +157,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Fox.successful(foundDataset._id)
     else
       for {
+        _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
         _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
                                                                   dataStore.name,
                                                                   dataSource.hashCode,
@@ -179,6 +178,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           s"Replacing dataset ${foundDataset.name} (status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
         )
         for {
+          _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
           _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
                                                                     dataStore.name,
                                                                     dataSource.hashCode,
@@ -282,7 +282,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         } yield
           (user.isAdminOf(dataset._organization)
             || user.isDatasetManager
-            || dataset._uploader.contains(user._id)
             || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }

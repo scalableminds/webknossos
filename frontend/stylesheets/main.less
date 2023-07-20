@@ -41,8 +41,8 @@
 }
 
 // ----------------------- MAIN STYLES
-@font-family: "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
-  Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+@font-family: "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
   sans-serif;
 
 body {
@@ -83,8 +83,6 @@ body {
   }
 
   @media @smartphones {
-    height: 54px !important;
-
     a[href="/"] span {
       font-size: 0px; // hide text
     }
@@ -386,7 +384,7 @@ i.without-icon-margin,
 .webknossos-welcome-toast {
   background-color: @primary-color;
   color: white;
-  
+
   .logo {
     background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
     filter: brightness(4);
@@ -400,7 +398,7 @@ i.without-icon-margin,
     position: relative;
   }
   .ant-notification-notice-message {
-    padding-left: 40px; 
+    padding-left: 40px;
     margin-top: 20px;
     margin-bottom: 30px;
     color: white;
@@ -417,10 +415,10 @@ i.without-icon-margin,
       margin-bottom: 30px;
       margin-right: 60px;
     }
-    
-    .drawing-welcome-guy{
+
+    .drawing-welcome-guy {
       position: relative;
-    
+
       &:before {
         width: 53px;
         height: 100px;
@@ -440,7 +438,6 @@ i.without-icon-margin,
   .ant-notification-notice-close {
     color: white;
   }
-
 }
 
 .no-borders {
@@ -626,22 +623,21 @@ i.without-icon-margin,
   margin-bottom: 4px;
 }
 
-
 .login-view {
-
   & {
     height: 100%;
     min-height: calc(100vh - @navbar-height);
     background: @background-blue-neurons;
   }
-  
+
   .login-content {
     background-color: white;
     width: 600px;
-    padding: 80px; 
+    padding: 80px;
 
     h3 {
       color: @black // always enforce dark text color to prevent dark mode bugs
+;
     }
 
     @media @smartphones {

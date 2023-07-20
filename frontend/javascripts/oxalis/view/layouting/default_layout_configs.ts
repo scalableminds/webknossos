@@ -112,20 +112,14 @@ const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
-// @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
-const OrthoViewports: Record<keyof typeof OrthoViews, TabNode> = {};
-Object.keys(OrthoViews).forEach((viewportId) => {
-  // @ts-expect-error ts-migrate(2476) FIXME: A const enum member can only be accessed using a s... Remove this comment to see the full error message
+const OrthoViewports = {} as Record<keyof typeof OrthoViews, TabNode>;
+Utils.keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
-// @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
-const ArbitraryViewports: Record<keyof typeof ArbitraryViews, TabNode> = {};
-Object.keys(ArbitraryViews).forEach((viewportId) => {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
+Utils.keys(ArbitraryViews).forEach((viewportId) => {
   const name = ArbitraryViewsToName[viewportId];
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const globalLayoutSettings: GlobalConfig = {
@@ -149,8 +143,12 @@ function buildTabsets(setsOfTabs: Array<Array<TabNode>>): Array<TabsetNode> {
   return tabsets;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'side' implicitly has an 'any' type.
-function buildBorder(side, tabset: Array<TabNode>, width: number, isBorderOpen: boolean): Border {
+function buildBorder(
+  side: "left" | "right",
+  tabset: Array<TabNode>,
+  width: number,
+  isBorderOpen: boolean,
+): Border {
   const buildTabset = Tabset(tabset, 100);
   const border: Border = {
     type: "border",

@@ -32,7 +32,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import { BlobReader, ZipReader, Entry } from "@zip.js/zip.js";
+import Zip from "libs/zipjs_wrapper";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -490,16 +490,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       if (fileExtension === "zip") {
         try {
-          const reader = new ZipReader(new BlobReader(file));
+          const reader = new Zip.ZipReader(new Zip.BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
-          const wkwFile = entries.find((entry: Entry) =>
+          const wkwFile = entries.find((entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
           );
           const needsConversion = wkwFile == null;
           this.handleNeedsConversionInfo(needsConversion);
 
-          const nmlFile = entries.find((entry: Entry) =>
+          const nmlFile = entries.find((entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "nml"),
           );
           if (nmlFile) {

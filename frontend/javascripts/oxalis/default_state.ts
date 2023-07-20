@@ -91,6 +91,7 @@ const defaultState: OxalisState = {
       dilateValue: 2,
     },
     renderWatermark: true,
+    antialiasRendering: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

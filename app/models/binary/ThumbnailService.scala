@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import com.typesafe.scalalogging.LazyLogging
-import models.configuration.DataSetConfigurationService
+import models.configuration.DatasetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 
 class ThumbnailService @Inject()(dataSetService: DataSetService,
                                  thumbnailCachingService: ThumbnailCachingService,
-                                 dataSetConfigurationService: DataSetConfigurationService,
+                                 dataSetConfigurationService: DatasetConfigurationService,
                                  dataSetDAO: DataSetDAO,
                                  thumbnailDAO: ThumbnailDAO)
     extends LazyLogging

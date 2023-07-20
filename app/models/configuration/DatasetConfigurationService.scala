@@ -13,7 +13,7 @@ import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 
-class DataSetConfigurationService @Inject()(dataSetService: DatasetService,
+class DatasetConfigurationService @Inject()(dataSetService: DatasetService,
                                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                             userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
                                             dataSetDAO: DatasetDAO,

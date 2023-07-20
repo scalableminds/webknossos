@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.inject.Inject
 import models.binary.{DatasetDAO, DatasetService}
-import models.configuration.DataSetConfigurationService
+import models.configuration.DatasetConfigurationService
 import models.user.UserService
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.Messages
@@ -14,11 +14,11 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(
-    userService: UserService,
-    dataSetService: DatasetService,
-    dataSetDAO: DatasetDAO,
-    dataSetConfigurationService: DataSetConfigurationService,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                                         userService: UserService,
+                                         dataSetService: DatasetService,
+                                         dataSetDAO: DatasetDAO,
+                                         dataSetConfigurationService: DatasetConfigurationService,
+                                         sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>

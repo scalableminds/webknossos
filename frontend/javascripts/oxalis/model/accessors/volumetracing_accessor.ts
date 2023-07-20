@@ -18,7 +18,7 @@ import type {
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import type { AnnotationTool, ContourMode, Vector3, Vector4 } from "oxalis/constants";
+import { AnnotationTool, ContourMode, MappingStatusEnum, Vector3, Vector4 } from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   getMappingInfo,
@@ -28,6 +28,7 @@ import {
   getVisibleSegmentationLayer,
   getDataLayers,
   getLayerByName,
+  getVisibleOrLastSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import {
@@ -39,6 +40,7 @@ import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import messages from "messages";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -569,4 +571,96 @@ export function getSegmentColorAsHSLA(
   const [r, g, b, a] = getSegmentColorAsRGBA(state, mappedId, layerName);
   const [hue, saturation, value] = jsRgb2hsl([r, g, b]);
   return [hue, saturation, value, a];
+}
+
+const AGGLOMERATE_STATES = {
+  NO_SEGMENTATION: {
+    value: false,
+    reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
+  },
+  NO_MAPPING: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_mapping"],
+  },
+  NO_AGGLOMERATE_FILE_ACTIVE: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"],
+  },
+  NO_AGGLOMERATE_FILE_AVAILABLE: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
+  },
+  NO_AGGLOMERATE_FILES_LOADED_YET: {
+    value: false,
+    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet"],
+  },
+  YES: {
+    value: true,
+    reason: "",
+  },
+};
+
+const CONNECTOME_STATES = {
+  NO_SEGMENTATION: {
+    value: false,
+    reason: "A segmentation layer needs to be visible to load the synapses of a segment.",
+  },
+  NO_CONNECTOME_FILE: {
+    value: false,
+    reason: "A connectome file needs to be available to load the synapses of a segment.",
+  },
+  YES: {
+    value: true,
+    reason: "",
+  },
+};
+
+export function hasConnectomeFile(state: OxalisState) {
+  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
+
+  if (segmentationLayer == null) {
+    return CONNECTOME_STATES.NO_SEGMENTATION;
+  }
+
+  const { currentConnectomeFile } =
+    state.localSegmentationData[segmentationLayer.name].connectomeData;
+
+  if (currentConnectomeFile == null) {
+    return CONNECTOME_STATES.NO_CONNECTOME_FILE;
+  }
+
+  return CONNECTOME_STATES.YES;
+}
+
+export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+
+export function hasAgglomerateMapping(state: OxalisState) {
+  const segmentation = getVisibleSegmentationLayer(state);
+
+  if (!segmentation) {
+    return AGGLOMERATE_STATES.NO_SEGMENTATION;
+  }
+
+  if (segmentation.agglomerates == null) {
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILES_LOADED_YET;
+  }
+
+  if (segmentation.agglomerates.length === 0) {
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_AVAILABLE;
+  }
+
+  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    segmentation.name,
+  );
+
+  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+    return AGGLOMERATE_STATES.NO_MAPPING;
+  }
+
+  if (mappingType !== "HDF5") {
+    return AGGLOMERATE_STATES.NO_AGGLOMERATE_FILE_ACTIVE;
+  }
+
+  return AGGLOMERATE_STATES.YES;
 }

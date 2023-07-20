@@ -24,6 +24,7 @@ import type {
   ServerEditableMapping,
   APIOrganization,
   APIUserCompact,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -68,7 +69,6 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
-import { AdditionalCoordinate } from "./model/bucket_data_handling/wkstore_adapter";
 
 export type MutableCommentType = {
   content: string;

@@ -1,4 +1,4 @@
-import { AdditionalCoordinate } from "./model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 

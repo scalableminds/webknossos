@@ -28,7 +28,7 @@ import type {
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import { ResolutionInfo } from "../helpers/resolution_info";
-import { AdditionalCoordinate } from "./wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

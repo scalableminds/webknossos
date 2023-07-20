@@ -1,5 +1,6 @@
 import type { Vector3, OrthoView } from "oxalis/constants";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 type ZoomInAction = ReturnType<typeof zoomInAction>;
 type ZoomOutAction = ReturnType<typeof zoomOutAction>;
 type ZoomByDeltaAction = ReturnType<typeof zoomByDeltaAction>;

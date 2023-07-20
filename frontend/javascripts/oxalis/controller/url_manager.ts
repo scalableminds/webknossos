@@ -19,7 +19,7 @@ import messages from "messages";
 import { validateUrlStateJSON } from "types/validation";
 import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const MAX_UPDATE_INTERVAL = 1000;
 

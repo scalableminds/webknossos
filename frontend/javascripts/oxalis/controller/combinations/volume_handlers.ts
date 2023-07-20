@@ -12,7 +12,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();

@@ -1,5 +1,5 @@
 import { Vector3 } from "oxalis/constants";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;

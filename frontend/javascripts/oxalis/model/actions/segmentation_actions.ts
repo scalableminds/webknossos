@@ -1,6 +1,7 @@
 import type { Vector3 } from "oxalis/constants";
 import type { MappingType } from "oxalis/store";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export type AdHocIsosurfaceInfo = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;

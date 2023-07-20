@@ -41,7 +41,8 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 

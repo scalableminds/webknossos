@@ -35,7 +35,7 @@ import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const VersionRestoreWarning = (
   <Alert

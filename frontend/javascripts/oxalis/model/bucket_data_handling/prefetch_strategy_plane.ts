@@ -9,7 +9,8 @@ import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { ResolutionInfo } from "../helpers/resolution_info";
-import { AdditionalCoordinate } from "./wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
 export enum ContentTypes {

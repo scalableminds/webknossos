@@ -30,7 +30,7 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
-import { AdditionalCoordinate } from "./wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;

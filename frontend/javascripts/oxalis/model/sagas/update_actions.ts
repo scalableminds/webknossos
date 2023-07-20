@@ -1,7 +1,4 @@
-import type {
-  AdditionalCoordinate,
-  SendBucketInfo,
-} from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";
 import type {
   VolumeTracing,
@@ -12,6 +9,7 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;

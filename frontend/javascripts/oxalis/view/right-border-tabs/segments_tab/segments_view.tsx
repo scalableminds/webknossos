@@ -98,7 +98,7 @@ import {
 } from "../tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const { confirm } = Modal;
 const { Option } = Select;

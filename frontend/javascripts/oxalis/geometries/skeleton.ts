@@ -12,7 +12,7 @@ import NodeShader, {
 } from "oxalis/geometries/materials/node_shader";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const MAX_CAPACITY = 1000;
 

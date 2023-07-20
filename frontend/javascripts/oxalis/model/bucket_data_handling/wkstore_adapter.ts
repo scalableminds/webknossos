@@ -25,6 +25,7 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const COMPRESSION_WORKER_COUNT = 2;
@@ -33,7 +34,7 @@ const compressionPool = new WorkerPool(
   COMPRESSION_WORKER_COUNT,
 );
 export const REQUEST_TIMEOUT = 60000;
-export type AdditionalCoordinate = { name: string; value: number };
+
 export type SendBucketInfo = {
   position: Vector3;
   additionalCoordinates: Array<AdditionalCoordinate> | null | undefined;

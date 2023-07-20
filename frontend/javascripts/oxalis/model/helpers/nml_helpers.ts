@@ -29,7 +29,7 @@ import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constan
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];

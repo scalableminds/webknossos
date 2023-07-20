@@ -57,7 +57,7 @@ import { coalesce } from "libs/utils";
 
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {

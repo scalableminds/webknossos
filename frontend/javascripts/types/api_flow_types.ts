@@ -18,7 +18,8 @@ import type {
   TreeType,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { AdditionalCoordinate } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+
+export type AdditionalCoordinate = { name: string; value: number };
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =

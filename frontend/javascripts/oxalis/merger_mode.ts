@@ -11,7 +11,7 @@ import messages from "messages";
 import { UnregisterHandler } from "oxalis/api/api_latest";
 import { Action } from "oxalis/model/actions/actions";
 import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
-import { AdditionalCoordinate } from "./model/bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;

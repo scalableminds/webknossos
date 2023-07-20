@@ -1,6 +1,6 @@
 import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { AdditionalCoordinate } from "../bucket_data_handling/wkstore_adapter";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 import { type ResolutionInfo } from "./resolution_info";
 
 export function globalPositionToBucketPosition(

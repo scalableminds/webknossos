@@ -49,6 +49,7 @@ export const FlycamActions = [
   "ROLL_FLYCAM",
   "PITCH_FLYCAM",
   "ROTATE_FLYCAM",
+  "SET_ADDITIONAL_COORDINATES",
 ];
 export const zoomInAction = () =>
   ({

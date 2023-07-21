@@ -611,6 +611,7 @@ export function* diffSkeletonTracing(
     yield updateSkeletonTracing(
       skeletonTracing,
       V3.floor(getPosition(flycam)),
+      flycam.additionalCoordinates,
       getRotation(flycam),
       flycam.zoomStep,
     );

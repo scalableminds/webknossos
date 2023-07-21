@@ -699,6 +699,7 @@ export type ServerTracingBase = {
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
   editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
   version: number;

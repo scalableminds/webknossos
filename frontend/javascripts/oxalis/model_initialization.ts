@@ -524,7 +524,9 @@ function setupLayerForVolumeTracing(
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
-      // todop
+      // todop: TS complains because the index property is missing in the unified additional
+      // coordiantes. the backend should probably set this up, anyway?
+      // @ts-ignore
       additionalCoordinates: Utils.values(unifiedAdditionalCoordinates),
     };
     if (fallbackLayerIndex > -1) {
@@ -575,6 +577,7 @@ function determineDefaultState(
   const { viewMode } = temporaryConfiguration;
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
+  let additionalCoordinates = null;
 
   if (defaultPosition != null) {
     position = defaultPosition;
@@ -584,6 +587,7 @@ function determineDefaultState(
 
   if (someTracing != null) {
     position = Utils.point3ToVector3(someTracing.editPosition);
+    additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
 
   if (urlStatePosition != null) {
@@ -641,6 +645,7 @@ function determineDefaultState(
     rotation,
     activeNode,
     stateByLayer,
+    additionalCoordinates,
     ...rest,
   };
 }
@@ -669,7 +674,7 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   }
 
   if (state.additionalCoordinates != null) {
-    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates))
+    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
   }
 }
 

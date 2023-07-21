@@ -1125,7 +1125,7 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition);
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates);
     });
   };
 
@@ -1152,6 +1152,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.props.loadPrecomputedMesh(
         segment.id,
         segment.somePosition,
+        segment.someAdditionalCoordinates,
         this.props.currentMeshFile.meshFileName,
       );
     });

@@ -50,6 +50,7 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 0,
     y: 0,

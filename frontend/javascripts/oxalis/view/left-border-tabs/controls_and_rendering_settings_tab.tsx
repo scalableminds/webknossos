@@ -294,9 +294,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             ).toString()}
             onChange={this.onChangeGpuFactor}
             disabled={this.props.activeUser == null}
-            disabledReason={
-              this.props.activeUser == null ? "You need to log in to change this setting." : null
-            }
+            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
             options={getGpuFactorsWithLabels().map(([factor, label]) => ({
               label,
               value: factor.toString(),
@@ -368,9 +366,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             }
             value={this.props.userConfiguration.antialiasRendering}
             disabled={this.props.activeUser == null}
-            disabledReason={
-              this.props.activeUser == null ? "You need to log in to change this setting." : null
-            }
+            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
             onChange={(arg) => {
               askUserToReload();
               this.onChangeUser.antialiasRendering(arg);

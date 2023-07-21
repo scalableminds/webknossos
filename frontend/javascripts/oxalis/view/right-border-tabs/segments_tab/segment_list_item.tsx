@@ -147,7 +147,7 @@ type Props = {
   mappingInfo: ActiveMappingInfo;
   isHoveredSegmentId: boolean;
   centeredSegmentId: number | null | undefined;
-  selectedSegmentId: number | null | undefined;
+  selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
   handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
@@ -170,6 +170,7 @@ type Props = {
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
+  multiSelectMenu: MenuProps;
 };
 
 function _MeshInfoItem(props: {
@@ -315,7 +316,7 @@ function _SegmentListItem({
   mappingInfo,
   isHoveredSegmentId,
   centeredSegmentId,
-  selectedSegmentId,
+  selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
   handleSegmentDropdownMenuVisibility,
@@ -333,6 +334,7 @@ function _SegmentListItem({
   currentMeshFile,
   onRenameStart,
   onRenameEnd,
+  multiSelectMenu,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -455,7 +457,7 @@ function _SegmentListItem({
         padding: "2px 5px",
       }}
       className={classnames("segment-list-item", {
-        "is-selected-cell": segment.id === selectedSegmentId,
+        "is-selected-cell": selectedSegmentIds?.includes(segment.id), //TODO this wont work
         "is-hovered-cell": isHoveredSegmentId,
       })}
       onMouseEnter={() => {
@@ -466,7 +468,11 @@ function _SegmentListItem({
       }}
     >
       <Dropdown
-        menu={createSegmentContextMenu()} // The overlay is generated lazily. By default, this would make the overlay
+        menu={
+          selectedSegmentIds != null && selectedSegmentIds.length > 1
+            ? multiSelectMenu
+            : createSegmentContextMenu()
+        } // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.
@@ -539,7 +545,7 @@ function _SegmentListItem({
       >
         <MeshInfoItem
           segment={segment}
-          isSelectedInList={segment.id === selectedSegmentId}
+          isSelectedInList={selectedSegmentIds != null && selectedSegmentIds?.includes(segment.id)}
           isHovered={isHoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}

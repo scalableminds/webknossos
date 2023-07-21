@@ -34,7 +34,7 @@ import {
 } from "antd";
 import features from "features";
 import Toast from "libs/toast";
-import _ from "lodash";
+import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
@@ -398,7 +398,6 @@ class SegmentsView extends React.Component<Props, State> {
       nativeEvent: MouseEvent;
     },
   ) => {
-    debugger;
     const { node, nativeEvent } = event;
     const { key = "" } = node;
     //id
@@ -414,8 +413,11 @@ class SegmentsView extends React.Component<Props, State> {
       newSelectedKeys = [key];
     }
     console.log(newSelectedKeys);
+    console.log(this.state.selectedSegmentIds);
     this.setState({
-      selectedSegmentIds: newSelectedKeys as number[],
+      selectedSegmentIds: newSelectedKeys.map((key) =>
+        this.getSegmentIdForKey(String(key)),
+      ) as number[],
     });
   };
 
@@ -1158,7 +1160,21 @@ class SegmentsView extends React.Component<Props, State> {
     const allSegments = this.getSegmentsOfGroup(MISSING_GROUP_ID);
     if (allSegments == null) return [];
     const selectedSegmentIds = this.state.selectedSegmentIds;
-    return allSegments?.filter((segment) => selectedSegmentIds.includes(`segment-${segment.id}`));
+    return allSegments?.filter((segment) => selectedSegmentIds.includes(segment.id));
+  };
+
+  getSegmentIdForKey = (segmentKey: Key) => {
+    const segmentKeyAsString = String(segmentKey);
+    console.log("1");
+    if (segmentKeyAsString.startsWith("segment-")) {
+      console.log("2");
+      const potentialSegmentId = segmentKeyAsString.split("-")[1];
+      if (!isNaN(parseInt(potentialSegmentId))) {
+        console.log(potentialSegmentId);
+        return parseInt(potentialSegmentId);
+      }
+    }
+    return segmentKey;
   };
 
   handlePerSegment(groupId: number | null, callback: (s: Segment) => void) {
@@ -1570,7 +1586,9 @@ class SegmentsView extends React.Component<Props, State> {
                             }}
                             multiple
                             showLine
-                            selectedKeys={this.state.selectedSegmentIds}
+                            selectedKeys={this.state.selectedSegmentIds.map(
+                              (segmentId) => `segment-${segmentId}`,
+                            )}
                             switcherIcon={<DownOutlined />}
                             treeData={this.state.groupTree}
                             titleRender={titleRender}

@@ -611,9 +611,12 @@ function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
 
 export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
 
-export function getUnifiedAdditionalCoordinates(
+function _getUnifiedAdditionalCoordinates(
   mutableDataset: APIDataset,
 ): Record<string, Omit<AdditionalCoordinateWithBounds, "index">> {
+  /*
+   * Merge additional coordinates from all layers.
+   */
   const unifiedAdditionalCoordinates: Record<
     string,
     Omit<AdditionalCoordinateWithBounds, "index">
@@ -640,6 +643,8 @@ export function getUnifiedAdditionalCoordinates(
 
   return unifiedAdditionalCoordinates;
 }
+
+export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalCoordinates);
 
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.

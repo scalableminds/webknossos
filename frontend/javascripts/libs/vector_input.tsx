@@ -6,6 +6,8 @@ import InputComponent from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
 import { InputProps } from "antd";
 
+const CHARACTER_WIDTH_PX = 8;
+
 type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   value: T | string;
   onChange: (value: T) => void;
@@ -121,24 +123,27 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
   };
 
   handleOnKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-      event.preventDefault();
-      const { selectionStart, value } = event.target as HTMLInputElement;
-      const vec = Utils.stringToNumberArray(value) as T;
-
-      // count commas before the selection to obtain the index
-      const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(
-        (el: string) => el === ",",
-      ).length;
-      if (event.key === "ArrowUp") {
-        vec[vectorIndex] += 1;
-      } else {
-        vec[vectorIndex] -= 1;
-      }
-      this.props.onChange(vec);
-      const text = vec.join(", ");
-      this.setState({ text });
+    /* Increment/decrement current value when using arrow up/down */
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return;
     }
+
+    event.preventDefault();
+    const { selectionStart, value } = event.target as HTMLInputElement;
+    const vec = Utils.stringToNumberArray(value) as T;
+
+    // Count commas before the selection to obtain the index of the current element
+    const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(
+      (el: string) => el === ",",
+    ).length;
+    if (event.key === "ArrowUp") {
+      vec[vectorIndex] += 1;
+    } else {
+      vec[vectorIndex] -= 1;
+    }
+    this.props.onChange(vec);
+    const text = vec.join(", ");
+    this.setState({ text });
   };
 
   render() {
@@ -150,9 +155,8 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
     } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
 
     const { addonBefore } = props;
-    const CHARACTER_WIDTH = 8;
     const addonBeforeLength =
-      typeof addonBefore === "string" ? 20 + CHARACTER_WIDTH * addonBefore.length : 0;
+      typeof addonBefore === "string" ? 20 + CHARACTER_WIDTH_PX * addonBefore.length : 0;
 
     return (
       <InputComponent
@@ -166,7 +170,9 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
             ? {
                 ...style,
                 width:
-                  this.getText(this.state.text).length * CHARACTER_WIDTH + 25 + addonBeforeLength,
+                  this.getText(this.state.text).length * CHARACTER_WIDTH_PX +
+                  25 +
+                  addonBeforeLength,
               }
             : style
         }

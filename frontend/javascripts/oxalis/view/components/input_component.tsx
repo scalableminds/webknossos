@@ -19,6 +19,7 @@ class InputComponent extends React.PureComponent<InputProps, {}> {
   };
 
   getSnapshotBeforeUpdate(_prevProps: InputProps, _prevState: {}): [number | null, number | null] {
+    // Remember the selection within the input before updating it.
     try {
       return [
         // @ts-ignore
@@ -36,6 +37,7 @@ class InputComponent extends React.PureComponent<InputProps, {}> {
     _prevState: {},
     snapshot: [number | null, number | null],
   ) {
+    // Restore the remembered selection when necessary
     try {
       // @ts-ignore
       this.inputRef.current.input.selectionStart = snapshot[0];

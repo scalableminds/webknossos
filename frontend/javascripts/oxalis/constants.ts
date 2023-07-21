@@ -20,7 +20,6 @@ export type Vector6 = [number, number, number, number, number, number];
 export type BucketAddress =
   | Vector4
   | [number, number, number, number, AdditionalCoordinate[] | null];
-// export type BucketAddress = [number, number, number, number, number[]];
 
 export type Point2 = {
   x: number;

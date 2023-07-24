@@ -398,10 +398,19 @@ class SegmentsView extends React.Component<Props, State> {
       nativeEvent: MouseEvent;
     },
   ) => {
-    // TODO [important]: this also gets triggered if context menu is clicked
     const { node, nativeEvent } = event;
     const { key = "" } = node;
     const treeData = this.state.groupTree;
+
+    if (
+      nativeEvent?.target instanceof HTMLElement &&
+      (nativeEvent?.target?.closest(".ant-dropdown-menu") != null ||
+        nativeEvent?.target?.closest(".ant-popover") != null)
+    ) {
+      // Ignore events that refer to elements in a popover or dropdown, since these
+      // shouldn't influence the selection of the tree component.
+      return;
+    }
 
     // Windows / Mac single pick
     const ctrlPick: boolean = nativeEvent?.ctrlKey || nativeEvent?.metaKey;

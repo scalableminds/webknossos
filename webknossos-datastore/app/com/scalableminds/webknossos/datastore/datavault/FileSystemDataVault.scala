@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.box2Fox
+import net.liftweb.util.Helpers.tryo
 
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path}
@@ -12,18 +14,22 @@ class FileSystemDataVault extends DataVault {
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = ???
 
   def readBytesLocal(path: Path, range: Option[NumericRange[Long]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    range match {
-      case None => Fox.successful(Files.readAllBytes(path))
-      case Some(r) =>
-        val channel = Files.newByteChannel(path)
-        val buf = ByteBuffer.allocateDirect(r.length)
-        channel.position(r.start)
-        channel.read(buf)
-        buf.position(0)
-        val arr = new Array[Byte](r.length)
-        buf.get(arr)
-        Fox.successful(arr)
-    }
+    if (Files.exists(path)) {
+      range match {
+        case None => tryo(Files.readAllBytes(path)).toFox
+        case Some(r) =>
+          tryo {
+            val channel = Files.newByteChannel(path)
+            val buf = ByteBuffer.allocateDirect(r.length)
+            channel.position(r.start)
+            channel.read(buf)
+            buf.position(0)
+            val arr = new Array[Byte](r.length)
+            buf.get(arr)
+            arr
+          }.toFox
+      }
+    } else Fox.empty
 }
 
 object FileSystemDataVault {

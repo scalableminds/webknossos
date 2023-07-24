@@ -45,3 +45,10 @@ message AdditionalCoordinateProto {
   required string name = 1;
   required int32 value = 2;
 }
+
+message AdditionalCoordinateDefinitionProto {
+  required string name = 1;
+  required int32 index = 2;
+  required int32 lowerBound = 3;
+  required int32 upperBound = 4;
+}

@@ -47,6 +47,38 @@ package object datasource {
       case layer: SegmentationLayer => Some(layer)
       case _                        => None
     }
+
+    def additionalCoordinatesUnion: Option[Seq[AdditionalCoordinate]] = {
+      val additionalCoordinatesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
+      for (layer <- dataLayers) {
+        layer.additionalCoordinates match {
+          case Some(additionalCoordinates) => {
+            for (additionalCoordinate <- additionalCoordinates) {
+              val additionalCoordinateToInsert = additionalCoordinatesMap.get(additionalCoordinate.name) match {
+                case Some((existingIndex, existingLowerBound, existingUpperBound)) =>
+                  // TODO: What to do with the index here?
+                  (existingIndex,
+                   math.min(existingLowerBound, additionalCoordinate.lowerBound),
+                   math.max(existingUpperBound, additionalCoordinate.upperBound))
+                case None =>
+                  (additionalCoordinate.index, additionalCoordinate.lowerBound, additionalCoordinate.upperBound)
+              }
+              additionalCoordinatesMap(additionalCoordinate.name) = additionalCoordinateToInsert
+            }
+          }
+          case None =>
+        }
+      }
+
+      val additionalCoordinates = additionalCoordinatesMap.iterator.map {
+        case (name, (index, lowerBound, upperBound)) => AdditionalCoordinate(name, Array(lowerBound, upperBound), index)
+      }.toSeq
+      if (additionalCoordinates.isEmpty) {
+        None
+      } else {
+        Some(additionalCoordinates)
+      }
+    }
   }
 
   object GenericDataSource {

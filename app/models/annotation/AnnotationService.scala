@@ -11,6 +11,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.{
+  AdditionalCoordinateProto,
   ColorProto,
   NamedBoundingBoxProto,
   Vec3DoubleProto,
@@ -24,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   FetchedAnnotationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalCoordinate,
   ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
@@ -77,7 +79,8 @@ case class RedundantTracingProperties(
     editPosition: Vec3IntProto,
     editRotation: Vec3DoubleProto,
     zoomLevel: Double,
-    userBoundingBoxes: Seq[NamedBoundingBoxProto]
+    userBoundingBoxes: Seq[NamedBoundingBoxProto],
+    editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
 )
 
 class AnnotationService @Inject()(
@@ -144,6 +147,8 @@ class AnnotationService @Inject()(
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
+    val additionalCoordinates =
+      fallbackLayer.map(_.additionalCoordinates).getOrElse(dataSource.additionalCoordinatesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
     } yield
@@ -163,7 +168,8 @@ class AnnotationService @Inject()(
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
-        hasSegmentIndex = Some(fallbackLayer.isEmpty)
+        hasSegmentIndex = Some(fallbackLayer.isEmpty),
+        additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
       )
   }
 
@@ -240,13 +246,15 @@ class AnnotationService @Inject()(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
               organizationName = Some(datasetOrganizationName),
+              additionalCoordinates = AdditionalCoordinate.toProto(dataSource.additionalCoordinatesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
               skeleton.copy(
                 editPosition = p.editPosition,
                 editRotation = p.editRotation,
                 zoomLevel = p.zoomLevel,
-                userBoundingBoxes = p.userBoundingBoxes
+                userBoundingBoxes = p.userBoundingBoxes,
+                editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
               )
             }.getOrElse(skeleton)
             for {
@@ -273,7 +281,8 @@ class AnnotationService @Inject()(
                   editPosition = p.editPosition,
                   editRotation = p.editRotation,
                   zoomLevel = p.zoomLevel,
-                  userBoundingBoxes = p.userBoundingBoxes
+                  userBoundingBoxes = p.userBoundingBoxes,
+                  editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
                 )
               }.getOrElse(volumeTracing)
               volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted)
@@ -305,7 +314,8 @@ class AnnotationService @Inject()(
             s.editRotation,
             s.zoomLevel,
             s.userBoundingBoxes ++ s.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
+            s.editPositionAdditionalCoordinates
           )
         case Right(v) =>
           RedundantTracingProperties(
@@ -313,7 +323,8 @@ class AnnotationService @Inject()(
             v.editRotation,
             v.zoomLevel,
             v.userBoundingBoxes ++ v.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
+            v.editPositionAdditionalCoordinates
           )
       }
 
@@ -384,7 +395,8 @@ class AnnotationService @Inject()(
         autoFallbackLayer = false,
         None,
         Some(ResolutionRestrictions.empty),
-        Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType))
+        Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType)),
+        None
       )
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()

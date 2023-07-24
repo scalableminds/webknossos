@@ -44,6 +44,7 @@ message VolumeTracing {
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
     repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
+    repeated AdditionalCoordinateDefinitionProto additionalCoordinates = 22; // Additional coordinates for which this tracing is defined (may not be the same as those of a data layer)
 }
 
 message SegmentGroup {

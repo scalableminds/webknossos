@@ -1544,16 +1544,23 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
+  folderId: string | null,
 ): Promise<void> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (folderId) {
+      params.append("folderId", folderId);
+    }
+
+    return Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?${params}`,
       {
         method: "PUT",
         data: datasource,
       },
-    ),
-  );
+    );
+  });
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.

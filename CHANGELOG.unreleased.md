@@ -40,6 +40,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Correctly use configured fill-value for missing chunks of remote datasets hosted on gcs or s3. [#7198](https://github.com/scalableminds/webknossos/pull/7198)
 - Correctly use configured fill-value for missing chunks of local non-wkw datasets. [#7216](https://github.com/scalableminds/webknossos/pull/7216)
 - Adapted the proofreading docs to reflect the current state of the proofreading tool. [#7212](https://github.com/scalableminds/webknossos/pull/7212)
+- Fixed a bug when adding remote datasets while not having write-access to the root folder. [#7221](https://github.com/scalableminds/webknossos/pull/7221)
 
 ### Removed
 - Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)

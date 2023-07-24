@@ -422,8 +422,6 @@ class SegmentsView extends React.Component<Props, State> {
     } else {
       newSelectedKeys = [key];
     }
-    console.log(newSelectedKeys);
-    console.log(this.state.selectedSegmentIds);
     this.setState({
       selectedSegmentIds: newSelectedKeys.map((key) =>
         this.getSegmentIdForKey(String(key)),
@@ -974,7 +972,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  getRemoveFromSegmentListItem = (
+  getRemoveFromSegmentListMenuItem = (
     groupId: number | null,
     segmentId: number | null = null,
   ): ItemType => {
@@ -1153,14 +1151,32 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    const hideOrShowMeshesLabel = this.state.areSegmentsInGroupVisible[groupId]
+  areSelectedSegmentsMeshesVisible = () => {
+    // TODO remove me. We assume that there are meshes because of check one level up
+    const selectedSegments = this.getSelectedSegments();
+    const isosurfaces = this.props.isosurfaces;
+    const isSomeSegmentLoadedAndInvisible = selectedSegments.some((segment) => {
+      const segmentIsosurface = isosurfaces[segment.id];
+      // Only regard loaded, but invisible meshes
+      return segmentIsosurface != null && !isosurfaces[segment.id].isVisible;
+    });
+    // show "Hide meshes" if no isosurface is loaded and invisible
+    return !isSomeSegmentLoadedAndInvisible;
+  };
+
+  getShowMeshesMenuItem = (groupId: number | null, segmentId: number | null = null): ItemType => {
+    let willShowHideMeshesLabel =
+      groupId == null
+        ? this.areSelectedSegmentsMeshesVisible()
+        : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
+
+    const showHideMeshesLabel = willShowHideMeshesLabel
       ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
       : { icon: <EyeOutlined />, text: "Show" };
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "showMeshesOfGroup",
-          icon: hideOrShowMeshesLabel.icon,
+          icon: showHideMeshesLabel.icon,
           label: (
             <div
               onClick={() => {
@@ -1176,7 +1192,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleDropdownMenuVisibility(groupId, false);
               }}
             >
-              {hideOrShowMeshesLabel.text} Meshes
+              {showHideMeshesLabel.text} Meshes
             </div>
           ),
         }
@@ -1218,6 +1234,10 @@ class SegmentsView extends React.Component<Props, State> {
     this.handlePerSegment(groupId, (segment) =>
       Store.dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name)),
     );
+    // manually reset selected segments
+    this.setState({
+      selectedSegmentIds: [],
+    });
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
@@ -1497,18 +1517,7 @@ class SegmentsView extends React.Component<Props, State> {
               );
             }
 
-            /*             const multiSelectMenu: MenuProps = {
-              items: [
-                this.getSetGroupColorMenuItem(null),
-                this.getLoadMeshesFromFileMenuItem(null),
-                this.getComputeMeshesAdHocMenuItem(null),
-                this.getReloadMenuItem(null),
-                this.getRemoveMeshesMenuItem(null),
-                //this.getShowMeshesMenuItem(null),
-                this.getDownLoadMeshesMenuItem(null),
-              ],
-            }; */
-
+            const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
             const multiSelectMenu = (segmentId: number): MenuProps => {
               return {
                 items: [
@@ -1516,11 +1525,17 @@ class SegmentsView extends React.Component<Props, State> {
                   this.getResetGroupColorMenuItem(null, segmentId),
                   this.getLoadMeshesFromFileMenuItem(null, segmentId),
                   this.getComputeMeshesAdHocMenuItem(null, segmentId),
-                  this.getReloadMenuItem(null, segmentId),
-                  this.getRemoveMeshesMenuItem(null, segmentId),
-                  this.getRemoveFromSegmentListItem(null, segmentId),
-                  //this.getShowMeshesMenuItem(null),
-                  this.getDownLoadMeshesMenuItem(null, segmentId),
+                  doSelectedSegmentsHaveAnyMeshes
+                    ? this.getShowMeshesMenuItem(null, segmentId)
+                    : null,
+                  doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null, segmentId) : null,
+                  doSelectedSegmentsHaveAnyMeshes
+                    ? this.getRemoveMeshesMenuItem(null, segmentId)
+                    : null,
+                  doSelectedSegmentsHaveAnyMeshes
+                    ? this.getDownLoadMeshesMenuItem(null, segmentId)
+                    : null,
+                  this.getRemoveFromSegmentListMenuItem(null, segmentId),
                 ],
               };
             };

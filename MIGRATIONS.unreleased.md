@@ -10,4 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
+- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)

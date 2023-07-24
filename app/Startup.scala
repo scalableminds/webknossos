@@ -2,6 +2,7 @@ import akka.actor.{ActorSystem, Props}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import models.annotation.AnnotationDAO
+import models.binary.ThumbnailCachingService
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
@@ -29,6 +30,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         lifecycle: ApplicationLifecycle,
                         tempFileService: TempFileService,
                         inviteService: InviteService,
+                        thumbnailCachingService: ThumbnailCachingService,
                         sqlClient: SqlClient,
                         slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends LazyLogging {
@@ -51,6 +53,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   cleanUpService.register("deletion of old annotations in initializing state", 1 day) {
     annotationDAO.deleteOldInitializingAnnotations()
+  }
+
+  cleanUpService.register("deletion of expired thumbnails", 1 day) {
+    thumbnailCachingService.removeExpiredThumbnails()
   }
 
   lifecycle.addStopHook { () =>

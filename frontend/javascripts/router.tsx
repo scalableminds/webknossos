@@ -32,7 +32,6 @@ import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
 import { Button, Col, Layout, Result, Row } from "antd";
-import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
@@ -220,7 +219,6 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
-          <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />

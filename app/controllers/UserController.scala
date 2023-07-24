@@ -6,11 +6,11 @@ import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
-import models.organization.OrganizationService
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WkEnv
+import oxalis.security.{PasswordHasher, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
@@ -29,10 +29,12 @@ class UserController @Inject()(userService: UserService,
                                multiUserDAO: MultiUserDAO,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
+                               organizationDAO: OrganizationDAO,
                                timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
+                               passwordHasher: PasswordHasher,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {

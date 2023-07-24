@@ -236,7 +236,8 @@
     "worker-loader": "^3.0.8"
   },
   "resolutions": {
-    "**/mini-store": "^1.1.0"
+    "**/mini-store": "^1.1.0",
+    "**/redux": "3.7.2"
   },
   "ava": {
     "files": [

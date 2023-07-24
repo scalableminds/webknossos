@@ -10,4 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
-- [104-verify-email.sql](conf/evolutions/104-verify-email.sql)
+- [105-verify-email.sql](conf/evolutions/105-verify-email.sql)

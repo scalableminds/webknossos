@@ -11,6 +11,7 @@ import {
   SearchOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -910,6 +911,7 @@ class SegmentsView extends React.Component<Props, State> {
     segmentId: number | null = null,
   ): ItemType => {
     const isEditingDisabled = !this.props.allowUpdate;
+    const title = "Change Segment Color";
     return {
       key: "changeGroupColor",
       disabled: isEditingDisabled,
@@ -923,7 +925,7 @@ class SegmentsView extends React.Component<Props, State> {
       ),
       label: (
         <ChangeColorMenuItemContent
-          title="Change Segment Color"
+          title={title}
           isDisabled={isEditingDisabled}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
@@ -934,6 +936,64 @@ class SegmentsView extends React.Component<Props, State> {
           rgb={this.getColorOfFirstSegmentOrNull(groupId)}
           hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
+      ),
+    };
+  };
+
+  getResetGroupColorMenuItem = (
+    groupId: number | null,
+    segmentId: number | null = null,
+  ): ItemType => {
+    const isEditingDisabled = !this.props.allowUpdate;
+    const title = "Reset Segment Color";
+    return {
+      key: "resetGroupColor",
+      disabled: isEditingDisabled,
+      icon: (
+        <i
+          className="fas fa-undo"
+          style={{
+            cursor: "pointer",
+          }}
+        />
+      ),
+      label: (
+        <div
+          title={title}
+          onClick={(color) => {
+            if (getVisibleSegmentationLayer == null) {
+              return;
+            }
+            this.setGroupColor(groupId, null);
+            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+          }}
+        >
+          Reset Segment Color
+        </div>
+      ),
+    };
+  };
+
+  getRemoveFromSegmentListItem = (
+    groupId: number | null,
+    segmentId: number | null = null,
+  ): ItemType => {
+    this.assertSegmentXORGroupId(groupId, segmentId);
+    return {
+      key: "removeSegments",
+      icon: <CloseOutlined />,
+      label: (
+        <div
+          onClick={() => {
+            if (this.props.visibleSegmentationLayer == null) {
+              return;
+            }
+            this.handleRemoveSegmentsFromList(groupId);
+            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+          }}
+        >
+          Remove Segments From List
+        </div>
       ),
     };
   };
@@ -1123,7 +1183,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  setGroupColor(groupId: number | null, color: Vector3) {
+  setGroupColor(groupId: number | null, color: Vector3 | null) {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
@@ -1150,6 +1210,14 @@ class SegmentsView extends React.Component<Props, State> {
         Store.dispatch(refreshIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
       }
     });
+  };
+
+  handleRemoveSegmentsFromList = (groupId: number | null) => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
+    this.handlePerSegment(groupId, (segment) =>
+      Store.dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name)),
+    );
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
@@ -1328,7 +1396,7 @@ class SegmentsView extends React.Component<Props, State> {
     const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
-      // Remove group
+      // Remove groupremoveSegment
       parentsChildren.splice(index, 1);
 
       if (!deleteChildren) {
@@ -1445,10 +1513,12 @@ class SegmentsView extends React.Component<Props, State> {
               return {
                 items: [
                   this.getSetGroupColorMenuItem(null, segmentId),
+                  this.getResetGroupColorMenuItem(null, segmentId),
                   this.getLoadMeshesFromFileMenuItem(null, segmentId),
                   this.getComputeMeshesAdHocMenuItem(null, segmentId),
                   this.getReloadMenuItem(null, segmentId),
                   this.getRemoveMeshesMenuItem(null, segmentId),
+                  this.getRemoveFromSegmentListItem(null, segmentId),
                   //this.getShowMeshesMenuItem(null),
                   this.getDownLoadMeshesMenuItem(null, segmentId),
                 ],

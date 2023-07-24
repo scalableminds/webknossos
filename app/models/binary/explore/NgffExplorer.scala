@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinate, Category, ElementClass}
 
 import scala.concurrent.ExecutionContext
 
@@ -67,22 +67,45 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
           elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
           else elementClassRaw
           boundingBox = boundingBoxFromMags(magsWithAttributes)
+          additionalCoordinates <- getAdditionalCoordinates(multiscale, remotePath)
           layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass) || isSegmentation) {
             ZarrSegmentationLayer(name,
                                   boundingBox,
                                   elementClass,
                                   magsWithAttributes.map(_.mag),
-                                  largestSegmentId = None)
+                                  largestSegmentId = None,
+                                  additionalCoordinates = Some(additionalCoordinates))
           } else
             ZarrDataLayer(name,
                           Category.color,
                           boundingBox,
                           elementClass,
                           magsWithAttributes.map(_.mag),
-                          additionalCoordinates = Some(multiscale.getAdditionalCoordsFromAxes))
+                          additionalCoordinates = Some(additionalCoordinates))
         } yield (layer, voxelSizeNanometers)
       })
     } yield layerTuples
+
+  private def getAdditionalCoordinates(multiscale: NgffMultiscalesItem,
+                                       remotePath: VaultPath): Fox[Seq[AdditionalCoordinate]] = {
+    val defaultAxes = List("c", "x", "y", "z")
+    for {
+      // Selecting shape of first mag, assuming no mags for additional coordinates
+      dataset <- Fox.option2Fox(multiscale.datasets.headOption)
+      zarrHeader <- getZarrHeader(dataset, remotePath)
+      shape = zarrHeader.shape
+    } yield {
+      multiscale.axes.zipWithIndex.flatMap(axisAndIndex =>
+        if (!defaultAxes.contains(axisAndIndex._1.name)) {
+          Some(
+            AdditionalCoordinate(name = axisAndIndex._1.name,
+                                 bounds = Array(0, shape(axisAndIndex._2)),
+                                 index = axisAndIndex._2))
+        } else {
+          None
+      })
+    }
+  }
 
   private def exploreLabelLayers(remotePath: VaultPath,
                                  credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
@@ -119,17 +142,25 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       case _                  => e
     }
 
+  private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath)(implicit ec: ExecutionContext) =
+    for {
+      _ <- Fox.successful()
+      magPath = layerPath / ngffDataset.path
+      zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
+      zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
+    } yield zarrHeader
+
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
                                      layerPath: VaultPath,
                                      voxelSizeInAxisUnits: Vec3Double,
                                      axisOrder: AxisOrder,
                                      credentialId: Option[String],
-                                     channelIndex: Option[Int]): Fox[MagWithAttributes] =
+                                     channelIndex: Option[Int])(implicit ec: ExecutionContext): Fox[MagWithAttributes] =
     for {
       mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
       magPath = layerPath / ngffDataset.path
       zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
-      zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
+      zarrHeader <- getZarrHeader(ngffDataset, layerPath)
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield

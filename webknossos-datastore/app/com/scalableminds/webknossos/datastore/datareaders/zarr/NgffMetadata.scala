@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -110,18 +109,7 @@ case class NgffMultiscalesItem(
       NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
     ),
     datasets: List[NgffDataset]
-) {
-
-  def getAdditionalCoordsFromAxes: Seq[AdditionalCoordinate] = {
-    val defaultAxes = List("c", "x", "y", "z")
-    axes.zipWithIndex.flatMap(axisAndIndex =>
-      if (!defaultAxes.contains(axisAndIndex._1.name)) {
-        Some(AdditionalCoordinate(name = axisAndIndex._1.name, bounds = Array(0, 0), index = axisAndIndex._2))
-      } else {
-        None
-    })
-  }
-}
+)
 
 object NgffMultiscalesItem {
   implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]

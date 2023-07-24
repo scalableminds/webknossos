@@ -15,12 +15,7 @@ import { connect } from "react-redux";
 import React, { useEffect, useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import {
-  exploreRemoteDataset,
-  isDatasetNameValid,
-  storeRemoteDataset,
-  updateDatasetPartial,
-} from "admin/admin_rest_api";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -226,17 +221,11 @@ function DatasetAddRemoteView(props: Props) {
           configJSON.id.name,
           activeUser.organization,
           datasourceConfigStr,
+          targetFolderId,
         );
       } catch (e) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
-      }
-      if (targetFolderId) {
-        const datasetId = {
-          owningOrganization: activeUser.organization,
-          name: configJSON.id.name,
-        };
-        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
       }
       onAdded(activeUser.organization, configJSON.id.name, true);
     }

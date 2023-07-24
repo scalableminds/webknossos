@@ -18,12 +18,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
-import type {
-  APIProjectWithStatus,
-  APIProject,
-  APIUser,
-  APIUserBase,
-} from "types/api_flow_types";
+import type { APIProjectWithStatus, APIProject, APIUser, APIUserBase } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {

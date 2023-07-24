@@ -110,10 +110,10 @@ class AvailableTasksReportView extends React.PureComponent<{}, State> {
                       <Tooltip
                         title={
                           <span>
-                            There are potentially {item.availableTasksByProjects[key]} tasks from the
-                            project <i>{projectName}</i> available for automatic assignment for this
-                            user because they match the configured assignment criteria; especially
-                            the required experience level <i>{experience}</i>.
+                            There are potentially {item.availableTasksByProjects[key]} tasks from
+                            the project <i>{projectName}</i> available for automatic assignment for
+                            this user because they match the configured assignment criteria;
+                            especially the required experience level <i>{experience}</i>.
                           </span>
                         }
                       >

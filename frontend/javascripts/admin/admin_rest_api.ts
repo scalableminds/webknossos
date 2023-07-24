@@ -1886,7 +1886,9 @@ export async function getProjectProgressReport(
   return progressData;
 }
 
-export async function getAvailableTasksReport(teamId: string): Promise<Array<APIAvailableTasksReport>> {
+export async function getAvailableTasksReport(
+  teamId: string,
+): Promise<Array<APIAvailableTasksReport>> {
   const availableTasksData = await Request.receiveJSON(`/api/teams/${teamId}/availableTasksReport`);
   assertResponseLimit(availableTasksData);
   return availableTasksData;

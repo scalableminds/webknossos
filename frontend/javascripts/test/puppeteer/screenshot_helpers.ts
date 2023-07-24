@@ -74,7 +74,10 @@ export async function compareScreenshot(
     existingScreenshot.width,
     existingScreenshot.height,
     {
-      threshold: 0.0,
+      // The default of the pixelmatch library is 0.1.
+      // 0.01 was chosen since it was the smallest threshold
+      // that could solve some flakiness.
+      threshold: 0.01,
     },
   );
 

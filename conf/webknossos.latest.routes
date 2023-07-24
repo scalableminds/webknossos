@@ -31,6 +31,7 @@ GET           /auth/oidc/login                                                  
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin
+POST          /auth/createUserInOrganization/:organizationName                                  controllers.AuthenticationController.createUserInOrganization(organizationName: String)
 
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read
@@ -227,12 +228,14 @@ GET           /statistics/users                                                 
 
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list
+POST          /organizations                                                                    controllers.OrganizationController.create
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                                  controllers.OrganizationController.get(organizationName: String)
 PATCH         /organizations/:organizationName                                                  controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                                  controllers.OrganizationController.delete(organizationName: String)
+POST          /organizations/:organizationName/addUser                                          controllers.OrganizationController.addUser(organizationName: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData
 POST          /pricing/requestExtension                                                         controllers.OrganizationController.sendExtendPricingPlanEmail
 POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)

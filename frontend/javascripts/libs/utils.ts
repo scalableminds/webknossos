@@ -132,17 +132,17 @@ export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) =>
   return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
 
-export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
+export function parseMaybe(str: string | null | undefined): unknown | null {
   try {
     const parsedJSON = JSON.parse(str || "");
 
     if (parsedJSON != null) {
-      return Maybe.Just(parsedJSON);
+      return parsedJSON;
     } else {
-      return Maybe.Nothing();
+      return null;
     }
   } catch (_exception) {
-    return Maybe.Nothing();
+    return null;
   }
 }
 

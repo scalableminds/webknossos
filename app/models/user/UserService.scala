@@ -83,10 +83,7 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      isSuperUser <- multiUserDAO.findOne(multiUserId).map(_.isSuperUser)
-      _ <- bool2Fox(isSuperUser)
-    } yield ()
+    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser))
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
@@ -149,7 +146,8 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
-                       isUnlisted: Boolean = false): Fox[User] =
+                       isUnlisted: Boolean = false,
+                       isOrganizationOwner: Boolean = false): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -164,7 +162,7 @@ class UserService @Inject()(conf: WkConf,
         isDatasetManager = false,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
-        isOrganizationOwner = false,
+        isOrganizationOwner = isOrganizationOwner,
         isUnlisted = isUnlisted,
         created = Instant.now
       )

@@ -78,7 +78,11 @@ class OrganizationController @Inject()(
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationDisplayName)
         user <- userDAO.findFirstByMultiUser(owner._id)
-        _ <- userService.joinOrganization(user, org._id, autoActivate = true, isAdmin = true)
+        _ <- userService.joinOrganization(user,
+                                          org._id,
+                                          autoActivate = true,
+                                          isAdmin = true,
+                                          isOrganizationOwner = true)
       } yield Ok(org.name)
     }
 

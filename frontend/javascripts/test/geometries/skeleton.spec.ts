@@ -1,5 +1,7 @@
 // Integration tests for skeleton.js
 import "test/mocks/lz4";
+// Ensure singletons are set up
+import "test/helpers/apiHelpers";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";

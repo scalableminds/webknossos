@@ -4,7 +4,7 @@ import type { Uniforms } from "oxalis/geometries/materials/plane_material_factor
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import Store from "oxalis/store";
+import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";

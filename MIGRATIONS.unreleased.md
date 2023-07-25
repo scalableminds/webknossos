@@ -6,9 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.08.0...HEAD)
 
 ### Postgres Evolutions:
-- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
-- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)

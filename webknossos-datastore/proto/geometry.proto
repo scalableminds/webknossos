@@ -9,6 +9,11 @@ message Vec3IntProto {
     required int32 z = 3;
 }
 
+message Vec2IntProto {
+  required int32 x = 1;
+  required int32 y = 2;
+}
+
 message ListOfVec3IntProto {
   repeated Vec3IntProto values = 1;
 }
@@ -49,6 +54,5 @@ message AdditionalCoordinateProto {
 message AdditionalCoordinateDefinitionProto {
   required string name = 1;
   required int32 index = 2;
-  required int32 lowerBound = 3;
-  required int32 upperBound = 4;
+  required Vec2IntProto bounds = 3;
 }

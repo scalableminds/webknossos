@@ -144,6 +144,7 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
+PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                                  controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
@@ -279,6 +280,10 @@ GET           /shortLinks/byKey/:key                                            
 POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential
+
+# Email verification
+POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
+POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail
 
 # Voxelytics
 POST          /voxelytics/workflows                                                             controllers.VoxelyticsController.storeWorkflow

@@ -5,6 +5,7 @@ import React from "react";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import LoginForm from "./login_form";
+
 type Props = {
   history: RouteComponentProps["history"];
   redirect?: string;

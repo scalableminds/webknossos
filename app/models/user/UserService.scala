@@ -38,6 +38,7 @@ class UserService @Inject()(conf: WkConf,
                             teamMembershipService: TeamMembershipService,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
+                            emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
                             passwordHasher: PasswordHasher,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
@@ -95,7 +96,8 @@ class UserService @Inject()(conf: WkConf,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean,
-             isOrganizationOwner: Boolean): Fox[User] = {
+             isOrganizationOwner: Boolean,
+             isEmailVerified: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -104,7 +106,8 @@ class UserService @Inject()(conf: WkConf,
         multiUserId,
         email,
         passwordInfo,
-        isSuperUser = false
+        isSuperUser = false,
+        isEmailVerified = isEmailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -126,6 +129,7 @@ class UserService @Inject()(conf: WkConf,
         isUnlisted = false,
         lastTaskTypeId = None
       )
+      _ <- Fox.runIf(!isEmailVerified)(emailVerificationService.sendEmailVerification(user))
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
     } yield user
@@ -194,7 +198,7 @@ class UserService @Inject()(conf: WkConf,
     }
     for {
       oldEmail <- emailFor(user)
-      _ <- multiUserDAO.updateEmail(user._multiUser, email)
+      _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,
@@ -355,7 +359,8 @@ class UserService @Inject()(conf: WkConf,
         "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
-        "isSuperUser" -> multiUser.isSuperUser
+        "isSuperUser" -> multiUser.isSuperUser,
+        "isEmailVerified" -> multiUser.isEmailVerified,
       )
     }
   }

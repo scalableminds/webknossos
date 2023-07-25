@@ -204,4 +204,16 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
+  def emailVerificationMail(user: User, userEmail: String, key: String): Mail = {
+    val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry
+      .map(duration => s"This link will expire in ${duration.toString()}. ")
+      .getOrElse("")
+    Mail(
+      from = defaultSender,
+      subject = "Verify Your Email at WEBKNOSSOS",
+      bodyHtml = html.mail.verifyEmail(user.name, key, linkExpiry).body,
+      recipients = List(userEmail)
+    )
+  }
+
 }

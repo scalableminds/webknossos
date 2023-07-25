@@ -2471,3 +2471,16 @@ export function sendHelpEmail(message: string) {
 export function requestSingleSignOnLogin() {
   return Request.receiveJSON("/api/auth/oidc/login");
 }
+
+export function verifyEmail(key: string) {
+  return Request.receiveJSON(`/api/verifyEmail/${key}`, {
+    method: "POST",
+    showErrorToast: false,
+  });
+}
+
+export function requestVerificationMail() {
+  return Request.receiveJSON("/api/verifyEmail", {
+    method: "POST",
+  });
+}

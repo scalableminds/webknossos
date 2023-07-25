@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageOptions}
+import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.util.Helpers.tryo
@@ -36,7 +36,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)
     for {
-      bytes <- tryo {
+      bytes <- try {
         range match {
           case StartEnd(r) =>
             val blobReader = storage.reader(blobId)
@@ -47,7 +47,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
             val arr = new Array[Byte](r.length)
             bb.position(0)
             bb.get(arr)
-            arr
+            Fox.successful(arr)
           case SuffixLength(l) =>
             val blobReader = storage.reader(blobId)
             blobReader.seek(-l)
@@ -56,9 +56,15 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
             val arr = new Array[Byte](l.toInt)
             bb.position(0)
             bb.get(arr)
-            arr
-          case Complete() => storage.readAllBytes(bucket, objName)
+            Fox.successful(arr)
+          case Complete() => Fox.successful(storage.readAllBytes(bucket, objName))
         }
+      } catch {
+        case s: StorageException =>
+          if (s.getCode == 404)
+            Fox.empty
+          else Fox.failure(s.getMessage)
+        case t: Throwable => Fox.failure(t.getMessage)
       }
       blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build)
       encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))

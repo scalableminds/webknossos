@@ -34,15 +34,15 @@ function BorderToggleButton(props: Props) {
         className={className}
         size="small"
         /*
-    Normally, a simple onClick handler would be enough for this button
-    to support both desktops as mobile devices with touchscreens.
-    However, since the button is placed in the FlexLayout's panels,
-    its presence interferes with the existing mouse drag / touch drag
-    behavior to move tabs around.
-    For this reason, we have to call stopPropagation and preventDefault.
-    Additionally, we need to detect whether the user has dragged a tab
-    across screen (to move a tab). In that case, onTouchEnd does nothing.
-    */
+          Normally, a simple onClick handler would be enough for this button
+          to support both desktops as mobile devices with touchscreens.
+          However, since the button is placed in the FlexLayout's panels,
+          its presence interferes with the existing mouse drag / touch drag
+          behavior to move tabs around.
+          For this reason, we have to call stopPropagation and preventDefault.
+          Additionally, we need to detect whether the user has dragged a tab
+          across screen (to move a tab). In that case, onTouchEnd does nothing.
+        */
         onClick={(event) => {
           if (event != null) {
             // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message

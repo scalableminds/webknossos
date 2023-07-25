@@ -29,14 +29,22 @@ export type Action =
   | SegmentationAction
   | ConnectomeAction
   | ProofreadAction
-  | OrganizationAction;
+  | OrganizationAction
+  | ReturnType<typeof wkReadyAction>
+  | ReturnType<typeof sceneControllerReadyAction>
+  | ReturnType<typeof restartSagaAction>;
 
-export const wkReadyAction = () => ({
-  type: "WK_READY",
-});
-export const sceneControllerReadyAction = () => ({
-  type: "SCENE_CONTROLLER_READY",
-});
-export const restartSagaAction = () => ({
-  type: "RESTART_SAGA",
-});
+export const wkReadyAction = () =>
+  ({
+    type: "WK_READY",
+  } as const);
+
+export const sceneControllerReadyAction = () =>
+  ({
+    type: "SCENE_CONTROLLER_READY",
+  } as const);
+
+export const restartSagaAction = () =>
+  ({
+    type: "RESTART_SAGA",
+  } as const);

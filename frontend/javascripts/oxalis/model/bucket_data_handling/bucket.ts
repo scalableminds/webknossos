@@ -51,6 +51,12 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
+export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
+  if (bucket.type === "null") {
+    throw new Error("Unexpected null bucket.");
+  }
+}
+
 export class NullBucket {
   type: "null" = "null";
 

@@ -281,6 +281,10 @@ POST          /credentials/httpBasicAuth                                        
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential
 
+# Email verification
+POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
+POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail
+
 # Voxelytics
 POST          /voxelytics/workflows                                                             controllers.VoxelyticsController.storeWorkflow
 GET           /voxelytics/workflows                                                             controllers.VoxelyticsController.listWorkflows

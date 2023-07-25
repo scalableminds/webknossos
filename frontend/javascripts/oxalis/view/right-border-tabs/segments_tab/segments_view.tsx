@@ -256,7 +256,8 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
-  selectedSegmentIds: number[];
+  selectedIds: { segments: number[]; group: number | null };
+  //selectedSegmentIds: number[];
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentOrGroupId: number | null | undefined;
   groupTree: TreeNode[];
@@ -349,7 +350,7 @@ class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
     renamingCounter: 0,
-    selectedSegmentIds: [],
+    selectedIds: { segments: [], group: null },
     activeMeshJobId: null,
     activeDropdownSegmentOrGroupId: null,
     groupTree: [],
@@ -402,7 +403,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { node, nativeEvent } = event;
     const { key = "" } = node;
     const treeData = this.state.groupTree;
-
+    //debugger;
     if (
       nativeEvent?.target instanceof HTMLElement &&
       (nativeEvent?.target?.closest(".ant-dropdown-menu") != null ||
@@ -422,10 +423,9 @@ class SegmentsView extends React.Component<Props, State> {
     } else {
       newSelectedKeys = [key];
     }
+    //toggle between group and segment. question: how is group selected? key or id?
     this.setState({
-      selectedSegmentIds: newSelectedKeys.map((key) =>
-        this.getSegmentIdForKey(String(key)),
-      ) as number[],
+      selectedIds: this.getSegmentIdForKey(newSelectedKeys),
     });
   };
 
@@ -632,10 +632,9 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.setPosition(segment.somePosition);
   };
 
-  handleDropdownMenuVisibility = (segmentOrGroupId: number, isVisible: boolean) => {
-    //TODO first segment or a multiselect constant?
-    //TODO naming?
-    if (isVisible) {
+  handleDropdownMenuVisibility = (segmentOrGroupId: number | null, isVisible: boolean) => {
+    if (isVisible && segmentOrGroupId != null) {
+      debugger;
       this.setState({
         activeDropdownSegmentOrGroupId: segmentOrGroupId,
       });
@@ -958,7 +957,7 @@ class SegmentsView extends React.Component<Props, State> {
       label: (
         <div
           title={title}
-          onClick={(color) => {
+          onClick={() => {
             if (getVisibleSegmentationLayer == null) {
               return;
             }
@@ -1125,19 +1124,16 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
-    return this.state.selectedSegmentIds != null
+    return this.state.selectedIds != null
       ? {
           key: "moveHere",
           onClick: () => {
-            if (
-              this.state.selectedSegmentIds == null ||
-              this.props.visibleSegmentationLayer == null
-            ) {
+            if (this.props.visibleSegmentationLayer == null) {
               // Satisfy TS
               return;
             }
             this.props.updateSegments(
-              this.state.selectedSegmentIds,
+              this.state.selectedIds.segments,
               { groupId },
               this.props.visibleSegmentationLayer.name,
               true,
@@ -1236,7 +1232,7 @@ class SegmentsView extends React.Component<Props, State> {
     );
     // manually reset selected segments
     this.setState({
-      selectedSegmentIds: [],
+      selectedIds: { segments: [], group: null },
     });
   };
 
@@ -1286,20 +1282,35 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.getSegmentsOfGroup(MISSING_GROUP_ID);
     if (allSegments == null) return [];
-    const selectedSegmentIds = this.state.selectedSegmentIds;
+    const selectedSegmentIds = this.state.selectedIds.segments;
     return allSegments?.filter((segment) => selectedSegmentIds.includes(segment.id));
   };
 
-  getSegmentIdForKey = (segmentKey: Key) => {
-    const segmentKeyAsString = String(segmentKey);
-    if (segmentKeyAsString.startsWith("segment-")) {
-      const potentialSegmentId = segmentKeyAsString.split("-")[1];
-      if (isNumber(parseInt(potentialSegmentId))) {
-        console.log(potentialSegmentId);
-        return parseInt(potentialSegmentId);
+  getSegmentIdForKey = (segmentOrGroupKeys: Key[]) => {
+    let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    segmentOrGroupKeys.forEach((key) => {
+      const keyAsString = String(key);
+      let splitUpKey = [];
+      if (keyAsString.startsWith("group-")) {
+        console.log(keyAsString);
+        const regexSplit = keyAsString.split(/-(-?)/);
+        const idWithSign = regexSplit[1].concat(regexSplit[2]);
+        if (isNumber(parseInt(idWithSign))) {
+          console.log(idWithSign); //TODO remove
+          selectedIds.group = parseInt(idWithSign);
+          // TODO return or something to make sure this only happens once
+        }
+      } else if (keyAsString.startsWith("segment-")) {
+        // there should be no negative segment IDs
+        const regexSplit = keyAsString.split("-");
+        if (isNumber(parseInt(regexSplit[1]))) {
+          console.log(regexSplit[1]); //TODO remove
+          selectedIds.segments.push(parseInt(regexSplit[1]));
+          // TODO doughnut (dont) return
+        }
       }
-    }
-    return segmentKey;
+    });
+    return selectedIds;
   };
 
   handlePerSegment(groupId: number | null, callback: (s: Segment) => void) {
@@ -1525,8 +1536,6 @@ class SegmentsView extends React.Component<Props, State> {
             const multiSelectMenu = (segmentId: number): MenuProps => {
               return {
                 items: [
-                  this.getSetGroupColorMenuItem(null, segmentId),
-                  this.getResetGroupColorMenuItem(null, segmentId),
                   this.getLoadMeshesFromFileMenuItem(null, segmentId),
                   this.getComputeMeshesAdHocMenuItem(null, segmentId),
                   doSelectedSegmentsHaveAnyMeshes
@@ -1539,6 +1548,8 @@ class SegmentsView extends React.Component<Props, State> {
                   doSelectedSegmentsHaveAnyMeshes
                     ? this.getDownLoadMeshesMenuItem(null, segmentId)
                     : null,
+                  this.getSetGroupColorMenuItem(null, segmentId),
+                  this.getResetGroupColorMenuItem(null, segmentId),
                   this.getRemoveFromSegmentListMenuItem(null, segmentId),
                 ],
               };
@@ -1553,7 +1564,7 @@ class SegmentsView extends React.Component<Props, State> {
                     mapId={mapId}
                     segment={segment}
                     centeredSegmentId={centeredSegmentId}
-                    selectedSegmentIds={this.state.selectedSegmentIds}
+                    selectedSegmentIds={this.state.selectedIds.segments}
                     activeDropdownSegmentId={this.state.activeDropdownSegmentOrGroupId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleDropdownMenuVisibility}
@@ -1608,13 +1619,13 @@ class SegmentsView extends React.Component<Props, State> {
                       label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
                       disabled: true,
                     },
-                    this.getSetGroupColorMenuItem(id),
                     this.getLoadMeshesFromFileMenuItem(id),
                     this.getComputeMeshesAdHocMenuItem(id),
                     this.getReloadMenuItem(id),
                     this.getRemoveMeshesMenuItem(id),
                     this.getShowMeshesMenuItem(id),
                     this.getDownLoadMeshesMenuItem(id),
+                    this.getSetGroupColorMenuItem(id),
                   ],
                 };
 
@@ -1718,9 +1729,9 @@ class SegmentsView extends React.Component<Props, State> {
                             }}
                             multiple
                             showLine
-                            selectedKeys={this.state.selectedSegmentIds.map(
-                              (segmentId) => `segment-${segmentId}`,
-                            )}
+                            selectedKeys={this.state.selectedIds.segments
+                              .map((segmentId) => `segment-${segmentId}`)
+                              .concat(`group-${this.state.selectedIds.group}`)}
                             switcherIcon={<DownOutlined />}
                             treeData={this.state.groupTree}
                             titleRender={titleRender}

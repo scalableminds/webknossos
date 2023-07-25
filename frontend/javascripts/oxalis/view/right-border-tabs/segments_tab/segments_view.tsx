@@ -1187,7 +1187,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleChangeMeshVisibilityInGroup(
                   this.props.visibleSegmentationLayer.name,
                   groupId,
-                  !this.state.areSegmentsInGroupVisible[groupId],
+                  !this.areSelectedSegmentsMeshesVisible(),
                 );
                 this.handleDropdownMenuVisibility(groupId, false);
               }}
@@ -1254,7 +1254,11 @@ class SegmentsView extends React.Component<Props, State> {
     });
   };
 
-  handleChangeMeshVisibilityInGroup = (layerName: string, groupId: number, isVisible: boolean) => {
+  handleChangeMeshVisibilityInGroup = (
+    layerName: string,
+    groupId: number | null,
+    isVisible: boolean,
+  ) => {
     this.handlePerSegment(groupId, (segment) => {
       if (Store.getState().localSegmentationData[layerName].isosurfaces[segment.id] != null) {
         Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible));

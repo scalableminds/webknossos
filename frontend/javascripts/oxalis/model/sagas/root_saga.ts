@@ -18,6 +18,7 @@ import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
 import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
+import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
@@ -53,6 +54,7 @@ function* restartableSaga(): Saga<void> {
       call(UndoSaga),
       ...VolumetracingSagas.map((saga) => call(saga)),
       call(watchZ1Downsampling),
+      call(warnIfEmailIsUnverified),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

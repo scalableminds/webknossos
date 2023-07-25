@@ -13,7 +13,9 @@ import {
 import type { APIUser } from "types/api_flow_types";
 import Toast from "libs/toast";
 import { location } from "libs/window";
+
 const { Content } = Layout;
+
 export default function AcceptInviteView({
   token,
   activeUser,

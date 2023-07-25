@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added configuration to require users' emails to be verified, added flow to verify emails via link. [#7161](https://github.com/scalableminds/webknossos/pull/7161)
 
 ### Changed
+- When importing a remote dataset and adding another layer with a different voxel size, that layer is now scaled to match the first layer. [#7213](https://github.com/scalableminds/webknossos/pull/7213)
 
 ### Fixed
 

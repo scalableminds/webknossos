@@ -73,19 +73,19 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging with MortonNDHelper {
-  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String =
-    bucket.additionalCoordinates match {
+trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
+    val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
+    val additionalCoordinateString = bucket.additionalCoordinates match {
       case Some(additionalCoordinates) =>
         // Now assuming that additional coordinates are ordered, where do we get index from otherwise?
-        val mortonIndex = mortonEncode(bucket.allCoordinates.toArray)
-        val additionalCoordinateString = additionalCoordinates.map(_.value.toString).mkString(",")
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ},$additionalCoordinateString]"
-      case None => {
-        val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
-      }
+        // TODO: Pass in index somehow
+        additionalCoordinates.map(_.value.toString).mkString(",")
+      case None => ""
     }
+    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[$additionalCoordinateString]-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+
+  }
 
   protected def buildKeyPrefix(dataLayerName: String): String =
     s"$dataLayerName/"
@@ -99,7 +99,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
     }
 
   private def parseBucketKeyXYZ(key: String) = {
-    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
+    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[]\\[(\\d+),(\\d+),(\\d+)]".r
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
         val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
@@ -126,20 +126,19 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
       key: String,
       additionalCoordinates: Seq[AdditionalCoordinate]): Option[(String, BucketPosition)] = {
     val additionalCoordinateCapture = Array.fill(additionalCoordinates.length)("(\\d+)").mkString(",")
-    val keyRx = s"([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)$additionalCoordinateCapture]".r
+    val keyRx = s"([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[$additionalCoordinateCapture]\\[(\\d+),(\\d+),(\\d+)]".r
     val matchOpt = keyRx.findFirstMatchIn(key)
     matchOpt match {
       case Some(aMatch) =>
         val name = aMatch.group(1)
         val resolutionStr = aMatch.group(2)
-        val xStr = aMatch.group(3)
-        val yStr = aMatch.group(4)
-        val zStr = aMatch.group(5)
+        val xStr = aMatch.group(additionalCoordinates.length + 3)
+        val yStr = aMatch.group(additionalCoordinates.length + 4)
+        val zStr = aMatch.group(additionalCoordinates.length + 5)
 
-        val commonGroupCount = 5 // OR 6?
         // TODO: Does this work?
         val additionalCoordinateRequests: Seq[AdditionalCoordinateRequest] =
-          (commonGroupCount + 1 until aMatch.groupCount).zipWithIndex.map(
+          (3 until additionalCoordinates.length+3).zipWithIndex.map(
             groupIndexAndCoordIndex =>
               AdditionalCoordinateRequest(additionalCoordinates(groupIndexAndCoordIndex._2).name,
                                           aMatch.group(groupIndexAndCoordIndex._1).toInt))

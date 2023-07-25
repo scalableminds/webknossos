@@ -42,3 +42,4 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)
 
 ### Breaking Changes
+- The task and project api have changed. Make sure to update to the latest webknossos python library version when interacting with task and projects via the python library. Compare [webknossos-libs#930](https://github.com/scalableminds/webknossos-libs/pull/930). [#7220](https://github.com/scalableminds/webknossos/pull/7220)

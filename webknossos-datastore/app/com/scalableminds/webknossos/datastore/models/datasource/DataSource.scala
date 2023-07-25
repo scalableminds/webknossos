@@ -26,9 +26,7 @@ package object datasource {
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: Vec3Double,
-                                                    defaultViewConfiguration: Option[DataSetViewConfiguration] = None,
-                                                    coordinateTransformations: Option[List[CoordinateTransformation]] =
-                                                      None)
+                                                    defaultViewConfiguration: Option[DataSetViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)

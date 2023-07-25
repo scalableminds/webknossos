@@ -44,11 +44,11 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
     with LazyLogging {
 
   def exploreRemoteDatasource(
-      urisWithCredentials: List[ExploreRemoteDatasetParameters],
+      parameters: List[ExploreRemoteDatasetParameters],
       requestIdentity: WkEnv#I,
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
-      exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(
+      exploredLayersNested <- Fox.serialCombined(parameters)(
         parameters =>
           exploreRemoteLayersForUri(parameters.remoteUri,
                                     parameters.credentialIdentifier,
@@ -61,13 +61,14 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
       rescaledLayers = rescaledLayersAndVoxelSize._1
       voxelSize = rescaledLayersAndVoxelSize._2
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
-      preferredVoxelSize = urisWithCredentials.flatMap(_.preferredVoxelSize).headOption
-      coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
+      preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
+      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(renamedLayers,
+                                                                                 preferredVoxelSize,
+                                                                                 voxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
-        renamedLayers,
-        voxelSize,
-        coordinateTransformations = coordinateTransformations
+        layersWithCoordinateTransformations,
+        voxelSize
       )
     } yield dataSource
 
@@ -93,6 +94,24 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
         }
     }
   }
+
+  private def addCoordinateTransformationsToLayers(layers: List[DataLayer],
+                                                   preferredVoxelSize: Option[Array[Double]],
+                                                   voxelSize: Vec3Double): List[DataLayer] =
+    layers.map(l => {
+      val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
+      l match {
+        case l: ZarrDataLayer                => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: ZarrSegmentationLayer        => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: N5DataLayer                  => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: N5SegmentationLayer          => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: PrecomputedDataLayer         => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: PrecomputedSegmentationLayer => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: Zarr3DataLayer               => l.copy(coordinateTransformations = coordinateTransformations)
+        case l: Zarr3SegmentationLayer       => l.copy(coordinateTransformations = coordinateTransformations)
+        case _                               => throw new Exception("Encountered unsupported layer format during explore remote")
+      }
+    })
 
   private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
       implicit ec: ExecutionContext): Fox[Vec3Int] = {

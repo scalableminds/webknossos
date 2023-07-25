@@ -46,6 +46,11 @@ export type AdditionalCoordinateWithBounds = {
   index: number;
   name: string;
 };
+export type ServerAdditionalCoordinateWithBounds = {
+  bounds: { x: number; y: number };
+  index: number;
+  name: string;
+};
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
@@ -704,6 +709,7 @@ export type ServerTracingBase = {
   error?: string;
   version: number;
   zoomLevel: number;
+  additionalCoordinates: ServerAdditionalCoordinateWithBounds[];
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the

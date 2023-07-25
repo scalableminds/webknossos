@@ -486,7 +486,6 @@ function setupLayerForVolumeTracing(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
-  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -524,10 +523,10 @@ function setupLayerForVolumeTracing(
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
-      // todop: TS complains because the index property is missing in the unified additional
-      // coordiantes. the backend should probably set this up, anyway?
-      // @ts-ignore
-      additionalCoordinates: Utils.values(unifiedAdditionalCoordinates),
+      additionalCoordinates: tracing.additionalCoordinates.map((coords) => ({
+        ...coords,
+        bounds: [coords.bounds.x, coords.bounds.y],
+      })),
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;

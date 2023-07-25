@@ -118,6 +118,7 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  additionalCoordinates: [],
   zoomLevel: 2,
   userBoundingBoxes: [],
   typ: "Skeleton",

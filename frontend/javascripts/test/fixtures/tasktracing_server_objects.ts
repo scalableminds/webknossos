@@ -56,6 +56,7 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  additionalCoordinates: [],
   zoomLevel: 2,
   version: 0,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",

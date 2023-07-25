@@ -69,6 +69,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
     y: 0,
     z: 0,
   },
+  additionalCoordinates: [],
   userBoundingBoxes: [],
   largestSegmentId: 0,
 };

@@ -12,6 +12,6 @@ CREATE TABLE webknossos.dataSet_layer_additionalCoordinates(
 ALTER TABLE webknossos.dataSet_layer_additionalCoordinates
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 104;
+UPDATE webknossos.releaseInformation SET schemaVersion = 106;
 
 COMMIT TRANSACTION;

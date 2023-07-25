@@ -2,7 +2,7 @@ package oxalis.mail
 
 import models.organization.Organization
 import models.user.User
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import utils.WkConf
 import views._
 
@@ -42,7 +42,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
-      implicit messages: Messages): Mail =
+      implicit mp: MessagesProvider): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to WEBKNOSSOS",
@@ -203,5 +203,17 @@ class DefaultMails @Inject()(conf: WkConf) {
       bodyHtml = html.mail.jobFailedUploadConvert(user.name, datasetName).body,
       recipients = List(userEmail)
     )
+
+  def emailVerificationMail(user: User, userEmail: String, key: String): Mail = {
+    val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry
+      .map(duration => s"This link will expire in ${duration.toString()}. ")
+      .getOrElse("")
+    Mail(
+      from = defaultSender,
+      subject = "Verify Your Email at WEBKNOSSOS",
+      bodyHtml = html.mail.verifyEmail(user.name, key, linkExpiry).body,
+      recipients = List(userEmail)
+    )
+  }
 
 }

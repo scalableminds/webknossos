@@ -358,6 +358,20 @@ class AnnotationController @Inject()(
       } yield result
   }
 
+  @ApiOperation(hidden = true, value = "")
+  def addSegmentIndex(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotation <- provider.provideAnnotation(id, request.identity)
+      _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.addSegmentIndex.explorationalsOnly"
+      annotationLayer <- annotation.annotationLayers
+        .find(_.tracingId == tracingId)
+        .toFox ?~> "annotation.addSegmentIndex.layerNotFound"
+      _ <- annotationService.addSegmentIndex(annotation, annotationLayer) ?~> "annotation.addSegmentIndex.failed"
+      updated <- provider.provideAnnotation(id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield JsonOk(json)
+  }
+
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {

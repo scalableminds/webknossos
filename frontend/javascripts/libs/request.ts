@@ -32,7 +32,7 @@ export type RequestOptionsWithData<T> = RequestOptions & {
   data: T;
 };
 
-type ServerErrorMessage = {
+export type ServerErrorMessage = {
   error: string;
 };
 

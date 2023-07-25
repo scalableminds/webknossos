@@ -6,8 +6,13 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.08.0...HEAD)
+
+- Postgres Evolution 105 (see below) adds email verification and sets the emails of all existing users as verified.
+To set all email addresses as unverified, execute this query:
+```sql
+UPDATE webknossos.multiUsers SET isEmailVerified = false;
+```
 
 ### Postgres Evolutions:
-- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
-- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
+- [105-verify-email.sql](conf/evolutions/105-verify-email.sql)

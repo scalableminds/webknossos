@@ -368,6 +368,7 @@ class VolumeTracingService @Inject()(
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0,
+      // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
       hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions.fallbackLayer)
     )
     for {

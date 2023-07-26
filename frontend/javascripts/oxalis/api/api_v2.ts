@@ -591,15 +591,10 @@ class DataApi {
    * @example // Get the segmentation id for a segmentation layer
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
-  async getDataValue(
-    layerName: string,
-    position: Vector3,
-    zoomStep: number = 0,
-    additionalCoordinates: AdditionalCoordinate[] | null = null,
-  ): Promise<number> {
+  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
-    const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
+    const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
     const bucket = cube.getOrCreateBucket(bucketAddress);
     if (bucket.type === "null") return 0;
     let needsToAwaitBucket = false;
@@ -622,7 +617,7 @@ class DataApi {
     }
 
     // Bucket has been loaded by now or was loaded already
-    return cube.getDataValue(position, additionalCoordinates, null, zoomStep);
+    return cube.getDataValue(position, null, null, zoomStep);
   }
 
   /**

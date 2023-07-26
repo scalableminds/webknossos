@@ -16,11 +16,15 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const MAX_CAPACITY = 1000;
 
+type BufferGeometryWithBufferAttributes = THREE.BufferGeometry & {
+  attributes: Record<string, THREE.BufferAttribute>;
+};
+
 type BufferHelper = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
 type Buffer = {
   capacity: number;
   nextIndex: number;
-  geometry: THREE.BufferGeometry;
+  geometry: BufferGeometryWithBufferAttributes;
   mesh: THREE.Object3D;
 };
 type BufferPosition = {
@@ -212,7 +216,7 @@ class Skeleton {
     material: THREE.RawShaderMaterial,
     helper: BufferHelper,
   ): Buffer {
-    const geometry = new THREE.BufferGeometry();
+    const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     this.rootGroup.add(mesh);
@@ -507,14 +511,13 @@ class Skeleton {
       id,
       this.nodes,
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
-        const attributes = buffer.geometry.attributes as Record<string, THREE.BufferAttribute>;
-        (attributes.position as THREE.BufferAttribute).set(node.position, index * 3);
+        const attributes = buffer.geometry.attributes;
+        attributes.position.set(node.position, index * 3);
 
         if (node.additionalCoordinates) {
           for (const idx of _.range(0, node.additionalCoordinates.length)) {
-            const attributeAdditionalCoordinates = buffer.geometry.attributes[
-              `additionalCoord_${idx}`
-            ] as THREE.BufferAttribute;
+            const attributeAdditionalCoordinates =
+              buffer.geometry.attributes[`additionalCoord_${idx}`];
             attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
           }
         }
@@ -539,7 +542,7 @@ class Skeleton {
   deleteNode(treeId: number, nodeId: number) {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.type as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.type;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
@@ -552,7 +555,7 @@ class Skeleton {
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.radius as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.radius;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = radius;
       return [attribute];
@@ -571,14 +574,13 @@ class Skeleton {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
 
       if (additionalCoordinates) {
         for (const idx of _.range(0, additionalCoordinates.length)) {
-          const attributeAdditionalCoordinates = buffer.geometry.attributes[
-            `additionalCoord_${idx}`
-          ] as THREE.BufferAttribute;
+          const attributeAdditionalCoordinates =
+            buffer.geometry.attributes[`additionalCoord_${idx}`];
           attributeAdditionalCoordinates.set([additionalCoordinates[idx].value], index);
         }
       }
@@ -592,7 +594,7 @@ class Skeleton {
       const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
-        const positionAttribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
+        const positionAttribute = buffer.geometry.attributes.position;
         positionAttribute.set(position, index * 6 + indexOffset);
         return [positionAttribute];
       });
@@ -614,7 +616,7 @@ class Skeleton {
   updateNodeType(treeId: number, nodeId: number, type: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.type as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.type;
       // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = type;
       return [attribute];
@@ -624,7 +626,7 @@ class Skeleton {
   updateIsCommented(treeId: number, nodeId: number, isCommented: boolean) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.isCommented as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.isCommented;
       // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean' is not assignable to type 'number'.
       attribute.array[index] = isCommented;
       return [attribute];
@@ -638,8 +640,8 @@ class Skeleton {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, ({ buffer, index }) => {
       const { attributes } = buffer.geometry;
-      const positionAttribute = attributes.position as THREE.BufferAttribute;
-      const treeIdAttribute = attributes.treeId as THREE.BufferAttribute;
+      const positionAttribute = attributes.position;
+      const treeIdAttribute = attributes.treeId;
 
       positionAttribute.set(source.position, index * 6);
       positionAttribute.set(target.position, index * 6 + 3);
@@ -648,9 +650,7 @@ class Skeleton {
       const changedAttributes = [];
       if (source.additionalCoordinates && target.additionalCoordinates) {
         for (const idx of _.range(0, source.additionalCoordinates.length)) {
-          const additionalCoordAttribute = attributes[
-            `additionalCoord_${idx}`
-          ] as THREE.BufferAttribute;
+          const additionalCoordAttribute = attributes[`additionalCoord_${idx}`];
 
           additionalCoordAttribute.set([source.additionalCoordinates[idx].value], 2 * index);
           additionalCoordAttribute.set([target.additionalCoordinates[idx].value], 2 * index + 1);
@@ -669,7 +669,7 @@ class Skeleton {
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.position as THREE.BufferAttribute;
+      const attribute = buffer.geometry.attributes.position;
       attribute.set([0, 0, 0, 0, 0, 0], index * 6);
       return [attribute];
     });

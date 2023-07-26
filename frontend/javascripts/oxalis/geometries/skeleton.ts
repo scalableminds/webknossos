@@ -512,10 +512,10 @@ class Skeleton {
 
         if (node.additionalCoordinates) {
           for (const idx of _.range(0, node.additionalCoordinates.length)) {
-            const attributeadditionalCoordinates = buffer.geometry.attributes[
+            const attributeAdditionalCoordinates = buffer.geometry.attributes[
               `additionalCoord_${idx}`
             ] as THREE.BufferAttribute;
-            attributeadditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
+            attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
           }
         }
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
@@ -576,10 +576,10 @@ class Skeleton {
 
       if (additionalCoordinates) {
         for (const idx of _.range(0, additionalCoordinates.length)) {
-          const attributeadditionalCoordinates = buffer.geometry.attributes[
+          const attributeAdditionalCoordinates = buffer.geometry.attributes[
             `additionalCoord_${idx}`
           ] as THREE.BufferAttribute;
-          attributeadditionalCoordinates.set([additionalCoordinates[idx].value], index);
+          attributeAdditionalCoordinates.set([additionalCoordinates[idx].value], index);
         }
       }
 

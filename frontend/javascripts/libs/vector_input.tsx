@@ -195,7 +195,7 @@ export class Vector6Input extends BaseVector<Vector6> {
 
 export class ArbitraryVectorInput extends BaseVector<number[]> {
   get defaultValue(): number[] {
-    return Array(this.props.vectorLength).fill(0)
+    return Array(this.props.vectorLength).fill(0);
   }
 }
 

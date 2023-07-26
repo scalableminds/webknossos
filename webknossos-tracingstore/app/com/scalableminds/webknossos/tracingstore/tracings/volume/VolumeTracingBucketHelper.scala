@@ -138,7 +138,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
 
         // TODO: Does this work?
         val additionalCoordinateRequests: Seq[AdditionalCoordinateRequest] =
-          (3 until additionalCoordinates.length+3).zipWithIndex.map(
+          (3 until additionalCoordinates.length + 3).zipWithIndex.map(
             groupIndexAndCoordIndex =>
               AdditionalCoordinateRequest(additionalCoordinates(groupIndexAndCoordIndex._2).name,
                                           aMatch.group(groupIndexAndCoordIndex._1).toInt))

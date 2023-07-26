@@ -255,7 +255,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           const fallbackValue =
             (existingAdditionalCoordinates != null
               ? existingAdditionalCoordinates[index]?.value
-              : null) ?? Math.floor((bounds[1] - bounds[0]) / 2);
+              : null) ?? bounds[0];
           if (values) {
             const specifiedValue = values.find((element) => element.name === name);
             if (specifiedValue) {

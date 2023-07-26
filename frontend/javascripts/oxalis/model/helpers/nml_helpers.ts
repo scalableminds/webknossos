@@ -309,10 +309,17 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
     const position = node.position.map(Math.floor);
-    const maybeProperties =
-      (node.additionalCoordinates?.length || 0) === 0
-        ? {}
-        : { additionalCoordinates: JSON.stringify(node.additionalCoordinates) };
+    const maybeProperties = Object.fromEntries(
+      (node.additionalCoordinates || []).map((coord) => [
+        // Export additional coordinates like this:
+        // additionalCoordinate-t="10"
+        // Don't capitalize coord.name, because it it's not reversible for
+        // names that are already capitalized.
+        `additionalCoordinate-${coord.name}`,
+        coord.value,
+      ]),
+    );
+
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
@@ -729,11 +736,14 @@ export function parseNml(nmlString: string): Promise<{
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
-              additionalCoordinates: _parseJSON(
-                attr,
-                "additionalCoordinates",
-                [],
-              ) as AdditionalCoordinate[],
+              // Parse additional coordinates, like additionalCoordinate-t="10"
+              additionalCoordinates: Object.keys(attr)
+                .map((key) => [key, key.split("additionalCoordinate-")[1]])
+                .filter(([_key, name]) => name != null)
+                .map(([key, name]) => ({
+                  name,
+                  value: _parseFloat(attr, key, 0),
+                })) as AdditionalCoordinate[],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),

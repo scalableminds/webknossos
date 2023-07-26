@@ -5,7 +5,7 @@ import _ from "lodash";
 /*
  * A lightweight wrapper around <Input> which does:
  * - automatically blur on Escape
- * - maintain the cursor position / selection even when mutating the the input value
+ * - maintain the cursor position / selection even when mutating the input value
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */
 

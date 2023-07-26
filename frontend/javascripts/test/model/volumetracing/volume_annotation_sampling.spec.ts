@@ -484,9 +484,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
       [13, 13],
     ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
     const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
-    if (bucket.type === "null") {
-      throw new Error("Unexpected null bucket.");
-    }
+    assertNonNullBucket(bucket);
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
   });
   const goalVoxelMap = getEmptyVoxelMap();
@@ -571,9 +569,7 @@ test("Downsampling annotation should work across more than one resolution", (t) 
       [13, 13],
     ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
     const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
-    if (bucket.type === "null") {
-      throw new Error("Unexpected null bucket.");
-    }
+    assertNonNullBucket(bucket);
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
   });
   const goalVoxelMap = getEmptyVoxelMap();

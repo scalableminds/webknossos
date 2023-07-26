@@ -116,6 +116,9 @@ export default function determineBucketsForFlight(
   ];
   const planePointsGlobal = planePoints.map((vec) => transformAndApplyMatrix(vec));
   const planeBuckets = planePointsGlobal.map((position: Vector3) =>
+    // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
+    // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
+    // potential other coordinates.
     globalPositionToBucketPosition(position, resolutions, logZoomStep, null),
   );
 

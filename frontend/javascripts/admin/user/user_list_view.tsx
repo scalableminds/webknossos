@@ -117,9 +117,7 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
-    // todo: activate this line again after testing
-    // const newUser = await updateUser({ ...selectedUser, isActive });
-    const newUser = { ...selectedUser, isActive };
+    const newUser = await updateUser({ ...selectedUser, isActive });
     const newUsers = this.state.users.map((user) => (selectedUser.id === user.id ? newUser : user));
 
     this.setState({

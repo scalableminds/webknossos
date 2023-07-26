@@ -71,7 +71,7 @@ export function bucketPositionToGlobalAddress(
   bucketPosition: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const [x, y, z, resolutionIndex, _dims] = bucketPosition;
+  const [x, y, z, resolutionIndex, _additionalCoordinates] = bucketPosition;
   const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
     x * constants.BUCKET_WIDTH * resolution[0],

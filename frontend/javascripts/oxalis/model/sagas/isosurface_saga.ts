@@ -201,6 +201,13 @@ function* loadAdHocIsosurface(
     return;
   }
 
+  if (_.size(layer.cube.additionalCoordinatesBounds) > 0) {
+    // Also see https://github.com/scalableminds/webknossos/issues/7229
+    Toast.warning(
+      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
+    );
+  }
+
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
 
   yield* call(
@@ -529,7 +536,8 @@ function* _refreshIsosurfaceWithMap(
   // The isosurface should only be removed once after re-fetching the isosurface first position.
   let shouldBeRemoved = true;
 
-  // todop: store mesh with additional coordinates
+  // Meshing for N-D segmentations is not yet supported.
+  // See https://github.com/scalableminds/webknossos/issues/7229
   const seedAdditionalCoordinates = undefined;
   for (const [, position] of isosurfacePositions) {
     // Reload the isosurface at the given position if it isn't already loaded there.

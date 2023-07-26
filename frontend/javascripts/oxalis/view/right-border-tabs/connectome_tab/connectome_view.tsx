@@ -167,7 +167,7 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   bitDepth: 8,
   interpolation: false,
   // Don't assume any additionalCoordinates here, because no 4D connectomes are
-  // known yet.
+  // known yet. Also see https://github.com/scalableminds/webknossos/issues/7229.
   additionalCoordinates: null,
 });
 

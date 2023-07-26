@@ -564,6 +564,7 @@ function determineDefaultState(
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
+    additionalCoordinates: urlStateAdditionalCoordinates,
     zoomStep: urlStateZoomStep,
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
@@ -591,6 +592,10 @@ function determineDefaultState(
 
   if (urlStatePosition != null) {
     position = urlStatePosition;
+  }
+
+  if (urlStateAdditionalCoordinates != null) {
+    additionalCoordinates = urlStateAdditionalCoordinates;
   }
 
   let zoomStep = datasetConfiguration.zoom;

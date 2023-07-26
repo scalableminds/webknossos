@@ -144,7 +144,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
   private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath)(implicit ec: ExecutionContext) =
     for {
-      _ <- Fox.successful()
+      _ <- Fox.successful(())
       magPath = layerPath / ngffDataset.path
       zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"

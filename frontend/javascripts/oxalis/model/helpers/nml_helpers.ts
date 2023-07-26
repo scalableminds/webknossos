@@ -62,16 +62,6 @@ function escape(string: string): string {
     .replace(/\n/g, "&#xa;");
 }
 
-function unescape(string: string): string {
-  return string
-    .replaceAll("&#xa;", "\n")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&apos;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&");
-}
-
 function mapColorToComponents(color: Vector3) {
   return {
     "color.r": color[0],
@@ -430,18 +420,6 @@ function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: nu
   }
 
   return Number.parseFloat(obj[key]);
-}
-
-function _parseJSON(obj: Record<string, string>, key: string, defaultValue?: number[]): Object {
-  if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
-      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
-    } else {
-      return defaultValue;
-    }
-  }
-
-  return JSON.parse(unescape(obj[key]));
 }
 
 function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {

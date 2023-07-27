@@ -423,9 +423,27 @@ class SegmentsView extends React.Component<Props, State> {
     } else {
       newSelectedKeys = [key];
     }
-    //toggle between group and segment. question: how is group selected? key or id?
+    const selectedIds = this.getSegmentIdForKey(newSelectedKeys);
+    // selected group after selecting segmentd
+    if (selectedIds.group != null && selectedIds.segments.length > 0) {
+      if (selectedIds.segments.length > 1) {
+        Modal.confirm({
+          title: "Do you really want to select this group?",
+          content: `You have ${selectedIds.segments.length} selected segments. Do you really want to select this group?
+        This will deselect all selected trees.`,
+          onOk: () => {
+            this.setState({ selectedIds: { segments: [], group: selectedIds.group } });
+          },
+          onCancel() {},
+        });
+      } else {
+        this.setState({ selectedIds: this.getSegmentIdForKey([key]) });
+      }
+      return;
+    }
+
     this.setState({
-      selectedIds: this.getSegmentIdForKey(newSelectedKeys),
+      selectedIds: selectedIds,
     });
   };
 
@@ -1290,7 +1308,6 @@ class SegmentsView extends React.Component<Props, State> {
     let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
-      let splitUpKey = [];
       if (keyAsString.startsWith("group-")) {
         console.log(keyAsString);
         const regexSplit = keyAsString.split(/-(-?)/);

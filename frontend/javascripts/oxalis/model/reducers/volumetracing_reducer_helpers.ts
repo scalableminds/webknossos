@@ -9,10 +9,14 @@ import type {
   SegmentGroup,
   SegmentMap,
 } from "oxalis/store";
-import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getSegmentationLayerForTracing,
+  isVolumeAnnotationDisallowedForZoom,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
 
 export function updateVolumeTracing(
   state: OxalisState,
@@ -47,6 +51,11 @@ export function updateEditableMapping(
   });
 }
 export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+  const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
+  if (id > getMaximumSegmentIdForLayer(state.dataset, segmentationLayer.name)) {
+    // Ignore the action if the segment id is larger than the maximum segment id for the layer.
+    return state;
+  }
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     activeCellId: id,
   });
@@ -61,10 +70,7 @@ export function createCellReducer(
   const { activeCellId } = volumeTracing;
 
   const newId = Math.max(activeCellId, largestSegmentId) + 1;
-
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
-    activeCellId: newId,
-  });
+  return setActiveCellReducer(state, volumeTracing, newId);
 }
 
 const MAXIMUM_LABEL_ACTIONS_COUNT = 50;

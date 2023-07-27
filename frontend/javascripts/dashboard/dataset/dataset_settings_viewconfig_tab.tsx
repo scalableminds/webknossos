@@ -12,6 +12,7 @@ import {
   Table,
   Select,
   Slider,
+  Divider,
 } from "antd";
 import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
@@ -50,6 +51,9 @@ export default function DatasetSettingsViewConfigTab() {
   ];
   const comments: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
     alpha: "20 for segmentation layer",
+    min: "Only for color layers",
+    max: "Only for color layers",
+    intensityRange: "Only set/change for color layers",
   };
   const layerViewConfigurationEntries = _.map(
     getDefaultLayerViewConfiguration(),
@@ -67,8 +71,8 @@ export default function DatasetSettingsViewConfigTab() {
   );
   const checkboxSettings = (
     [
-      ["interpolation", 3],
-      ["fourBit", 3],
+      ["interpolation", 6],
+      ["fourBit", 6],
       ["renderMissingDataBlack", 6],
     ] as Array<[keyof RecommendedConfiguration, number]>
   ).map(([settingsName, spanWidth]) => (
@@ -135,7 +139,33 @@ export default function DatasetSettingsViewConfigTab() {
             <Vector3Input />
           </FormItemWithInfo>
         </Col>
-        <Col span={3}>
+      </Row>
+      <Row gutter={24}>{checkboxSettings}</Row>
+      <Row gutter={24}>
+        <Col span={6}>
+          <Row gutter={24}>
+            <Col span={16}>
+              <FormItemWithInfo
+                name={["defaultConfiguration", "segmentationPatternOpacity"]}
+                label={settings.segmentationPatternOpacity}
+                info={settingsTooltips.segmentationPatternOpacity}
+                colon={false}
+              >
+                <Slider min={0} max={100} step={1} />
+              </FormItemWithInfo>
+            </Col>
+            <Col span={8} style={{ marginLeft: -12 }}>
+              <FormItem
+                name={["defaultConfiguration", "segmentationPatternOpacity"]}
+                colon={false}
+                label=" "
+              >
+                <InputNumber min={0} max={100} step={1} precision={0} />
+              </FormItem>
+            </Col>
+          </Row>
+        </Col>
+        <Col span={6}>
           <FormItemWithInfo
             colon={false}
             name={["defaultConfiguration", "blendMode"]}
@@ -148,7 +178,7 @@ export default function DatasetSettingsViewConfigTab() {
             </Select>
           </FormItemWithInfo>
         </Col>
-        <Col span={3}>
+        <Col span={6}>
           <FormItemWithInfo
             colon={false}
             name={["defaultConfiguration", "loadingStrategy"]}
@@ -162,28 +192,7 @@ export default function DatasetSettingsViewConfigTab() {
           </FormItemWithInfo>
         </Col>
       </Row>
-      <Row gutter={24}>
-        {checkboxSettings}
-        <Col span={4}>
-          <FormItemWithInfo
-            name={["defaultConfiguration", "segmentationPatternOpacity"]}
-            label={settings.segmentationPatternOpacity}
-            info={settingsTooltips.segmentationPatternOpacity}
-            colon={false}
-          >
-            <Slider min={0} max={100} step={1} />
-          </FormItemWithInfo>
-        </Col>
-        <Col span={2} style={{ marginLeft: -12 }}>
-          <FormItem
-            name={["defaultConfiguration", "segmentationPatternOpacity"]}
-            colon={false}
-            label=" "
-          >
-            <InputNumber min={0} max={100} step={1} precision={0} />
-          </FormItem>
-        </Col>
-      </Row>
+      <Divider />
       <Row gutter={32}>
         <Col span={12}>
           <FormItemWithInfo
@@ -196,7 +205,7 @@ export default function DatasetSettingsViewConfigTab() {
               },
             ]}
           >
-            <Input.TextArea rows={10} style={jsonEditStyle} />
+            <Input.TextArea rows={18} style={jsonEditStyle} />
           </FormItemWithInfo>
         </Col>
         <Col span={12}>

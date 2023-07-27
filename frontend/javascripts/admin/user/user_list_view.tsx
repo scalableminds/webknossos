@@ -130,9 +130,10 @@ class UserListView extends React.PureComponent<Props, State> {
     }
     Modal.confirm({
       title: "Account was activated.",
-      content: "Do you want to configure the teams and permissions of the user?",
-      okText: "Yes",
-      cancelText: "No",
+      content:
+        "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
+      okText: "Configure teams and permissions",
+      cancelText: "Close",
       icon: <CheckCircleOutlined style={{ color: "green" }} />,
       onOk: () => {
         this.setState({

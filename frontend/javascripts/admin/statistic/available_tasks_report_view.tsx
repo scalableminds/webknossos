@@ -14,6 +14,11 @@ type State = {
   isLoading: boolean;
 };
 
+/*
+ * Note that the phrasing “available” tasks is chosen here over “pending” to
+ * emphasize that tasks are still available for individual users.
+ * From the project viewpoint they are tasks with pending instances.
+ */
 class AvailableTasksReportView extends React.PureComponent<{}, State> {
   state: State = {
     data: [],

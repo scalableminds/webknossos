@@ -321,6 +321,10 @@ class ReactRouter extends React.Component<Props> {
                 component={ProjectProgressReportView}
                 exact
               />
+              <RouteWithErrorBoundary
+                path="/reports/openTasks"
+                render={() => <Redirect to="/reports/availableTasks" />}
+              />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 requiredPricingPlan={PricingPlanEnum.Team}

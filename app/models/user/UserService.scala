@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
 import models.team._
 import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.TokenDAO
+import oxalis.security.{PasswordHasher, TokenDAO}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
@@ -38,7 +38,9 @@ class UserService @Inject()(conf: WkConf,
                             teamMembershipService: TeamMembershipService,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
+                            emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
+                            passwordHasher: PasswordHasher,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
@@ -81,6 +83,9 @@ class UserService @Inject()(conf: WkConf,
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
+  def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser))
+
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
@@ -91,7 +96,8 @@ class UserService @Inject()(conf: WkConf,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean,
-             isOrganizationOwner: Boolean): Fox[User] = {
+             isOrganizationOwner: Boolean,
+             isEmailVerified: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -100,7 +106,8 @@ class UserService @Inject()(conf: WkConf,
         multiUserId,
         email,
         passwordInfo,
-        isSuperUser = false
+        isSuperUser = false,
+        isEmailVerified = isEmailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -122,6 +129,7 @@ class UserService @Inject()(conf: WkConf,
         isUnlisted = false,
         lastTaskTypeId = None
       )
+      _ <- Fox.runIf(!isEmailVerified)(emailVerificationService.sendEmailVerification(user))
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
     } yield user
@@ -142,7 +150,8 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
-                       isUnlisted: Boolean = false): Fox[User] =
+                       isUnlisted: Boolean = false,
+                       isOrganizationOwner: Boolean = false): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -157,7 +166,7 @@ class UserService @Inject()(conf: WkConf,
         isDatasetManager = false,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
-        isOrganizationOwner = false,
+        isOrganizationOwner = isOrganizationOwner,
         isUnlisted = isUnlisted,
         created = Instant.now
       )
@@ -189,7 +198,7 @@ class UserService @Inject()(conf: WkConf,
     }
     for {
       oldEmail <- emailFor(user)
-      _ <- multiUserDAO.updateEmail(user._multiUser, email)
+      _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,
@@ -207,6 +216,9 @@ class UserService @Inject()(conf: WkConf,
 
   private def removeUserFromCache(userId: ObjectId): Unit =
     userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
+
+  def getPasswordInfo(passwordOpt: Option[String]): PasswordInfo =
+    passwordOpt.map(passwordHasher.hash).getOrElse(getOpenIdConnectPasswordInfo)
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
@@ -347,7 +359,8 @@ class UserService @Inject()(conf: WkConf,
         "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
-        "isSuperUser" -> multiUser.isSuperUser
+        "isSuperUser" -> multiUser.isSuperUser,
+        "isEmailVerified" -> multiUser.isEmailVerified,
       )
     }
   }

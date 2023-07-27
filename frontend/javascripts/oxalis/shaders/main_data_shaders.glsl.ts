@@ -38,6 +38,7 @@ import {
 type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
+  orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
   resolutionsCount: number;
@@ -202,7 +203,8 @@ void main() {
 
   // Get Color Value(s)
   vec3 color_value  = vec3(0.0);
-  <% _.each(colorLayerNames, function(name, layerIndex) { %>
+  <% _.each(orderedColorLayerNames, function(name, layerIndex) { %>
+    <% const color_layer_index = colorLayerNames.indexOf(name); %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
@@ -216,7 +218,7 @@ void main() {
       if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
-            <%= formatNumberAsGLSLFloat(layerIndex) %>,
+            <%= formatNumberAsGLSLFloat(color_layer_index) %>,
             <%= name %>_data_texture_width,
             <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             transformedCoordUVW,

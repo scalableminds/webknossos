@@ -18,3 +18,4 @@ UPDATE webknossos.multiUsers SET isEmailVerified = false;
 
 ### Postgres Evolutions:
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
+- [106-task-terminology.sql](conf/evolutions/106-task-terminology.sql)

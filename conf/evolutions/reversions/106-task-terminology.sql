@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 105, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 106, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW webknossos.tasks_;
 
@@ -84,6 +84,6 @@ AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 104;
+UPDATE webknossos.releaseInformation SET schemaVersion = 105;
 
 COMMIT TRANSACTION;

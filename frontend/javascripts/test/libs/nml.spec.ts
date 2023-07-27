@@ -292,6 +292,40 @@ test("NML serializing and parsing should yield the same state even when using mu
   t.deepEqual(skeletonTracing.trees, trees);
   t.deepEqual(skeletonTracing.treeGroups, treeGroups);
 });
+test("NML serializing and parsing should yield the same state even when additional coordinates exist", async (t) => {
+  const existingNodeMap = initialState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
+  const { trees, treeGroups } = await parseNml(serializedNml);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  t.deepEqual(skeletonTracing.trees, trees);
+  t.deepEqual(skeletonTracing.treeGroups, treeGroups);
+});
 test("NML Serializer should only serialize visible trees", async (t) => {
   const state = update(initialState, {
     tracing: {

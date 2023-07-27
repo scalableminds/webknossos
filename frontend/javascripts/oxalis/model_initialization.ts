@@ -803,10 +803,7 @@ function ensureDatasetSettingsHasLayerOrder(
     datasetConfiguration?.colorLayerOrder?.filter(
       (layerName) => colorLayerNames.indexOf(layerName) >= 0,
     ) || [];
-  if (
-    datasetConfiguration.colorLayerOrder == null ||
-    onlyExistingLayers.length < colorLayerNames.length
-  ) {
+  if (onlyExistingLayers.length < colorLayerNames.length) {
     return {
       ...datasetConfiguration,
       colorLayerOrder: colorLayerNames,

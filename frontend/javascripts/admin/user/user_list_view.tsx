@@ -125,7 +125,7 @@ class UserListView extends React.PureComponent<Props, State> {
     });
 
     if (!isActive) {
-      // Don't ask the user whether the team permissions
+      // Don't ask the user for the team permissions
       return;
     }
     Modal.confirm({

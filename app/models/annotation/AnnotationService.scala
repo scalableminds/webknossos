@@ -393,11 +393,24 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
-      _ <- bool2Fox(annotation.volumeAnnotationLayers.nonEmpty) ?~> "annotation.downsample.volumeOnly"
+      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.downsample.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
       newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId, downsample = true)
       _ = logger.info(
         s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by downsampled copy $newVolumeTracingId for annotation ${annotation._id}.")
+      _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
+    } yield ()
+
+  def addSegmentIndex(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.downsample.volumeOnly"
+      rpcClient <- tracingStoreService.clientFor(dataSet)
+      // duplicate in tracingstore will add segment index if possible
+      newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId)
+      _ = logger.info(
+        s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by copy with added segment index $newVolumeTracingId for annotation ${annotation._id}.")
       _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
     } yield ()
 

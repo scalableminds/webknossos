@@ -423,12 +423,27 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def add(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =
+  def add(token: Option[String],
+          organizationName: String,
+          dataSetName: String,
+          folderId: Option[String]): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         for {
           _ <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent")
+          _ <- remoteWebKnossosClient.reserveDataSourceUpload(
+            ReserveUploadInformation(
+              uploadId = "",
+              name = dataSetName,
+              organization = organizationName,
+              totalFileCount = 1,
+              layersToLink = None,
+              initialTeams = List.empty,
+              folderId = folderId,
+            ),
+            urlOrHeaderToken(token, request)
+          ) ?~> "dataSet.upload.validation.failed"
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
                                                   expectExisting = false)
           _ <- remoteWebKnossosClient.reportUpload(

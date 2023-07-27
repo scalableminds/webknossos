@@ -5,7 +5,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
-export const EMPTY_KEY_VALUE = 0;
+export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 

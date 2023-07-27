@@ -341,6 +341,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
+    if (!intensityRange) {
+      return null;
+    }
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
 
@@ -595,7 +598,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) : null}
           </div>
           <div className="flex-item">
-            {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
               <Tooltip
                 title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}

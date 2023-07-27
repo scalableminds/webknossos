@@ -31,7 +31,8 @@ const eliminateErrors = (
 };
 
 export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIDataLayer) => ({
-  intensityRange: getDefaultIntensityRangeOfLayer(dataset, layer.name),
+  intensityRange:
+    layer.category === "color" ? getDefaultIntensityRangeOfLayer(dataset, layer.name) : undefined,
   alpha: layer.category === "color" ? 100 : 20,
 });
 
@@ -62,6 +63,11 @@ export const enforceValidatedDatasetViewConfiguration = (
           existingLayerConfig,
         );
         eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
+        if (layer.category === "segmentation") {
+          delete existingLayerConfig.intensityRange;
+        } else if (existingLayerConfig.intensityRange == null) {
+          existingLayerConfig.intensityRange = getDefaultIntensityRangeOfLayer(dataset, layer.name);
+        }
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = existingLayerConfig;
       } else {

@@ -53,10 +53,10 @@ export default function DatasetSettingsViewConfigTab() {
     alpha: "20 for segmentation layer",
     min: "Only for color layers",
     max: "Only for color layers",
-    intensityRange: "Only set/change for color layers",
+    intensityRange: "Only for color layers",
   };
   const layerViewConfigurationEntries = _.map(
-    getDefaultLayerViewConfiguration(),
+    { ...getDefaultLayerViewConfiguration(), min: 0, max: 0, intensityRange: [0, 255] },
     (defaultValue: any, key: string) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
@@ -154,7 +154,7 @@ export default function DatasetSettingsViewConfigTab() {
                 <Slider min={0} max={100} step={1} />
               </FormItemWithInfo>
             </Col>
-            <Col span={8} style={{ marginLeft: -12 }}>
+            <Col span={8} style={{ marginRight: -12 }}>
               <FormItem
                 name={["defaultConfiguration", "segmentationPatternOpacity"]}
                 colon={false}

@@ -190,16 +190,12 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
 export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
   return (
     <Tooltip title="Organization" placement="left">
-      <tr>
-        <td
-          style={{
-            paddingRight: 20,
-          }}
-        >
-          <i className="fas fa-building fa-xl" style={{ color: "var(--ant-primary)" }} />
-        </td>
-        <td>{organizationName === null ? <i>loading...</i> : organizationName}</td>
-      </tr>
+      <div className="info-tab-block">
+        <p className="sidebar-label">Organization</p>
+        <p>
+          <Tag color="blue">{organizationName === null ? <i>loading...</i> : organizationName}</Tag>
+        </p>
+      </div>
     </Tooltip>
   );
 }
@@ -637,6 +633,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         {this.getAnnotationName()}
         {this.getAnnotationDescription()}
         {this.getDatasetName()}
+        {this.maybePrintOrganization()}
         {this.maybePrintOwnerAndContributors()}
 
         <div className="info-tab-block">
@@ -648,7 +645,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <tbody>
-              {this.maybePrintOrganization()}
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
               {this.getResolutionInfo()}

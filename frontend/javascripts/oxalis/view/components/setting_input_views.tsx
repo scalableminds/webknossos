@@ -199,6 +199,7 @@ export type SwitchSettingProps = {
   loading: boolean;
   labelSpan?: number | null;
   postSwitchIcon: React.ReactNode | null | undefined;
+  disabledReason?: string | null;
 };
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
@@ -228,13 +229,15 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 alignItems: "center",
               }}
             >
-              <Switch
-                onChange={onChange}
-                checked={value}
-                defaultChecked={value}
-                disabled={disabled}
-                loading={loading}
-              />
+              <Tooltip title={this.props.disabledReason}>
+                <Switch
+                  onChange={onChange}
+                  checked={value}
+                  defaultChecked={value}
+                  disabled={disabled}
+                  loading={loading}
+                />
+              </Tooltip>
               {postSwitchIcon}
             </div>
           </Tooltip>
@@ -636,6 +639,8 @@ type DropdownSettingProps = {
   label: React.ReactNode | string;
   value: number | string;
   options: Array<Record<string, any>>;
+  disabled?: boolean;
+  disabledReason?: string | null;
 };
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
@@ -646,16 +651,19 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Select
-            onChange={onChange}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            value={value.toString()}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            defaultValue={value.toString()}
-            size="small"
-            dropdownMatchSelectWidth={false}
-            options={this.props.options}
-          />
+          <Tooltip title={this.props.disabledReason}>
+            <Select
+              onChange={onChange}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              value={value.toString()}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              defaultValue={value.toString()}
+              size="small"
+              dropdownMatchSelectWidth={false}
+              options={this.props.options}
+              disabled={this.props.disabled}
+            />
+          </Tooltip>
         </Col>
       </Row>
     );

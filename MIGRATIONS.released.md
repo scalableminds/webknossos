@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [23.08.0](https://github.com/scalableminds/webknossos/releases/tag/23.08.0) - 2023-07-24
+[Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...23.08.0)
+
+### Postgres Evolutions:
+- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
+- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
+
+
 ## [23.07.0](https://github.com/scalableminds/webknossos/releases/tag/23.07.0) - 2023-06-20
 [Commits](https://github.com/scalableminds/webknossos/compare/23.06.0...23.07.0)
 - FossilDB needs to be opened with new additional column family volumeSegmentIndex.

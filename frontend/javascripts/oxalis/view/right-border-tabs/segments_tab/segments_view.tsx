@@ -951,10 +951,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  getResetGroupColorMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
+  getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
     const isEditingDisabled = !this.props.allowUpdate;
     const title = "Reset Segment Color";
     return {
@@ -985,11 +982,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  getRemoveFromSegmentListMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
-    this.assertSegmentXORGroupId(groupId, segmentId);
+  getRemoveFromSegmentListMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "removeSegments",
       icon: <CloseOutlined />,
@@ -1018,11 +1011,7 @@ class SegmentsView extends React.Component<Props, State> {
     return relevantSegments[0].color;
   };
 
-  getComputeMeshesAdHocMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
-    this.assertSegmentXORGroupId(groupId, segmentId);
+  getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "computeAdHoc",
       icon: <i className="fas fa-dice-d20 fa-icon" />,
@@ -1043,19 +1032,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  assertSegmentXORGroupId(groupId: number | null, segmentId: number | null) {
-    if ((groupId != null && segmentId != null) || (groupId == null && segmentId == null)) {
-      Toast.error("Dropdown can either be open for segment or for segment group");
-      return false;
-    }
-    return true;
-  }
-
-  getLoadMeshesFromFileMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
-    this.assertSegmentXORGroupId(groupId, segmentId);
+  getLoadMeshesFromFileMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
@@ -1077,7 +1054,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  getReloadMenuItem = (groupId: number | null, segmentId: number | null = null): ItemType => {
+  getReloadMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "reloadMeshes",
@@ -1096,7 +1073,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getRemoveMeshesMenuItem = (groupId: number | null, segmentId: number | null = null): ItemType => {
+  getRemoveMeshesMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "removeMeshes",
@@ -1115,10 +1092,7 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  getDownLoadMeshesMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
+  getDownLoadMeshesMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
           key: "downloadAllMeshes",
@@ -1550,22 +1524,18 @@ class SegmentsView extends React.Component<Props, State> {
             }
 
             const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
-            const multiSelectMenu = (segmentId: number): MenuProps => {
+            const multiSelectMenu = (): MenuProps => {
               return {
                 items: [
-                  this.getLoadMeshesFromFileMenuItem(null, segmentId),
-                  this.getComputeMeshesAdHocMenuItem(null, segmentId),
+                  this.getLoadMeshesFromFileMenuItem(null),
+                  this.getComputeMeshesAdHocMenuItem(null),
                   doSelectedSegmentsHaveAnyMeshes ? this.getShowMeshesMenuItem(null) : null,
-                  doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null, segmentId) : null,
-                  doSelectedSegmentsHaveAnyMeshes
-                    ? this.getRemoveMeshesMenuItem(null, segmentId)
-                    : null,
-                  doSelectedSegmentsHaveAnyMeshes
-                    ? this.getDownLoadMeshesMenuItem(null, segmentId)
-                    : null,
+                  doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null) : null,
+                  doSelectedSegmentsHaveAnyMeshes ? this.getRemoveMeshesMenuItem(null) : null,
+                  doSelectedSegmentsHaveAnyMeshes ? this.getDownLoadMeshesMenuItem(null) : null,
                   this.getSetGroupColorMenuItem(null),
-                  this.getResetGroupColorMenuItem(null, segmentId),
-                  this.getRemoveFromSegmentListMenuItem(null, segmentId),
+                  this.getResetGroupColorMenuItem(null),
+                  this.getRemoveFromSegmentListMenuItem(null),
                 ],
               };
             };
@@ -1600,7 +1570,7 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
-                    multiSelectMenu={multiSelectMenu(segment.id)}
+                    multiSelectMenu={multiSelectMenu()}
                   />
                 );
               } else {

@@ -8,39 +8,17 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.08.0...HEAD)
 
 ### Added
-- Added a modal to the voxelytics workflow view that lists all artifacts with their file size and inode count. This helps identifying the largest artifacts to free disk space. [#7152](https://github.com/scalableminds/webknossos/pull/7152)
-- In order to facilitate changing the brush size in the brush tool, buttons with preset brush sizes were added. These presets are user configurable by assigning the current brush size to any of the preset buttons. Additionally the preset brush sizes can be set with keyboard shortcuts. [#7101](https://github.com/scalableminds/webknossos/pull/7101)
-- Added new graphics and restyled empty dashboards. [#7008](https://github.com/scalableminds/webknossos/pull/7008)
-- Added warning when using WEBKNOSSOS in an outdated browser. [#7165](https://github.com/scalableminds/webknossos/pull/7165)
-- Re-added optional antialiasing for rendering. [#7180](https://github.com/scalableminds/webknossos/pull/7180)
-- Added a search feature for segments and segment groups. Listed segments/groups can be searched by id and name. [#7175](https://github.com/scalableminds/webknossos/pull/7175)
-- Added support for transformations with thin plate splines. [#7131](https://github.com/scalableminds/webknossos/pull/7131)
-- WEBKNOSSOS can now read S3 remote dataset credentials from environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`. Those will be used, if available, when accessing remote datasets for which no explicit credentials are supplied. [#7170](https://github.com/scalableminds/webknossos/pull/7170)
-- Added security.txt according to [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116). The content is configurable and it can be disabled. [#7182](https://github.com/scalableminds/webknossos/pull/7182)
-- Added tooltips to explain the task actions "Reset" and "Reset and Cancel". [#7201](https://github.com/scalableminds/webknossos/pull/7201)
-- Thumbnail improvements: Thumbnails now use intensity configuration, thumbnails can now be created for float datasets, and they are cached across webknossos restarts. [#7190](https://github.com/scalableminds/webknossos/pull/7190)
-- Added batch actions for segment groups, such as changing the color and loading or downloading all corresponding meshes. [#7164](https://github.com/scalableminds/webknossos/pull/7164).
+- Added the option to change the ordering of color layers via drag and drop. This is useful when using the cover blend mode. [#7188](https://github.com/scalableminds/webknossos/pull/7188)
+- Added configuration to require users' emails to be verified, added flow to verify emails via link. [#7161](https://github.com/scalableminds/webknossos/pull/7161)
 - Added a route to explore and add remote datasets via API. [#7176](https://github.com/scalableminds/webknossos/pull/7176)
 
 ### Changed
-- Redesigned the info tab in the right-hand sidebar to be fit the new branding and design language. [#7110](https://github.com/scalableminds/webknossos/pull/7110)
-- The proofreading tool is always visible now (even when disabled). [#7174](https://github.com/scalableminds/webknossos/pull/7174)
-- Optimized processing of parallel requests (new thread pool configuration, asynchronous FossilDB client), improving performance and reducing idle waiting. [#7139](https://github.com/scalableminds/webknossos/pull/7139)
-- Renamed "open" tasks to "pending" and slightly redesigned the available task assignment view for clarity. [#7187](https://github.com/scalableminds/webknossos/pull/7187)
-- Being the uploader of a dataset no longer grants edit permissions on that dataset. [#7200](https://github.com/scalableminds/webknossos/pull/7200)
-- Enabled the "Shift + middle-click" shortcut to load agglomerate skeletons for all tools, not just the Skeleton tool. [#7212](https://github.com/scalableminds/webknossos/pull/7212)
-- Improved support for touch devices by adding floating buttons for easier navigation and layout changes. [#7178](https://github.com/scalableminds/webknossos/pull/7178)
 
 ### Fixed
-- Fixed rare rendering bug at viewport edge for anisotropic datasets. [#7163](https://github.com/scalableminds/webknossos/pull/7163)
-- Fixed the dataset search which was broken when only the root folder existed. [#7177](https://github.com/scalableminds/webknossos/pull/7177)
-- Correctly use configured fill-value for missing chunks of remote datasets hosted on gcs or s3. [#7198](https://github.com/scalableminds/webknossos/pull/7198)
-- Adapted the proofreading docs to reflect the current state of the proofreading tool. [#7212](https://github.com/scalableminds/webknossos/pull/7212)
 
 ### Removed
-- Removed the "Globalize Floodfill" feature that could extend partial floodfills across an entire dataset. Please use the fill tool multiple times instead or make use of the proofreading tool when correcting large structures. [#7173](https://github.com/scalableminds/webknossos/pull/7173)
 
 ### Breaking Changes

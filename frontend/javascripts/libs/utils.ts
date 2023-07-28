@@ -1149,3 +1149,19 @@ export function minValue(array: Array<number>): number {
   }
   return value;
 }
+
+/*
+ * Iterates over arbitrary objects recursively and calls the callback function.
+ */
+export const deepIterate = (obj: any, callback: (val: unknown) => void) => {
+  if (obj == null) {
+    return;
+  }
+  Object.keys(obj).forEach((key: any) => {
+    callback(obj[key]);
+
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      deepIterate(obj[key], callback);
+    }
+  });
+};

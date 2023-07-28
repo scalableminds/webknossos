@@ -654,7 +654,7 @@ type Transform =
 
 function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer): Transform | null {
   let coordinateTransformations = layer.coordinateTransformations;
-  if (!coordinateTransformations) {
+  if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
   if (coordinateTransformations.length > 1) {

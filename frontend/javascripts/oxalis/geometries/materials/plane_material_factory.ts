@@ -793,14 +793,18 @@ class PlaneMaterialFactory {
 
             if (scaledTpsInv) {
               this.scaledTpsInvPerLayer[name] = scaledTpsInv;
+            } else {
+              delete this.scaledTpsInvPerLayer[name];
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
+            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
           }
+          this.recomputeShaders();
         },
         true,
       ),
@@ -855,6 +859,9 @@ class PlaneMaterialFactory {
   }
 
   recomputeShaders = _.throttle(() => {
+    if (this.material == null) {
+      return;
+    }
     const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;

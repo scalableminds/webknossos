@@ -13,7 +13,7 @@ import {
   EllipsisOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
@@ -105,6 +105,7 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -162,6 +163,41 @@ const DragHandle = SortableHandle(() => (
     />
   </div>
 ));
+
+function TransformationIcon({ layer }: { layer: APIDataLayer }) {
+  const dispatch = useDispatch();
+  const transformations = layer.coordinateTransformations || [];
+
+  const typeToLabel = {
+    affine: "an affine",
+    thin_plate_spline: "a thin-plate-spline",
+  };
+
+  const toggleLayerTransforms = () => {
+    dispatch(setLayerTransformsAction(layer.name, null));
+  };
+
+  return (
+    <div className="flex-item">
+      <Tooltip
+        title={
+          transformations.length > 0
+            ? `This layer is rendered with ${typeToLabel[transformations[0].type]} transformation.`
+            : "This layer is shown natively (i.e., without any transformations)."
+        }
+      >
+        <i
+          className="fas fa-th"
+          style={{
+            transform: transformations.length > 0 ? "rotate(45deg)" : "",
+            color: "gray",
+          }}
+          onClick={toggleLayerTransforms}
+        ></i>
+      </Tooltip>
+    </div>
+  );
+}
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -592,6 +628,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               </Tooltip>
             ) : null}
           </div>
+          <TransformationIcon layer={layer} />
           <div className="flex-item">
             {isVolumeTracing ? (
               <Tooltip

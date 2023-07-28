@@ -4,6 +4,7 @@ import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import { flatToNestedMatrix, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import DiffableMap from "libs/diffable_map";
 import { MappingStatusEnum } from "oxalis/constants";
+import { deepIterate } from "libs/utils";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -64,11 +65,17 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_LAYER_TRANSFORMS": {
-      const { layerName, transformMatrix } = action;
-      if (transformMatrix.some((el) => Number.isNaN(el))) {
+      const { layerName, coordinateTransformations } = action;
+
+      let hasNaN = false;
+      deepIterate(coordinateTransformations, (el: any) => {
+        if (Number.isNaN(el)) hasNaN = true;
+      });
+
+      if (hasNaN) {
         console.error(
           "Did not update layer transforms, because it contained NaN values.",
-          transformMatrix,
+          coordinateTransformations,
         );
         return state;
       }
@@ -76,12 +83,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
         if (layer.name === layerName) {
           return {
             ...layer,
-            coordinateTransformations: [
-              {
-                type: "affine" as const,
-                matrix: flatToNestedMatrix(transformMatrix),
-              },
-            ],
+            coordinateTransformations,
           };
         } else {
           return layer;

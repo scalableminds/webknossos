@@ -425,6 +425,8 @@ class SegmentsView extends React.Component<Props, State> {
     }
     const selectedIds = this.getSegmentIdForKey(newSelectedKeys);
     // selected group after selecting segmentd
+    console.log(selectedIds);
+    console.log(newSelectedKeys);
     if (selectedIds.group != null && selectedIds.segments.length > 0) {
       if (selectedIds.segments.length > 1) {
         Modal.confirm({
@@ -652,7 +654,6 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleDropdownMenuVisibility = (segmentOrGroupId: number | null, isVisible: boolean) => {
     if (isVisible && segmentOrGroupId != null) {
-      debugger;
       this.setState({
         activeDropdownSegmentOrGroupId: segmentOrGroupId,
       });
@@ -1298,10 +1299,21 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSelectedSegments = (): Segment[] => {
-    const allSegments = this.getSegmentsOfGroup(MISSING_GROUP_ID);
+    const allSegments = this.props.segments;
     if (allSegments == null) return [];
     const selectedSegmentIds = this.state.selectedIds.segments;
-    return allSegments?.filter((segment) => selectedSegmentIds.includes(segment.id));
+    return allSegments.toObject.filter((segment) => selectedSegmentIds.includes(segment.id));
+    //TODO, see getDerivedStateFromProps
+  };
+
+  getSelectedItemKeys = () => {
+    const mappedIdsToKeys = this.state.selectedIds.segments.map(
+      (segmentId) => `segment-${segmentId}`,
+    );
+    if (this.state.selectedIds.group != null) {
+      mappedIdsToKeys.concat(`group-${this.state.selectedIds.group}`);
+    }
+    return mappedIdsToKeys;
   };
 
   getSegmentIdForKey = (segmentOrGroupKeys: Key[]) => {
@@ -1309,19 +1321,16 @@ class SegmentsView extends React.Component<Props, State> {
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {
-        console.log(keyAsString);
         const regexSplit = keyAsString.split(/-(-?)/);
         const idWithSign = regexSplit[1].concat(regexSplit[2]);
         if (isNumber(parseInt(idWithSign))) {
-          console.log(idWithSign); //TODO remove
           selectedIds.group = parseInt(idWithSign);
-          // TODO return or something to make sure this only happens once
+          // TODO return or something to make sure this only happens once?
         }
       } else if (keyAsString.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = keyAsString.split("-");
         if (isNumber(parseInt(regexSplit[1]))) {
-          console.log(regexSplit[1]); //TODO remove
           selectedIds.segments.push(parseInt(regexSplit[1]));
           // TODO doughnut (dont) return
         }
@@ -1334,6 +1343,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     if (groupId == null) {
+      debugger;
       const selectedSegments = this.getSelectedSegments();
       selectedSegments?.forEach(callback);
       return;
@@ -1746,9 +1756,7 @@ class SegmentsView extends React.Component<Props, State> {
                             }}
                             multiple
                             showLine
-                            selectedKeys={this.state.selectedIds.segments
-                              .map((segmentId) => `segment-${segmentId}`)
-                              .concat(`group-${this.state.selectedIds.group}`)}
+                            selectedKeys={this.getSelectedItemKeys()}
                             switcherIcon={<DownOutlined />}
                             treeData={this.state.groupTree}
                             titleRender={titleRender}

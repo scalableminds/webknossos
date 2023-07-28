@@ -76,9 +76,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     } yield ()
 
   def assertValidFolderName(name: String): Fox[Unit] =
-    for {
-      _ <- bool2Fox(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
-    } yield ()
+    bool2Fox(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
 
   def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =

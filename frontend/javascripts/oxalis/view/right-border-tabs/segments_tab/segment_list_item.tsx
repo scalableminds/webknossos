@@ -150,7 +150,7 @@ type Props = {
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
-  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
+  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
   updateSegment: (
@@ -178,7 +178,7 @@ function _MeshInfoItem(props: {
   isSelectedInList: boolean;
   isHovered: boolean;
   isosurface: IsosurfaceInformation | null | undefined;
-  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
+  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
 }) {
@@ -198,7 +198,7 @@ function _MeshInfoItem(props: {
           style={{ marginLeft: 8 }}
           onContextMenu={(evt) => {
             evt.preventDefault();
-            props.handleSegmentDropdownMenuVisibility(segment.id, true);
+            props.handleSegmentDropdownMenuVisibility(true, segment.id);
           }}
         >
           No mesh loaded. Use right-click to add one.
@@ -351,7 +351,7 @@ function _SegmentListItem({
     return null;
   }
 
-  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
+  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(false, 0);
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -482,7 +482,7 @@ function _SegmentListItem({
         autoDestroy
         placement="bottom"
         open={activeDropdownSegmentId === segment.id}
-        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
+        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(isVisible, segment.id)}
         trigger={["contextMenu"]}
       >
         <div style={{ display: "inline-flex", alignItems: "center" }}>
@@ -510,7 +510,7 @@ function _SegmentListItem({
           />
           <Tooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+              onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
             />
           </Tooltip>
           {/* Show Default Segment Name if another one is already defined*/}
@@ -545,7 +545,9 @@ function _SegmentListItem({
       >
         <MeshInfoItem
           segment={segment}
-          isSelectedInList={selectedSegmentIds != null && selectedSegmentIds?.includes(segment.id)}
+          isSelectedInList={
+            selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+          }
           isHovered={isHoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}

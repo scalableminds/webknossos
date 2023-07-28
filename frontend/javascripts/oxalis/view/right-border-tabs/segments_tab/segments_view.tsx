@@ -108,7 +108,6 @@ import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { DataNode } from "antd/lib/tree";
-import DiffableMap from "libs/diffable_map";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -403,8 +402,6 @@ class SegmentsView extends React.Component<Props, State> {
   ) => {
     const { node, nativeEvent } = event;
     const { key = "" } = node;
-    const treeData = this.state.groupTree;
-    //debugger;
     if (
       nativeEvent?.target instanceof HTMLElement &&
       (nativeEvent?.target?.closest(".ant-dropdown-menu") != null ||
@@ -425,7 +422,6 @@ class SegmentsView extends React.Component<Props, State> {
       newSelectedKeys = [key];
     }
     const selectedIds = this.getSegmentIdForKey(newSelectedKeys);
-    // selected group after selecting segmentd
     console.log(selectedIds);
     console.log(newSelectedKeys);
     if (selectedIds.group != null && selectedIds.segments.length > 0) {
@@ -653,8 +649,9 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.setPosition(segment.somePosition);
   };
 
-  handleDropdownMenuVisibility = (segmentOrGroupId: number | null, isVisible: boolean) => {
+  handleDropdownMenuVisibility = (isVisible: boolean, segmentOrGroupId: number | null = null) => {
     if (isVisible && segmentOrGroupId != null) {
+      //done by antd internally
       this.setState({
         activeDropdownSegmentOrGroupId: segmentOrGroupId,
       });
@@ -923,10 +920,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  getSetGroupColorMenuItem = (
-    groupId: number | null,
-    segmentId: number | null = null,
-  ): ItemType => {
+  getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     const isEditingDisabled = !this.props.allowUpdate;
     const title = "Change Segment Color";
     return {
@@ -982,7 +976,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.setGroupColor(groupId, null);
-            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+            this.handleDropdownMenuVisibility(false);
           }}
         >
           Reset Segment Color
@@ -1006,7 +1000,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleRemoveSegmentsFromList(groupId);
-            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+            this.handleDropdownMenuVisibility(false);
           }}
         >
           Remove Segments From List
@@ -1040,7 +1034,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesAdHoc(groupId);
             this.getToastForMissingPositions(groupId);
-            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+            this.handleDropdownMenuVisibility(false);
           }}
         >
           Compute Meshes (ad hoc)
@@ -1074,7 +1068,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesFromFile(groupId);
             this.getToastForMissingPositions(groupId);
-            this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+            this.handleDropdownMenuVisibility(false);
           }}
         >
           Load Meshes (precomputed)
@@ -1092,7 +1086,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRefreshMeshes(groupId);
-                this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+                this.handleDropdownMenuVisibility(false);
               }}
             >
               Refresh Meshes
@@ -1111,7 +1105,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRemoveMeshes(groupId);
-                this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+                this.handleDropdownMenuVisibility(false);
               }}
             >
               Remove Meshes
@@ -1133,7 +1127,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.downloadAllMeshesForGroup(groupId);
-                this.handleDropdownMenuVisibility(groupId != null ? groupId : segmentId, false);
+                this.handleDropdownMenuVisibility(false);
               }}
             >
               Download Meshes
@@ -1158,7 +1152,7 @@ class SegmentsView extends React.Component<Props, State> {
               this.props.visibleSegmentationLayer.name,
               true,
             );
-            this.handleDropdownMenuVisibility(groupId, false);
+            this.handleDropdownMenuVisibility(false);
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
@@ -1180,7 +1174,7 @@ class SegmentsView extends React.Component<Props, State> {
     return !isSomeSegmentLoadedAndInvisible;
   };
 
-  getShowMeshesMenuItem = (groupId: number | null, segmentId: number | null = null): ItemType => {
+  getShowMeshesMenuItem = (groupId: number | null): ItemType => {
     let willShowHideMeshesLabel =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
@@ -1205,7 +1199,7 @@ class SegmentsView extends React.Component<Props, State> {
                   groupId,
                   !this.areSelectedSegmentsMeshesVisible(),
                 );
-                this.handleDropdownMenuVisibility(groupId, false);
+                this.handleDropdownMenuVisibility(false);
               }}
             >
               {showHideMeshesLabel.text} Meshes
@@ -1300,10 +1294,9 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSelectedSegments = (): Segment[] => {
-    const allSegments = this.props.segments; //TODO
+    const allSegments = this.props.segments;
     if (allSegments == null) return [];
     return this.state.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
-    //TODO, see getDerivedStateFromProps
   };
 
   getSelectedItemKeys = () => {
@@ -1311,7 +1304,7 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => `segment-${segmentId}`,
     );
     if (this.state.selectedIds.group != null) {
-      mappedIdsToKeys.concat(`group-${this.state.selectedIds.group}`);
+      return mappedIdsToKeys.concat(`group-${this.state.selectedIds.group}`);
     }
     return mappedIdsToKeys;
   };
@@ -1325,14 +1318,12 @@ class SegmentsView extends React.Component<Props, State> {
         const idWithSign = regexSplit[1].concat(regexSplit[2]);
         if (isNumber(parseInt(idWithSign))) {
           selectedIds.group = parseInt(idWithSign);
-          // TODO return or something to make sure this only happens once?
         }
       } else if (keyAsString.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = keyAsString.split("-");
         if (isNumber(parseInt(regexSplit[1]))) {
           selectedIds.segments.push(parseInt(regexSplit[1]));
-          // TODO doughnut (dont) return
         }
       }
     });
@@ -1343,7 +1334,6 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     if (groupId == null) {
-      debugger;
       const selectedSegments = this.getSelectedSegments();
       selectedSegments?.forEach(callback);
       return;
@@ -1565,9 +1555,7 @@ class SegmentsView extends React.Component<Props, State> {
                 items: [
                   this.getLoadMeshesFromFileMenuItem(null, segmentId),
                   this.getComputeMeshesAdHocMenuItem(null, segmentId),
-                  doSelectedSegmentsHaveAnyMeshes
-                    ? this.getShowMeshesMenuItem(null, segmentId)
-                    : null,
+                  doSelectedSegmentsHaveAnyMeshes ? this.getShowMeshesMenuItem(null) : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null, segmentId) : null,
                   doSelectedSegmentsHaveAnyMeshes
                     ? this.getRemoveMeshesMenuItem(null, segmentId)
@@ -1575,7 +1563,7 @@ class SegmentsView extends React.Component<Props, State> {
                   doSelectedSegmentsHaveAnyMeshes
                     ? this.getDownLoadMeshesMenuItem(null, segmentId)
                     : null,
-                  this.getSetGroupColorMenuItem(null, segmentId),
+                  this.getSetGroupColorMenuItem(null),
                   this.getResetGroupColorMenuItem(null, segmentId),
                   this.getRemoveFromSegmentListMenuItem(null, segmentId),
                 ],
@@ -1624,7 +1612,7 @@ class SegmentsView extends React.Component<Props, State> {
                       key: "create",
                       onClick: () => {
                         this.createGroup(id);
-                        this.handleDropdownMenuVisibility(id, false);
+                        this.handleDropdownMenuVisibility(false);
                       },
                       disabled: isEditingDisabled,
                       icon: <PlusOutlined />,
@@ -1635,7 +1623,7 @@ class SegmentsView extends React.Component<Props, State> {
                       disabled: isEditingDisabled,
                       onClick: () => {
                         this.handleDeleteGroup(id);
-                        this.handleDropdownMenuVisibility(id, false);
+                        this.handleDropdownMenuVisibility(false);
                       },
                       icon: <DeleteOutlined />,
                       label: "Delete group",
@@ -1669,7 +1657,7 @@ class SegmentsView extends React.Component<Props, State> {
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
                       open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible) => this.handleDropdownMenuVisibility(id, isVisible)}
+                      onOpenChange={(isVisible) => this.handleDropdownMenuVisibility(isVisible, id)}
                       trigger={["contextMenu"]}
                     >
                       <EditableTextLabel

@@ -108,6 +108,7 @@ import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { DataNode } from "antd/lib/tree";
+import DiffableMap from "libs/diffable_map";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -1299,10 +1300,9 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSelectedSegments = (): Segment[] => {
-    const allSegments = this.props.segments;
+    const allSegments = this.props.segments; //TODO
     if (allSegments == null) return [];
-    const selectedSegmentIds = this.state.selectedIds.segments;
-    return allSegments.toObject.filter((segment) => selectedSegmentIds.includes(segment.id));
+    return this.state.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
     //TODO, see getDerivedStateFromProps
   };
 

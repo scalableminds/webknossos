@@ -4,7 +4,7 @@ import ReactDOM from "react-dom";
 import { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
-import { message } from 'antd';
+import { message } from "antd";
 
 import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
-  message.config({top: 30});
+  message.config({ top: 30 });
   document.addEventListener("click", googleAnalyticsLogClicks);
   checkBrowserFeatures();
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);

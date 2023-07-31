@@ -57,6 +57,7 @@ class FolderController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
+        _ <- folderService.assertValidFolderName(params.name)
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"

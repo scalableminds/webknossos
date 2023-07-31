@@ -110,6 +110,7 @@ dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a
 dataSet.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataSet.explore.failed.readFile=Failed to read remote file
 dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
+dataSet.explore.autoAdd.failed=Failed to automatically import the explored dataset.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system
@@ -334,6 +335,7 @@ folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
 folder.noWriteAccess=No write access in this folder
+folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.
 segmentAnything.noUri=No Uri for SAM server configured.

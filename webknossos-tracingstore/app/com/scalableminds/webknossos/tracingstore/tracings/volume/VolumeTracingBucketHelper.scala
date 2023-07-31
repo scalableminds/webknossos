@@ -74,12 +74,12 @@ trait VolumeBucketCompression extends LazyLogging {
 }
 
 trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
-  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
+  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition, additionalCoordinateDefinition): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     val additionalCoordinateString = bucket.additionalCoordinates match {
       case Some(additionalCoordinates) =>
         // Now assuming that additional coordinates are ordered, where do we get index from otherwise?
-        // TODO: Pass in index somehow
+        // TODO: Pass in index somehow to sort the coordinates.
         additionalCoordinates.map(_.value.toString).mkString(",")
       case None => ""
     }
@@ -137,10 +137,11 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
         val zStr = aMatch.group(additionalCoordinates.length + 5)
 
         // TODO: Does this work?
+        val additionalCoordinatesIndexSorted = additionalCoordinates.sortBy(_.index)
         val additionalCoordinateRequests: Seq[AdditionalCoordinateRequest] =
           (3 until additionalCoordinates.length + 3).zipWithIndex.map(
             groupIndexAndCoordIndex =>
-              AdditionalCoordinateRequest(additionalCoordinates(groupIndexAndCoordIndex._2).name,
+              AdditionalCoordinateRequest(additionalCoordinatesIndexSorted(groupIndexAndCoordIndex._2).name,
                                           aMatch.group(groupIndexAndCoordIndex._1).toInt))
 
         val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)

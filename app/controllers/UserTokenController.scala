@@ -166,7 +166,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
-    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
+    // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
@@ -199,7 +199,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
     if (mode != AccessMode.read)
-      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access mode for job exports: $mode")))
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

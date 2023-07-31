@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -437,6 +438,28 @@ class VolumeTracingController @Inject()(
                                                                            magParsed,
                                                                            urlOrHeaderToken(token, request))
         } yield Ok(Json.toJson(segmentVolume))
+      }
+    }
+
+  def getSegmentIndex(token: Option[String],
+                      tracingId: String,
+                      segmentId: Long,
+                      mag: String,
+                      cubeSize: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
+          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed)
+          bucketPositionsForCubeSize = bucketPositionsRaw.values
+            .map(vec3IntFromProto)
+            .map(_.scale(32)) // bucket positions raw are indices of 32³ buckets
+            .map(_ / cubeSizeParsed)
+            .distinct // divide by requested cube size to map them to larger buckets, select unique
+            .map(_ * cubeSizeParsed) // return positions, not indices
+        } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }
 

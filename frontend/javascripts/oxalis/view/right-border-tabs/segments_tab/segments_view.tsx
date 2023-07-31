@@ -259,7 +259,8 @@ type State = {
   selectedIds: { segments: number[]; group: number | null };
   //selectedSegmentIds: number[];
   activeMeshJobId: string | null | undefined;
-  activeDropdownSegmentOrGroupId: [number | null | undefined, null | "segment" | "group"];
+  activeDropdownSegmentId: number | null | undefined;
+  activeDropdownGroupId: number | null | undefined;
   groupTree: TreeNode[];
   searchableTreeItemList: TreeNode[];
   prevProps: Props | null | undefined;
@@ -352,7 +353,8 @@ class SegmentsView extends React.Component<Props, State> {
     renamingCounter: 0,
     selectedIds: { segments: [], group: null },
     activeMeshJobId: null,
-    activeDropdownSegmentOrGroupId: [null, null],
+    activeDropdownSegmentId: null,
+    activeDropdownGroupId: null,
     groupTree: [],
     searchableTreeItemList: [],
     prevProps: null,
@@ -649,45 +651,19 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.setPosition(segment.somePosition);
   };
 
-  toggleDropdownMenuVisibility = (
-    isVisible: boolean,
-    segmentOrGroupId: [number | null, "segment" | "group" | null] = [null, null],
-  ) => {
-    if (isVisible) {
-      this.setState({
-        activeDropdownSegmentOrGroupId: segmentOrGroupId,
-      });
-    } else {
-      this.setState({
-        activeDropdownSegmentOrGroupId: [null, null],
-      });
-    }
+  closeDropdowns = () => {
+    this.handleGroupDropdownMenuVisibility(false);
+    this.handleSegmentDropdownMenuVisibility(false);
   };
 
-  handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null) => {
-    this.toggleDropdownMenuVisibility(isVisible, [segmentId, "segment"]);
+  handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null = null) => {
+    const newActiveSegmentDropdown = isVisible ? segmentId : null;
+    this.setState({ activeDropdownSegmentId: newActiveSegmentDropdown });
   };
 
-  handleGroupDropdownMenuVisibility = (isVisible: boolean, groupId: number | null) => {
-    this.toggleDropdownMenuVisibility(isVisible, [groupId, "group"]);
-  };
-
-  getIdOfActiveSegmentDropdown = () => {
-    const activeDropdownId = this.state.activeDropdownSegmentOrGroupId;
-    if (activeDropdownId[1] === "segment") {
-      return activeDropdownId[0];
-    } else {
-      return null;
-    }
-  };
-
-  getIdOfActiveGroupDropdown = () => {
-    const activeDropdownId = this.state.activeDropdownSegmentOrGroupId;
-    if (activeDropdownId[1] === "group") {
-      return activeDropdownId[0];
-    } else {
-      return null;
-    }
+  handleGroupDropdownMenuVisibility = (isVisible: boolean, groupId: number | null = null) => {
+    const newActiveGroupDropdown = isVisible ? groupId : null;
+    this.setState({ activeDropdownGroupId: newActiveGroupDropdown });
   };
 
   startComputingMeshfile = async () => {
@@ -1000,7 +976,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.setGroupColor(groupId, null);
-            this.toggleDropdownMenuVisibility(false);
+            this.closeDropdowns();
           }}
         >
           Reset Segment Color
@@ -1020,7 +996,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleRemoveSegmentsFromList(groupId);
-            this.toggleDropdownMenuVisibility(false);
+            this.closeDropdowns();
           }}
         >
           Remove Segments From List
@@ -1050,7 +1026,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesAdHoc(groupId);
             this.getToastForMissingPositions(groupId);
-            this.toggleDropdownMenuVisibility(false);
+            this.closeDropdowns();
           }}
         >
           Compute Meshes (ad hoc)
@@ -1072,7 +1048,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesFromFile(groupId);
             this.getToastForMissingPositions(groupId);
-            this.toggleDropdownMenuVisibility(false);
+            this.closeDropdowns();
           }}
         >
           Load Meshes (precomputed)
@@ -1090,7 +1066,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRefreshMeshes(groupId);
-                this.toggleDropdownMenuVisibility(false);
+                this.closeDropdowns();
               }}
             >
               Refresh Meshes
@@ -1109,7 +1085,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRemoveMeshes(groupId);
-                this.toggleDropdownMenuVisibility(false);
+                this.closeDropdowns();
               }}
             >
               Remove Meshes
@@ -1128,7 +1104,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.downloadAllMeshesForGroup(groupId);
-                this.toggleDropdownMenuVisibility(false);
+                this.closeDropdowns();
               }}
             >
               Download Meshes
@@ -1153,7 +1129,7 @@ class SegmentsView extends React.Component<Props, State> {
               this.props.visibleSegmentationLayer.name,
               true,
             );
-            this.toggleDropdownMenuVisibility(false);
+            this.closeDropdowns();
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
@@ -1200,7 +1176,7 @@ class SegmentsView extends React.Component<Props, State> {
                   groupId,
                   !this.areSelectedSegmentsMeshesVisible(),
                 );
-                this.toggleDropdownMenuVisibility(false);
+                this.closeDropdowns();
               }}
             >
               {showHideMeshesLabel.text} Meshes
@@ -1577,7 +1553,7 @@ class SegmentsView extends React.Component<Props, State> {
                     segment={segment}
                     centeredSegmentId={centeredSegmentId}
                     selectedSegmentIds={this.state.selectedIds.segments}
-                    activeDropdownSegmentId={this.getIdOfActiveSegmentDropdown()}
+                    activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     isosurface={this.props.isosurfaces[segment.id]}
@@ -1609,7 +1585,7 @@ class SegmentsView extends React.Component<Props, State> {
                       key: "create",
                       onClick: () => {
                         this.createGroup(id);
-                        this.toggleDropdownMenuVisibility(false);
+                        this.closeDropdowns();
                       },
                       disabled: isEditingDisabled,
                       icon: <PlusOutlined />,
@@ -1620,7 +1596,7 @@ class SegmentsView extends React.Component<Props, State> {
                       disabled: isEditingDisabled,
                       onClick: () => {
                         this.handleDeleteGroup(id);
-                        this.toggleDropdownMenuVisibility(false);
+                        this.closeDropdowns();
                       },
                       icon: <DeleteOutlined />,
                       label: "Delete group",
@@ -1653,10 +1629,7 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open={
-                        this.state.activeDropdownSegmentOrGroupId[1] === "group" &&
-                        this.state.activeDropdownSegmentOrGroupId[0] === id
-                      } // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
+                      open={this.state.activeDropdownGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
                       onOpenChange={(isVisible) =>
                         this.handleGroupDropdownMenuVisibility(isVisible, id)
                       }

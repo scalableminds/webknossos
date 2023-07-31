@@ -33,7 +33,7 @@ import scala.util.Try
 case class ExploreRemoteDatasetParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
                                           credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[Array[Double]])
+                                          preferredVoxelSize: Option[Vec3Double])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
@@ -96,7 +96,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
   }
 
   private def addCoordinateTransformationsToLayers(layers: List[DataLayer],
-                                                   preferredVoxelSize: Option[Array[Double]],
+                                                   preferredVoxelSize: Option[Vec3Double],
                                                    voxelSize: Vec3Double): List[DataLayer] =
     layers.map(l => {
       val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
@@ -131,28 +131,21 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
 
   private def coordinateTransformationForVoxelSize(
       foundVoxelSize: Vec3Double,
-      preferredVoxelSize: Option[Array[Double]]): Option[List[CoordinateTransformation]] =
+      preferredVoxelSize: Option[Vec3Double]): Option[List[CoordinateTransformation]] =
     preferredVoxelSize match {
       case None => None
-      case Some(asArray) =>
-        Vec3Double.fromArray(asArray) match {
-          case None => None
-          case Some(voxelSize) =>
-            val scaleX = foundVoxelSize.x / voxelSize.x
-            val scaleY = foundVoxelSize.y / voxelSize.y
-            val scaleZ = foundVoxelSize.z / voxelSize.z
-            Some(
-              List(
-                CoordinateTransformation(CoordinateTransformationType.affine,
-                                         matrix = Some(
-                                           List(
-                                             List(scaleX, 0, 0, 0),
-                                             List(0, scaleY, 0, 0),
-                                             List(0, 0, scaleZ, 0),
-                                             List(0, 0, 0, 1)
-                                           )))))
-        }
-
+      case Some(voxelSize) =>
+        val scale = foundVoxelSize / voxelSize
+        Some(
+          List(
+            CoordinateTransformation(CoordinateTransformationType.affine,
+                                     matrix = Some(
+                                       List(
+                                         List(scale.x, 0, 0, 0),
+                                         List(0, scale.y, 0, 0),
+                                         List(0, 0, scale.z, 0),
+                                         List(0, 0, 0, 1)
+                                       )))))
     }
 
   private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayer, Vec3Double)])(

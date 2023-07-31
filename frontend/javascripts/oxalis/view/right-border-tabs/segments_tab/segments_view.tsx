@@ -257,7 +257,6 @@ type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
   selectedIds: { segments: number[]; group: number | null };
-  //selectedSegmentIds: number[];
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
   activeDropdownGroupId: number | null | undefined;
@@ -424,8 +423,6 @@ class SegmentsView extends React.Component<Props, State> {
       newSelectedKeys = [key];
     }
     const selectedIds = this.getSegmentIdForKey(newSelectedKeys);
-    console.log(selectedIds);
-    console.log(newSelectedKeys);
     if (selectedIds.group != null && selectedIds.segments.length > 0) {
       if (selectedIds.segments.length > 1) {
         Modal.confirm({
@@ -651,7 +648,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.setPosition(segment.somePosition);
   };
 
-  closeDropdowns = () => {
+  closeSegmentOrGroupDropdown = () => {
     this.handleGroupDropdownMenuVisibility(false);
     this.handleSegmentDropdownMenuVisibility(false);
   };
@@ -925,7 +922,6 @@ class SegmentsView extends React.Component<Props, State> {
 
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     const isEditingDisabled = !this.props.allowUpdate;
-    const title = "Change Segment Color";
     return {
       key: "changeGroupColor",
       disabled: isEditingDisabled,
@@ -939,7 +935,7 @@ class SegmentsView extends React.Component<Props, State> {
       ),
       label: (
         <ChangeColorMenuItemContent
-          title={title}
+          title="Change Segment Color"
           isDisabled={isEditingDisabled}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
@@ -947,7 +943,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.setGroupColor(groupId, color);
           }}
-          rgb={this.getColorOfFirstSegmentOrNull(groupId)}
+          rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
           hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
       ),
@@ -976,7 +972,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.setGroupColor(groupId, null);
-            this.closeDropdowns();
+            this.closeSegmentOrGroupDropdown();
           }}
         >
           Reset Segment Color
@@ -996,7 +992,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleRemoveSegmentsFromList(groupId);
-            this.closeDropdowns();
+            this.closeSegmentOrGroupDropdown();
           }}
         >
           Remove Segments From List
@@ -1005,7 +1001,7 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  getColorOfFirstSegmentOrNull = (groupId: number | null) => {
+  getColorOfFirstSegmentOrGrey = (groupId: number | null) => {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
     if (relevantSegments == null || relevantSegments[0]?.color == null) {
@@ -1026,7 +1022,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesAdHoc(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeDropdowns();
+            this.closeSegmentOrGroupDropdown();
           }}
         >
           Compute Meshes (ad hoc)
@@ -1048,7 +1044,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesFromFile(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeDropdowns();
+            this.closeSegmentOrGroupDropdown();
           }}
         >
           Load Meshes (precomputed)
@@ -1066,7 +1062,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRefreshMeshes(groupId);
-                this.closeDropdowns();
+                this.closeSegmentOrGroupDropdown();
               }}
             >
               Refresh Meshes
@@ -1085,7 +1081,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRemoveMeshes(groupId);
-                this.closeDropdowns();
+                this.closeSegmentOrGroupDropdown();
               }}
             >
               Remove Meshes
@@ -1104,7 +1100,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.downloadAllMeshesForGroup(groupId);
-                this.closeDropdowns();
+                this.closeSegmentOrGroupDropdown();
               }}
             >
               Download Meshes
@@ -1129,7 +1125,7 @@ class SegmentsView extends React.Component<Props, State> {
               this.props.visibleSegmentationLayer.name,
               true,
             );
-            this.closeDropdowns();
+            this.closeSegmentOrGroupDropdown();
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
@@ -1139,20 +1135,18 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   areSelectedSegmentsMeshesVisible = () => {
-    // TODO remove me. We assume that there are meshes because of check one level up
     const selectedSegments = this.getSelectedSegments();
     const isosurfaces = this.props.isosurfaces;
-    const isSomeSegmentLoadedAndInvisible = selectedSegments.some((segment) => {
+    const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
       const segmentIsosurface = isosurfaces[segment.id];
-      // Only regard loaded, but invisible meshes
       return segmentIsosurface != null && !isosurfaces[segment.id].isVisible;
     });
     // show "Hide meshes" if no isosurface is loaded and invisible
-    return !isSomeSegmentLoadedAndInvisible;
+    return !isSomeMeshLoadedAndInvisible;
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let willShowHideMeshesLabel =
+    let willShowHideMeshesLabel: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
@@ -1176,7 +1170,7 @@ class SegmentsView extends React.Component<Props, State> {
                   groupId,
                   !this.areSelectedSegmentsMeshesVisible(),
                 );
-                this.closeDropdowns();
+                this.closeSegmentOrGroupDropdown();
               }}
             >
               {showHideMeshesLabel.text} Meshes
@@ -1292,6 +1286,7 @@ class SegmentsView extends React.Component<Props, State> {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {
         const regexSplit = keyAsString.split(/-(-?)/);
+        // concatenate id with negative sign for root group. for positive ids, regexSplit[2] is empty
         const idWithSign = regexSplit[1].concat(regexSplit[2]);
         if (isNumber(parseInt(idWithSign))) {
           selectedIds.group = parseInt(idWithSign);
@@ -1310,14 +1305,9 @@ class SegmentsView extends React.Component<Props, State> {
   handlePerSegment(groupId: number | null, callback: (s: Segment) => void) {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
-    if (groupId == null) {
-      const selectedSegments = this.getSelectedSegments();
-      selectedSegments?.forEach(callback);
-      return;
-    }
-    const segmentGroup = this.getSegmentsOfGroup(groupId);
-    if (segmentGroup == null) return;
-    segmentGroup.forEach(callback);
+    const relevantSegments =
+      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+    relevantSegments?.forEach(callback);
   }
 
   handleLoadMeshesFromFile = (groupId: number | null) => {
@@ -1338,16 +1328,14 @@ class SegmentsView extends React.Component<Props, State> {
       groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return;
 
-    if (visibleSegmentationLayer != null) {
-      const segmentsArray = relevantSegments.map((segment) => {
-        return {
-          segmentName: segment.name ? segment.name : "mesh",
-          segmentId: segment.id,
-          layerName: visibleSegmentationLayer.name,
-        };
-      });
-      Store.dispatch(triggerIsosurfacesDownloadAction(segmentsArray));
-    }
+    const segmentsArray = relevantSegments.map((segment) => {
+      return {
+        segmentName: segment.name ? segment.name : "mesh",
+        segmentId: segment.id,
+        layerName: visibleSegmentationLayer.name,
+      };
+    });
+    Store.dispatch(triggerIsosurfacesDownloadAction(segmentsArray));
   };
 
   handleDeleteGroup = (groupId: number) => {
@@ -1425,7 +1413,7 @@ class SegmentsView extends React.Component<Props, State> {
     const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
-      // Remove groupremoveSegment
+      // Remove group
       parentsChildren.splice(index, 1);
 
       if (!deleteChildren) {
@@ -1585,7 +1573,7 @@ class SegmentsView extends React.Component<Props, State> {
                       key: "create",
                       onClick: () => {
                         this.createGroup(id);
-                        this.closeDropdowns();
+                        this.closeSegmentOrGroupDropdown();
                       },
                       disabled: isEditingDisabled,
                       icon: <PlusOutlined />,
@@ -1596,7 +1584,7 @@ class SegmentsView extends React.Component<Props, State> {
                       disabled: isEditingDisabled,
                       onClick: () => {
                         this.handleDeleteGroup(id);
-                        this.closeDropdowns();
+                        this.closeSegmentOrGroupDropdown();
                       },
                       icon: <DeleteOutlined />,
                       label: "Delete group",

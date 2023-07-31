@@ -456,10 +456,7 @@ function _SegmentListItem({
       style={{
         padding: "2px 5px",
       }}
-      className={classnames("segment-list-item", {
-        "is-selected-cell": selectedSegmentIds?.includes(segment.id), //TODO this wont work
-        "is-hovered-cell": isHoveredSegmentId,
-      })}
+      className={classnames("segment-list-item")}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}
@@ -469,7 +466,7 @@ function _SegmentListItem({
     >
       <Dropdown
         menu={
-          selectedSegmentIds != null && selectedSegmentIds.length > 1
+          selectedSegmentIds?.includes(segment.id) && selectedSegmentIds.length > 1
             ? multiSelectMenu
             : createSegmentContextMenu()
         } // The overlay is generated lazily. By default, this would make the overlay

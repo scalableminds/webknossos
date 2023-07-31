@@ -137,5 +137,4 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
         bool2Fox(userCount + usersToAddCount <= includedUsers))
     } yield ()
-
 }

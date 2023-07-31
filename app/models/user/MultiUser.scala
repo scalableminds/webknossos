@@ -25,6 +25,7 @@ case class MultiUser(
     novelUserExperienceInfos: JsObject = Json.obj(),
     selectedTheme: Theme = Theme.auto,
     created: Instant = Instant.now,
+    isEmailVerified: Boolean = false,
     isDeleted: Boolean = false
 )
 
@@ -55,6 +56,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         novelUserExperienceInfos,
         theme,
         Instant.fromSql(r.created),
+        r.isemailverified,
         r.isdeleted
       )
     }
@@ -65,11 +67,11 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- run(q"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher,
                                                      passwordInfo_password,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
-                                                     created, isDeleted)
+                                                     created, isEmailVerified, isDeleted)
                    values(${u._id}, ${u.email}, $passwordInfoHasher,
                           ${u.passwordInfo.password},
                           ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
-                          ${u.created}, ${u.isDeleted})""".asUpdate)
+                          ${u.created}, ${u.isEmailVerified}, ${u.isDeleted})""".asUpdate)
     } yield ()
 
   def updatePasswordInfo(multiUserId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -86,7 +88,15 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""update webknossos.multiusers set
-                          email = $email
+                          email = $email, isEmailVerified = false
+                   where _id = $multiUserId""".asUpdate)
+    } yield ()
+
+  def updateEmailVerification(multiUserId: ObjectId, verified: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(multiUserId)
+      _ <- run(q"""update webknossos.multiusers set
+                          isemailverified = $verified
                    where _id = $multiUserId""".asUpdate)
     } yield ()
 

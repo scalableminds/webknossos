@@ -20,6 +20,7 @@ const dummyUser: APIUser = {
   organization: "sample_organization",
   novelUserExperienceInfos: {},
   selectedTheme: "auto",
+  isEmailVerified: true,
 };
 
 export default dummyUser;

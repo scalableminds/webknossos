@@ -1,7 +1,6 @@
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
-
 GET           /buildinfo                                                                        controllers.Application.buildInfo
 GET           /features                                                                         controllers.Application.features
 GET           /health                                                                           controllers.Application.health
@@ -31,6 +30,7 @@ GET           /auth/oidc/login                                                  
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin
+POST          /auth/createUserInOrganization/:organizationName                                  controllers.AuthenticationController.createUserInOrganization(organizationName: String)
 
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read
@@ -72,6 +72,7 @@ GET           /datasets/:organizationName/:dataSetName/sandbox/:typ             
 GET           /datasets                                                                         controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 POST          /datasets                                                                         controllers.DataSetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DataSetController.exploreRemoteDataset
+POST          /datasets/exploreAndAddRemote                                                     controllers.DataSetController.exploreAndAddRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                         controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                                   controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PATCH         /datasets/:organizationName/:dataSetName                                          controllers.DataSetController.update(organizationName: String, dataSetName: String)
@@ -143,6 +144,7 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
+PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                                  controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
@@ -227,12 +229,14 @@ GET           /statistics/users                                                 
 
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list
+POST          /organizations                                                                    controllers.OrganizationController.create
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                                  controllers.OrganizationController.get(organizationName: String)
 PATCH         /organizations/:organizationName                                                  controllers.OrganizationController.update(organizationName: String)
 DELETE        /organizations/:organizationName                                                  controllers.OrganizationController.delete(organizationName: String)
+POST          /organizations/:organizationName/addUser                                          controllers.OrganizationController.addUser(organizationName: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData
 POST          /pricing/requestExtension                                                         controllers.OrganizationController.sendExtendPricingPlanEmail
 POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)
@@ -276,6 +280,10 @@ GET           /shortLinks/byKey/:key                                            
 POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential
+
+# Email verification
+POST          /verifyEmail/:key                                                                 controllers.EmailVerificationController.verify(key: String)
+POST          /verifyEmail                                                                      controllers.EmailVerificationController.requestVerificationMail
 
 # Voxelytics
 POST          /voxelytics/workflows                                                             controllers.VoxelyticsController.storeWorkflow

@@ -323,13 +323,23 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       }
     }).flatMap(identity)
 
-  /*
-    Awaits the future and opens the box. Do not use this in production code!
-   */
+  /**
+    *
+    *  Awaits the future and opens the box. Do not use this in production code (therefore marked as Deprecated)!
+    */
+  @Deprecated
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
-    val box = Await.result(futureBox, awaitTimeout)
+    val box = await(justification, awaitTimeout)
     box.openOrThrowException(justification)
   }
+
+  /**
+    *
+    * Awaits the future and returns the box. Should not be used in production code (therefore marked as Deprecated).
+    */
+  @Deprecated
+  def await(justification: String, awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
+    Await.result(futureBox, awaitTimeout)
 
   /**
     * Helper to force an implicit conversation

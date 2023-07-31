@@ -5,8 +5,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+
 import javax.inject.Inject
-import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO, DataSetService}
+import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO, DataSetService, ThumbnailCachingService}
 import models.user.{User, UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO}
 import play.api.libs.json._
 
@@ -16,6 +17,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
                                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                             userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
                                             dataSetDAO: DataSetDAO,
+                                            thumbnailCachingService: ThumbnailCachingService,
                                             dataSetDataLayerDAO: DataSetDataLayerDAO)(implicit ec: ExecutionContext) {
   def getDataSetViewConfigurationForUserAndDataset(
       requestedVolumeIds: List[String],
@@ -44,7 +46,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
       layerConfigurations <- getLayerConfigurations(dataSetLayers, requestedVolumeIds, dataSet)
     } yield buildCompleteDataSetConfiguration(dataSetViewConfiguration, layerConfigurations)
 
-  def getDataSetViewConfigurationFromDefaultAndAdmin(dataSet: DataSet): DataSetViewConfiguration = {
+  private def getDataSetViewConfigurationFromDefaultAndAdmin(dataSet: DataSet): DataSetViewConfiguration = {
     val defaultVC = dataSet.defaultViewConfiguration.getOrElse(Map.empty)
     val adminVC = dataSet.adminViewConfiguration.getOrElse(Map.empty)
     defaultVC ++ adminVC
@@ -83,10 +85,10 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
       dataLayers: List[DataLayerLike]): Map[String, LayerViewConfiguration] =
     dataLayers.flatMap(dl => dl.adminViewConfiguration.map(c => (dl.name, c))).toMap
 
-  def getLayerConfigurations(dataSetLayers: List[DataLayerLike],
-                             requestedVolumeIds: List[String],
-                             dataSet: DataSet,
-                             userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {
+  private def getLayerConfigurations(dataSetLayers: List[DataLayerLike],
+                                     requestedVolumeIds: List[String],
+                                     dataSet: DataSet,
+                                     userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {
     val allLayerNames = dataSetLayers.map(_.name) ++ requestedVolumeIds
     (userOpt match {
       case Some(user) =>
@@ -109,6 +111,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
         .getOrElse(Map.empty)
 
     for {
+      _ <- thumbnailCachingService.removeFromCache(dataSet._id)
       _ <- dataSetDAO.updateAdminViewConfiguration(dataSet._id, dataSetViewConfiguration)
       _ <- Fox.serialCombined(layerViewConfigurations.toList) {
         case (name, adminViewConfiguration) =>

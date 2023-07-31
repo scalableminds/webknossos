@@ -26,7 +26,7 @@ import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import utils.{ObjectId, WkConf}
@@ -57,6 +57,7 @@ class AuthenticationController @Inject()(
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
+    emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -75,47 +76,36 @@ class AuthenticationController @Inject()(
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
-        val email = signUpData.email.toLowerCase
-        var errors = List[String]()
-        val firstName = TextUtils.normalizeStrong(signUpData.firstName).getOrElse {
-          errors ::= Messages("user.firstName.invalid")
-          ""
-        }
-        val lastName = TextUtils.normalizeStrong(signUpData.lastName).getOrElse {
-          errors ::= Messages("user.lastName.invalid")
-          ""
-        }
-        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
-          case Full(_) =>
-            errors ::= Messages("user.email.alreadyInUse")
+        for {
+          (firstName, lastName, email, errors) <- validateNameAndEmail(signUpData.firstName,
+                                                                       signUpData.lastName,
+                                                                       signUpData.email)
+          result <- if (errors.nonEmpty) {
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-          case Empty =>
-            if (errors.nonEmpty) {
-              Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-            } else {
-              for {
-                inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
-                organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
-                organization <- organizationService.findOneByInviteByNameOrDefault(
-                  inviteBox.toOption,
-                  organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
-                _ <- organizationService
-                  .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
-                autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
-                _ <- createUser(organization,
-                                email,
-                                firstName,
-                                lastName,
-                                autoActivate,
-                                Option(signUpData.password),
-                                inviteBox,
-                                registerBrainDB = true)
-              } yield {
-                Ok
-              }
-            }
-          case f: Failure => Fox.failure(f.msg)
+          } else {
+            for {
+              _ <- Fox.successful(())
+              inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
+              organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
+              organization <- organizationService.findOneByInviteByNameOrDefault(inviteBox.toOption, organizationName)(
+                GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+              _ <- organizationService
+                .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
+              autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
+              _ <- createUser(organization,
+                              email,
+                              firstName,
+                              lastName,
+                              autoActivate,
+                              Option(signUpData.password),
+                              inviteBox,
+                              registerBrainDB = true)
+            } yield Ok
+          }
+        } yield {
+          result
         }
+
       }
     )
   }
@@ -127,9 +117,9 @@ class AuthenticationController @Inject()(
                          autoActivate: Boolean,
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
-                         registerBrainDB: Boolean = false)(implicit request: Request[AnyContent]): Fox[User] = {
-    val passwordInfo: PasswordInfo =
-      password.map(passwordHasher.hash).getOrElse(userService.getOpenIdConnectPasswordInfo)
+                         registerBrainDB: Boolean = false,
+                         isEmailVerified: Boolean = false)(implicit mp: MessagesProvider): Fox[User] = {
+    val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
       user <- userService.insert(organization._id,
                                  email,
@@ -138,7 +128,8 @@ class AuthenticationController @Inject()(
                                  autoActivate,
                                  passwordInfo,
                                  isAdmin = false,
-                                 isOrganizationOwner = false) ?~> "user.creation.failed"
+                                 isOrganizationOwner = false,
+                                 isEmailVerified = isEmailVerified) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -175,6 +166,8 @@ class AuthenticationController @Inject()(
                     authenticator <- combinedAuthenticatorService.create(loginInfo)
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
+                    _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
+                      .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                     _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
                   } yield result
@@ -234,8 +227,8 @@ class AuthenticationController @Inject()(
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        isSuperuser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        selectedOrganization <- if (isSuperuser)
+        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
+        selectedOrganization <- if (isSuperUser)
           accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationId, workflowHash)
         else
           accessibleBySwitchingForMultiUser(request.identity._multiUser,
@@ -515,7 +508,7 @@ class AuthenticationController @Inject()(
     }
 
   // Is called after user was successfully authenticated
-  def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
+  private def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
     implicit request: Request[AnyContent] =>
       userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
@@ -525,7 +518,13 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user <- createUser(organization, oidc.email, oidc.given_name, oidc.family_name, autoActivate = true, None)
+            user <- createUser(organization,
+                               oidc.email,
+                               oidc.given_name,
+                               oidc.family_name,
+                               autoActivate = true,
+                               None,
+                               isEmailVerified = true) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(loginInfo)
@@ -554,61 +553,119 @@ class AuthenticationController @Inject()(
       signUpData => {
         organizationService.assertMayCreateOrganization(request.identity).futureBox.flatMap {
           case Full(_) =>
-            val email = signUpData.email.toLowerCase
-            var errors = List[String]()
-            val firstName = TextUtils.normalizeStrong(signUpData.firstName).getOrElse {
-              errors ::= Messages("user.firstName.invalid")
-              ""
-            }
-            val lastName = TextUtils.normalizeStrong(signUpData.lastName).getOrElse {
-              errors ::= Messages("user.lastName.invalid")
-              ""
-            }
-            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).futureBox.flatMap {
-              case Full(_) =>
-                errors ::= Messages("user.email.alreadyInUse")
+            for {
+              (firstName, lastName, email, errors) <- validateNameAndEmail(signUpData.firstName,
+                                                                           signUpData.lastName,
+                                                                           signUpData.email)
+              result <- if (errors.nonEmpty) {
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-              case Empty =>
-                if (errors.nonEmpty) {
-                  Fox.successful(
-                    BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
-                } else {
-                  for {
-                    organization <- organizationService.createOrganization(
-                      Option(signUpData.organization).filter(_.trim.nonEmpty),
-                      signUpData.organizationDisplayName) ?~> "organization.create.failed"
-                    user <- userService.insert(organization._id,
-                                               email,
-                                               firstName,
-                                               lastName,
-                                               isActive = true,
-                                               passwordHasher.hash(signUpData.password),
-                                               isAdmin = true,
-                                               isOrganizationOwner = true) ?~> "user.creation.failed"
-                    _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                    multiUser <- multiUserDAO.findOne(user._multiUser)
-                    dataStoreToken <- bearerTokenAuthenticatorService
-                      .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
-                      .toFox
-                    _ <- organizationService
-                      .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
-                  } yield {
-                    Mailer ! Send(
-                      defaultMails.newOrganizationMail(organization.displayName,
-                                                       email.toLowerCase,
-                                                       request.headers.get("Host").getOrElse("")))
-                    if (conf.Features.isWkorgInstance) {
-                      mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
-                    }
-                    Ok
+              } else {
+                for {
+                  organization <- organizationService.createOrganization(
+                    Option(signUpData.organization).filter(_.trim.nonEmpty),
+                    signUpData.organizationDisplayName) ?~> "organization.create.failed"
+                  user <- userService.insert(
+                    organization._id,
+                    email,
+                    firstName,
+                    lastName,
+                    isActive = true,
+                    passwordHasher.hash(signUpData.password),
+                    isAdmin = true,
+                    isOrganizationOwner = true,
+                    isEmailVerified = false
+                  ) ?~> "user.creation.failed"
+                  _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+                  multiUser <- multiUserDAO.findOne(user._multiUser)
+                  dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
+                  _ <- organizationService
+                    .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
+                } yield {
+                  Mailer ! Send(defaultMails
+                    .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
+                  if (conf.Features.isWkorgInstance) {
+                    mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                   }
+                  Ok
                 }
-              case f: Failure => Fox.failure(f.msg)
-            }
+              }
+            } yield result
           case _ => Fox.failure(Messages("organization.create.forbidden"))
         }
       }
     )
+  }
+
+  case class CreateUserInOrganizationParameters(firstName: String,
+                                                lastName: String,
+                                                email: String,
+                                                password: Option[String],
+                                                autoActivate: Option[Boolean])
+
+  object CreateUserInOrganizationParameters {
+    implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
+      Json.format[CreateUserInOrganizationParameters]
+  }
+
+  def createUserInOrganization(organizationName: String): Action[CreateUserInOrganizationParameters] =
+    sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
+        organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
+        (firstName, lastName, email, errors) <- validateNameAndEmail(request.body.firstName,
+                                                                     request.body.lastName,
+                                                                     request.body.email)
+        result <- if (errors.isEmpty) {
+          createUser(organization,
+                     email,
+                     firstName,
+                     lastName,
+                     request.body.autoActivate.getOrElse(false),
+                     request.body.password,
+                     Empty,
+                     registerBrainDB = true).map(u => Ok(u._id.toString))
+        } else {
+          Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+        }
+      } yield {
+        result
+      }
+    }
+
+  private def validateNameAndEmail(firstName: String,
+                                   lastName: String,
+                                   email: String): Fox[(String, String, String, List[String])] = {
+    var (errors, fN, lN) = normalizeName(firstName, lastName)
+    for {
+      nameEmailErrorBox: Box[(String, String, String, List[String])] <- multiUserDAO
+        .findOneByEmail(email.toLowerCase)(GlobalAccessContext)
+        .futureBox
+        .flatMap {
+          case Full(_) =>
+            errors ::= "user.email.alreadyInUse"
+            Fox.successful(("", "", "", errors))
+          case Empty =>
+            if (errors.nonEmpty) {
+              Fox.successful(("", "", "", errors))
+            } else {
+              Fox.successful((fN, lN, email.toLowerCase, List()))
+            }
+          case f: Failure => Fox.failure(f.msg)
+        }
+    } yield nameEmailErrorBox
+  }
+
+  private def normalizeName(firstName: String, lastName: String) = {
+    var errors = List[String]()
+    val fN = TextUtils.normalizeStrong(firstName).getOrElse {
+      errors ::= "user.firstName.invalid"
+      ""
+    }
+    val lN = TextUtils.normalizeStrong(lastName).getOrElse {
+      errors ::= "user.lastName.invalid"
+      ""
+    }
+    (errors, fN, lN)
   }
 
 }

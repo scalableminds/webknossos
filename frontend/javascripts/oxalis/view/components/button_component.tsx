@@ -26,6 +26,14 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
     }
   };
 
+  handleTouchEnd = (e: React.TouchEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+
+    if (this.props.onTouchEnd) {
+      this.props.onTouchEnd(e);
+    }
+  };
+
   render() {
     const { children, faIcon, title, tooltipPlacement, ...restProps } = this.props;
     const iconEl = faIcon != null && !this.props.loading ? <i className={faIcon} /> : null;
@@ -33,12 +41,12 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
       // Differentiate via children != null, since antd uses a different styling for buttons
       // with a single icon child (.ant-btn-icon-only will be assigned)
       children != null ? (
-        <Button {...restProps} onClick={this.handleClick}>
+        <Button {...restProps} onClick={this.handleClick} onTouchEnd={this.handleTouchEnd}>
           {iconEl}
           {children}
         </Button>
       ) : (
-        <Button {...restProps} onClick={this.handleClick}>
+        <Button {...restProps} onClick={this.handleClick} onTouchEnd={this.handleTouchEnd}>
           {iconEl}
         </Button>
       );

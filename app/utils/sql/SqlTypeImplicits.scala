@@ -24,6 +24,10 @@ trait SqlTypeImplicits {
     override def apply(v1: PositionedResult): Option[Instant] = v1.nextTimestampOption().map(Instant.fromSql)
   }
 
+  implicit protected object GetByteArray extends GetResult[Array[Byte]] {
+    override def apply(v1: PositionedResult): Array[Byte] = v1.nextBytes()
+  }
+
   // Conversions of values to SqlValue
 
   implicit def stringToSqlValue(v: String): SqlValue = StringValue(v)
@@ -55,6 +59,8 @@ trait SqlTypeImplicits {
     }
 
   implicit def stringIterableToSqlValue(v: Iterable[String]): SqlValue = StringArrayValue(v.toList)
+
+  implicit def byteArrayToSqlValue(v: Array[Byte]): SqlValue = ByteArrayValue(v)
 
   implicit def boundingBoxToSqlValue(v: BoundingBox): SqlValue = BoundingBoxValue(v)
 
@@ -89,6 +95,8 @@ trait SqlTypeImplicits {
   implicit def jsValueToSqlToken(v: JsValue): SqlToken = jsValueToSqlValue(v).toSqlToken
 
   implicit def stringIterableToSqlToken(v: Iterable[String]): SqlToken = stringIterableToSqlValue(v).toSqlToken
+
+  implicit def byteArrayToSqlToken(v: Array[Byte]): SqlToken = byteArrayToSqlValue(v).toSqlToken
 
   implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = boundingBoxToSqlValue(v).toSqlToken
 

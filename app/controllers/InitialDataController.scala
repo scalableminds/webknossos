@@ -90,6 +90,7 @@ Samplecountry
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
     isSuperUser = conf.WebKnossos.SampleOrganization.User.isSuperUser,
+    isEmailVerified = true
   )
   private val defaultUser = User(
     userId,
@@ -112,6 +113,7 @@ Samplecountry
     defaultUserEmail2,
     userService.createPasswordInfo(defaultUserPassword),
     isSuperUser = false,
+    isEmailVerified = true
   )
   private val defaultUser2 = User(
     userId2,

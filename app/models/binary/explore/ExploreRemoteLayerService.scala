@@ -1,5 +1,6 @@
 package models.binary.explore
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
@@ -15,14 +16,18 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
+import models.binary.{DataSetService, DataStoreDAO, WKRemoteDataStoreClient}
 import models.binary.credential.CredentialService
+import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
-import oxalis.security.WkEnv
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.libs.json.{Json, OFormat}
+import utils.ObjectId
 
 import java.net.URI
 import javax.inject.Inject
@@ -38,9 +43,24 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, dataVaultService: DataVaultService)
+case class ExploreAndAddRemoteDatasetParameters(remoteUri: String, datasetName: String, folderPath: Option[String])
+
+object ExploreAndAddRemoteDatasetParameters {
+  implicit val jsonFormat: OFormat[ExploreAndAddRemoteDatasetParameters] =
+    Json.format[ExploreAndAddRemoteDatasetParameters]
+}
+
+class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
+                                          dataVaultService: DataVaultService,
+                                          organizationDAO: OrganizationDAO,
+                                          dataStoreDAO: DataStoreDAO,
+                                          dataSetService: DataSetService,
+                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                          rpc: RPC)
     extends FoxImplicits
     with LazyLogging {
+
+  private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def exploreRemoteDatasource(
       urisWithCredentials: List[ExploreRemoteDatasetParameters],
@@ -66,6 +86,20 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService, 
         voxelSize
       )
     } yield dataSource
+
+  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
+                          datasetName: String,
+                          user: User,
+                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(user._organization)
+      dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+      _ <- dataSetService.assertValidDataSetName(datasetName)
+      _ <- dataSetService.assertNewDataSetName(datasetName, organization._id) ?~> "dataSet.name.alreadyTaken"
+      client = new WKRemoteDataStoreClient(dataStore, rpc)
+      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
+      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
+    } yield ()
 
   private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()

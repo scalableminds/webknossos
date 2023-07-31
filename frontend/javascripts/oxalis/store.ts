@@ -297,6 +297,7 @@ export type DatasetConfiguration = {
   readonly fourBit: boolean;
   readonly interpolation: boolean;
   readonly layers: Record<string, DatasetLayerConfiguration>;
+  readonly colorLayerOrder: Array<string>;
   readonly position?: Vector3;
   readonly zoom?: number;
   readonly rotation?: Vector3;
@@ -358,6 +359,7 @@ export type UserConfiguration = {
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
+  readonly antialiasRendering: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

@@ -13,6 +13,7 @@ import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volu
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+
 export function updateVolumeTracing(
   state: OxalisState,
   volumeTracingId: string,

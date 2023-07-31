@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(106);
 COMMIT TRANSACTION;
 
 
@@ -173,6 +173,20 @@ CREATE TABLE webknossos.dataSet_lastUsedTimes(
   _dataSet CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   lastUsedTime TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE webknossos.dataSet_thumbnails(
+  _dataSet CHAR(24) NOT NULL,
+  dataLayerName VARCHAR(256),
+  width INT NOT NULL,
+  height INT NOT NULL,
+  mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
+  image BYTEA NOT NULL,
+  mimetype VARCHAR(256),
+  mag webknossos.VECTOR3 NOT NULL,
+  mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_dataSet, dataLayerName, width, height, mappingName)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
@@ -387,6 +401,7 @@ CREATE TABLE webknossos.multiUsers(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
+  isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
@@ -483,7 +498,7 @@ CREATE TABLE webknossos.credentials(
 
 CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -500,6 +515,14 @@ CREATE TABLE webknossos.folder_allowedTeams(
   PRIMARY KEY (_folder, _team)
 );
 
+CREATE TABLE webknossos.emailVerificationKeys(
+  _id CHAR(24) PRIMARY KEY,
+  key TEXT NOT NULL,
+  email VARCHAR(512) NOT NULL,
+  _multiUser CHAR(24) NOT NULL,
+  validUntil TIMESTAMPTZ,
+  isUsed BOOLEAN NOT NULL DEFAULT false
+);
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
@@ -628,7 +651,7 @@ SELECT
 u._id AS _user, m.email, u.firstName, u.lastname, o.displayName AS organization_displayName,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o.name AS organization_name, u.created AS user_created,
-m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity
+m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
 FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;

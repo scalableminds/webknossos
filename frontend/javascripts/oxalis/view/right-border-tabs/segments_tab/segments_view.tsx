@@ -439,7 +439,8 @@ class SegmentsView extends React.Component<Props, State> {
           onCancel() {},
         });
       } else {
-        // if only one segment is selected, select group without warning (and vice-versa)
+        // if only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
+        // this behaviour is imitated from the skeleton tab.
         this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
       }
       return;

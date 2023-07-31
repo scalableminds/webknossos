@@ -422,26 +422,31 @@ class SegmentsView extends React.Component<Props, State> {
     } else {
       newSelectedKeys = [key];
     }
-    const selectedIds = this.getSegmentIdForKey(newSelectedKeys);
-    if (selectedIds.group != null && selectedIds.segments.length > 0) {
-      if (selectedIds.segments.length > 1) {
+    const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
+    const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
+    if (
+      selectedIdsForCaseDistinction.group != null &&
+      selectedIdsForCaseDistinction.segments.length > 0
+    ) {
+      if (selectedIdsForCaseDistinction.segments.length > 1) {
         Modal.confirm({
           title: "Do you really want to select this group?",
-          content: `You have ${selectedIds.segments.length} selected segments. Do you really want to select this group?
+          content: `You have ${selectedIdsForCaseDistinction.segments.length} selected segments. Do you really want to select this group?
         This will deselect all selected trees.`,
           onOk: () => {
-            this.setState({ selectedIds: { segments: [], group: selectedIds.group } });
+            this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
           },
           onCancel() {},
         });
       } else {
-        this.setState({ selectedIds: this.getSegmentIdForKey([key]) });
+        // if only one segment is selected, select group without warning (and vice-versa)
+        this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
       }
       return;
     }
 
     this.setState({
-      selectedIds: selectedIds,
+      selectedIds: selectedIdsForState,
     });
   };
 
@@ -1280,7 +1285,7 @@ class SegmentsView extends React.Component<Props, State> {
     return mappedIdsToKeys;
   };
 
-  getSegmentIdForKey = (segmentOrGroupKeys: Key[]) => {
+  getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
     let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);

@@ -17,3 +17,4 @@ UPDATE webknossos.multiUsers SET isEmailVerified = false;
 ### Postgres Evolutions:
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
 - [106-folder-no-slashes.sql](conf/evolutions/106-folder-no-slashes.sql)
+- [107-additional-coordinates](conf/evolutions/107-additional-coordinates.sql)

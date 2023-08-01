@@ -466,7 +466,7 @@ function _SegmentListItem({
     >
       <Dropdown
         menu={
-          selectedSegmentIds?.includes(segment.id) && selectedSegmentIds.length > 1
+          (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
             ? multiSelectMenu
             : createSegmentContextMenu()
         } // The overlay is generated lazily. By default, this would make the overlay

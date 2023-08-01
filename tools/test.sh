@@ -46,7 +46,7 @@ function prepare {
   ' find-sh {} \;
 }
 
-function ensureUpToDateTests {
+ensureUpToDateTests() {
   lastChangedSource=$($FIND "$jsPath" -regex ".*\.tsx?$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
   lastChangedTests=$($FIND "$testBundlePath" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
@@ -61,11 +61,22 @@ function ensureUpToDateTests {
   fi
 }
 
+maybeWithC8() {
+  if [[ -n "$CIRCLECI" ]]; then
+    # Running in CircleCI, use c8 to gather code coverage.
+    c8 --silent --no-clean "$@"
+  else
+    # Not running in CircleCI, execute the command directly
+    "$@"
+  fi
+}
+
+
 # For faster, local testing, you may want to remove the `c8` part of the following statement.
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
   ensureUpToDateTests
@@ -83,13 +94,13 @@ then
   fi
 
   echo Only running $changed_files
-  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean --exclude binaryData ava \
+  export NODE_PATH="$testBundlePath" && ava \
     $changed_files \
     "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && c8 --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
+  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests

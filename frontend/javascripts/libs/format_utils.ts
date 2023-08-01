@@ -146,6 +146,29 @@ export function formatNumberToLength(lengthInNm: number): string {
 
 // formatNumberToArea, toVolume
 // exponent in formatnumbertounit
+const nmFactorToUnit2D = new Map([
+  [1e-6, "pm^2"],
+  [1, "nm^2"],
+  [1e6, "µm^2"],
+  [1e12, "mm^2"],
+  [1e18, "m^2"],
+  [1e24, "km^2"],
+]);
+export function formatNumberToArea(lengthInNm2: number): string {
+  return formatNumberToUnit(lengthInNm2, nmFactorToUnit);
+}
+
+const nmFactorToUnit3D = new Map([
+  [1e-9, "pm^3"],
+  [1, "nm^3"],
+  [1e9, "µm^3"],
+  [1e18, "mm^3"],
+  [1e27, "m^3"],
+  [1e36, "km^3"],
+]);
+export function formatNumberToVolume(lengthInNm3: number): string {
+  return formatNumberToUnit(lengthInNm3, nmFactorToUnit);
+}
 
 const byteFactorToUnit = new Map([
   [1, "B"],

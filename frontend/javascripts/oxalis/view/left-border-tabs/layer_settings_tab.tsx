@@ -105,7 +105,6 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -199,7 +198,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
             color: "gray",
           }}
           onClick={toggleLayerTransforms}
-        ></i>
+        />
       </Tooltip>
     </div>
   );

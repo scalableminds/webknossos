@@ -8,7 +8,6 @@ test("MultiKeyMap: basic set/get", (t) => {
   const obj2 = {};
   const obj3 = {};
   const obj4 = {};
-  const obj5 = {};
 
   const key1 = [obj1, obj2, obj3, obj4];
   // The key is another object which has a different identity
@@ -40,7 +39,6 @@ test("MultiKeyMap: get non-existent key", (t) => {
   const obj2 = {};
   const obj3 = {};
   const obj4 = {};
-  const obj5 = {};
 
   const key1 = [obj1, obj2, obj3, obj4];
   t.is(map.get(key1), undefined);
@@ -53,7 +51,6 @@ test("MultiKeyMap: override", (t) => {
   const obj2 = {};
   const obj3 = {};
   const obj4 = {};
-  const obj5 = {};
 
   const key1 = [obj1, obj2, obj3, obj4];
   const key1Equalivent = [obj1, obj2, obj3, obj4];

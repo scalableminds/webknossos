@@ -1,4 +1,3 @@
-import { Matrix4x4 } from "mjs";
 import type { APIDataset, CoordinateTransformation } from "types/api_flow_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;

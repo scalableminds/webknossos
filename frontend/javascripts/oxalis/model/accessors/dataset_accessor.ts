@@ -760,7 +760,7 @@ function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
   const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
   return (a: A, b: B, c: C): T => {
     let res = map.get([a, b, c]);
-    if (res == undefined) {
+    if (res === undefined) {
       res = fn(a, b, c);
       map.set([a, b, c], res);
     }

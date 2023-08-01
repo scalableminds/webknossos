@@ -4,7 +4,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
-import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.{
+  AdditionalCoordinateDefinitionProto,
+  AdditionalCoordinateProto,
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec2IntProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
@@ -19,7 +26,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
 import scala.collection.{immutable, mutable}
-import scala.xml.{NodeSeq, XML, Node => XMLNode}
+import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
 object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
 
@@ -58,13 +65,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         val organizationName =
           if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
-        val editPosition =
-          parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
+        val (editPosition, editPositionAdditionalCoordinates) =
+          parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
         val editRotation =
           parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
         var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         var taskBoundingBox: Option[BoundingBox] = None
+        val additionalCoordinates =
+          parseAdditionalCoordinateDefinitions(parameters \ "additionalCoordinates").getOrElse(Seq())
         parseTaskBoundingBox(parameters \ "taskBoundingBox", isTaskUpload, userBoundingBoxes).foreach {
           case Left(value)  => taskBoundingBox = Some(value)
           case Right(value) => userBoundingBoxes = userBoundingBoxes :+ value
@@ -92,7 +101,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 organizationName,
                 segments = v.segments,
                 segmentGroups = v.segmentGroups,
-                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName)
+                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName),
+                editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
+                additionalCoordinates = additionalCoordinates
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
@@ -116,7 +127,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 treeGroupsAfterSplit,
                 userBoundingBoxes,
-                organizationName
+                organizationName,
+                editPositionAdditionalCoordinates,
+                additionalCoordinates = additionalCoordinates
               )
             )
 
@@ -189,13 +202,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case (Some(x), Some(y), Some(z)) => Some(Vec3IntProto(x.toInt, y.toInt, z.toInt))
         case _                           => None
       }
+      val additionalCoordinates = parseAdditionalCoordinateValues(node)
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
         name = getSingleAttributeOpt(node, "name"),
         creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
         color = parseColorOpt(node),
-        groupId = getSingleAttribute(node, "groupId").toIntOpt
+        groupId = getSingleAttribute(node, "groupId").toIntOpt,
+        additionalCoordinates = additionalCoordinates
       )
     })
 
@@ -248,6 +263,23 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
+  def parseAdditionalCoordinateDefinitions(nodes: NodeSeq) =
+    nodes.headOption.map(
+      _.child.flatMap(
+        additionalCoordinateNode => {
+          for {
+            name <- getSingleAttributeOpt(additionalCoordinateNode, "name")
+            indexStr <- getSingleAttributeOpt(additionalCoordinateNode, "index")
+            index <- indexStr.toIntOpt
+            minStr <- getSingleAttributeOpt(additionalCoordinateNode, "min")
+            min <- minStr.toIntOpt
+            maxStr <- getSingleAttributeOpt(additionalCoordinateNode, "max")
+            max <- maxStr.toIntOpt
+          } yield new AdditionalCoordinateDefinitionProto(name, index, Vec2IntProto(min, max))
+        }
+      )
+    )
+
   private def parseDataSetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
 
@@ -266,8 +298,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseTime(nodes: NodeSeq): Long =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "ms").toLongOpt).getOrElse(DEFAULT_TIME)
 
-  private def parseEditPosition(nodes: NodeSeq): Option[Vec3Int] =
-    nodes.headOption.flatMap(parseVec3Int)
+  private def parseEditPosition(nodes: NodeSeq): Option[(Vec3Int, Seq[AdditionalCoordinateProto])] =
+    nodes.headOption.flatMap(n => {
+      val xyz = parseVec3Int(n)
+      val additionalCoordinates = parseAdditionalCoordinateValues(n)
+      xyz match {
+        case Some(value) => Some(value, additionalCoordinates)
+        case None        => None
+      }
+    })
 
   private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =
     nodes.headOption.flatMap(parseRotationForParams)
@@ -451,6 +490,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     for {
       id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
+      additionalCoordinates = parseAdditionalCoordinateValues(node)
       position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
@@ -459,8 +499,33 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
+      Node(id,
+           position,
+           rotation,
+           radius,
+           viewport,
+           resolution,
+           bitDepth,
+           interpolation,
+           timestamp,
+           additionalCoordinates)
     }
+  }
+
+  private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
+    val regex = "additionalCoordinate-(\\w)".r("name")
+    node.attributes.flatMap {
+      case attribute: Attribute => {
+        if (attribute.key.startsWith("additionalCoordinate")) {
+          Some(
+            new AdditionalCoordinateProto(regex.findAllIn(attribute.key).group("name"),
+                                          attribute.value.toString().toInt))
+        } else {
+          None
+        }
+      }
+      case _ => None
+    }.toSeq
   }
 
 }

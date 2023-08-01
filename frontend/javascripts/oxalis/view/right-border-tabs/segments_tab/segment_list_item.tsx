@@ -456,7 +456,7 @@ function _SegmentListItem({
       style={{
         padding: "2px 5px",
       }}
-      className={classnames("segment-list-item")}
+      className="segment-list-item"
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}

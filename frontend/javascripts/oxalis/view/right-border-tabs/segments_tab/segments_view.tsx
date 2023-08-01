@@ -221,11 +221,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     layerName: string,
     createsNewUndoState: boolean,
   ) {
-    segmentIds.forEach((segmentId) =>
-      dispatch(
-        updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
-      ),
+    const actions = segmentIds.map((segmentId) =>
+      updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
     );
+    Store.dispatch(batchUpdateGroupsAndSegmentsAction(actions));
   },
 
   updateSegment(

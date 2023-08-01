@@ -76,12 +76,12 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                     reportMutable,
                                     requestIdentity))
       layersWithVoxelSizes = exploredLayersNested.flatten
+      preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes) ?~> "Could not extract common voxel size from layers"
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
       rescaledLayers = rescaledLayersAndVoxelSize._1
       voxelSize = rescaledLayersAndVoxelSize._2
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
-      preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(renamedLayers,
                                                                                  preferredVoxelSize,
                                                                                  voxelSize)
@@ -147,10 +147,10 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       }
     })
 
+  private def isPowerOfTwo(x: Int): Boolean =
+    x != 0 && (x & (x - 1)) == 0
   private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
       implicit ec: ExecutionContext): Fox[Vec3Int] = {
-    def isPowerOfTwo(x: Int): Boolean =
-      x != 0 && (x & (x - 1)) == 0
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
@@ -163,27 +163,42 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
 
+  private def findBaseVoxelSize(minVoxelSize: Vec3Double, preferredVoxelSizeOpt: Option[Vec3Double]): Vec3Double =
+    preferredVoxelSizeOpt match {
+      case Some(preferredVoxelSize) =>
+        val baseMag = (minVoxelSize / preferredVoxelSize).round.toVec3Int
+        if (isPowerOfTwo(baseMag.x) && isPowerOfTwo(baseMag.y) && isPowerOfTwo(baseMag.z)) {
+          preferredVoxelSize
+        } else {
+          minVoxelSize
+        }
+      case None => minVoxelSize
+    }
+
   private def coordinateTransformationForVoxelSize(
       foundVoxelSize: Vec3Double,
       preferredVoxelSize: Option[Vec3Double]): Option[List[CoordinateTransformation]] =
     preferredVoxelSize match {
       case None => None
       case Some(voxelSize) =>
-        val scale = foundVoxelSize / voxelSize
-        Some(
-          List(
-            CoordinateTransformation(CoordinateTransformationType.affine,
-                                     matrix = Some(
-                                       List(
-                                         List(scale.x, 0, 0, 0),
-                                         List(0, scale.y, 0, 0),
-                                         List(0, 0, scale.z, 0),
-                                         List(0, 0, 0, 1)
-                                       )))))
+        if (voxelSize == foundVoxelSize) { None } else {
+          val scale = foundVoxelSize / voxelSize
+          Some(
+            List(
+              CoordinateTransformation(CoordinateTransformationType.affine,
+                                       matrix = Some(
+                                         List(
+                                           List(scale.x, 0, 0, 0),
+                                           List(0, scale.y, 0, 0),
+                                           List(0, 0, scale.z, 0),
+                                           List(0, 0, 0, 1)
+                                         )))))
+        }
     }
 
-  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayer, Vec3Double)])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
+  private def rescaleLayersByCommonVoxelSize(
+      layersWithVoxelSizes: List[(DataLayer, Vec3Double)],
+      preferredVoxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
     val allVoxelSizes = layersWithVoxelSizes
       .flatMap(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
@@ -196,14 +211,15 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
     for {
       minVoxelSize <- option2Fox(minVoxelSizeOpt)
-      allMags <- Fox.combined(allVoxelSizes.map(magFromVoxelSize(minVoxelSize, _)).toList) ?~> s"voxel sizes for layers are not uniform, got ${layersWithVoxelSizes
+      baseVoxelSize = findBaseVoxelSize(minVoxelSize, preferredVoxelSize)
+      allMags <- Fox.combined(allVoxelSizes.map(magFromVoxelSize(baseVoxelSize, _)).toList) ?~> s"voxel sizes for layers are not uniform, got ${layersWithVoxelSizes
         .map(_._2)}"
       groupedMags = allMags.groupBy(_.maxDim)
       _ <- Fox.combined(groupedMags.values.map(checkForDuplicateMags).toList)
       rescaledLayers = layersWithVoxelSizes.map(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
         val layerVoxelSize = layerWithVoxelSize._2
-        val magFactors = (layerVoxelSize / minVoxelSize).toVec3Int
+        val magFactors = (layerVoxelSize / baseVoxelSize).toVec3Int
         layer match {
           case l: ZarrDataLayer =>
             l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
@@ -232,7 +248,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
           case _ => throw new Exception("Encountered unsupported layer format during explore remote")
         }
       })
-    } yield (rescaledLayers, minVoxelSize)
+    } yield (rescaledLayers, baseVoxelSize)
   }
 
   private def exploreRemoteLayersForUri(

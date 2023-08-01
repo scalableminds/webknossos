@@ -240,7 +240,6 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_ADDITIONAL_COORDINATES": {
       const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(state.dataset);
-      const expectedAdditionalCoordinatesCount = Object.keys(unifiedAdditionalCoordinates).length;
 
       // In case the specified additional coordinates don't cover all existing additional
       // coordinates, add the missing coordinates back.

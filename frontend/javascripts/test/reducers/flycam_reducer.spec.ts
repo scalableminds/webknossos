@@ -155,7 +155,7 @@ test("Flycam should move by plane in ortho mode with dynamicSpaceDirection", (t)
   );
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, -2]);
 });
-test.only("Flycam should not change additional coordinates value when layers don't have any.", (t) => {
+test("Flycam should not change additional coordinates value when layers don't have any.", (t) => {
   const newState = FlycamReducer(
     initialState,
     FlycamActions.setAdditionalCoordinatesAction([{ name: "t", value: 123 }]),
@@ -163,7 +163,7 @@ test.only("Flycam should not change additional coordinates value when layers don
   t.deepEqual(initialState, newState);
 });
 
-test.only("Flycam should get correct subset of additional coordinates value when subset is set.", (t) => {
+test("Flycam should get correct subset of additional coordinates value when subset is set.", (t) => {
   const adaptedState = update(initialState, {
     // flycam
     dataset: {

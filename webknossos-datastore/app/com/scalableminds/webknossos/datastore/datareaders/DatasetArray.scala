@@ -49,8 +49,16 @@ class DatasetArray(vaultPath: VaultPath,
       additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
       additionalCoordinates: Map[String, AdditionalCoordinate])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalCoordinates.size
+
+    /*
+      readAsFortranOrder only supports a shape/offset with XYZ at the end. This does not really make sense if we assume
+      that xyz and additional coordinates may have any index/axisorder. Since only ngff datasets are currently supported
+      for additional coordinates, and they follow the convention (t)(c) ... zyx, with additional coordinates before zyx,
+      this works for now.
+     */
+
     val shapeArray: Array[Int] = Array.fill(dimensionCount)(1)
-    shapeArray(dimensionCount - 3) = shape.x //put xyz at the end for now. Doesn't really make sense in general (?)
+    shapeArray(dimensionCount - 3) = shape.x
     shapeArray(dimensionCount - 2) = shape.y
     shapeArray(dimensionCount - 1) = shape.z
 
@@ -67,6 +75,7 @@ class DatasetArray(vaultPath: VaultPath,
     for (additionalCoordinateRequest <- additionalCoordinateRequests) {
       val index = additionalCoordinates(additionalCoordinateRequest.name).index
       offsetArray(index) = additionalCoordinateRequest.value
+      // Shape for additional coordinates will always be 1e
     }
     readBytes(shapeArray, offsetArray)
   }
@@ -81,8 +90,7 @@ class DatasetArray(vaultPath: VaultPath,
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val totalOffset
-      : Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _) // TODO: header.voxeloffset might not work for non-ngff nd-datasets
+    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,

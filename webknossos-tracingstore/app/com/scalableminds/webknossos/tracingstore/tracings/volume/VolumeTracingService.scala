@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinate, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
@@ -581,6 +581,7 @@ class VolumeTracingService @Inject()(
     dataLayer.bucketProvider.bucketStream(Some(tracing.version))
   }
 
+  // TODO: Everytime things are merged, additional coordinates should be merged as well
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
@@ -635,7 +636,14 @@ class VolumeTracingService @Inject()(
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache)
+            _ <- saveBucket(
+              newId,
+              elementClass,
+              bucketPosition,
+              bucketBytes,
+              newVersion,
+              toCache,
+              Some(AdditionalCoordinate.fromProto(tracings.head.additionalCoordinates))) // TODO: Use merged?
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
           } yield ()

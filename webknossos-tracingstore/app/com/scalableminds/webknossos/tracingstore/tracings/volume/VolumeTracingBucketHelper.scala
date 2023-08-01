@@ -74,14 +74,17 @@ trait VolumeBucketCompression extends LazyLogging {
 }
 
 trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
-  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
+  protected def buildBucketKey(dataLayerName: String,
+                               bucket: BucketPosition,
+                               additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinate]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
-    val additionalCoordinateString = bucket.additionalCoordinates match {
-      case Some(additionalCoordinates) =>
-        // Now assuming that additional coordinates are ordered, where do we get index from otherwise?
-        // TODO: Pass in index somehow to sort the coordinates.
-        additionalCoordinates.map(_.value.toString).mkString(",")
-      case None => ""
+    val additionalCoordinateString = (bucket.additionalCoordinates, additionalCoordinateDefinitions) match {
+      case (Some(additionalCoordinates), Some(definitions)) =>
+        // Bucket key additional coordinates need to be ordered to be found later.
+        val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
+        val sortedValues = definitions.sortBy(_.index).map(a => valueMap(a.name))
+        sortedValues.map(_.toString).mkString(",")
+      case _ => ""
     }
     s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[$additionalCoordinateString]-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
 
@@ -190,7 +193,7 @@ trait VolumeTracingBucketHelper
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
-    val key = buildBucketKey(dataLayer.name, bucket)
+    val key = buildBucketKey(dataLayer.name, bucket, dataLayer.additionalCoordinates)
 
     val dataFox = loadBucketFromTemporaryStore(key) match {
       case Some(data) => Fox.successful(data)
@@ -240,15 +243,22 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean = false): Fox[Unit] =
-    saveBucket(dataLayer.name, dataLayer.elementClass, bucket, data, version, toTemporaryStore)
+    saveBucket(dataLayer.name,
+               dataLayer.elementClass,
+               bucket,
+               data,
+               version,
+               toTemporaryStore,
+               dataLayer.additionalCoordinates)
 
   protected def saveBucket(tracingId: String,
                            elementClass: ElementClass.Value,
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toTemporaryStore: Boolean): Fox[Unit] = {
-    val key = buildBucketKey(tracingId, bucket)
+                           toTemporaryStore: Boolean,
+                           additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Unit] = {
+    val key = buildBucketKey(tracingId, bucket, additionalCoordinates)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toTemporaryStore) {
       // Note that this temporary store is for temporary volumes only (e.g. compound projects)

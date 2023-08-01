@@ -22,4 +22,11 @@ object AdditionalCoordinate {
               Vec2IntProto(additionalCoordinate.lowerBound, additionalCoordinate.upperBound)))
       case None => Seq()
     }
+
+  def fromProto(protos: Seq[AdditionalCoordinateDefinitionProto]): Seq[AdditionalCoordinate] =
+    protos.map(
+      p => AdditionalCoordinate(p.name, Array(p.bounds.x, p.bounds.y), p.index)
+    )
+
+  // TODO: Merge method? (Used in Datasource.scala and VolumeTracingService?)
 }

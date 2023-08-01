@@ -13,7 +13,7 @@ import {
   EllipsisOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { connect, useDispatch } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
@@ -166,7 +166,13 @@ const DragHandle = SortableHandle(() => (
 
 function TransformationIcon({ layer }: { layer: APIDataLayer }) {
   const dispatch = useDispatch();
-  const transformations = layer.coordinateTransformations || [];
+  const transform = useSelector((state: OxalisState) =>
+    getTransformsForLayerOrNull(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
 
   const typeToLabel = {
     affine: "an affine",
@@ -174,22 +180,22 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
   };
 
   const toggleLayerTransforms = () => {
-    dispatch(setLayerTransformsAction(layer.name, null));
+    dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
   };
 
   return (
     <div className="flex-item">
       <Tooltip
         title={
-          transformations.length > 0
-            ? `This layer is rendered with ${typeToLabel[transformations[0].type]} transformation.`
+          transform != null
+            ? `This layer is rendered with ${typeToLabel[transform.type]} transformation.`
             : "This layer is shown natively (i.e., without any transformations)."
         }
       >
         <i
           className="fas fa-th"
           style={{
-            transform: transformations.length > 0 ? "rotate(45deg)" : "",
+            transform: transform != null ? "rotate(45deg)" : "",
             color: "gray",
           }}
           onClick={toggleLayerTransforms}
@@ -861,7 +867,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (foundPosition && foundResolution) {
       const layer = getLayerByName(dataset, layerName, true);
-      const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
+      const transformMatrix = getTransformsForLayerOrNull(
+        dataset,
+        layer,
+        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+      )?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);
         // Transform the found position according to the matrix.

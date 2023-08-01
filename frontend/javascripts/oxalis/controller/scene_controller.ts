@@ -458,7 +458,11 @@ class SceneController {
           isHighlighted: false,
         });
         bbCube.getMeshes().forEach((mesh) => {
-          const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
+          const transformMatrix = getTransformsForLayerOrNull(
+            dataset,
+            layer,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();
             // @ts-ignore

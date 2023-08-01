@@ -1,14 +1,14 @@
-type RecursiveMap<K extends Object, V> = WeakMap<K, V | RecursiveMap<K, V>>;
+type RecursiveMap<K, V> = Map<K, V | RecursiveMap<K, V>>;
 
-export default class MultiKeyWeakMap<E extends Object, V, K extends E[]> {
-  map: RecursiveMap<E, V> = new WeakMap<E, RecursiveMap<E, V>>();
+export default class MultiKeyMap<E, V, K extends E[]> {
+  map: RecursiveMap<E, V> = new Map<E, RecursiveMap<E, V>>();
   set(keys: K, value: V) {
     let currentMap = this.map;
     for (const [index, key] of keys.entries()) {
       if (index < keys.length - 1) {
         let foundMap = currentMap.get(key) as RecursiveMap<E, V> | undefined;
         if (foundMap == null) {
-          foundMap = new WeakMap<E, RecursiveMap<E, V>>();
+          foundMap = new Map<E, RecursiveMap<E, V>>();
           currentMap.set(key, foundMap);
         }
         currentMap = foundMap;

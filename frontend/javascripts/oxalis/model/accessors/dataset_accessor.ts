@@ -28,6 +28,7 @@ import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
 import estimateAffine from "libs/estimate_affine";
 import TPS3D from "libs/thin_plate_spline";
+import MultiKeyMap from "libs/multi_key_map";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -626,7 +627,8 @@ const dummyMapping = {
   mappingStatus: MappingStatusEnum.DISABLED,
   mappingSize: 0,
   mappingType: "JSON",
-};
+} as const;
+
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
@@ -637,7 +639,6 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ mappingName: null; mapping: null; mappingK... Remove this comment to see the full error message
   return dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
@@ -652,7 +653,10 @@ type Transform =
   | { type: "affine"; affineMatrix: Matrix4x4 }
   | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; scaledTpsInv: TPS3D };
 
-function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer): Transform | null {
+function _getTransformsForLayerOrNullBase(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+): Transform | null {
   let coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
@@ -689,29 +693,109 @@ function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer):
   return null;
 }
 
-function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
-  let cachedA: A | null = null;
-  let cacheForA: Map<B, T> = new Map();
-  return (a: A, b: B): T => {
-    if (a !== cachedA) {
-      cachedA = a;
-      cacheForA = new Map();
-    }
-    if (!cacheForA.has(b)) {
-      cacheForA.set(b, fn(a, b));
-    }
-    const res = cacheForA.get(b);
-    if (res === undefined) {
-      throw new Error("Error in caching logic.");
+function _getTransformsForLayerOrNull(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform | null {
+  const layerTransforms = _getTransformsForLayerOrNullBase(dataset, layer);
+
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. Just use the transforms
+    // as they are in the dataset.
+    return layerTransforms;
+  }
+
+  if (nativelyRenderedLayerName === layer.name) {
+    // This layer should be rendered without any transforms.
+    return null;
+  }
+
+  // Apply the inverse of the layer that should be rendered natively
+  // to the current layers transforms
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+
+  const transformsOfNativeLayer = _getTransformsForLayerOrNullBase(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms. Leave the layer
+    // transforms untouched.
+    return layerTransforms;
+  }
+
+  // todo
+  const inverseNativeTransforms = invert(transformsOfNativeLayer);
+  return apply(layerTransforms, inverseNativeTransforms);
+}
+
+function invert(transforms: Transform): Transform {
+  if (transforms.type === "affine") {
+    return {
+      type: "affine",
+      affineMatrix: M4x4.inverse(transforms.affineMatrix),
+    };
+  }
+  throw new Error("Not implemented");
+  // type === "thin_plate_spline"
+}
+
+function apply(transformsA: Transform | null, transformsB: Transform): Transform | null {
+  if (transformsA == null) {
+    return transformsB;
+  }
+
+  if (transformsA.type === "affine" && transformsB.type === "affine") {
+    return {
+      type: "affine",
+      affineMatrix: M4x4.mul(transformsA.affineMatrix, transformsB.affineMatrix),
+    };
+  }
+
+  throw new Error("Not implemented");
+
+  // todo: chain both transforms
+}
+
+function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
+  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
+  return (a: A, b: B, c: C): T => {
+    let res = map.get([a, b, c]);
+    if (res == undefined) {
+      res = fn(a, b, c);
+      map.set([a, b, c], res);
     }
     return res;
   };
 }
 
-export const getTransformsForLayerOrNull = memoizeWithTwoKeys(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(dataset: APIDataset, layer: APIDataLayer): Transform {
-  return getTransformsForLayerOrNull(dataset, layer) || IdentityTransform;
+export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
 }
+
+function _getTransformsPerLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Record<string, Transform> {
+  const transformsPerLayer: Record<string, Transform> = {};
+  const layers = dataset.dataSource.dataLayers;
+  for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+    const layer = layers[layerIdx];
+    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+    transformsPerLayer[layer.name] = transforms;
+  }
+
+  return transformsPerLayer;
+}
+
+export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];

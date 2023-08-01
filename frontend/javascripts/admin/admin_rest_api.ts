@@ -964,21 +964,16 @@ export function getSegmentVolume(
   mag: Vector3,
   segmentId: number,
 ): Promise<number> {
-  const params = new URLSearchParams({
-    mag: mag.join("-"),
-    segmentId: String(segmentId),
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token: token,
+      mag: mag.join("-"),
+      segmentId: String(segmentId),
+    });
+    return Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?${params}`,
+    );
   });
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      //TODO delete all these comments!
-      ///volume/:tracingId/segmentStatistics/volume
-      // @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long)
-
-      ///volume/:tracingId/importVolumeData
-      //@com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(token: Option[String], tracingId: String)
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}?${params}`,
-    ).then((obj) => obj.version),
-  );
 }
 
 export async function importVolumeTracing(
@@ -988,7 +983,7 @@ export async function importVolumeTracing(
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
+      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing}/importVolumeData?token=${token}`,
       {
         data: {
           dataFile,

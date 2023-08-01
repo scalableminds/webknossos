@@ -144,6 +144,9 @@ export function formatNumberToLength(lengthInNm: number): string {
   return formatNumberToUnit(lengthInNm, nmFactorToUnit);
 }
 
+// formatNumberToArea, toVolume
+// exponent in formatnumbertounit
+
 const byteFactorToUnit = new Map([
   [1, "B"],
   [1e3, "KB"],

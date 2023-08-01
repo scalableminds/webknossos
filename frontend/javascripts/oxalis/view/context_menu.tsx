@@ -69,6 +69,7 @@ import {
 import {
   getVisibleSegmentationLayer,
   getMappingInfo,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -101,6 +102,8 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
+import { getSegmentVolume } from "admin/admin_rest_api";
+import { useFetch } from "libs/react_helpers";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1107,6 +1110,35 @@ function ContextMenuInner(propsWithInputRef: Props) {
     maybeViewport,
   } = props;
 
+  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+  const { visibleSegmentationLayer, volumeTracing } = props;
+  const hasNoFallbackLayer =
+    visibleSegmentationLayer != null &&
+    "fallbackLayer" in visibleSegmentationLayer &&
+    visibleSegmentationLayer.fallbackLayer == null;
+  const segmentSize = useFetch(
+    async () => {
+      if (visibleSegmentationLayer != null && volumeTracing != null) {
+        if (hasNoFallbackLayer) {
+          const tracingId = volumeTracing.tracingId;
+          const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+          const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+          const segmentId = segmentIdAtPosition;
+          const segmentSize = await getSegmentVolume(
+            tracingStoreUrl,
+            tracingId,
+            mag.getHighestResolution(),
+            segmentId,
+          );
+          console.log(segmentSize);
+          return String(segmentSize);
+        }
+      }
+    },
+    "loading", //TODO make pretty with spinner
+    [hideContextMenu, segmentIdAtPosition],
+  );
+
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
@@ -1143,7 +1175,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const nodePositionAsString =
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
     nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
-  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const infoRows = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
@@ -1180,16 +1211,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  const volumeString = "Hello, my name is placy!";
-  infoRows.push(
-    getInfoMenuItem(
-      "volumeInfo",
-      <>
-        <i className="fas fa-flask" /> {volumeString}
-        {copyIconWithTooltip(volumeString, "Copy placy")}
-      </>,
-    ),
-  );
+  if (hasNoFallbackLayer) {
+    infoRows.push(
+      getInfoMenuItem(
+        "volumeInfo",
+        <>
+          <i className="fas fa-flask" /> Size: {String(segmentSize)}
+          {copyIconWithTooltip(String(segmentSize), "Copy size")}
+        </>,
+      ),
+    );
+  }
 
   if (distanceToSelection != null) {
     infoRows.push(

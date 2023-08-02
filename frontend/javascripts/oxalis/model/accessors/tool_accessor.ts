@@ -219,7 +219,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     segmentationTracingLayer != null &&
     getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
       segmentationTracingLayer.tracingId
-    ] != IdentityTransform;
+    ] !== IdentityTransform;
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&

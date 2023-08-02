@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
 import { Vector3 } from "oxalis/constants";
 
@@ -42,4 +43,8 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   ]);
 
   return new Matrix(affineMatrix);
+}
+
+export function estimateAffineMatrix4x4(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+  return estimateAffine(sourcePoints, targetPoints).to1DArray() as any as Matrix4x4;
 }

@@ -1,4 +1,4 @@
-import estimateAffine from "libs/estimate_affine";
+import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import { Matrix4x4 } from "mjs";
@@ -16,13 +16,22 @@ export type Transform =
       scaledTps: TPS3D;
     };
 
+export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
+  const affineMatrix = estimateAffineMatrix4x4(source, target);
+
+  return {
+    type: "affine",
+    affineMatrix,
+  };
+}
+
 export function createThinPlateSplineTransform(
   source: Vector3[],
   target: Vector3[],
   scale: Vector3,
 ): Transform {
-  const affineMatrix = estimateAffine(source, target).to1DArray() as any as Matrix4x4;
-  const affineMatrixInv = estimateAffine(target, source).to1DArray() as any as Matrix4x4;
+  const affineMatrix = estimateAffineMatrix4x4(source, target);
+  const affineMatrixInv = estimateAffineMatrix4x4(target, source);
 
   return {
     type: "thin_plate_spline",
@@ -50,10 +59,7 @@ export function invertTransform(transforms: Transform): Transform {
   };
 }
 
-export function chainTransforms(
-  transformsA: Transform | null,
-  transformsB: Transform,
-): Transform | null {
+export function chainTransforms(transformsA: Transform | null, transformsB: Transform): Transform {
   /*
    * This function applies transformsB on top of an nullable transformsA.
    */
@@ -119,3 +125,12 @@ export function chainTransforms(
     `Unhandled combination of transform types: ${transformsA.type}, ${transformsB.type}`,
   );
 }
+
+export const transformPoint = (transforms: Transform) => {
+  if (transforms.type === "affine") {
+    const matrix = M4x4.transpose(transforms.affineMatrix);
+    return (pos: Vector3) => M4x4.transformVectorsAffine(matrix, [pos])[0];
+  } else {
+  }
+  return (pos: Vector3) => transforms.scaledTps.transform(pos[0], pos[1], pos[2]);
+};

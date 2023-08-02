@@ -75,8 +75,9 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "thin_plate_spline") {
-    const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
-    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
+    // todop: make naming proper
+    const targetPointsA = transformsA.scaledTps.unscaledSourcePoints;
+    const sourcePointsA = transformsA.scaledTps.unscaledTargetPoints;
 
     const transformedTargetPointsA = targetPointsA.map((point) =>
       transformsB.scaledTps.transform(...point),

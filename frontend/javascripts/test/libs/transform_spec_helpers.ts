@@ -7,9 +7,18 @@ export function almostEqual(
   vec2: Vector3,
   threshold: number = 1,
 ) {
-  t.true(Math.abs(vec1[0] - vec2[0]) < threshold);
-  t.true(Math.abs(vec1[1] - vec2[1]) < threshold);
-  t.true(Math.abs(vec1[2] - vec2[2]) < threshold);
+  t.true(
+    Math.abs(vec1[0] - vec2[0]) < threshold,
+    `Values are not similar enough: ${vec1[0] - vec2[0]}`,
+  );
+  t.true(
+    Math.abs(vec1[1] - vec2[1]) < threshold,
+    `Values are not similar enough: ${vec1[1] - vec2[1]}`,
+  );
+  t.true(
+    Math.abs(vec1[2] - vec2[2]) < threshold,
+    `Values are not similar enough: ${vec1[2] - vec2[2]}`,
+  );
 }
 
 export function getPointsC555() {

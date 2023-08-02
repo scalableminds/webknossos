@@ -85,7 +85,7 @@ elif [ $cmd == "test-changed" ]
 then
   ensureUpToDateTests
   # Find modified *.spec.* files, trim their extension (since ts != js) and look them up in the compiled bundle
-  changed_files=$(git ls-files --modified | grep \.spec\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*")
+  changed_files=$(git ls-files --modified | grep \\.spec\\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*")
 
   if [ -z "$changed_files" ]
   then

@@ -180,6 +180,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
 
   const toggleLayerTransforms = () => {
     dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
+    // todop: change position accordingly
   };
 
   return (
@@ -187,7 +188,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
       <Tooltip
         title={
           transform != null
-            ? `This layer is rendered with ${typeToLabel[transform.type]} transformation.`
+            ? `This layer is rendered with ${
+                typeToLabel[transform.type]
+              } transformation. Click to render this layer without any transforms.`
             : "This layer is shown natively (i.e., without any transformations)."
         }
       >

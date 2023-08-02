@@ -26,9 +26,13 @@ import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
-import estimateAffine from "libs/estimate_affine";
-import TPS3D from "libs/thin_plate_spline";
 import MultiKeyMap from "libs/multi_key_map";
+import {
+  chainTransforms,
+  createThinPlateSplineTransform,
+  invertTransform,
+  Transform,
+} from "../helpers/transformation_helpers";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -649,10 +653,6 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-type Transform =
-  | { type: "affine"; affineMatrix: Matrix4x4 }
-  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; scaledTpsInv: TPS3D };
-
 function _getTransformsForLayerOrNullBase(
   dataset: APIDataset,
   layer: APIDataLayer,
@@ -675,16 +675,8 @@ function _getTransformsForLayerOrNullBase(
     return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
   } else if (type === "thin_plate_spline") {
     let { source, target } = transformation.correspondences;
-    const affineMatrix = estimateAffine(source, target).to1DArray() as any as Matrix4x4;
 
-    source = source.map((point) => V3.scale3(point, dataset.dataSource.scale));
-    target = target.map((point) => V3.scale3(point, dataset.dataSource.scale));
-
-    return {
-      type,
-      affineMatrix,
-      scaledTpsInv: new TPS3D(target, source),
-    };
+    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale);
   }
 
   console.error(
@@ -723,37 +715,8 @@ function _getTransformsForLayerOrNull(
     return layerTransforms;
   }
 
-  // todo
-  const inverseNativeTransforms = invert(transformsOfNativeLayer);
-  return apply(layerTransforms, inverseNativeTransforms);
-}
-
-function invert(transforms: Transform): Transform {
-  if (transforms.type === "affine") {
-    return {
-      type: "affine",
-      affineMatrix: M4x4.inverse(transforms.affineMatrix),
-    };
-  }
-  throw new Error("Not implemented");
-  // type === "thin_plate_spline"
-}
-
-function apply(transformsA: Transform | null, transformsB: Transform): Transform | null {
-  if (transformsA == null) {
-    return transformsB;
-  }
-
-  if (transformsA.type === "affine" && transformsB.type === "affine") {
-    return {
-      type: "affine",
-      affineMatrix: M4x4.mul(transformsA.affineMatrix, transformsB.affineMatrix),
-    };
-  }
-
-  throw new Error("Not implemented");
-
-  // todo: chain both transforms
+  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
+  return chainTransforms(layerTransforms, inverseNativeTransforms);
 }
 
 function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {

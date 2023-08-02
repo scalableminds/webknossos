@@ -7,7 +7,7 @@ import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 test("Basic TPS calculation", async (t) => {
   const [sourcePoints, targetPoints] = getPointsC555();
 
-  const tps = new TPS3D(sourcePoints, targetPoints);
+  const tps = new TPS3D(sourcePoints, targetPoints, [1, 1, 1]);
 
   almostEqual(
     t,

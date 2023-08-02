@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { Matrix, solve } from "ml-matrix";
 import { Vector3 } from "oxalis/constants";
+import { V3 } from "./mjs";
 
 class TPS1d {
   // This class accepts 3-dimensional control points
@@ -110,12 +111,23 @@ export default class TPS3D {
   tpsY = new TPS1d();
   tpsZ = new TPS1d();
 
-  constructor(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+  unscaledSourcePoints: Vector3[];
+  unscaledTargetPoints: Vector3[];
+  scale: Vector3;
+
+  constructor(unscaledSourcePoints: Vector3[], unscaledTargetPoints: Vector3[], scale: Vector3) {
+    const sourcePoints = unscaledSourcePoints.map((point) => V3.scale3(point, scale));
+    const targetPoints = unscaledTargetPoints.map((point) => V3.scale3(point, scale));
+
     const [cps, offsetX, offsetY, offsetZ] = this.getControlPointsWithOffsets(
       sourcePoints,
       targetPoints,
       true,
     );
+
+    this.unscaledSourcePoints = sourcePoints;
+    this.unscaledTargetPoints = targetPoints;
+    this.scale = scale;
 
     this.tpsX.fit(offsetX, cps);
     this.tpsY.fit(offsetY, cps);

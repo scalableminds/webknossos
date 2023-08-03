@@ -117,26 +117,31 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
-    const newUserPromises = this.state.users.map((user) => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, {
-          isActive,
-        });
-        return updateUser(newUser);
-      }
+    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUsers = this.state.users.map((user) => (selectedUser.id === user.id ? newUser : user));
 
-      return Promise.resolve(user);
+    this.setState({
+      users: newUsers,
     });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
+
+    if (!isActive) {
+      // Don't ask the user for the team permissions
+      return;
+    }
+    Modal.confirm({
+      title: "Account was activated.",
+      content:
+        "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
+      okText: "Configure teams and permissions",
+      cancelText: "Close",
+      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      onOk: () => {
         this.setState({
-          users: newUsers,
           selectedUserIds: [selectedUser.id],
           isTeamRoleModalOpen: isActive,
         });
       },
-      () => {}, // Do nothing, change did not succeed
-    );
+    });
   };
 
   deactivateUser = (user: APIUser): void => {
@@ -598,13 +603,23 @@ class UserListView extends React.PureComponent<Props, State> {
                     // eslint-disable-next-line no-nested-ternary
                     user.isActive ? (
                       this.props.activeUser.isAdmin ? (
-                        <LinkButton onClick={() => this.deactivateUser(user)}>
+                        <LinkButton
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            this.deactivateUser(user);
+                          }}
+                        >
                           <UserDeleteOutlined />
                           Deactivate User
                         </LinkButton>
                       ) : null
                     ) : (
-                      <LinkButton onClick={() => this.activateUser(user)}>
+                      <LinkButton
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          this.activateUser(user);
+                        }}
+                      >
                         <UserAddOutlined />
                         Activate User
                       </LinkButton>

@@ -1,8 +1,8 @@
 package backend
 
 import java.io.ByteArrayInputStream
-
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateDefinitionProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
@@ -129,6 +129,14 @@ class NMLUnitTestSuite extends PlaySpec {
 
     "throw an error for duplicate groupId state" in {
       val newTracing = dummyTracing.copy(treeGroups = TreeGroup("Group", 3) +: dummyTracing.treeGroups)
+
+      assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
+    }
+
+    "throw an error for multiple additional coordinates of the same name" in {
+      val newTracing = dummyTracing.copy(
+        additionalCoordinates = Seq(new AdditionalCoordinateDefinitionProto("t", 0, Vec2IntProto(0, 10)),
+                                    new AdditionalCoordinateDefinitionProto("t", 1, Vec2IntProto(10, 20))))
 
       assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
     }

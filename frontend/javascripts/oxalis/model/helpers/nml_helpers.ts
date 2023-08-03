@@ -224,6 +224,9 @@ function serializeParameters(
   skeletonTracing: SkeletonTracing,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
+  const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
+  const { additionalCoordinates } = skeletonTracing;
+
   const editRotation = getRotation(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
@@ -254,6 +257,7 @@ function serializeParameters(
           x: editPosition[0],
           y: editPosition[1],
           z: editPosition[2],
+          ...additionalCoordinatesToObject(editPositionAdditionalCoordinates || []),
         }),
         serializeTag("editRotation", {
           xRot: editRotation[0],
@@ -265,6 +269,19 @@ function serializeParameters(
         }),
         ...userBBoxes.map((userBB) => serializeUserBoundingBox(userBB, "userBoundingBox")),
         serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
+
+        ...serializeTagWithChildren(
+          "additionalCoordinates",
+          {},
+          additionalCoordinates.map((coord) =>
+            serializeTag("additionalCoordinate", {
+              name: coord.name,
+              index: coord.index,
+              min: coord.bounds[0],
+              max: coord.bounds[1],
+            }),
+          ),
+        ),
       ]),
     ),
     "</parameters>",
@@ -299,16 +316,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
     const position = node.position.map(Math.floor);
-    const maybeProperties = Object.fromEntries(
-      (node.additionalCoordinates || []).map((coord) => [
-        // Export additional coordinates like this:
-        // additionalCoordinate-t="10"
-        // Don't capitalize coord.name, because it it's not reversible for
-        // names that are already capitalized.
-        `additionalCoordinate-${coord.name}`,
-        coord.value,
-      ]),
-    );
+    const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
 
     return serializeTag("node", {
       id: node.id,
@@ -327,6 +335,19 @@ function serializeNodes(nodes: NodeMap): Array<string> {
       time: node.timestamp,
     });
   });
+}
+
+function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {
+  return Object.fromEntries(
+    additionalCoordinates.map((coord) => [
+      // Export additional coordinates like this:
+      // additionalCoordinate-t="10"
+      // Don't capitalize coord.name, because it it's not reversible for
+      // names that are already capitalized.
+      `additionalCoordinate-${coord.name}`,
+      coord.value,
+    ]),
+  );
 }
 
 function serializeEdges(edges: EdgeCollection): Array<string> {

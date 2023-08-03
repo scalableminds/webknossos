@@ -162,6 +162,7 @@ const initialSkeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
+  additionalCoordinates: [],
 };
 
 const initialState: OxalisState = _.extend({}, defaultState, {

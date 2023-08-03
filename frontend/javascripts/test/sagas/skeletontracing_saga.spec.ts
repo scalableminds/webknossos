@@ -103,6 +103,7 @@ const skeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
+  additionalCoordinates: [],
 };
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,

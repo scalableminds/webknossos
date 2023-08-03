@@ -84,6 +84,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
           activeIndex: -1,
         },
         showSkeletons: true,
+        additionalCoordinates: [],
       };
       return update(state, {
         localSegmentationData: {

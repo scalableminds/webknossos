@@ -25,6 +25,7 @@ import type {
   APIOrganization,
   APIUserCompact,
   AdditionalCoordinate,
+  AdditionalCoordinateWithBounds,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -201,6 +202,7 @@ type TracingBase = {
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
+  readonly additionalCoordinates: AdditionalCoordinateWithBounds[];
 };
 export type NavigationList = {
   readonly list: Array<number>;

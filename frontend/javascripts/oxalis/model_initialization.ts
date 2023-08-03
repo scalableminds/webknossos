@@ -105,6 +105,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { convertServerAdditionalCoordinatesToFrontEnd } from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -528,10 +529,9 @@ function setupLayerForVolumeTracing(
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
-      additionalCoordinates: tracing.additionalCoordinates.map((coords) => ({
-        ...coords,
-        bounds: [coords.bounds.x, coords.bounds.y],
-      })),
+      additionalCoordinates: convertServerAdditionalCoordinatesToFrontEnd(
+        tracing.additionalCoordinates,
+      ),
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;

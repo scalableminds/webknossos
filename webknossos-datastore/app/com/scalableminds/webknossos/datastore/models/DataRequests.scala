@@ -73,7 +73,9 @@ object DataRequestCollection {
 case class AdditionalCoordinateRequest(
     name: String,
     value: Int
-)
+) {
+  override def toString() = s"$name=$value"
+}
 
 object AdditionalCoordinateRequest {
   implicit val jsonFormat: OFormat[AdditionalCoordinateRequest] = Json.format[AdditionalCoordinateRequest]

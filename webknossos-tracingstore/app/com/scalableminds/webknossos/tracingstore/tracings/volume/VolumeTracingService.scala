@@ -423,14 +423,19 @@ class VolumeTracingService @Inject()(
                                  tracing: VolumeTracing,
                                  isTemporaryTracing: Boolean = false,
                                  includeFallbackDataIfAvailable: Boolean = false,
-                                 userToken: Option[String] = None): VolumeTracingLayer =
+                                 userToken: Option[String] = None,
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
       volumeTracingService = this,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
-      userToken = userToken
+      userToken = userToken,
+      additionalCoordinates = additionalCoordinates match {
+        case Some(value) => Some(value)
+        case None        => Some(AdditionalCoordinate.fromProto(tracing.additionalCoordinates))
+      }
     )
 
   def updateActionLog(tracingId: String,

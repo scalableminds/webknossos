@@ -204,8 +204,12 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
   });
 }
 
-function positionToString(pos: Vector3): string {
-  return pos.map((value) => roundTo(value, 2)).join(", ");
+function positionToString(
+  pos: Vector3,
+  optAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): string {
+  const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
+  return [...pos, ...additionalCoordinates].map((value) => roundTo(value, 2)).join(", ");
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
@@ -1110,9 +1114,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
       nodeContextMenuTree = tree;
     });
   }
+  // TS doesnt understand the above initialization and assumes the values
+  // are always null. The following NOOP helps TS with the correct typing.
+  nodeContextMenuTree = nodeContextMenuTree as Tree | null;
+  nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
 
   const positionToMeasureDistanceTo =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
     nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
@@ -1128,8 +1135,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
         ]
       : null;
   const nodePositionAsString =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
-    nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+    nodeContextMenuNode != null
+      ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
+      : "";
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const infoRows = [];
 
@@ -1137,7 +1145,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "nodeInfo",
-        // @ts-expect-error FIXME: Property 'treeId' does not exist on type 'never'... Remove this comment to see the full error message
         `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`,
       ),
     );
@@ -1155,7 +1162,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   } else if (globalPosition != null) {
-    const positionAsString = positionToString(globalPosition);
+    const positionAsString = positionToString(globalPosition, props.additionalCoordinates);
+
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",

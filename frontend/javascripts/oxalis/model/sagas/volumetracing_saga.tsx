@@ -64,6 +64,7 @@ import { setBusyBlockingInfoAction, setToolAction } from "oxalis/model/actions/u
 import type {
   ClickSegmentAction,
   SetActiveCellAction,
+  CreateCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
@@ -137,20 +138,25 @@ function* warnOfTooLowOpacity(): Saga<void> {
 
 function* warnTooLargeSegmentId(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
-  let oldSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
   while (true) {
-    yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]);
+    const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
+      | SetActiveCellAction
+      | CreateCellAction;
     const newSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    if (oldSegmentId === newSegmentId) {
-      const dataset = yield* select((state) => state.dataset);
-      const volumeTracing = yield* select(enforceActiveVolumeTracing);
-      const segmentationLayer = yield* call(
-        [Model, Model.getSegmentationTracingLayer],
-        volumeTracing.tracingId,
-      );
-      const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
-      Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
+    if (
+      (action.type === "CREATE_CELL" && action.newSegmentId === newSegmentId) ||
+      (action.type === "SET_ACTIVE_CELL" && action.segmentId === newSegmentId)
+    ) {
+      continue;
     }
+    const dataset = yield* select((state) => state.dataset);
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const segmentationLayer = yield* call(
+      [Model, Model.getSegmentationTracingLayer],
+      volumeTracing.tracingId,
+    );
+    const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
+    Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
   }
 }
 

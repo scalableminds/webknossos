@@ -343,7 +343,8 @@ export function determineAllowedModes(settings?: Settings): {
 }
 
 export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
-  return getDefaultIntensityRangeOfLayer(dataset, layerName)[1];
+  const valueRange = getDefaultIntensityRangeOfLayer(dataset, layerName);
+  return valueRange[1];
 }
 
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {

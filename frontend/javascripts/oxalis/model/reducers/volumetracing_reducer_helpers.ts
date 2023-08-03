@@ -63,14 +63,9 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
 export function createCellReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
-  largestSegmentId: number,
+  newSegmentId: number,
 ) {
-  // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
-  // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids and increase it by one.
-  const { activeCellId } = volumeTracing;
-
-  const newId = Math.max(activeCellId, largestSegmentId) + 1;
-  return setActiveCellReducer(state, volumeTracing, newId);
+  return setActiveCellReducer(state, volumeTracing, newSegmentId);
 }
 
 const MAXIMUM_LABEL_ACTIONS_COUNT = 50;

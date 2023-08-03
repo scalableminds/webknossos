@@ -244,7 +244,7 @@ function VolumeTracingReducer(
       if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0) {
         // If a largest segment id is known, but the active cell is 0, we can automatically
         // create a new segment ID for the user.
-        return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+        return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
       }
 
       return newState;
@@ -308,7 +308,7 @@ function VolumeTracingReducer(
     }
 
     case "CREATE_CELL": {
-      return createCellReducer(state, volumeTracing, action.largestSegmentId);
+      return createCellReducer(state, volumeTracing, action.newSegmentId);
     }
 
     case "UPDATE_DIRECTION": {

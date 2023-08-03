@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIn
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
@@ -58,6 +58,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
+        additionalCoordinates <- parseAdditionalCoordinateDefinitions(parameters \ "additionalCoordinates")
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -72,8 +73,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
         var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         var taskBoundingBox: Option[BoundingBox] = None
-        val additionalCoordinates =
-          parseAdditionalCoordinateDefinitions(parameters \ "additionalCoordinates").getOrElse(Seq())
         parseTaskBoundingBox(parameters \ "taskBoundingBox", isTaskUpload, userBoundingBoxes).foreach {
           case Left(value)  => taskBoundingBox = Some(value)
           case Right(value) => userBoundingBoxes = userBoundingBoxes :+ value
@@ -263,8 +262,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  def parseAdditionalCoordinateDefinitions(nodes: NodeSeq) =
-    nodes.headOption.map(
+  private def parseAdditionalCoordinateDefinitions(nodes: NodeSeq)(implicit m: MessagesProvider) = {
+    val additionalCoordinates = nodes.headOption.map(
       _.child.flatMap(
         additionalCoordinateNode => {
           for {
@@ -279,6 +278,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         }
       )
     )
+    additionalCoordinates match {
+      case Some(coords) =>
+        if (coords.map(_.name).distinct.size == coords.size) {
+          Full(coords)
+        } else {
+          Failure(Messages("nml.additionalCoordinates.notUnique"))
+        }
+      case None => Full(Seq())
+    }
+  }
 
   private def parseDataSetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")

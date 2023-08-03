@@ -86,7 +86,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
         sortedValues.map(_.toString).mkString(",")
       case _ => ""
     }
-    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[$additionalCoordinateString]-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[$additionalCoordinateString][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
 
   }
 
@@ -139,7 +139,6 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
         val yStr = aMatch.group(additionalCoordinates.length + 4)
         val zStr = aMatch.group(additionalCoordinates.length + 5)
 
-        // TODO: Does this work?
         val additionalCoordinatesIndexSorted = additionalCoordinates.sortBy(_.index)
         val additionalCoordinateRequests: Seq[AdditionalCoordinateRequest] =
           (3 until additionalCoordinates.length + 3).zipWithIndex.map(
@@ -320,7 +319,7 @@ class VersionedBucketIterator(prefix: String,
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next
       currentStartAfterKey = Some(bucket.key)
-      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, None).isEmpty) {
+      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, dataLayer.additionalCoordinates).isEmpty) {
         getNextNonRevertedBucket
       } else {
         Some(bucket)

@@ -99,8 +99,13 @@ case class BucketPosition(
 
   def toVec3IntProto: Vec3IntProto = Vec3IntProto(bucketX, bucketY, bucketZ)
 
+  private def additionalCoordinateString = additionalCoordinates match {
+    case Some(coords) => s", additional coordinates: ${coords.map(_.toString()).mkString(",")}"
+    case None         => ""
+  }
+
   override def toString: String =
-    s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag)"
+    s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag$additionalCoordinateString)"
 
   def allCoordinates: Seq[Int] =
     // TODO: Where do we get coordinate ordering from?

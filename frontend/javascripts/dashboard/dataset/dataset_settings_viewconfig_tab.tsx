@@ -27,6 +27,7 @@ import {
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
+import ColorLayerOrderingTable from "./color_layer_ordering_component";
 
 const FormItem = Form.Item;
 
@@ -190,6 +191,16 @@ export default function DatasetSettingsViewConfigTab() {
               <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
             </Select>
           </FormItemWithInfo>
+        </Col>
+      </Row>
+      <Row gutter={24}>
+        <Col span={6}>
+          <FormItem
+            name={["defaultConfiguration", "colorLayerOrder"]}
+            valuePropName="colorLayerNames"
+          >
+            <ColorLayerOrderingTable />
+          </FormItem>
         </Col>
       </Row>
       <Divider />

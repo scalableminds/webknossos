@@ -73,6 +73,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   segmentationPatternOpacity: 40,
   layers: {},
   blendMode: BLEND_MODES.Additive,
+  colorLayerOrder: [],
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -126,6 +127,12 @@ export const datasetViewConfiguration = {
   },
   layers: {
     type: "object",
+  },
+  colorLayerOrder: {
+    type: "array",
+    items: {
+      type: "string",
+    },
   },
 };
 export default {

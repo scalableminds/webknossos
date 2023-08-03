@@ -2,12 +2,14 @@ package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
+import utils.ObjectId
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
@@ -68,5 +70,17 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("dataSetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
+
+  def addDataSource(organizationName: String,
+                    datasetName: String,
+                    dataSource: GenericDataSource[DataLayer],
+                    folderId: Option[ObjectId],
+                    userToken: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
+        .addQueryString("token" -> userToken)
+        .addQueryStringOptional("folderId", folderId.map(_.toString))
+        .put(dataSource)
+    } yield ()
 
 }

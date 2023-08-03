@@ -573,6 +573,7 @@ class UserListView extends React.PureComponent<Props, State> {
               ]}
               filtered
               filteredValue={this.state.activationFilter}
+              filterMultiple
               // @ts-ignore
               onFilter={(
                 value: "activated" | "deactivated" | "verified" | "unverified",
@@ -602,6 +603,7 @@ class UserListView extends React.PureComponent<Props, State> {
                     <CloseCircleOutlined
                       style={{
                         fontSize: 20,
+                        color: "#e84749",
                       }}
                     />
                   </Tooltip>

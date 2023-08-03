@@ -56,7 +56,7 @@ export default function DatasetSettingsViewConfigTab() {
     intensityRange: "Only for color layers",
   };
   const layerViewConfigurationEntries = _.map(
-    { ...getDefaultLayerViewConfiguration(), min: 0, max: 0, intensityRange: [0, 255] },
+    { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
     (defaultValue: any, key: string) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;

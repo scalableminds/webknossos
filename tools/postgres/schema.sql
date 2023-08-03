@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(105);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(106);
 COMMIT TRANSACTION;
 
 
@@ -498,7 +498,7 @@ CREATE TABLE webknossos.credentials(
 
 CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

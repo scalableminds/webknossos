@@ -1,8 +1,8 @@
-import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
+import { CopyOutlined, PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
 import { connect } from "react-redux";
-import React, { createContext, MouseEvent, useContext } from "react";
+import React, { createContext, MouseEvent, useContext, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -104,6 +104,7 @@ import {
 } from "antd/lib/menu/hooks/useItems";
 import { getSegmentVolume } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
+import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1096,6 +1097,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
+  const [lastTimeVolumeWasFetched, setLastTimeVolumeWasFetched] = useState(new Date());
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1120,6 +1122,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     async () => {
       if (visibleSegmentationLayer != null && volumeTracing != null) {
         if (hasNoFallbackLayer) {
+          console.log(contextMenuPosition);
           const tracingId = volumeTracing.tracingId;
           const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
           const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
@@ -1130,12 +1133,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
             mag.getHighestResolution(),
             segmentId,
           );
+          console.log(segmentSize);
           return formatNumberToVolume(segmentSize);
         }
       }
     },
     "loading", //TODO make pretty with spinner
-    [hideContextMenu, segmentIdAtPosition],
+    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched],
   );
 
   if (contextMenuPosition == null || maybeViewport == null) {
@@ -1210,13 +1214,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
+  const handleRefreshSegmentVolume = async () => {
+    await api.tracing.save();
+    setLastTimeVolumeWasFetched(new Date());
+  };
+
+  const refreshButton = (
+    <Tooltip title="Update this statistic">
+      <AsyncIconButton
+        onClick={handleRefreshSegmentVolume}
+        type="primary"
+        icon={<ReloadOutlined />}
+      />
+    </Tooltip>
+  );
+
   if (hasNoFallbackLayer) {
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
         <>
-          <i className="fas fa-flask" /> Size: {segmentSize}
+          <i className="fas fa-expand-alt segment-context-icon" />
+          Size: {segmentSize}
           {copyIconWithTooltip(segmentSize as string, "Copy size")}
+          {refreshButton}
         </>,
       ),
     );

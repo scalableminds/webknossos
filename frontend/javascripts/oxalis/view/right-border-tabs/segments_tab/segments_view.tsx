@@ -1290,9 +1290,8 @@ class SegmentsView extends React.Component<Props, State> {
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {
-        const regexSplit = keyAsString.split(/-(-?)/);
-        // concatenate id with negative sign for root group. for positive ids, regexSplit[2] is empty
-        const idWithSign = regexSplit[1].concat(regexSplit[2]);
+        // Note that negative ids can be found here, which is why group- is used as a splitter
+        const idWithSign = keyAsString.split("group-")[1];
         if (isNumber(parseInt(idWithSign))) {
           selectedIds.group = parseInt(idWithSign);
         }

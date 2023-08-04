@@ -52,7 +52,7 @@ import {
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
@@ -1130,8 +1130,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
             mag.getHighestResolution(),
             segmentId,
           );
-          console.log(segmentSize);
-          return String(segmentSize);
+          return formatNumberToVolume(segmentSize);
         }
       }
     },
@@ -1216,8 +1215,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "volumeInfo",
         <>
-          <i className="fas fa-flask" /> Size: {String(segmentSize)}
-          {copyIconWithTooltip(String(segmentSize), "Copy size")}
+          <i className="fas fa-flask" /> Size: {segmentSize}
+          {copyIconWithTooltip(segmentSize as string, "Copy size")}
         </>,
       ),
     );

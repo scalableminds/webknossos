@@ -144,30 +144,34 @@ export function formatNumberToLength(lengthInNm: number): string {
   return formatNumberToUnit(lengthInNm, nmFactorToUnit);
 }
 
-// formatNumberToArea, toVolume
-// exponent in formatnumbertounit
 const nmFactorToUnit2D = new Map([
-  [1e-6, "pm^2"],
-  [1, "nm^2"],
-  [1e6, "µm^2"],
-  [1e12, "mm^2"],
-  [1e18, "m^2"],
-  [1e24, "km^2"],
+  [1e-6, "pm²"],
+  [1, "nm²"],
+  [1e6, "µm²"],
+  [1e12, "mm²"],
+  [1e18, "m²"],
+  [1e24, "km²"],
 ]);
+/* TODO: or rather: 
+const nmFactorToUnit2D = new Map(
+  Array.from(nmFactorToUnit).map((entry) => [Math.pow(entry[0], 2), entry[1].concat("²")]),
+); 
+Although I think that the explicit maps are better to read and it's better to have them stored rather than computing them every time they are needed.
+*/
 export function formatNumberToArea(lengthInNm2: number): string {
-  return formatNumberToUnit(lengthInNm2, nmFactorToUnit);
+  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, 0);
 }
 
 const nmFactorToUnit3D = new Map([
-  [1e-9, "pm^3"],
-  [1, "nm^3"],
-  [1e9, "µm^3"],
-  [1e18, "mm^3"],
-  [1e27, "m^3"],
-  [1e36, "km^3"],
+  [1e-9, "pm³"],
+  [1, "nm³"],
+  [1e9, "µm³"],
+  [1e18, "mm³"],
+  [1e27, "m³"],
+  [1e36, "km³"],
 ]);
 export function formatNumberToVolume(lengthInNm3: number): string {
-  return formatNumberToUnit(lengthInNm3, nmFactorToUnit);
+  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, 0);
 }
 
 const byteFactorToUnit = new Map([

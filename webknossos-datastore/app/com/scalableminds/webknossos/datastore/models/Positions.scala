@@ -106,10 +106,6 @@ case class BucketPosition(
 
   override def toString: String =
     s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag$additionalCoordinateString)"
-
-  def allCoordinates: Seq[Int] =
-    // TODO: Where do we get coordinate ordering from?
-    Seq(bucketX, bucketY, bucketZ) ++ additionalCoordinates.getOrElse(Seq()).map(c => c.value)
 }
 
 class CubePosition(

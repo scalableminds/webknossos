@@ -257,7 +257,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
               case Empty                      => Fox.successful(None)
               case f: Failure                 => f.toFox
             }
-            mergedTracing = tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt)
+            mergedTracing <- tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield Ok(Json.toJson(newId))
         }

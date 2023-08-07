@@ -111,6 +111,7 @@ dataSet.upload.storageExceeded=Cannot upload dataset because the storage quota o
 dataSet.explore.failed.readFile=Failed to read remote file
 dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 dataSet.explore.autoAdd.failed=Failed to automatically import the explored dataset.
+dataSet.additionalCoordinates.different=Additional coordinates differ in merged units.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system

@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArr
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -41,7 +41,7 @@ class ZarrArray(vaultPath: VaultPath,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,
                 channelIndex: Option[Int],
-                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DatasetArray(vaultPath,
                          dataSourceId,

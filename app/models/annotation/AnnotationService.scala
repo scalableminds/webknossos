@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   FetchedAnnotationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinate,
+  AdditionalCoordinateDefinition,
   ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
@@ -169,7 +169,7 @@ class AnnotationService @Inject()(
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty),
-        additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+        additionalCoordinates = AdditionalCoordinateDefinition.toProto(additionalCoordinates)
       )
   }
 
@@ -246,7 +246,7 @@ class AnnotationService @Inject()(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
               organizationName = Some(datasetOrganizationName),
-              additionalCoordinates = AdditionalCoordinate.toProto(dataSource.additionalCoordinatesUnion)
+              additionalCoordinates = AdditionalCoordinateDefinition.toProto(dataSource.additionalCoordinatesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
               skeleton.copy(

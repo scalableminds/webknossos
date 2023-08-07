@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinate, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinateDefinition, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
@@ -424,7 +424,7 @@ class VolumeTracingService @Inject()(
                                  isTemporaryTracing: Boolean = false,
                                  includeFallbackDataIfAvailable: Boolean = false,
                                  userToken: Option[String] = None,
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None): VolumeTracingLayer =
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
@@ -434,7 +434,7 @@ class VolumeTracingService @Inject()(
       userToken = userToken,
       additionalCoordinates = additionalCoordinates match {
         case Some(value) => Some(value)
-        case None        => Some(AdditionalCoordinate.fromProto(tracing.additionalCoordinates))
+        case None        => Some(AdditionalCoordinateDefinition.fromProto(tracing.additionalCoordinates))
       }
     )
 
@@ -648,7 +648,7 @@ class VolumeTracingService @Inject()(
               bucketBytes,
               newVersion,
               toCache,
-              Some(AdditionalCoordinate.fromProto(tracings.head.additionalCoordinates))) // TODO: Use merged?
+              Some(AdditionalCoordinateDefinition.fromProto(tracings.head.additionalCoordinates))) // TODO: Use merged?
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
           } yield ()

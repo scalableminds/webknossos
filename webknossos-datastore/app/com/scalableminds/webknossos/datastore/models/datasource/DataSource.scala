@@ -48,7 +48,7 @@ package object datasource {
       case _                        => None
     }
 
-    def additionalCoordinatesUnion: Option[Seq[AdditionalCoordinate]] = {
+    def additionalCoordinatesUnion: Option[Seq[AdditionalCoordinateDefinition]] = {
       val additionalCoordinatesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
       for (layer <- dataLayers) {
         layer.additionalCoordinates match {
@@ -71,7 +71,7 @@ package object datasource {
       }
 
       val additionalCoordinates = additionalCoordinatesMap.iterator.map {
-        case (name, (index, lowerBound, upperBound)) => AdditionalCoordinate(name, Array(lowerBound, upperBound), index)
+        case (name, (index, lowerBound, upperBound)) => AdditionalCoordinateDefinition(name, Array(lowerBound, upperBound), index)
       }.toSeq
       if (additionalCoordinates.isEmpty) {
         None

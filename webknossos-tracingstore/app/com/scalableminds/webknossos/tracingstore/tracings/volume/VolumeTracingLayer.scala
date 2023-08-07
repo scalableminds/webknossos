@@ -78,7 +78,7 @@ case class VolumeTracingLayer(
     includeFallbackDataIfAvailable: Boolean = false,
     tracing: VolumeTracing,
     userToken: Option[String],
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],

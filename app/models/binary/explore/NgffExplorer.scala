@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinate, Category, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinateDefinition, Category, ElementClass}
 
 import scala.concurrent.ExecutionContext
 
@@ -87,7 +87,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     } yield layerTuples
 
   private def getAdditionalCoordinates(multiscale: NgffMultiscalesItem,
-                                       remotePath: VaultPath): Fox[Seq[AdditionalCoordinate]] = {
+                                       remotePath: VaultPath): Fox[Seq[AdditionalCoordinateDefinition]] = {
     val defaultAxes = List("c", "x", "y", "z")
     for {
       // Selecting shape of first mag, assuming no mags for additional coordinates
@@ -98,7 +98,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       multiscale.axes.zipWithIndex.flatMap(axisAndIndex =>
         if (!defaultAxes.contains(axisAndIndex._1.name)) {
           Some(
-            AdditionalCoordinate(name = axisAndIndex._1.name,
+            AdditionalCoordinateDefinition(name = axisAndIndex._1.name,
                                  bounds = Array(0, shape(axisAndIndex._2) - 1),
                                  index = axisAndIndex._2))
         } else {

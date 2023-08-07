@@ -3,16 +3,17 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateDefinitionProto, Vec2IntProto}
 import play.api.libs.json.{Format, Json}
 
-case class AdditionalCoordinate(name: String, bounds: Array[Int], index: Int) {
+case class AdditionalCoordinateDefinition(name: String, bounds: Array[Int], index: Int) {
   def lowerBound: Int = bounds(0)
   def upperBound: Int = bounds(1)
 }
 
-object AdditionalCoordinate {
-  implicit val jsonFormat: Format[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
+object AdditionalCoordinateDefinition {
+  implicit val jsonFormat: Format[AdditionalCoordinateDefinition] = Json.format[AdditionalCoordinateDefinition]
 
-  def toProto(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]): Seq[AdditionalCoordinateDefinitionProto] =
-    additionalCoordinatesOpt match {
+  def toProto(additionalCoordinatesDefinitionsOpt: Option[Seq[AdditionalCoordinateDefinition]])
+    : Seq[AdditionalCoordinateDefinitionProto] =
+    additionalCoordinatesDefinitionsOpt match {
       case Some(additionalCoordinates) =>
         additionalCoordinates.map(
           additionalCoordinate =>
@@ -23,9 +24,10 @@ object AdditionalCoordinate {
       case None => Seq()
     }
 
-  def fromProto(protos: Seq[AdditionalCoordinateDefinitionProto]): Seq[AdditionalCoordinate] =
-    protos.map(
-      p => AdditionalCoordinate(p.name, Array(p.bounds.x, p.bounds.y), p.index)
+  def fromProto(additionalCoordinateDefinitionProtos: Seq[AdditionalCoordinateDefinitionProto])
+    : Seq[AdditionalCoordinateDefinition] =
+    additionalCoordinateDefinitionProtos.map(
+      p => AdditionalCoordinateDefinition(p.name, Array(p.bounds.x, p.bounds.y), p.index)
     )
 
   // TODO: Merge method? (Used in Datasource.scala and VolumeTracingService?)

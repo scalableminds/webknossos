@@ -38,7 +38,7 @@ case class ZarrDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    override val additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+    override val additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -56,7 +56,7 @@ case class ZarrSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
 ) extends SegmentationLayer
     with ZarrLayer
 

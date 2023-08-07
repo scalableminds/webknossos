@@ -167,9 +167,9 @@ trait DataLayerLike {
   def coordinateTransformations: Option[List[CoordinateTransformation]]
 
   // n-dimensional datasets = 3-dimensional datasets with additional coordinates
-  def additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  def additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]
 
-  def additionalCoordinateMap: Map[String, AdditionalCoordinate] =
+  def additionalCoordinateMap: Map[String, AdditionalCoordinateDefinition] =
     additionalCoordinates match {
       case Some(additionalCoords) =>
         additionalCoords.map(additionalCoord => (additionalCoord.name -> additionalCoord)).toMap
@@ -287,7 +287,7 @@ case class AbstractDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -319,7 +319,7 @@ case class AbstractSegmentationLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {

@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
-  AdditionalCoordinate,
+  AdditionalCoordinateDefinition,
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
@@ -822,10 +822,10 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
 class DatasetLayerAdditionalCoordinatesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayerAdditionalcoordinatesRow): AdditionalCoordinate =
-    AdditionalCoordinate(row.name, Array(row.lowerbound, row.upperbound), row.index)
+  private def parseRow(row: DatasetLayerAdditionalcoordinatesRow): AdditionalCoordinateDefinition =
+    AdditionalCoordinateDefinition(row.name, Array(row.lowerbound, row.upperbound), row.index)
 
-  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalCoordinate]] =
+  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalCoordinateDefinition]] =
     for {
       rows <- run(q"""SELECT *
            FROM webknossos.dataSet_layer_additionalCoordinates

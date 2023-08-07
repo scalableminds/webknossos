@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinate,
+  AdditionalCoordinateDefinition,
   DataLayer,
   DataLayerLike,
   ElementClass
@@ -76,7 +76,7 @@ trait VolumeBucketCompression extends LazyLogging {
 trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
-                               additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinate]]): String = {
+                               additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinateDefinition]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     val additionalCoordinateString = (bucket.additionalCoordinates, additionalCoordinateDefinitions) match {
       case (Some(additionalCoordinates), Some(definitions)) =>
@@ -95,7 +95,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
 
   protected def parseBucketKey(
       key: String,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Option[(String, BucketPosition)] =
+      additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Option[(String, BucketPosition)] =
     additionalCoordinates match {
       case Some(value) => parseBucketKeyWithAdditionalCoordinates(key, value)
       case None        => parseBucketKeyXYZ(key)
@@ -127,7 +127,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
 
   private def parseBucketKeyWithAdditionalCoordinates(
       key: String,
-      additionalCoordinates: Seq[AdditionalCoordinate]): Option[(String, BucketPosition)] = {
+      additionalCoordinates: Seq[AdditionalCoordinateDefinition]): Option[(String, BucketPosition)] = {
     val additionalCoordinateCapture = Array.fill(additionalCoordinates.length)("(\\d+)").mkString(",")
     val keyRx = s"([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[$additionalCoordinateCapture]\\[(\\d+),(\\d+),(\\d+)]".r
     val matchOpt = keyRx.findFirstMatchIn(key)
@@ -256,7 +256,7 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean,
-                           additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Unit] = {
+                           additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Fox[Unit] = {
     val key = buildBucketKey(tracingId, bucket, additionalCoordinates)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toTemporaryStore) {

@@ -648,8 +648,9 @@ class VolumeTracingService @Inject()(
       }
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
-        mergedAdditionalCoordinateDefinitions <- AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(
-          tracings.map(t => Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates))))
+        mergedAdditionalCoordinateDefinitions <- Fox.box2Fox(
+          AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(tracings.map(t =>
+            Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates)))))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(newId,

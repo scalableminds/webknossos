@@ -40,9 +40,9 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[SkeletonTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty)
-          val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
           for {
+            mergedTracing <- Fox.box2Fox(tracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
+            processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
             newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
           } yield Ok(Json.toJson(newId))
         }

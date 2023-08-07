@@ -74,7 +74,7 @@ case class AdditionalCoordinateRequest(
     name: String,
     value: Int
 ) {
-  override def toString() = s"$name=$value"
+  override def toString = s"$name=$value"
 }
 
 object AdditionalCoordinateRequest {

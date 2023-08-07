@@ -84,7 +84,7 @@ object NgffMultiscalesItem {
   implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]
 }
 
-case class NgffMetadata(multiscales: List[NgffMultiscalesItem])
+case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroObject])
 
 object NgffMetadata {
   def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): NgffMetadata = {
@@ -93,7 +93,7 @@ object NgffMetadata {
         NgffDataset(path = mag.toMagLiteral(allowScalar = true),
                     List(NgffCoordinateTransformation(
                       scale = Some(List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList)))))
-    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)))
+    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)), None)
   }
 
   implicit val jsonFormat: OFormat[NgffMetadata] = Json.format[NgffMetadata]
@@ -106,4 +106,14 @@ case class NgffLabelsGroup(labels: List[String])
 object NgffLabelsGroup {
   implicit val jsonFormat: OFormat[NgffLabelsGroup] = Json.format[NgffLabelsGroup]
   val LABEL_PATH = "labels/.zattrs"
+}
+
+case class NgffOmeroObject(channels: List[NgffChannelAttributes])
+object NgffOmeroObject {
+  implicit val jsonFormat: OFormat[NgffOmeroObject] = Json.format[NgffOmeroObject]
+}
+
+case class NgffChannelAttributes(color: Option[String], label: Option[String])
+object NgffChannelAttributes {
+  implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
 }

@@ -38,6 +38,11 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
       )
     }
   }
+
+  def assertValidScriptName(scriptName: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.bool2Fox(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> "script.name.invalid.characters"
+    } yield ()
 }
 
 object Script {

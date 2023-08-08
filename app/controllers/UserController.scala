@@ -29,12 +29,10 @@ class UserController @Inject()(userService: UserService,
                                multiUserDAO: MultiUserDAO,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
-                               organizationDAO: OrganizationDAO,
                                timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
-                               passwordHasher: PasswordHasher,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -259,26 +257,11 @@ class UserController @Inject()(userService: UserService,
           "Optional filtering: If true, list only users who are admin, if false, list only users who are not admin")
       isAdmin: Option[Boolean]
   ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    UsingFilters(
-      Filter(isEditable,
-             (value: Boolean, el: User) =>
-               for { isEditable <- userService.isEditableBy(el, request.identity) } yield isEditable == value),
-      Filter(
-        isTeamManagerOrAdmin,
-        (value: Boolean, el: User) =>
-          for { isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(el, request.identity._organization) } yield
-            isTeamManagerOrAdmin == value
-      ),
-      Filter(isAdmin, (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
-    ) { filter =>
-      for {
-        users <- userDAO.findAll
-        filtered <- filter.applyOn(users)
-        js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u =>
-          userService.publicWrites(u, request.identity))
-      } yield {
-        Ok(Json.toJson(js))
-      }
+    for {
+      users <- userDAO.findAllWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
+      js <- Fox.serialCombined(users.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
+    } yield {
+      Ok(Json.toJson(js))
     }
   }
 

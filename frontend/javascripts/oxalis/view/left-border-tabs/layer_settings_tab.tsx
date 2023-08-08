@@ -58,8 +58,9 @@ import {
   getTransformsForLayerOrNull,
   getWidestResolutions,
   getLayerBoundingBox,
+  getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -105,6 +106,7 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import { invertTransform, transformPoint } from "oxalis/model/helpers/transformation_helpers";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -179,8 +181,18 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
   };
 
   const toggleLayerTransforms = () => {
+    const state = Store.getState();
+    const currentPosition = getPosition(state.flycam);
+    const currentTransforms = getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const invertedTransform = invertTransform(currentTransforms);
+    const newPosition = transformPoint(invertedTransform)(currentPosition);
+
     dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
-    // todop: change position accordingly
+    dispatch(setPositionAction(newPosition));
   };
 
   return (

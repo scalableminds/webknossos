@@ -391,6 +391,26 @@ test("NML serializer should produce correct NMLs", (t) => {
     id: "nml",
   });
 });
+test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
+  const adaptedState = update(initialState, {
+    tracing: {
+      skeleton: {
+        additionalCoordinates: {
+          $set: [{ name: "t", bounds: [0, 100], index: 0 }],
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    adaptedState,
+    adaptedState.tracing,
+    enforceSkeletonTracing(adaptedState.tracing),
+    BUILD_INFO,
+  );
+  t.snapshot(serializedNml, {
+    id: "nml-with-additional-coordinates",
+  });
+});
 test("NML serializer should escape special characters and multilines", (t) => {
   const state = update(initialState, {
     tracing: {

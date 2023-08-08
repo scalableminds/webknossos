@@ -89,7 +89,8 @@ function serializeTag(
   properties: Record<string, (string | number | boolean) | null | undefined>,
   closed: boolean = true,
 ): string {
-  return `<${name} ${Object.keys(properties)
+  const maybeSpace = Object.keys(properties).length > 0 ? " " : "";
+  return `<${name}${maybeSpace}${Object.keys(properties)
     .map((key) => {
       let valueStr = "";
       const value = properties[key];
@@ -270,18 +271,20 @@ function serializeParameters(
         ...userBBoxes.map((userBB) => serializeUserBoundingBox(userBB, "userBoundingBox")),
         serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
 
-        ...serializeTagWithChildren(
-          "additionalCoordinates",
-          {},
-          additionalCoordinates.map((coord) =>
-            serializeTag("additionalCoordinate", {
-              name: coord.name,
-              index: coord.index,
-              min: coord.bounds[0],
-              max: coord.bounds[1],
-            }),
-          ),
-        ),
+        ...(additionalCoordinates.length > 0
+          ? serializeTagWithChildren(
+              "additionalCoordinates",
+              {},
+              additionalCoordinates.map((coord) =>
+                serializeTag("additionalCoordinate", {
+                  name: coord.name,
+                  index: coord.index,
+                  min: coord.bounds[0],
+                  max: coord.bounds[1],
+                }),
+              ),
+            )
+          : []),
       ]),
     ),
     "</parameters>",

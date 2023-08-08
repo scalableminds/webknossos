@@ -81,7 +81,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                   .getOrElse(name)
               (color match {
                 case Some(c) => Seq(("color" -> JsArray(c.toArrayOfInts.map(i => JsNumber(BigDecimal(i)))))).toMap
-                case None    => Map()
+                case None    => LayerViewConfiguration.empty
               }, attributeName)
             }
             case None => (LayerViewConfiguration.empty, name)

@@ -17,7 +17,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added option to select multiple segments in the segment list in order to perform batch actions. [#7242](https://github.com/scalableminds/webknossos/pull/7242)
 
 ### Changed
-- Small messages during annotating (e.g. “finished undo”, “applying mapping…”) are now click-through so they do not block users from selecting tools. [7239](https://github.com/scalableminds/webknossos/pull/7239)
+- Small messages during annotating (e.g. “finished undo”, “applying mapping…”) are now click-through, so they do not block users from selecting tools. [#7239](https://github.com/scalableminds/webknossos/pull/7239)
+- When exploring remote NGFF datasets with channels, layer names and colors are automatically imported if available in the metadata. [#7251](https://github.com/scalableminds/webknossos/pull/7251)
 
 ### Fixed
 - Fixed that folders could appear in the dataset search output in the dashboard. [#7232](https://github.com/scalableminds/webknossos/pull/7232)

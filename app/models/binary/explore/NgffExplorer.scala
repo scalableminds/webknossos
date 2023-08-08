@@ -9,8 +9,8 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
-import play.api.libs.json.{JsArray, JsNumber, JsValue}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass, LayerViewConfiguration}
+import play.api.libs.json.{JsArray, JsNumber}
 
 import scala.concurrent.ExecutionContext
 
@@ -84,7 +84,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                 case None    => Map()
               }, attributeName)
             }
-            case None => (Map[String, JsValue](), name)
+            case None => (LayerViewConfiguration.empty, name)
           }
 
           boundingBox = boundingBoxFromMags(magsWithAttributes)

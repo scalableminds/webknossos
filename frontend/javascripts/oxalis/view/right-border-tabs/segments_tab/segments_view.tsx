@@ -858,7 +858,7 @@ class SegmentsView extends React.Component<Props, State> {
       disabled: isEditingDisabled,
       icon: (
         <i
-          className="fas fa-eye-dropper fa-sm fa-icon"
+          className="fas fa-eye-dropper fa-sm fa-icon fa-fw "
           style={{
             cursor: "pointer",
           }}
@@ -892,7 +892,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (id: number): ItemType => {
     return {
       key: "computeAdHoc",
-      icon: <i className="fas fa-dice-d20 fa-icon" />,
+      icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,
       label: (
         <div
           onClick={() => {
@@ -910,11 +910,19 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
+  getShowSegmentStatistics = (id: number): ItemType => {
+    return {
+      key: "segmentStatistics",
+      label: "Show Segment Statistics",
+      icon: <i className="fas fa-ruler fa-fw fa-icon"></i>,
+    };
+  };
+
   getLoadMeshesFromFileMenuItem = (id: number): ItemType => {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
-      icon: <i className="fas fa-dice-d20 fa-icon" />,
+      icon: <i className="fas fa-dice-d20 fa-icon fa-fw" />,
       label: (
         <div
           onClick={() => {
@@ -1389,6 +1397,7 @@ class SegmentsView extends React.Component<Props, State> {
                       disabled: true,
                     },
                     this.getSetGroupColorMenuItem(id),
+                    this.getShowSegmentStatistics(id),
                     this.getLoadMeshesFromFileMenuItem(id),
                     this.getComputeMeshesAdHocMenuItem(id),
                     this.getReloadMenuItem(id),
@@ -1410,7 +1419,8 @@ class SegmentsView extends React.Component<Props, State> {
                       // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
-                      open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
+                      open
+                      //open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
                       onOpenChange={(isVisible) =>
                         this.handleSegmentDropdownMenuVisibility(id, isVisible)
                       }

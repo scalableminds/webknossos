@@ -1122,7 +1122,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     async () => {
       if (visibleSegmentationLayer != null && volumeTracing != null) {
         if (hasNoFallbackLayer) {
-          console.log(contextMenuPosition);
+          console.log(contextMenuPosition); //TODO
           const tracingId = volumeTracing.tracingId;
           const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
           const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
@@ -1225,6 +1225,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         onClick={handleRefreshSegmentVolume}
         type="primary"
         icon={<ReloadOutlined />}
+        style={{ marginLeft: 4 }}
       />
     </Tooltip>
   );

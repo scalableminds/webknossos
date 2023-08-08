@@ -11,7 +11,7 @@ import {
   transformPoint,
 } from "oxalis/model/helpers/transformation_helpers";
 
-test("Inverse of affine should transform points back", async (t) => {
+test("Inverse of affine should transform points back (also tests chaining)", async (t) => {
   // This transform essentially computes:
   // coord := coord * 2 + 10
   const target = [
@@ -57,10 +57,10 @@ test("Inverse of affine should transform points back", async (t) => {
   }
 });
 
-test.only("Inverse of TPS should transform points back", async (t) => {
+test("Inverse of TPS should transform points back (also tests chaining)", async (t) => {
   // This transform is similar to:
   // coord := coord * 2 + 10
-  // however, is biased so that (100, 50, 25) transforms to 90, 40, 15
+  // in the area of the following inputs. however, is biased so that (100, 50, 25) transforms to 90, 40, 15
   const target = [
     [10, 10, 10],
     [30, 30, 30],
@@ -103,4 +103,106 @@ test.only("Inverse of TPS should transform points back", async (t) => {
   for (const p of points) {
     almostEqual(t, transformRoundtrip(p), p, epsilon);
   }
+});
+
+test("Test chaining affine with TPS", async (t) => {
+  // This transform essentially computes:
+  // coord := coord * 2 + 10
+  const affineSource = [
+    [0, 0, 0],
+    [10, 10, 10],
+    [10, 10, 0],
+    [5, 10, 15],
+  ] as Vector3[];
+  const affineTarget = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
+  ] as Vector3[];
+  const aff = createAffineTransform(affineTarget, affineSource);
+
+  // This transform is similar to:
+  // coord := (coord - 10) / 2
+  // in the area of the following inputs. however, is biased so that 90, 40, 15 transforms to 100, 50, 25
+  const source = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
+    [90, 40, 15],
+  ] as Vector3[];
+  const target = [
+    [0, 0, 0],
+    [10, 10, 10],
+    [10, 10, 0],
+    [5, 10, 15],
+    [100, 50, 25],
+  ] as Vector3[];
+  const tps = createThinPlateSplineTransform(target, source, [1, 1, 1]);
+
+  const transformA = transformPoint(aff);
+  const transformB = transformPoint(tps);
+  const transformAB = transformPoint(chainTransforms(aff, tps));
+  const epsilon = 0.001;
+  // Test chaining for 0, 0, 0 -> 10, 10, 10 -> 0, 0, 0
+  almostEqual(t, transformA([0, 0, 0]), [10, 10, 10], epsilon);
+  almostEqual(t, transformB([10, 10, 10]), [0, 0, 0], epsilon);
+  almostEqual(t, transformAB([0, 0, 0]), [0, 0, 0], epsilon);
+
+  // Test chaining for 5, 10, 15 -> 20, 30, 40 -> 5, 10, 15
+  almostEqual(t, transformA([5, 10, 15]), [20, 30, 40], epsilon);
+  almostEqual(t, transformB([20, 30, 40]), [5, 10, 15], epsilon);
+  almostEqual(t, transformAB([5, 10, 15]), [5, 10, 15], epsilon);
+});
+
+test("Test chaining TPS with affine", async (t) => {
+  // This transform is similar to:
+  // coord := (coord - 10) / 2
+  // in the area of the following inputs. however, is biased so that 90, 40, 15 transforms to 100, 50, 25
+  const source = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
+    [90, 40, 15],
+  ] as Vector3[];
+  const target = [
+    [0, 0, 0],
+    [10, 10, 10],
+    [10, 10, 0],
+    [5, 10, 15],
+    [100, 50, 25],
+  ] as Vector3[];
+  const tps = createThinPlateSplineTransform(target, source, [1, 1, 1]);
+
+  // This transform essentially computes:
+  // coord := coord * 2 + 10
+  const affineSource = [
+    [0, 0, 0],
+    [10, 10, 10],
+    [10, 10, 0],
+    [5, 10, 15],
+  ] as Vector3[];
+  const affineTarget = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
+  ] as Vector3[];
+  const aff = createAffineTransform(affineTarget, affineSource);
+
+  const transformA = transformPoint(tps);
+  const transformB = transformPoint(aff);
+  const transformAB = transformPoint(chainTransforms(tps, aff));
+  const epsilon = 0.001;
+  // Test chaining for 10, 10, 10 -> 0, 0, 0 -> 0, 0, 0
+  almostEqual(t, transformA([10, 10, 10]), [0, 0, 0], epsilon);
+  almostEqual(t, transformB([0, 0, 0]), [10, 10, 10], epsilon);
+  almostEqual(t, transformAB([10, 10, 10]), [10, 10, 10], epsilon);
+
+  // Test chaining for 30, 30, 30 -> 20, 30, 40 -> 30, 30, 30
+  almostEqual(t, transformA([30, 30, 30]), [10, 10, 10], epsilon);
+  almostEqual(t, transformB([10, 10, 10]), [30, 30, 30], epsilon);
+  almostEqual(t, transformAB([30, 30, 30]), [30, 30, 30], epsilon);
 });

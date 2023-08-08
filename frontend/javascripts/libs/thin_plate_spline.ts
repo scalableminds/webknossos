@@ -116,8 +116,8 @@ export default class TPS3D {
   scale: Vector3;
 
   constructor(unscaledSourcePoints: Vector3[], unscaledTargetPoints: Vector3[], scale: Vector3) {
-    const sourcePoints = unscaledSourcePoints.map((point) => V3.scale3(point, scale));
-    const targetPoints = unscaledTargetPoints.map((point) => V3.scale3(point, scale));
+    const sourcePoints = unscaledSourcePoints.map((point) => V3.scale3(point, scale, [0, 0, 0]));
+    const targetPoints = unscaledTargetPoints.map((point) => V3.scale3(point, scale, [0, 0, 0]));
 
     const [cps, offsetX, offsetY, offsetZ] = this.getControlPointsWithOffsets(
       sourcePoints,

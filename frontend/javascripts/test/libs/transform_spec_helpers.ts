@@ -9,15 +9,15 @@ export function almostEqual(
 ) {
   t.true(
     Math.abs(vec1[0] - vec2[0]) < threshold,
-    `Values are not similar enough: ${vec1[0] - vec2[0]}`,
+    `Values are not similar enough: diff_x=${vec1[0] - vec2[0]}`,
   );
   t.true(
     Math.abs(vec1[1] - vec2[1]) < threshold,
-    `Values are not similar enough: ${vec1[1] - vec2[1]}`,
+    `Values are not similar enough: diff_y=${vec1[1] - vec2[1]}`,
   );
   t.true(
     Math.abs(vec1[2] - vec2[2]) < threshold,
-    `Values are not similar enough: ${vec1[2] - vec2[2]}`,
+    `Values are not similar enough: diff_z=${vec1[2] - vec2[2]}`,
   );
 }
 

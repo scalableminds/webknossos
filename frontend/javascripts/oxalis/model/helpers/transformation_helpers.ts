@@ -91,11 +91,12 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "affine") {
-    const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
-    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
+    // todop: make naming proper
+    const sourcePointsA = transformsA.scaledTps.unscaledTargetPoints;
+    const targetPointsA = transformsA.scaledTps.unscaledSourcePoints;
 
     const transformedTargetPointsA = M4x4.transformVectorsAffine(
-      transformsB.affineMatrix,
+      M4x4.transpose(transformsB.affineMatrix),
       targetPointsA,
     );
 
@@ -107,11 +108,12 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   }
 
   if (transformsA.type === "affine" && transformsB.type === "thin_plate_spline") {
-    const sourcePointsB = transformsB.scaledTps.unscaledSourcePoints;
-    const targetPointsB = transformsB.scaledTps.unscaledTargetPoints;
+    // todop: make naming proper
+    const sourcePointsB = transformsB.scaledTps.unscaledTargetPoints;
+    const targetPointsB = transformsB.scaledTps.unscaledSourcePoints;
 
     const transformedSourcePointsB = M4x4.transformVectorsAffine(
-      M4x4.inverse(transformsA.affineMatrix),
+      M4x4.transpose(M4x4.inverse(transformsA.affineMatrix)),
       sourcePointsB,
     );
 

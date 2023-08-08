@@ -101,6 +101,7 @@ class VolumeTracingController @Inject()(
           val mergedTracing =
             tracingService
               .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty)
+              .openOrThrowException("Merging failed")
               // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
               .copy(segments = List.empty)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>

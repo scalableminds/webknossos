@@ -2,7 +2,7 @@ package backend
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinateRequest, BucketPosition}
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
 import com.scalableminds.webknossos.tracingstore.tracings.volume.BucketKeys
 import org.scalatestplus.play.PlaySpec
 
@@ -11,10 +11,10 @@ class BucketKeyTestSuite extends PlaySpec {
   class BucketKeyBuilder extends BucketKeys {
     def build(dataLayerName: String,
               bucket: BucketPosition,
-              additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinate]] = None): String =
+              additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinateDefinition]] = None): String =
       buildBucketKey(dataLayerName, bucket, additionalCoordinateDefinitions)
 
-    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Option[(String, BucketPosition)] =
+    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Option[(String, BucketPosition)] =
       parseBucketKey(key, additionalCoordinates)
   }
   val bucketKeyBuilder = new BucketKeyBuilder
@@ -44,7 +44,7 @@ class BucketKeyTestSuite extends PlaySpec {
     }
     "built with additional coordinates" should {
       val additionalCoordinateDefinitions =
-        Seq(AdditionalCoordinate("a", Array(0, 10), 0), AdditionalCoordinate("b", Array(0, 10), 1))
+        Seq(AdditionalCoordinateDefinition("a", Array(0, 10), 0), AdditionalCoordinateDefinition("b", Array(0, 10), 1))
       val additionalCoordinateRequests = Seq(AdditionalCoordinateRequest("a", 4), AdditionalCoordinateRequest("b", 5))
 
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinateRequests))

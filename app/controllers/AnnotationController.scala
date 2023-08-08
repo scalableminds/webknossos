@@ -8,7 +8,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
@@ -41,7 +41,7 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
                                      name: Option[String],
-                                     additionalCoordinate: Option[Seq[AdditionalCoordinate]])
+                                     additionalCoordinate: Option[Seq[AdditionalCoordinateDefinition]])
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]

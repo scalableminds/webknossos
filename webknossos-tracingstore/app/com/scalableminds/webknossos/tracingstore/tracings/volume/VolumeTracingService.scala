@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinate, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinateDefinition, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
@@ -419,12 +419,13 @@ class VolumeTracingService @Inject()(
       _ <- segmentIndexBuffer.flush()
     } yield ()
 
-  private def volumeTracingLayer(tracingId: String,
-                                 tracing: VolumeTracing,
-                                 isTemporaryTracing: Boolean = false,
-                                 includeFallbackDataIfAvailable: Boolean = false,
-                                 userToken: Option[String] = None,
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None): VolumeTracingLayer =
+  private def volumeTracingLayer(
+      tracingId: String,
+      tracing: VolumeTracing,
+      isTemporaryTracing: Boolean = false,
+      includeFallbackDataIfAvailable: Boolean = false,
+      userToken: Option[String] = None,
+      additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
@@ -434,7 +435,7 @@ class VolumeTracingService @Inject()(
       userToken = userToken,
       additionalCoordinates = additionalCoordinates match {
         case Some(value) => Some(value)
-        case None        => Some(AdditionalCoordinate.fromProto(tracing.additionalCoordinates))
+        case None        => Some(AdditionalCoordinateDefinition.fromProto(tracing.additionalCoordinates))
       }
     )
 
@@ -519,16 +520,21 @@ class VolumeTracingService @Inject()(
 
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
-            newEditableMappingIdOpt: Option[String]): VolumeTracing = {
-    def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
-                          tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
-      (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
-       tracingAWithIndex._2)
+            newEditableMappingIdOpt: Option[String]): Box[VolumeTracing] = {
+    def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
+                          tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
+      for {
+        tracingAWithIndex <- tracingAWithIndex
+        tracingBWithIndex <- tracingBWithIndex
+        merged <- mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats)
+      } yield (merged, tracingAWithIndex._2)
 
-    tracings.zipWithIndex
-      .reduceLeft(mergeTwoWithStats)
-      ._1
-      .copy(
+    for {
+      tracingsWithIndex <- Full(tracings.zipWithIndex.map(Full(_)))
+      tracingAndIndex <- tracingsWithIndex.reduceLeft(mergeTwoWithStats)
+      tracing <- tracingAndIndex._1
+    } yield
+      tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
         mappingName = newEditableMappingIdOpt,
@@ -539,7 +545,7 @@ class VolumeTracingService @Inject()(
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
                        indexB: Int,
-                       mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+                       mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
@@ -548,8 +554,10 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBox,
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
-    val tracingBSegments =
-      if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+    for {
+      mergedAdditionalCoordinateDefinitions <- AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(
+        Seq(tracingA, tracingB).map(t => Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates))))
+      tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
       else {
         val labelMap = mergedVolumeStats.labelMaps(indexB)
         tracingB.segments.map { segment =>
@@ -558,18 +566,20 @@ class VolumeTracingService @Inject()(
           )
         }
       }
-    tracingA.copy(
-      largestSegmentId = largestSegmentId,
-      boundingBox = mergedBoundingBox.getOrElse(
-        com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
-          com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
-          0,
-          0,
-          0)), // should never be empty for volumes
-      userBoundingBoxes = userBoundingBoxes,
-      segments = tracingA.segments.toList ::: tracingBSegments.toList,
-      segmentGroups = mergedGroups
-    )
+    } yield
+      tracingA.copy(
+        largestSegmentId = largestSegmentId,
+        boundingBox = mergedBoundingBox.getOrElse(
+          com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
+            com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
+            0,
+            0,
+            0)), // should never be empty for volumes
+        userBoundingBoxes = userBoundingBoxes,
+        segments = tracingA.segments.toList ::: tracingBSegments.toList,
+        segmentGroups = mergedGroups,
+        additionalCoordinates = AdditionalCoordinateDefinition.toProto(mergedAdditionalCoordinateDefinitions)
+      )
   }
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
@@ -586,7 +596,6 @@ class VolumeTracingService @Inject()(
     dataLayer.bucketProvider.bucketStream(Some(tracing.version))
   }
 
-  // TODO: Everytime things are merged, additional coordinates should be merged as well
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
@@ -639,16 +648,18 @@ class VolumeTracingService @Inject()(
       }
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
+        mergedAdditionalCoordinateDefinitions <- Fox.box2Fox(
+          AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(tracings.map(t =>
+            Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates)))))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(
-              newId,
-              elementClass,
-              bucketPosition,
-              bucketBytes,
-              newVersion,
-              toCache,
-              Some(AdditionalCoordinate.fromProto(tracings.head.additionalCoordinates))) // TODO: Use merged?
+            _ <- saveBucket(newId,
+                            elementClass,
+                            bucketPosition,
+                            bucketBytes,
+                            newVersion,
+                            toCache,
+                            mergedAdditionalCoordinateDefinitions)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
           } yield ()

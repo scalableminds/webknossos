@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinate,
+  AdditionalCoordinateDefinition,
   CoordinateTransformation,
   DataFormat,
   DataLayer,
@@ -96,5 +96,5 @@ case class EditableMappingLayer(name: String,
 
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
-  override def additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+  override def additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
 }

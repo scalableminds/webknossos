@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -24,7 +24,7 @@ class DatasetArray(vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
-                   additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                   additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
@@ -47,7 +47,7 @@ class DatasetArray(vaultPath: VaultPath,
       shape: Vec3Int,
       offset: Vec3Int,
       additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
-      additionalCoordinates: Map[String, AdditionalCoordinate])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+      additionalCoordinates: Map[String, AdditionalCoordinateDefinition])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalCoordinates.size
 
     /*

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.image
 
+import com.scalableminds.util.image.Color
 import com.typesafe.scalalogging.LazyLogging
 
 import java.awt.image.BufferedImage
@@ -28,6 +29,7 @@ case class ImageCreatorParameters(
     intensityRange: Option[(Double, Double)] = None,
     blackAndWhite: Boolean,
     isSegmentation: Boolean = false,
+    color: Option[Color] = None
 )
 
 object ImageCreator extends LazyLogging {
@@ -103,7 +105,8 @@ object ImageCreator extends LazyLogging {
   private def toRGBArray(b: Array[Byte],
                          elementClass: ElementClass.Value,
                          isSegmentation: Boolean,
-                         intensityRange: Option[(Double, Double)]) = {
+                         intensityRange: Option[(Double, Double)],
+                         color: Option[Color]) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
@@ -112,30 +115,43 @@ object ImageCreator extends LazyLogging {
       colored(idx / bytesPerElement) = {
         if (isSegmentation)
           idToRGB(b(idx))
-        else
+        else {
+          val rF = color.map(_.r).getOrElse(1d) // rF = red factor
+          val gF = color.map(_.g).getOrElse(1d)
+          val bF = color.map(_.b).getOrElse(1d)
           elementClass match {
             case ElementClass.uint8 =>
               val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
-              (0xFF << 24) | ((grayNormalized & 0xFF) << 16) | ((grayNormalized & 0xFF) << 8) | ((grayNormalized & 0xFF) << 0)
+              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
+                grayNormalized,
+                bF) << 0)
             case ElementClass.uint16 =>
               val grayNormalized = normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
-              (0xFF << 24) | ((grayNormalized & 0xFF) << 16) | ((grayNormalized & 0xFF) << 8) | ((grayNormalized & 0xFF) << 0)
+              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
+                grayNormalized,
+                bF) << 0)
             case ElementClass.uint24 => // assume uint24 rgb color data
               (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
             case ElementClass.float =>
               val grayNormalized = normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-              (0xFF << 24) | ((grayNormalized & 0xFF) << 16) | ((grayNormalized & 0xFF) << 8) | ((grayNormalized & 0xFF) << 0)
+              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
+                grayNormalized,
+                bF) << 0)
             case _ =>
               throw new Exception(
                 "Can't handle " + bytesPerElement + " bytes per element in Image creator for a color layer.")
           }
+        }
       }
       idx += bytesPerElement
     }
     colored
   }
 
-  private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Byte =
+  private def applyColor(valueByte: Int, colorFactor: Double): Int =
+    (valueByte * colorFactor).toInt & 0xFF
+
+  private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Int =
     intensityRangeOpt match {
       case None => grayByte
       case Some(intensityRange) =>
@@ -145,7 +161,7 @@ object ImageCreator extends LazyLogging {
 
   private def normalizeIntensityUint16(intensityRangeOpt: Option[(Double, Double)],
                                        grayLowerByte: Byte,
-                                       grayUpperByte: Byte): Byte =
+                                       grayUpperByte: Byte): Int =
     intensityRangeOpt match {
       case None => grayUpperByte
       case Some(intensityRange) =>
@@ -157,13 +173,13 @@ object ImageCreator extends LazyLogging {
                                       byte0: Byte,
                                       byte1: Byte,
                                       byte2: Byte,
-                                      byte3: Byte): Byte = {
+                                      byte3: Byte): Int = {
     val intensityRange = intensityRangeOpt.getOrElse((0.0, 255.0))
     val grayInt = ((byte3 & 0xFF) << 24) | ((byte2 & 0xFF) << 16) | ((byte1 & 0xFF) << 8) | (byte0 & 0xFF)
     normalizeIntensityImpl(java.lang.Float.intBitsToFloat(grayInt).toDouble, intensityRange)
   }
 
-  private def normalizeIntensityImpl(value: Double, intensityRange: (Double, Double)): Byte =
+  private def normalizeIntensityImpl(value: Double, intensityRange: (Double, Double)): Int =
     Math
       .round(
         com.scalableminds.util.tools.Math.clamp(
@@ -172,7 +188,7 @@ object ImageCreator extends LazyLogging {
           0,
           255
         ))
-      .toByte
+      .toInt
 
   private def idToRGB(b: Byte) = {
     def hueToRGB(h: Double): Int = {
@@ -214,7 +230,7 @@ object ImageCreator extends LazyLogging {
         0,
         params.slideWidth,
         params.slideHeight,
-        toRGBArray(b, params.elementClass, params.isSegmentation, params.intensityRange),
+        toRGBArray(b, params.elementClass, params.isSegmentation, params.intensityRange, params.color),
         0,
         params.slideWidth
       )

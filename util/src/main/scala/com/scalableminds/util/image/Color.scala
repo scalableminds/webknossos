@@ -6,6 +6,10 @@ import play.api.libs.json.{Format, JsValue, _}
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
   def toHtml = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
+
+  def rByte = (r * 255).toInt
+  def gByte = (g * 255).toInt
+  def bByte = (b * 255).toInt
 }
 
 object Color {
@@ -19,6 +23,14 @@ object Color {
       math.min(fourValue + 0.5, -fourValue + 2.5).clamp(0, 1),
       1
     )
+  }
+
+  def fromHTML(htmlCode: String): Color = {
+    val code = if (!htmlCode.startsWith("#")) s"#$htmlCode" else htmlCode
+    val r = Integer.valueOf(code.substring(1, 3), 16) / 255d
+    val g = Integer.valueOf(code.substring(3, 5), 16) / 255d
+    val b = Integer.valueOf(code.substring(5, 7), 16) / 255d
+    Color(r, g, b, 0)
   }
 
   implicit object ColorFormat extends Format[Color] {

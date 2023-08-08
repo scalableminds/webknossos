@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -19,7 +20,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             mag1BoundingBox: BoundingBox,
                             mag: Vec3Int,
                             mappingName: Option[String],
-                            intensityRangeOpt: Option[(Double, Double)]): Fox[Array[Byte]] = {
+                            intensityRangeOpt: Option[(Double, Double)],
+                            colorOpt: Option[Color]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Thumbnail called for: $organizationName/${dataSet.name}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
@@ -33,6 +35,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("mappingName", mappingName)
       .addQueryStringOptional("intensityMin", intensityRangeOpt.map(_._1.toString))
       .addQueryStringOptional("intensityMax", intensityRangeOpt.map(_._2.toString))
+      .addQueryStringOptional("color", colorOpt.map(_.toHtml))
       .getWithBytesResponse
   }
 

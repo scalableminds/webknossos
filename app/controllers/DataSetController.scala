@@ -101,7 +101,12 @@ class DataSetController @Inject()(userService: UserService,
     sil.UserAwareAction.async { implicit request =>
       for {
         _ <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnailWithCache(organizationName, dataSetName, dataLayerName, w, h, mappingName)
+        image <- thumbnailService.getThumbnail(organizationName,
+                                               dataSetName,
+                                               dataLayerName,
+                                               w.getOrElse(1000),
+                                               h.getOrElse(1000),
+                                               mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }

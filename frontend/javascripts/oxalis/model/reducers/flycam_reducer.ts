@@ -260,7 +260,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           if (specifiedValue) {
             return {
               name,
-              value: specifiedValue.value,
+              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
             };
           }
         }

@@ -162,7 +162,6 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
       <InputComponent
         onChange={this.handleChange}
         onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
         value={this.state.text}
         onKeyDown={this.handleOnKeyDown}
         style={
@@ -177,6 +176,13 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
             : style
         }
         {...props}
+        // onBlur needs to be placed below the ...props spread
+        // to ensure that it isn't overridden. User-specified onBlurs
+        // are not supported (see Props type), but might be passed
+        // nevertheless (e.g., when the VectorInput is a child of a
+        // Popover component). Until now, it hasn't raised any problems
+        // (the Popover example merely passed undefined as onBlur, anyway).
+        onBlur={this.handleBlur}
       />
     );
   }

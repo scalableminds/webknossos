@@ -287,7 +287,7 @@ script.invalid=Script is invalid
 script.name.invalid.characters=Script name is invalid. Please use only letters, digits, dots, space, underscores, hyphens.
 
 serialization.failed=Failed to serialize data.
-s
+
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
 initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 

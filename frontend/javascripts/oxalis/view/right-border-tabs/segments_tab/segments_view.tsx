@@ -106,6 +106,7 @@ import { ItemType } from "antd/lib/menu/hooks/useItems";
 import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -249,6 +250,7 @@ type State = {
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
   areSegmentsInGroupVisible: { [groupId: number]: boolean };
+  isSegmentStatisticsModalOpen: boolean;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -342,6 +344,7 @@ class SegmentsView extends React.Component<Props, State> {
     prevProps: null,
     groupToDelete: null,
     areSegmentsInGroupVisible: {},
+    isSegmentStatisticsModalOpen: false,
   };
   tree: React.RefObject<RcTree>;
 
@@ -913,7 +916,18 @@ class SegmentsView extends React.Component<Props, State> {
   getShowSegmentStatistics = (id: number): ItemType => {
     return {
       key: "segmentStatistics",
-      label: "Show Segment Statistics",
+      label: (
+        <>
+          <div
+            onClick={() => {
+              this.setState({ isSegmentStatisticsModalOpen: true });
+              this.handleSegmentDropdownMenuVisibility(id, false);
+            }}
+          >
+            Show Segment Statistics
+          </div>
+        </>
+      ),
       icon: <i className="fas fa-ruler fa-fw fa-icon"></i>,
     };
   };
@@ -1309,6 +1323,32 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  getSegmentStatisticsModal = (groupId: number) => {
+    //handle per group: get object of tracing id, tracing store, id
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    const hasNoFallbackLayer =
+      visibleSegmentationLayer != null &&
+      "fallbackLayer" in visibleSegmentationLayer &&
+      visibleSegmentationLayer.fallbackLayer == null;
+    if (hasNoFallbackLayer && this.props.hasVolumeTracing) {
+      //TODO second check, useful?
+      const tracingId = this.props; //TODO! how to get tracing?
+      const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+      return (
+        <SegmentStatisticsModal
+          isOpen={this.state.isSegmentStatisticsModalOpen}
+          onCancel={() => {
+            this.setState({ isSegmentStatisticsModalOpen: false });
+          }}
+          visibleSegmentationLayer={visibleSegmentationLayer}
+          tracingId={tracingId}
+          tracingStoreUrl={tracingStoreUrl}
+          segmentId={undefined}
+        />
+      );
+    }
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -1410,42 +1450,43 @@ class SegmentsView extends React.Component<Props, State> {
                 // Make sure the displayed name is not empty
                 const displayableName = name?.trim() || "<Unnamed Group>";
                 return (
-                  <div>
-                    <Dropdown
-                      menu={menu}
-                      placement="bottom"
-                      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-                      // destroyPopupOnHide should also be an option according to the docs, but
-                      // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-                      autoDestroy
-                      open
-                      //open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible) =>
-                        this.handleSegmentDropdownMenuVisibility(id, isVisible)
-                      }
-                      trigger={["contextMenu"]}
-                    >
-                      <EditableTextLabel
-                        value={displayableName}
-                        label="Group Name"
-                        onChange={(name) => {
-                          if (this.props.visibleSegmentationLayer != null) {
-                            api.data.renameSegmentGroup(
-                              this.props.visibleSegmentationLayer.name,
-                              id,
-                              name,
-                            );
-                          }
-                        }}
-                        margin="0 5px"
-                        // The root group must not be removed or renamed
-                        disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-                        onRenameStart={this.onRenameStart}
-                        onRenameEnd={this.onRenameEnd}
-                      />
-                    </Dropdown>
-                  </div>
+                  <>
+                    <div>
+                      <Dropdown
+                        menu={menu}
+                        placement="bottom"
+                        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
+                        // destroyPopupOnHide should also be an option according to the docs, but
+                        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+                        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+                        autoDestroy
+                        open={this.state.activeDropdownSegmentOrGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
+                        onOpenChange={(isVisible) =>
+                          this.handleSegmentDropdownMenuVisibility(id, isVisible)
+                        }
+                        trigger={["contextMenu"]}
+                      >
+                        <EditableTextLabel
+                          value={displayableName}
+                          label="Group Name"
+                          onChange={(name) => {
+                            if (this.props.visibleSegmentationLayer != null) {
+                              api.data.renameSegmentGroup(
+                                this.props.visibleSegmentationLayer.name,
+                                id,
+                                name,
+                              );
+                            }
+                          }}
+                          margin="0 5px"
+                          // The root group must not be removed or renamed
+                          disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+                          onRenameStart={this.onRenameStart}
+                          onRenameEnd={this.onRenameEnd}
+                        />
+                      </Dropdown>
+                    </div>
+                  </>
                 );
               }
             };

@@ -190,12 +190,38 @@ test("Flycam should get correct subset of additional coordinates value when subs
     // t is passed, but u is missing. Instead, a superfluous
     // q is passed.
     FlycamActions.setAdditionalCoordinatesAction([
-      { name: "t", value: 123 },
+      { name: "t", value: 7 },
       { name: "q", value: 0 },
     ]),
   );
   t.deepEqual(newState.flycam.additionalCoordinates, [
-    { name: "t", value: 123 },
+    { name: "t", value: 7 },
     { name: "u", value: 10 },
   ]);
+});
+
+test("Flycam should get valid additional coordinate value even when invalid value is passed.", (t) => {
+  const adaptedState = update(initialState, {
+    // flycam
+    dataset: {
+      dataSource: {
+        dataLayers: {
+          $set: [
+            {
+              name: "color1",
+              type: "color",
+              additionalCoordinates: [{ name: "t", bounds: [0, 10] }],
+            },
+          ],
+        },
+      },
+    },
+  });
+  const newState = FlycamReducer(
+    adaptedState,
+    // t is passed, but u is missing. Instead, a superfluous
+    // q is passed.
+    FlycamActions.setAdditionalCoordinatesAction([{ name: "t", value: 70 }]),
+  );
+  t.deepEqual(newState.flycam.additionalCoordinates, [{ name: "t", value: 10 }]);
 });

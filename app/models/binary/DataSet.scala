@@ -825,7 +825,8 @@ class DatasetLayerAdditionalCoordinatesDAO @Inject()(sqlClient: SqlClient)(impli
   private def parseRow(row: DatasetLayerAdditionalcoordinatesRow): AdditionalCoordinateDefinition =
     AdditionalCoordinateDefinition(row.name, Array(row.lowerbound, row.upperbound), row.index)
 
-  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalCoordinateDefinition]] =
+  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId,
+                                        dataLayerName: String): Fox[Seq[AdditionalCoordinateDefinition]] =
     for {
       rows <- run(q"""SELECT *
            FROM webknossos.dataSet_layer_additionalCoordinates

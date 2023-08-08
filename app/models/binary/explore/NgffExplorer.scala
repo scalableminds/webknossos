@@ -99,8 +99,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
         if (!defaultAxes.contains(axisAndIndex._1.name)) {
           Some(
             AdditionalCoordinateDefinition(name = axisAndIndex._1.name,
-                                 bounds = Array(0, shape(axisAndIndex._2) - 1),
-                                 index = axisAndIndex._2))
+                                           bounds = Array(0, shape(axisAndIndex._2) - 1),
+                                           index = axisAndIndex._2))
         } else {
           None
       })

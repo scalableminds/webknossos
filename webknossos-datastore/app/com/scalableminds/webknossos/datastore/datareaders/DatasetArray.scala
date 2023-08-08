@@ -43,11 +43,11 @@ class DatasetArray(vaultPath: VaultPath,
     readBytes(shapeArray, offsetArray)
   }
 
-  def readBytesWithAdditionalCoordinates(
-      shape: Vec3Int,
-      offset: Vec3Int,
-      additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
-      additionalCoordinates: Map[String, AdditionalCoordinateDefinition])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def readBytesWithAdditionalCoordinates(shape: Vec3Int,
+                                         offset: Vec3Int,
+                                         additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
+                                         additionalCoordinates: Map[String, AdditionalCoordinateDefinition])(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalCoordinates.size
 
     /*

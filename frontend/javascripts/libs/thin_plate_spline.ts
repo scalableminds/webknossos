@@ -122,11 +122,10 @@ export default class TPS3D {
     const [cps, offsetX, offsetY, offsetZ] = this.getControlPointsWithOffsets(
       sourcePoints,
       targetPoints,
-      false,
     );
 
-    this.unscaledSourcePoints = sourcePoints;
-    this.unscaledTargetPoints = targetPoints;
+    this.unscaledSourcePoints = unscaledSourcePoints;
+    this.unscaledTargetPoints = unscaledTargetPoints;
     this.scale = scale;
 
     this.tpsX.fit(offsetX, cps);
@@ -139,6 +138,14 @@ export default class TPS3D {
     const dy = this.tpsY.transform1D(x, y, z);
     const dz = this.tpsZ.transform1D(x, y, z);
     return [x + dx, y + dy, z + dz];
+  }
+
+  transformUnscaled(x: number, y: number, z: number): Vector3 {
+    // Scale, transform and unscale input.
+    const scaled = V3.scale3([x, y, z], this.scale, [0, 0, 0]);
+    const scaledTransformed = this.transform(...scaled);
+    const unscaledTransformed = V3.divide3(scaledTransformed, this.scale, [0, 0, 0]);
+    return unscaledTransformed;
   }
 
   getControlPointsWithOffsets(

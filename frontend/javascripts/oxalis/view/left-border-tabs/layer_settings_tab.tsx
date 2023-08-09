@@ -106,7 +106,10 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import { invertTransform, transformPoint } from "oxalis/model/helpers/transformation_helpers";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -191,13 +194,13 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
     const invertedTransform = invertTransform(currentTransforms);
-    const newPosition = transformPoint(invertedTransform)(currentPosition);
+    const newPosition = transformPointUnscaled(invertedTransform)(currentPosition);
 
     // Also transform a reference coordinate to determine how the scaling
     // changed. Then, adapt the zoom accordingly.
     const referenceOffset = [10, 10, 10] as Vector3;
     const secondPosition = V3.add(currentPosition, referenceOffset);
-    const newSecondPosition = transformPoint(invertedTransform)(secondPosition);
+    const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
 
     const scaleChange = _.mean(
       // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)

@@ -30,6 +30,6 @@ export default class MultiKeyMap<E, V, K extends E[]> {
         return currentMap.get(key) as V | undefined;
       }
     }
-    throw new Error("Unexpected code reached.");
+    throw new Error("MultiKeyMap.get called with empty key.");
   }
 }

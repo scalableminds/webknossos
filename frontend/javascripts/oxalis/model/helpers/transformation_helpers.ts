@@ -61,7 +61,8 @@ export function invertTransform(transforms: Transform): Transform {
 
 export function chainTransforms(transformsA: Transform | null, transformsB: Transform): Transform {
   /*
-   * This function applies transformsB on top of an nullable transformsA.
+   * This function applies transformsB on top of an nullable transformsA. The resulting transform
+   * effectively transforms points using transformsA and *then* transformsB.
    */
   if (transformsA == null) {
     return transformsB;
@@ -75,50 +76,55 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "thin_plate_spline") {
+    // Create a new TPS which uses the same source points as A and as target points
+    // use these from A but apply transform B on these.
     const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
     const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
 
-    const transformedSourcePointsA = sourcePointsA.map((point) =>
-      transformsB.scaledTps.transform(...point),
+    const transformedTargetPointsA = targetPointsA.map((point) =>
+      transformsB.scaledTps.transformUnscaled(...point),
     );
 
     return createThinPlateSplineTransform(
-      targetPointsA,
-      transformedSourcePointsA,
+      sourcePointsA,
+      transformedTargetPointsA,
       transformsA.scaledTps.scale,
     );
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "affine") {
-    // todop: make naming proper
-    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
+    // Create a new TPS which uses the same source points as A and as target points
+    // use these from A but apply transform B on these.
     const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
+    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
 
-    const transformedSourcePointsA = M4x4.transformVectorsAffine(
+    const transformedTargetPointsA = M4x4.transformVectorsAffine(
       M4x4.transpose(transformsB.affineMatrix),
-      sourcePointsA,
+      targetPointsA,
     );
 
     return createThinPlateSplineTransform(
-      targetPointsA,
-      transformedSourcePointsA,
+      sourcePointsA,
+      transformedTargetPointsA,
       transformsA.scaledTps.scale,
     );
   }
 
   if (transformsA.type === "affine" && transformsB.type === "thin_plate_spline") {
-    // todop: make naming proper
-    const targetPointsB = transformsB.scaledTps.unscaledTargetPoints;
+    // Create a new TPS which uses
+    // - the source points of B but applies the inverse A on these
+    // - the target points of B
     const sourcePointsB = transformsB.scaledTps.unscaledSourcePoints;
+    const targetPointsB = transformsB.scaledTps.unscaledTargetPoints;
 
-    const transformedTargetPointsB = M4x4.transformVectorsAffine(
+    const transformedSourcePointsB = M4x4.transformVectorsAffine(
       M4x4.transpose(M4x4.inverse(transformsA.affineMatrix)),
-      targetPointsB,
+      sourcePointsB,
     );
 
     return createThinPlateSplineTransform(
-      transformedTargetPointsB,
-      sourcePointsB,
+      transformedSourcePointsB,
+      targetPointsB,
       transformsB.scaledTps.scale,
     );
   }
@@ -128,11 +134,11 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   );
 }
 
-export const transformPoint = (transforms: Transform) => {
+export const transformPointUnscaled = (transforms: Transform) => {
   if (transforms.type === "affine") {
     const matrix = M4x4.transpose(transforms.affineMatrix);
     return (pos: Vector3) => M4x4.transformVectorsAffine(matrix, [pos])[0];
   } else {
   }
-  return (pos: Vector3) => transforms.scaledTps.transform(pos[0], pos[1], pos[2]);
+  return (pos: Vector3) => transforms.scaledTps.transformUnscaled(pos[0], pos[1], pos[2]);
 };

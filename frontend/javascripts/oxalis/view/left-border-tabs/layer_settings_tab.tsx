@@ -182,6 +182,8 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
+    // Transform current position using the inverse transform
+    // so that the user will still look at the same data location.
     const currentPosition = getPosition(state.flycam);
     const currentTransforms = getTransformsForLayer(
       state.dataset,
@@ -191,8 +193,19 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
     const invertedTransform = invertTransform(currentTransforms);
     const newPosition = transformPoint(invertedTransform)(currentPosition);
 
+    // Also transform a reference coordinate to determine how the scaling
+    // changed. Then, adapt the zoom accordingly.
+    const referenceOffset = [10, 10, 10] as Vector3;
+    const secondPosition = V3.add(currentPosition, referenceOffset);
+    const newSecondPosition = transformPoint(invertedTransform)(secondPosition);
+
+    const scaleChange = _.mean(
+      // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+      V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+    );
     dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
     dispatch(setPositionAction(newPosition));
+    dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
   };
 
   return (

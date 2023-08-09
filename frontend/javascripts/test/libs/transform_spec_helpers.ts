@@ -76,5 +76,5 @@ export function getPointsC555() {
   sourcePoints.push([482.1100102621723, 492.8521135830212, 633.5717351310861]);
   targetPoints.push([1508.3328498461537, 1977.8310726153848, 185.3605911476923]);
 
-  return [targetPoints, sourcePoints];
+  return [sourcePoints, targetPoints];
 }

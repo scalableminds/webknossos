@@ -8,7 +8,7 @@ import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { M4x4 } from "libs/mjs";
 
 test("Estimate affine projection", (t) => {
-  const [targetPoints, sourcePoints] = getPointsC555();
+  const [sourcePoints, targetPoints] = getPointsC555();
   let affineMatrix = estimateAffine(sourcePoints, targetPoints);
 
   const transform = (x: number, y: number, z: number) => {

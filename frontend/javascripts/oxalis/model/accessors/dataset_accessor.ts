@@ -676,7 +676,7 @@ function _getTransformsForLayerOrNullBase(
   } else if (type === "thin_plate_spline") {
     let { source, target } = transformation.correspondences;
 
-    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale);
+    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
   }
 
   console.error(

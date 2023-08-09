@@ -9,7 +9,7 @@ import { M4x4 } from "libs/mjs";
 
 test("Estimate affine projection", (t) => {
   const [targetPoints, sourcePoints] = getPointsC555();
-  let affineMatrix = estimateAffine(targetPoints, sourcePoints);
+  let affineMatrix = estimateAffine(sourcePoints, targetPoints);
 
   const transform = (x: number, y: number, z: number) => {
     const vec = new Matrix([[x, y, z, 1]]).transpose();
@@ -47,8 +47,8 @@ test("Estimate affine projection should make sense with M4x4 as well as Matrix",
     [30, 30, 10],
     [20, 30, 40],
   ] as Vector3[];
-  const aff1 = estimateAffineMatrix4x4(target, source);
-  const aff2 = estimateAffine(target, source);
+  const aff1 = estimateAffineMatrix4x4(source, target);
+  const aff2 = estimateAffine(source, target);
 
   const transform = (pos: Vector3) => M4x4.transformVectorsAffine(M4x4.transpose(aff1), [pos])[0];
   const transform2 = ([x, y, z]: Vector3) => {

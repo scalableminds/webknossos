@@ -16,8 +16,8 @@ export type Transform =
       scaledTps: TPS3D;
     };
 
-export function createAffineTransform(target: Vector3[], source: Vector3[]): Transform {
-  const affineMatrix = estimateAffineMatrix4x4(target, source);
+export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
+  const affineMatrix = estimateAffineMatrix4x4(source, target);
 
   return {
     type: "affine",
@@ -26,19 +26,19 @@ export function createAffineTransform(target: Vector3[], source: Vector3[]): Tra
 }
 
 export function createThinPlateSplineTransform(
-  target: Vector3[],
   source: Vector3[],
+  target: Vector3[],
   scale: Vector3,
 ): Transform {
-  const affineMatrix = estimateAffineMatrix4x4(target, source);
-  const affineMatrixInv = estimateAffineMatrix4x4(source, target);
+  const affineMatrix = estimateAffineMatrix4x4(source, target);
+  const affineMatrixInv = estimateAffineMatrix4x4(target, source);
 
   return {
     type: "thin_plate_spline",
     affineMatrix,
     affineMatrixInv,
-    scaledTpsInv: new TPS3D(source, target, scale),
-    scaledTps: new TPS3D(target, source, scale),
+    scaledTps: new TPS3D(source, target, scale),
+    scaledTpsInv: new TPS3D(target, source, scale),
   };
 }
 

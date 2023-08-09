@@ -115,7 +115,7 @@ export default class TPS3D {
   unscaledTargetPoints: Vector3[];
   scale: Vector3;
 
-  constructor(unscaledTargetPoints: Vector3[], unscaledSourcePoints: Vector3[], scale: Vector3) {
+  constructor(unscaledSourcePoints: Vector3[], unscaledTargetPoints: Vector3[], scale: Vector3) {
     const sourcePoints = unscaledSourcePoints.map((point) => V3.scale3(point, scale, [0, 0, 0]));
     const targetPoints = unscaledTargetPoints.map((point) => V3.scale3(point, scale, [0, 0, 0]));
 

@@ -9,7 +9,7 @@ import { Vector3 } from "oxalis/constants";
 test("Basic TPS calculation", async (t) => {
   const [targetPoints, sourcePoints] = getPointsC555();
 
-  const tps = new TPS3D(targetPoints, sourcePoints, [1, 1, 1]);
+  const tps = new TPS3D(sourcePoints, targetPoints, [1, 1, 1]);
 
   almostEqual(
     t,
@@ -24,10 +24,12 @@ test("Basic TPS calculation", async (t) => {
   );
 });
 
+//
+
 test("TPS calculation with scale", async (t) => {
   const [targetPoints, sourcePoints] = getPointsC555();
   const scale = [11, 12, 13] as Vector3;
-  const tps = new TPS3D(targetPoints, sourcePoints, scale);
+  const tps = new TPS3D(sourcePoints, targetPoints, scale);
   const s = (el: Vector3) => V3.scale3(el, scale);
 
   almostEqual(

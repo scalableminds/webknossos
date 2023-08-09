@@ -3,7 +3,8 @@ import { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
 import { Vector3 } from "oxalis/constants";
 
-export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+// Estimates an affine matrix that transforms from source points to target points.
+export default function estimateAffine(targetPoints: Vector3[], sourcePoints: Vector3[]) {
   // Number of correspondences
   const N = sourcePoints.length;
 
@@ -12,8 +13,8 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   const b = [];
 
   for (let i = 0; i < N; i++) {
-    const q = sourcePoints[i];
-    const p = targetPoints[i];
+    const p = sourcePoints[i];
+    const q = targetPoints[i];
     const [px, py, pz] = p;
     const [qx, qy, qz] = q;
 
@@ -47,6 +48,6 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   return new Matrix(affineMatrix);
 }
 
-export function estimateAffineMatrix4x4(sourcePoints: Vector3[], targetPoints: Vector3[]) {
-  return estimateAffine(sourcePoints, targetPoints).to1DArray() as any as Matrix4x4;
+export function estimateAffineMatrix4x4(targetPoints: Vector3[], sourcePoints: Vector3[]) {
+  return estimateAffine(targetPoints, sourcePoints).to1DArray() as any as Matrix4x4;
 }

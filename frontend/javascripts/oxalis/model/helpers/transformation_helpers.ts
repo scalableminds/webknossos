@@ -16,8 +16,8 @@ export type Transform =
       scaledTps: TPS3D;
     };
 
-export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
-  const affineMatrix = estimateAffineMatrix4x4(source, target);
+export function createAffineTransform(target: Vector3[], source: Vector3[]): Transform {
+  const affineMatrix = estimateAffineMatrix4x4(target, source);
 
   return {
     type: "affine",
@@ -26,19 +26,19 @@ export function createAffineTransform(source: Vector3[], target: Vector3[]): Tra
 }
 
 export function createThinPlateSplineTransform(
-  source: Vector3[],
   target: Vector3[],
+  source: Vector3[],
   scale: Vector3,
 ): Transform {
-  const affineMatrix = estimateAffineMatrix4x4(source, target);
-  const affineMatrixInv = estimateAffineMatrix4x4(target, source);
+  const affineMatrix = estimateAffineMatrix4x4(target, source);
+  const affineMatrixInv = estimateAffineMatrix4x4(source, target);
 
   return {
     type: "thin_plate_spline",
     affineMatrix,
     affineMatrixInv,
-    scaledTpsInv: new TPS3D(target, source, scale),
-    scaledTps: new TPS3D(source, target, scale),
+    scaledTpsInv: new TPS3D(source, target, scale),
+    scaledTps: new TPS3D(target, source, scale),
   };
 }
 
@@ -75,51 +75,50 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "thin_plate_spline") {
-    // todop: make naming proper
-    const targetPointsA = transformsA.scaledTps.unscaledSourcePoints;
-    const sourcePointsA = transformsA.scaledTps.unscaledTargetPoints;
+    const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
+    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
 
-    const transformedTargetPointsA = targetPointsA.map((point) =>
+    const transformedSourcePointsA = sourcePointsA.map((point) =>
       transformsB.scaledTps.transform(...point),
     );
 
     return createThinPlateSplineTransform(
-      sourcePointsA,
-      transformedTargetPointsA,
+      targetPointsA,
+      transformedSourcePointsA,
       transformsA.scaledTps.scale,
     );
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "affine") {
     // todop: make naming proper
-    const sourcePointsA = transformsA.scaledTps.unscaledTargetPoints;
-    const targetPointsA = transformsA.scaledTps.unscaledSourcePoints;
+    const targetPointsA = transformsA.scaledTps.unscaledTargetPoints;
+    const sourcePointsA = transformsA.scaledTps.unscaledSourcePoints;
 
-    const transformedTargetPointsA = M4x4.transformVectorsAffine(
+    const transformedSourcePointsA = M4x4.transformVectorsAffine(
       M4x4.transpose(transformsB.affineMatrix),
-      targetPointsA,
+      sourcePointsA,
     );
 
     return createThinPlateSplineTransform(
-      sourcePointsA,
-      transformedTargetPointsA,
+      targetPointsA,
+      transformedSourcePointsA,
       transformsA.scaledTps.scale,
     );
   }
 
   if (transformsA.type === "affine" && transformsB.type === "thin_plate_spline") {
     // todop: make naming proper
-    const sourcePointsB = transformsB.scaledTps.unscaledTargetPoints;
-    const targetPointsB = transformsB.scaledTps.unscaledSourcePoints;
+    const targetPointsB = transformsB.scaledTps.unscaledTargetPoints;
+    const sourcePointsB = transformsB.scaledTps.unscaledSourcePoints;
 
-    const transformedSourcePointsB = M4x4.transformVectorsAffine(
+    const transformedTargetPointsB = M4x4.transformVectorsAffine(
       M4x4.transpose(M4x4.inverse(transformsA.affineMatrix)),
-      sourcePointsB,
+      targetPointsB,
     );
 
     return createThinPlateSplineTransform(
-      transformedSourcePointsB,
-      targetPointsB,
+      transformedTargetPointsB,
+      sourcePointsB,
       transformsB.scaledTps.scale,
     );
   }

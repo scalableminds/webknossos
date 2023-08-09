@@ -61,19 +61,19 @@ test("Inverse of TPS should transform points back (also tests chaining)", async 
   // This transform is similar to:
   // coord := coord * 2 + 10
   // in the area of the following inputs. however, is biased so that (100, 50, 25) transforms to 90, 40, 15
-  const target = [
-    [10, 10, 10],
-    [30, 30, 30],
-    [30, 30, 10],
-    [20, 30, 40],
-    [90, 40, 15],
-  ] as Vector3[];
   const source = [
     [0, 0, 0],
     [10, 10, 10],
     [10, 10, 0],
     [5, 10, 15],
     [100, 50, 25],
+  ] as Vector3[];
+  const target = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
+    [90, 40, 15],
   ] as Vector3[];
   const tps1 = createThinPlateSplineTransform(target, source, [1, 1, 1]);
   const tps1Inv = invertTransform(tps1);

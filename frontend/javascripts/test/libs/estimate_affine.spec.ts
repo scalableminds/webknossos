@@ -35,17 +35,17 @@ test("Estimate affine projection", (t) => {
 test("Estimate affine projection should make sense with M4x4 as well as Matrix", async (t) => {
   // This transform essentially computes:
   // coord := coord * 2 + 10
-  const target = [
-    [10, 10, 10],
-    [30, 30, 30],
-    [30, 30, 10],
-    [20, 30, 40],
-  ] as Vector3[];
   const source = [
     [0, 0, 0],
     [10, 10, 10],
     [10, 10, 0],
     [5, 10, 15],
+  ] as Vector3[];
+  const target = [
+    [10, 10, 10],
+    [30, 30, 30],
+    [30, 30, 10],
+    [20, 30, 40],
   ] as Vector3[];
   const aff1 = estimateAffineMatrix4x4(target, source);
   const aff2 = estimateAffine(target, source);

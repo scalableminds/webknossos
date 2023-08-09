@@ -50,6 +50,7 @@ import {
   meshV0,
   meshV3,
   getMeshfilesForDatasetLayer,
+  getBucketPositionsForAdHocMesh,
 } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -185,32 +186,6 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
   );
 }
 
-function* loadAdHocIsosurface(
-  seedPosition: Vector3,
-  segmentId: number,
-  removeExistingIsosurface: boolean = false,
-  layerName?: string | null | undefined,
-  maybeExtraInfo?: AdHocIsosurfaceInfo,
-): Saga<void> {
-  const layer =
-    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
-
-  if (segmentId === 0 || layer == null) {
-    return;
-  }
-
-  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
-
-  yield* call(
-    loadIsosurfaceForSegmentId,
-    segmentId,
-    seedPosition,
-    isosurfaceExtraInfo,
-    removeExistingIsosurface,
-    layer,
-  );
-}
-
 function* getIsosurfaceExtraInfo(
   layerName: string,
   maybeExtraInfo: AdHocIsosurfaceInfo | null | undefined,
@@ -250,26 +225,36 @@ function* getInfoForIsosurfaceLoading(
   };
 }
 
-function* loadIsosurfaceForSegmentId(
-  segmentId: number,
+function* loadAdHocIsosurface(
   seedPosition: Vector3,
-  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
-  removeExistingIsosurface: boolean,
-  layer: DataLayer,
+  segmentId: number,
+  removeExistingIsosurface: boolean = false,
+  layerName?: string | null | undefined,
+  maybeExtraInfo?: AdHocIsosurfaceInfo,
 ): Saga<void> {
+  const layer =
+    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
+
+  if (segmentId === 0 || layer == null) {
+    return;
+  }
+
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
+
   const { zoomStep, resolutionInfo } = yield* call(
     getInfoForIsosurfaceLoading,
     layer,
     isosurfaceExtraInfo,
   );
   batchCounterPerSegment[segmentId] = 0;
+
   // If a REMOVE_ISOSURFACE action is dispatched and consumed
-  // here before loadIsosurfaceWithNeighbors is finished, the latter saga
+  // here before loadFullAdHocIsosurface is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
   yield* race({
-    loadIsosurfaceWithNeighbors: call(
-      loadIsosurfaceWithNeighbors,
+    loadFullAdHocIsosurface: call(
+      loadFullAdHocIsosurface,
       layer,
       segmentId,
       seedPosition,
@@ -287,7 +272,7 @@ function* loadIsosurfaceForSegmentId(
   });
 }
 
-function* loadIsosurfaceWithNeighbors(
+function* loadFullAdHocIsosurface(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
@@ -299,18 +284,48 @@ function* loadIsosurfaceWithNeighbors(
   let isInitialRequest = true;
   const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
-  let positionsToRequest = [clippedPosition];
   yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
+
+  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+
+  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  // Fetch from datastore if no volumetracing ...
+  let useDataStore = volumeTracing == null;
+  if (isosurfaceExtraInfo.useDataStore != null) {
+    // ... except if the caller specified whether to use the data store ...
+    useDataStore = isosurfaceExtraInfo.useDataStore;
+  } else if (volumeTracing?.mappingIsEditable) {
+    // ... or if an editable mapping is active.
+    useDataStore = false;
+  }
+
+  // Segment stats can only be used for volume tracings without editable mappings and without
+  // fallback layer.
+  const usePositionsFromSegmentStats =
+    volumeTracing != null &&
+    !volumeTracing.mappingIsEditable &&
+    volumeTracing.fallbackLayer == null;
+  let positionsToRequest = usePositionsFromSegmentStats
+    ? yield* getChunkPositionsFromSegmentStats(
+        tracingStoreHost,
+        layer,
+        segmentId,
+        cubeSize,
+        mag,
+        clippedPosition,
+      )
+    : [clippedPosition];
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
     if (currentPosition == null) {
       throw new Error("Satisfy typescript");
     }
-
     const neighbors = yield* call(
-      maybeLoadIsosurface,
+      maybeLoadIsosurfaceChunk,
       layer,
       segmentId,
       currentPosition,
@@ -319,19 +334,44 @@ function* loadIsosurfaceWithNeighbors(
       resolutionInfo,
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
+      useDataStore,
     );
     isInitialRequest = false;
-    positionsToRequest = positionsToRequest.concat(neighbors);
+    if (!usePositionsFromSegmentStats) {
+      // Only use neighbors if we don't have the positions from the segment
+      // stats.
+      positionsToRequest = positionsToRequest.concat(neighbors);
+    }
   }
 
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
+}
+
+function* getChunkPositionsFromSegmentStats(
+  tracingStoreHost: string,
+  layer: DataLayer,
+  segmentId: number,
+  cubeSize: Vector3,
+  mag: Vector3,
+  clippedPosition: Vector3,
+) {
+  const unscaledPositions = yield* call(
+    getBucketPositionsForAdHocMesh,
+    tracingStoreHost,
+    layer.name,
+    segmentId,
+    cubeSize,
+    mag,
+  );
+  const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
+  return sortByDistanceTo(positions, clippedPosition) as Vector3[];
 }
 
 function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
   return batchCounterPerSegment[segmentId] > MESH_CHUNK_THROTTLE_LIMIT;
 }
 
-function* maybeLoadIsosurface(
+function* maybeLoadIsosurfaceChunk(
   layer: DataLayer,
   segmentId: number,
   clippedPosition: Vector3,
@@ -340,6 +380,7 @@ function* maybeLoadIsosurface(
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
+  useDataStore: boolean,
 ): Saga<Vector3[]> {
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
@@ -368,16 +409,7 @@ function* maybeLoadIsosurface(
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  // Fetch from datastore if no volumetracing ...
-  let useDataStore = volumeTracing == null;
-  if (isosurfaceExtraInfo.useDataStore != null) {
-    // ... except if the caller specified whether to use the data store ...
-    useDataStore = isosurfaceExtraInfo.useDataStore;
-  } else if (volumeTracing?.mappingIsEditable) {
-    // ... or if an editable mapping is active.
-    useDataStore = false;
-  }
+
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
@@ -390,6 +422,7 @@ function* maybeLoadIsosurface(
 
   const { segmentMeshController } = getSceneController();
 
+  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -403,7 +436,7 @@ function* maybeLoadIsosurface(
           mag,
           segmentId,
           subsamplingStrides,
-          cubeSize: getZoomedCubeSize(zoomStep, resolutionInfo),
+          cubeSize,
           scale,
           ...isosurfaceExtraInfo,
         },
@@ -793,11 +826,7 @@ function _getLoadChunksTasks(
         }
         const availableChunks = availableChunksMap[lod];
         // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-        const sortedAvailableChunks = _.sortBy(
-          availableChunks,
-          (chunk: Vector3 | meshV3.MeshChunk) =>
-            V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-        ) as Array<Vector3> | Array<meshV3.MeshChunk>;
+        const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
         let tasks;
         if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
@@ -924,6 +953,15 @@ function _getLoadChunksTasks(
       }),
     ),
   );
+}
+
+function sortByDistanceTo(
+  availableChunks: Vector3[] | meshV3.MeshChunk[] | null | undefined,
+  seedPosition: Vector3,
+) {
+  return _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
+    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
+  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 }
 
 /*

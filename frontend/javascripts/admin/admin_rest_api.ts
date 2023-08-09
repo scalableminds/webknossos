@@ -2138,6 +2138,26 @@ export function computeIsosurface(
   });
 }
 
+export function getBucketPositionsForAdHocMesh(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+  cubeSize: Vector3,
+  mag: Vector3,
+): Promise<Vector3[]> {
+  return doWithToken(async (token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    params.append("cubeSize", `${cubeSize.join(",")}`);
+    params.append("mag", `${mag.join("-")}`);
+
+    const positions = await Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+    );
+    return positions;
+  });
+}
+
 export function getAgglomerateSkeleton(
   dataStoreUrl: string,
   datasetId: APIDatasetId,

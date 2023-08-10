@@ -98,10 +98,8 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  */
 const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
-  // @ts-ignore
-  return window.__marchingCubeSizeInMag1 != null
-    ? // @ts-ignore
-      window.__marchingCubeSizeInMag1
+  return (window as any).__marchingCubeSizeInMag1 != null
+    ? (window as any).__marchingCubeSizeInMag1
     : [128, 128, 128];
 }
 const modifiedCells: Set<number> = new Set();
@@ -119,10 +117,8 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
   const maybeMap = isosurfacesMap.get(segmentId);
 
   if (maybeMap == null) {
-    const newMap = new ThreeDMap();
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ThreeDMap<unknown>' is not assig... Remove this comment to see the full error message
+    const newMap = new ThreeDMap<boolean>();
     isosurfacesMap.set(segmentId, newMap);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'ThreeDMap<unknown>' is not assignable to typ... Remove this comment to see the full error message
     return newMap;
   }
 
@@ -166,12 +162,11 @@ const NEIGHBOR_LOOKUP = [
 
 function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
-  const neighboringPosition = [
+  const neighboringPosition: Vector3 = [
     clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
     clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
     clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
   ];
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
 }
 
@@ -398,8 +393,7 @@ function* maybeLoadIsosurfaceChunk(
   // since in the coarse resolution less data needs to be loaded. Another possibility to increase performance is
   // window.__marchingCubeSizeInMag1 which affects the cube size the marching cube algorithm will work on. If the cube is significantly larger than the
   // segments, computations are wasted.
-  // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
-  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [1, 1, 1];
+  const subsamplingStrides = (window as any).__isosurfaceSubsamplingStrides || [1, 1, 1];
   const scale = yield* select((state) => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
@@ -451,8 +445,7 @@ function* maybeLoadIsosurfaceChunk(
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
-      // @ts-ignore
-      ErrorHandling.notify(exception);
+      ErrorHandling.notify(exception as Error);
       console.warn("Retrying mesh generation...");
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
@@ -639,8 +632,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       layer,
     ),
     cancel: take(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'otherAction' implicitly has an 'any' ty... Remove this comment to see the full error message
-      (otherAction) =>
+      (otherAction: Action) =>
         otherAction.type === "REMOVE_ISOSURFACE" &&
         otherAction.segmentId === segmentId &&
         otherAction.layerName === layer.name,

@@ -235,30 +235,26 @@ export class QuickSelectGeometry {
 export class LineMeasurementGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
-  vertexBuffer: ResizableBuffer<Float32Array>;
+  vertexBuffer: Float32Array;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
 
     const lineGeometry = new THREE.BufferGeometry();
-    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 2);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
-    lineGeometry.setAttribute("position", positionAttribute);
     this.line = new THREE.Line(
       lineGeometry,
       new THREE.LineBasicMaterial({
         linewidth: 2,
       }),
     );
-    this.vertexBuffer = new ResizableBuffer(3, Float32Array, 2);
-    this.vertexBuffer.set([0, 0, 0], 0);
-    this.vertexBuffer.set([10, 10, 10], 1);
+    this.vertexBuffer = new Float32Array(6);
+    const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer, 3);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
     this.reset();
   }
 
   reset() {
     this.line.material.color = this.color;
-    this.vertexBuffer.clear();
     this.finalizeMesh();
   }
 
@@ -274,31 +270,19 @@ export class LineMeasurementGeometry {
   }
 
   setEndPoint(pos: Vector3) {
-    this.vertexBuffer.set(pos, 1);
+    this.vertexBuffer.set(pos, 3);
     this.finalizeMesh();
     app.vent.emit("rerender");
   }
 
   finalizeMesh() {
-    const mesh = this.line;
-    mesh.visible = true;
-    if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
-      // Need to rebuild Geometry
-      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
-      positionAttribute.setUsage(THREE.DynamicDrawUsage);
-      mesh.geometry.dispose();
-      mesh.geometry.setAttribute("position", positionAttribute);
-    }
-
-    mesh.geometry.attributes.position.needsUpdate = true;
-    mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
-    mesh.geometry.computeBoundingSphere();
+    this.line.geometry.attributes.position.needsUpdate = true;
+    this.line.geometry.computeBoundingSphere();
   }
 
   getDistance(): number {
-    // TODO: Problem: Line Rendert nicht
-    const start = new THREE.Vector3(...this.vertexBuffer.getElement(0));
-    const end = new THREE.Vector3(...this.vertexBuffer.getElement(1));
+    const start = new THREE.Vector3(...this.vertexBuffer.subarray(0, 3));
+    const end = new THREE.Vector3(...this.vertexBuffer.subarray(3, 6));
     console.log(start, end);
     return start.distanceTo(end);
   }

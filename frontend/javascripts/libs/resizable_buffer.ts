@@ -53,13 +53,10 @@ class ResizableBuffer<T extends Float32Array> {
     return this.buffer[i];
   }
 
-  getElement(i: number): T {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Int8Array | Uint8Array | Uint8ClampedArray |... Remove this comment to see the full error message
-    return this.buffer.subarray(i * this.elementLength, (i + 1) * this.elementLength);
-  }
-
   set(element: Array<number> | T, i: number): void {
+    this.ensureCapacity((i + 1) * this.elementLength);
     this.buffer.set(element, i * this.elementLength);
+    this.length = Math.max(this.length, (i + 1) * this.elementLength);
   }
 
   push(element: Array<number> | T): void {
@@ -137,7 +134,10 @@ class ResizableBuffer<T extends Float32Array> {
       const { buffer } = this;
 
       while (this.capacity < newCapacity) {
-        this.capacity = Math.floor(this.capacity * GROW_MULTIPLIER);
+        this.capacity = Math.max(
+          this.capacity + this.elementLength,
+          Math.floor(this.capacity * GROW_MULTIPLIER),
+        );
         this.capacity -= this.capacity % this.elementLength;
       }
 

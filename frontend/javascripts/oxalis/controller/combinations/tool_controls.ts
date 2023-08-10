@@ -797,9 +797,11 @@ export class LineMeasurementTool {
         startPos = V3.floor(calculateGlobalPos(state, pos, plane));
         initialPlan = plane;
         lineMeasurementGeometry.setStartPoint(startPos);
+        // Avoid having a line from the last end point to the start.
+        lineMeasurementGeometry.setEndPoint(startPos);
         currentPos = startPos;
       },
-      leftMouseUp: (pos: Point2, _event: MouseEvent) => {
+      leftMouseUp: () => {
         if (currentPos) {
           // lineMeasurementGeometry.setEndPoint(currentPos);
           console.log("distance is", lineMeasurementGeometry.getDistance());

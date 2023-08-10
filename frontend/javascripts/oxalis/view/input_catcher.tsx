@@ -105,6 +105,7 @@ const cursorForTool = {
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
+  LINE_MEASUREMENT: "pointer",
 };
 
 function InputCatcher({

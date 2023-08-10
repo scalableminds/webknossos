@@ -780,6 +780,68 @@ export class QuickSelectTool {
   static onToolDeselected() {}
 }
 
+export class LineMeasurementTool {
+  static getPlaneMouseControls(
+    _planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): any {
+    let startPos: Vector3 | null = null;
+    let currentPos: Vector3 | null = null;
+    let initialPlan: OrthoView = OrthoViews.PLANE_XY;
+    const SceneController = getSceneController();
+    const { lineMeasurementGeometry } = SceneController;
+    return {
+      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+        const state = Store.getState();
+        startPos = V3.floor(calculateGlobalPos(state, pos, plane));
+        initialPlan = plane;
+        lineMeasurementGeometry.setStartPoint(startPos);
+        currentPos = startPos;
+      },
+      leftMouseUp: (pos: Point2, _event: MouseEvent) => {
+        if (currentPos) {
+          // lineMeasurementGeometry.setEndPoint(currentPos);
+          console.log("distance is", lineMeasurementGeometry.getDistance());
+        }
+      },
+      leftDownMove: (_delta: Point2, pos: Point2, plane: OrthoView | null | undefined) => {
+        if (startPos == null) {
+          return;
+        }
+        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos, initialPlan));
+        currentPos = newCurrentPos;
+        lineMeasurementGeometry.setEndPoint(currentPos);
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Drag to measure distance",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {}
+}
+
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
@@ -849,6 +911,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
   [AnnotationToolEnum.FILL_CELL]: FillCellTool,
   [AnnotationToolEnum.PICK_CELL]: PickCellTool,
+  [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
 };
 export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolClass[activeTool];

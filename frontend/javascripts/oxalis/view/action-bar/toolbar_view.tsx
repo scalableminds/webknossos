@@ -818,6 +818,7 @@ const TOOL_NAMES = {
   QUICK_SELECT: "Quick Select Tool",
   BOUNDING_BOX: "Bounding Box Tool",
   PROOFREAD: "Proofreading Tool",
+  LINE_MEASUREMENT: "Measurement Tool",
 };
 
 export default function ToolbarView() {
@@ -1146,6 +1147,21 @@ export default function ToolbarView() {
             />
           </ToolRadioButton>
         ) : null}
+        <ToolRadioButton
+          name={TOOL_NAMES.LINE_MEASUREMENT}
+          description="Use left-drag to measure the distances."
+          disabledExplanation=""
+          disabled={false}
+          style={NARROW_BUTTON_STYLE}
+          value={AnnotationToolEnum.LINE_MEASUREMENT}
+        >
+          <i
+            style={{
+              paddingLeft: 4,
+            }}
+            className="fas fa-ruler"
+          />
+        </ToolRadioButton>
       </Radio.Group>
 
       <ToolSpecificSettings

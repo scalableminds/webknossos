@@ -182,6 +182,7 @@ export enum AnnotationToolEnum {
   QUICK_SELECT = "QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
+  LINE_MEASUREMENT = "LINE_MEASUREMENT",
 }
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,

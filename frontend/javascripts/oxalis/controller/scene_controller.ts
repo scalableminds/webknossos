@@ -15,7 +15,11 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
-import { ContourGeometry, QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import {
+  ContourGeometry,
+  LineMeasurementGeometry,
+  QuickSelectGeometry,
+} from "oxalis/geometries/helper_geometries";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import {
@@ -61,6 +65,8 @@ class SceneController {
   contour: ContourGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
   quickSelectGeometry: QuickSelectGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lineMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  lineMeasurementGeometry: LineMeasurementGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -239,6 +245,11 @@ class SceneController {
     this.quickSelectGeometry = new QuickSelectGeometry();
     this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
 
+    this.lineMeasurementGeometry = new LineMeasurementGeometry();
+    this.lineMeasurementGeometry
+      .getMeshes()
+      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+
     if (state.tracing.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);
     }
@@ -325,7 +336,7 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
-    this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
+    this.annotationToolsGeometryGroup.visible = true || id !== OrthoViews.TDView;
 
     const originalPosition = getPosition(Store.getState().flycam);
     if (id !== OrthoViews.TDView) {

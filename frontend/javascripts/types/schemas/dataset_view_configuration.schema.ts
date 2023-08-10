@@ -154,6 +154,7 @@ export default {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "layers",
+        "colorLayerOrder",
       ],
     },
     "types::OptionalLayerViewConfiguration": {

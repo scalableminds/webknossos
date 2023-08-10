@@ -792,7 +792,7 @@ function enforcePricingRestrictionsOnUserConfiguration(
   return userConfiguration;
 }
 
-function ensureDatasetSettingsHasLayerOrder(
+export function ensureDatasetSettingsHasLayerOrder(
   datasetConfiguration: DatasetConfiguration,
   dataset: APIDataset,
 ): DatasetConfiguration {

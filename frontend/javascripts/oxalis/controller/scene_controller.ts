@@ -441,9 +441,10 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+  updateLayerBoundingBoxes(): void {
     const state = Store.getState();
     const dataset = state.dataset;
+    const layers = getDataLayers(dataset);
 
     const newLayerBoundingBoxGroup = new THREE.Group();
     this.layerBoundingBoxes = Object.fromEntries(
@@ -554,7 +555,11 @@ class SceneController {
     );
     listenToStoreProperty(
       (storeState) => getDataLayers(storeState.dataset),
-      (layers) => this.setLayerBoundingBoxes(layers),
+      () => this.updateLayerBoundingBoxes(),
+    );
+    listenToStoreProperty(
+      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+      () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).boundingBox,

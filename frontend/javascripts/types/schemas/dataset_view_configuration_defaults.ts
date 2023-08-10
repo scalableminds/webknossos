@@ -4,10 +4,7 @@ import {
   defaultDatasetViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import type { APIDataset, APIMaybeUnimportedDataset, APIDataLayer } from "types/api_flow_types";
-import {
-  getDefaultIntensityRangeOfLayer,
-  isColorLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getDefaultValueRangeOfLayer, isColorLayer } from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
 
 const eliminateErrors = (
@@ -35,7 +32,7 @@ const eliminateErrors = (
 
 export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIDataLayer) => ({
   intensityRange:
-    layer.category === "color" ? getDefaultIntensityRangeOfLayer(dataset, layer.name) : undefined,
+    layer.category === "color" ? getDefaultValueRangeOfLayer(dataset, layer.name) : undefined,
   alpha: layer.category === "color" ? 100 : 20,
 });
 

@@ -53,7 +53,7 @@ import {
   updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
 import {
-  getDefaultIntensityRangeOfLayer,
+  getDefaultValueRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
   getLayerByName,
@@ -369,7 +369,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (!intensityRange) {
       return null;
     }
-    const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
+    const defaultIntensityRange = getDefaultValueRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
 
     return (

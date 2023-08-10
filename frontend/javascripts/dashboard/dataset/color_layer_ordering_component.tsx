@@ -39,7 +39,7 @@ export default function ColorLayerOrderingTable({
 
   const isSettingEnabled = colorLayerNames && colorLayerNames.length > 1;
   const collapsibleDisabledExplanation =
-    "This setting only makes sense if there are multiple color layers.";
+    "The order of layers can only be configured when the dataset has multiple color layers.";
 
   const panelTitle = (
     <span style={{ width: "100%" }}>

@@ -56,7 +56,6 @@ import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
-import { ensureDatasetSettingsHasLayerOrder } from "oxalis/model_initialization";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -347,20 +346,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         this.props.datasetId,
       );
       enforceValidatedDatasetViewConfiguration(datasetDefaultConfiguration, dataset, true);
-      const datasetDefaultConfigurationWithLayerOrder = ensureDatasetSettingsHasLayerOrder(
-        datasetDefaultConfiguration,
-        dataset,
-      );
       form.setFieldsValue({
-        defaultConfiguration: datasetDefaultConfigurationWithLayerOrder,
+        defaultConfiguration: datasetDefaultConfiguration,
         defaultConfigurationLayersJson: JSON.stringify(
-          datasetDefaultConfigurationWithLayerOrder.layers,
+          datasetDefaultConfiguration.layers,
           null,
           "  ",
         ),
       });
       this.setState({
-        datasetDefaultConfiguration: datasetDefaultConfigurationWithLayerOrder,
+        datasetDefaultConfiguration: datasetDefaultConfiguration,
         dataset,
       });
     } catch (error) {

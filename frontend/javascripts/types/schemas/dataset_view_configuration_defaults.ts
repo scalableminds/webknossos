@@ -4,7 +4,10 @@ import {
   defaultDatasetViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import type { APIDataset, APIMaybeUnimportedDataset, APIDataLayer } from "types/api_flow_types";
-import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDefaultIntensityRangeOfLayer,
+  isColorLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
 
 const eliminateErrors = (
@@ -35,6 +38,24 @@ export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIData
     layer.category === "color" ? getDefaultIntensityRangeOfLayer(dataset, layer.name) : undefined,
   alpha: layer.category === "color" ? 100 : 20,
 });
+
+export function ensureDatasetSettingsHasLayerOrder(
+  datasetConfiguration: Record<string, any>,
+  dataset: APIDataset,
+) {
+  const colorLayerNames = _.keys(datasetConfiguration.layers).filter((layerName) =>
+    isColorLayer(dataset, layerName),
+  );
+  const onlyExistingLayers =
+    datasetConfiguration?.colorLayerOrder?.filter(
+      (layerName: string) => colorLayerNames.indexOf(layerName) >= 0,
+    ) || [];
+  if (onlyExistingLayers.length < colorLayerNames.length) {
+    datasetConfiguration.colorLayerOrder = colorLayerNames;
+  } else {
+    datasetConfiguration.colorLayerOrder = onlyExistingLayers;
+  }
+}
 
 export const enforceValidatedDatasetViewConfiguration = (
   datasetViewConfiguration: Record<string, any>,
@@ -77,6 +98,7 @@ export const enforceValidatedDatasetViewConfiguration = (
           : _.pickBy(layerConfigDefault, (value: any) => value !== null);
       }
     });
+    ensureDatasetSettingsHasLayerOrder(datasetViewConfiguration, dataset);
   }
 
   datasetViewConfiguration.layers = newLayerConfig;

@@ -653,7 +653,9 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-function _getTransformsForLayerOrNullBase(
+// Returns the transforms (if they exist) for a layer as
+// they are defined in the dataset properties.
+function _getOriginalTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer,
 ): Transform | null {
@@ -690,7 +692,7 @@ function _getTransformsForLayerOrNull(
   layer: APIDataLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
-  const layerTransforms = _getTransformsForLayerOrNullBase(dataset, layer);
+  const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
 
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. Just use the transforms
@@ -707,7 +709,7 @@ function _getTransformsForLayerOrNull(
   // to the current layers transforms
   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
 
-  const transformsOfNativeLayer = _getTransformsForLayerOrNullBase(dataset, nativeLayer);
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
 
   if (transformsOfNativeLayer == null) {
     // The inverse of no transforms, are no transforms. Leave the layer
@@ -749,8 +751,7 @@ function _getTransformsPerLayer(
 ): Record<string, Transform> {
   const transformsPerLayer: Record<string, Transform> = {};
   const layers = dataset.dataSource.dataLayers;
-  for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
-    const layer = layers[layerIdx];
+  for (const layer of layers) {
     const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
     transformsPerLayer[layer.name] = transforms;
   }
@@ -759,6 +760,11 @@ function _getTransformsPerLayer(
 }
 
 export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
+
+export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
+  const layers = dataset.dataSource.dataLayers;
+  return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
+});
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];

@@ -59,6 +59,7 @@ import {
   getWidestResolutions,
   getLayerBoundingBox,
   getTransformsForLayer,
+  hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -177,6 +178,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),
   );
+  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  if (!showIcon) {
+    return null;
+  }
 
   const typeToLabel = {
     affine: "an affine",
@@ -185,6 +190,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
+    if (state.datasetConfiguration.nativelyRenderedLayerName === layer.name) {
+      return;
+    }
     // Transform current position using the inverse transform
     // so that the user will still look at the same data location.
     const currentPosition = getPosition(state.flycam);
@@ -198,8 +206,8 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
 
     // Also transform a reference coordinate to determine how the scaling
     // changed. Then, adapt the zoom accordingly.
-    const referenceOffset = [10, 10, 10] as Vector3;
-    const secondPosition = V3.add(currentPosition, referenceOffset);
+    const referenceOffset: Vector3 = [10, 10, 10];
+    const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
     const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
 
     const scaleChange = _.mean(
@@ -227,6 +235,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
           style={{
             transform: transform != null ? "rotate(45deg)" : "",
             color: "gray",
+            cursor: transform != null ? "pointer" : "default",
           }}
           onClick={toggleLayerTransforms}
         />

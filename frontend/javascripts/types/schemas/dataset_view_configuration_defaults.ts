@@ -84,7 +84,7 @@ export const enforceValidatedDatasetViewConfiguration = (
         if (layer.category === "segmentation") {
           delete existingLayerConfig.intensityRange;
         } else if (existingLayerConfig.intensityRange == null && !isOptional) {
-          existingLayerConfig.intensityRange = getDefaultIntensityRangeOfLayer(dataset, layer.name);
+          existingLayerConfig.intensityRange = getDefaultValueRangeOfLayer(dataset, layer.name);
         }
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = existingLayerConfig;
@@ -95,8 +95,11 @@ export const enforceValidatedDatasetViewConfiguration = (
           : _.pickBy(layerConfigDefault, (value: any) => value !== null);
       }
     });
-    ensureDatasetSettingsHasLayerOrder(datasetViewConfiguration, dataset);
   }
 
   datasetViewConfiguration.layers = newLayerConfig;
+  if (maybeUnimportedDataset.isActive) {
+    const dataset: APIDataset = maybeUnimportedDataset;
+    ensureDatasetSettingsHasLayerOrder(datasetViewConfiguration, dataset);
+  }
 };

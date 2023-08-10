@@ -49,7 +49,7 @@ import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
 import {
-  getDefaultIntensityRangeOfLayer,
+  getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
@@ -476,7 +476,7 @@ function normalizeToUint8(
   // Convert non uint8 data by scaling the values to uint8 (using the histogram settings)
   const inputData = new Uint8Array(inputDataRaw.length);
   const { intensityRange } = layerConfiguration;
-  const defaultIntensityRange = getDefaultIntensityRangeOfLayer(dataset, colorLayer.name);
+  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, colorLayer.name);
   const [min, max] = intensityRange || defaultIntensityRange;
   // Scale the color value according to the histogram settings.
   const is_max_and_min_equal = Number(max === min);

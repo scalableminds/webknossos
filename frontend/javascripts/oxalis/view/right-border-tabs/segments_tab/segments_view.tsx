@@ -1517,7 +1517,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentStatisticsModal = (groupId: number) => {
-    //handle per group: get object of tracing id, tracing store, id
     const segments = this.getSegmentsOfGroup(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =

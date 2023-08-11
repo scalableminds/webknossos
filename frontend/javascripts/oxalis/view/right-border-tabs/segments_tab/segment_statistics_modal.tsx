@@ -1,6 +1,5 @@
 import { getSegmentVolume } from "admin/admin_rest_api";
 import { Modal, Table } from "antd";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
 import saveAs from "file-saver";
 import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";

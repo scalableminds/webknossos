@@ -1047,14 +1047,14 @@ class SegmentsView extends React.Component<Props, State> {
           <div
             onClick={() => {
               this.setState({ activeStatisticsModalGroupId: id });
-              this.handleSegmentDropdownMenuVisibility(false);
+              this.handleGroupDropdownMenuVisibility(false);
             }}
           >
             Show Segment Statistics
           </div>
         </>
       ),
-      icon: <i className="fas fa-ruler fa-fw fa-icon"></i>,
+      icon: <i className="fas fa-ruler fa-fw fa-icon" />,
     };
   };
 
@@ -1531,7 +1531,7 @@ class SegmentsView extends React.Component<Props, State> {
       const tracingStoreUrl = state.tracing.tracingStore.url;
       return (
         <SegmentStatisticsModal
-          isOpen={this.state.activeStatisticsModalGroupId == groupId}
+          isOpen={this.state.activeStatisticsModalGroupId === groupId}
           onCancel={() => {
             this.setState({ activeStatisticsModalGroupId: null });
           }}

@@ -2,22 +2,8 @@ import { getSegmentVolume } from "admin/admin_rest_api";
 import { Modal } from "antd";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import { Vector3 } from "oxalis/constants";
-import {
-  getMappingInfo,
-  getResolutionInfo,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  getActiveSegmentationTracing,
-  getSegmentsForLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { Store } from "oxalis/singletons";
-import { OxalisState, SegmentMap, SkeletonTracing, VolumeTracing } from "oxalis/store";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import React from "react";
-import { connect } from "react-redux";
-import { APIDataLayer } from "types/api_flow_types";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;

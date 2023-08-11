@@ -104,7 +104,7 @@ import {
 } from "antd/lib/menu/hooks/useItems";
 import { getSegmentVolume } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
+import { AsyncIconButton } from "components/async_clickables";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

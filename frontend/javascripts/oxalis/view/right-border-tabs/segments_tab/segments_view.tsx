@@ -250,7 +250,7 @@ type State = {
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
   areSegmentsInGroupVisible: { [groupId: number]: boolean };
-  isSegmentStatisticsModalOpen: boolean;
+  activeStatisticsModalGroupId: number | null;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -344,7 +344,7 @@ class SegmentsView extends React.Component<Props, State> {
     prevProps: null,
     groupToDelete: null,
     areSegmentsInGroupVisible: {},
-    isSegmentStatisticsModalOpen: false,
+    activeStatisticsModalGroupId: null,
   };
   tree: React.RefObject<RcTree>;
 
@@ -920,7 +920,7 @@ class SegmentsView extends React.Component<Props, State> {
         <>
           <div
             onClick={() => {
-              this.setState({ isSegmentStatisticsModalOpen: true });
+              this.setState({ activeStatisticsModalGroupId: id });
               this.handleSegmentDropdownMenuVisibility(id, false);
             }}
           >
@@ -1338,9 +1338,9 @@ class SegmentsView extends React.Component<Props, State> {
       const tracingStoreUrl = state.tracing.tracingStore.url;
       return (
         <SegmentStatisticsModal
-          isOpen={this.state.isSegmentStatisticsModalOpen}
+          isOpen={this.state.activeStatisticsModalGroupId == groupId}
           onCancel={() => {
-            this.setState({ isSegmentStatisticsModalOpen: false });
+            this.setState({ activeStatisticsModalGroupId: null });
           }}
           visibleSegmentationLayer={visibleSegmentationLayer}
           tracingId={tracingId}

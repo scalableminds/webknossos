@@ -1,7 +1,11 @@
+import { getSegmentVolume } from "admin/admin_rest_api";
 import { Modal } from "antd";
+import { formatNumberToVolume } from "libs/format_utils";
+import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
 import {
   getMappingInfo,
+  getResolutionInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -18,9 +22,9 @@ import { APIDataLayer } from "types/api_flow_types";
 type Props = {
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
-  visibleSegmentationLayer: any;
   tracingId: any;
   tracingStoreUrl: any;
+  visibleSegmentationLayer: any;
   segmentIds: any;
 };
 
@@ -36,35 +40,39 @@ export function SegmentStatisticsModal({
   onCancel,
   tracingId,
   tracingStoreUrl,
+  visibleSegmentationLayer,
   segmentIds,
 }: Props) {
   console.log(tracingId);
-  /*   const segmentSize = useFetch(
+  const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+  const segmentSizesArray = useFetch(
     async () => {
-      const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
-      const segmentSize = await getSegmentVolume(
-        tracingStoreUrl,
-        tracingId,
-        mag.getHighestResolution(),
-        segmentId,
-      );
-      console.log(segmentSize);
-      return formatNumberToVolume(segmentSize);
+      const volumeStrings = await segmentIds.map(async (segmentId: number) => {
+        return getSegmentVolume(
+          tracingStoreUrl,
+          tracingId,
+          mag.getHighestResolution(),
+          segmentId,
+        ).then((vol) => formatNumberToVolume(vol));
+      });
+      return Promise.all(volumeStrings);
     },
-    "loading", //TODO make pretty with spinner
+    ["loading"], //TODO make pretty with spinner
     [isOpen],
-  ); */
+  );
+  const segmentSizes = segmentSizesArray.join(",");
+  console.log(segmentSizes);
 
   return (
     <Modal
       title="Segment Statistics"
       open={isOpen}
       onCancel={onCancel}
-      footer={null}
       style={{ marginRight: 10 }}
       onOk={exportStatisticsToCSV}
+      okText="Export to CSV"
     >
-      <p>Hier könnte Ihre Größe stehen!</p>
+      {segmentSizes}
     </Modal>
   );
 }

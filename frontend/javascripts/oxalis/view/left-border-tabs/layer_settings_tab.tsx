@@ -232,7 +232,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
       >
         {transform != null ? (
           <img
-            src="/assets/images/icon-warped-transforms.svg"
+            src="/assets/images/icon-transformed-layer.svg"
             alt="Transformed Layer Icon"
             style={{
               cursor: "pointer",

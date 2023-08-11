@@ -1518,13 +1518,13 @@ class SegmentsView extends React.Component<Props, State> {
 
   getSegmentStatisticsModal = (groupId: number) => {
     //handle per group: get object of tracing id, tracing store, id
-    const segmentIds = this.getSegmentsOfGroup(groupId)?.map((segment) => segment.id);
+    const segments = this.getSegmentsOfGroup(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
       visibleSegmentationLayer != null &&
       "fallbackLayer" in visibleSegmentationLayer &&
       visibleSegmentationLayer.fallbackLayer == null;
-    if (hasNoFallbackLayer && this.props.hasVolumeTracing) {
+    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
       const state = Store.getState();
       const volumeTracing = getActiveSegmentationTracing(state);
       const tracingId = volumeTracing?.tracingId;
@@ -1538,7 +1538,8 @@ class SegmentsView extends React.Component<Props, State> {
           visibleSegmentationLayer={visibleSegmentationLayer}
           tracingId={tracingId}
           tracingStoreUrl={tracingStoreUrl}
-          segmentIds={segmentIds}
+          segments={segments}
+          group={groupId}
         />
       );
     }

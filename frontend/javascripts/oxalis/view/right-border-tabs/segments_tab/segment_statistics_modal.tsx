@@ -1,8 +1,9 @@
 import { getSegmentVolume } from "admin/admin_rest_api";
-import { Modal } from "antd";
+import { Button, Modal, Table } from "antd";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { Segment } from "oxalis/store";
 import React from "react";
 
 type Props = {
@@ -11,15 +12,22 @@ type Props = {
   tracingId: any;
   tracingStoreUrl: any;
   visibleSegmentationLayer: any;
-  segmentIds: any;
+  segments: Segment[];
+  group: number;
+};
+
+type SegmentInfo = {
+  //TODO remove?
+  segmentId: number;
+  segmentName: string;
+  groupId: number;
+  groupName: string;
+  sizeInNm: number;
 };
 
 const exportStatisticsToCSV = () => {
   console.log();
 };
-
-//for multiple segments I will probably need to make an array of objects of tracingIds, StoreUrls, and segmentIds
-// TODO what does the tracing url depend on? -> I think its unique and needs to be passed every time
 
 export function SegmentStatisticsModal({
   isOpen,
@@ -27,27 +35,38 @@ export function SegmentStatisticsModal({
   tracingId,
   tracingStoreUrl,
   visibleSegmentationLayer,
-  segmentIds,
+  segments,
+  group,
 }: Props) {
   console.log(tracingId);
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
-  const segmentSizesArray = useFetch(
+  const dataSource = useFetch(
     async () => {
-      const volumeStrings = await segmentIds.map(async (segmentId: number) => {
+      const volumeStrings = await segments.map(async (segment: Segment) => {
         return getSegmentVolume(
           tracingStoreUrl,
           tracingId,
           mag.getHighestResolution(),
-          segmentId,
-        ).then((vol) => formatNumberToVolume(vol));
+          segment.id,
+        ).then((vol) => {
+          return {
+            segmentId: segment.id,
+            segmentName: segment.name == null ? `Segment ${segment.id}` : segment.id,
+            groupId: group,
+            sizeInNm: vol,
+            formattedSize: formatNumberToVolume(vol),
+          };
+        });
       });
       return Promise.all(volumeStrings);
     },
-    ["loading"], //TODO make pretty with spinner
+    [], //TODO make pretty with spinner
     [isOpen],
   );
-  const segmentSizes = segmentSizesArray.join(",");
-  console.log(segmentSizes);
+  const columns = [
+    { title: "Segment", dataIndex: "segmentName", key: "segmentName" },
+    { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
+  ];
 
   return (
     <Modal
@@ -55,26 +74,10 @@ export function SegmentStatisticsModal({
       open={isOpen}
       onCancel={onCancel}
       style={{ marginRight: 10 }}
-      onOk={exportStatisticsToCSV}
+      onOk={() => exportStatisticsToCSV()}
       okText="Export to CSV"
     >
-      {segmentSizes}
+      <Table dataSource={dataSource} columns={columns} />
     </Modal>
   );
 }
-
-/* function mapStateToProps(state: OxalisState): StateProps {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  return {
-    volumeTracing: getActiveSegmentationTracing(state),
-    datasetScale: state.dataset.dataSource.scale,
-    visibleSegmentationLayer,
-    segments:
-      visibleSegmentationLayer != null
-        ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
-        : null,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(SegmentStatisticsModal); */

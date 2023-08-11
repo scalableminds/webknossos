@@ -20,7 +20,7 @@ mockRequire("app", {
 });
 
 test("VolumeTracing should set a new active cell", (t) => {
-  const createCellAction = VolumeTracingActions.createCellAction(1000);
+  const createCellAction = VolumeTracingActions.createCellAction(1000, 1000);
   const setActiveCellAction = VolumeTracingActions.setActiveCellAction(1);
   // Create two cells, then set first one active
   let newState = VolumeTracingReducer(initialState, createCellAction);
@@ -53,6 +53,7 @@ test("VolumeTracing should set active but not create a cell 0", (t) => {
 
 test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
+    initialState.tracing.volumes[0].activeCellId as number,
     initialState.tracing.volumes[0].largestSegmentId as number,
   );
   // Create cell
@@ -64,6 +65,7 @@ test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
 
 test("VolumeTracing should create a non-existing cell id and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
+    initialState.tracing.volumes[0].activeCellId as number,
     initialState.tracing.volumes[0].largestSegmentId as number,
   );
   // Create a cell with an id that is higher than the largestSegmentId
@@ -75,6 +77,7 @@ test("VolumeTracing should create a non-existing cell id and not update the larg
 
 test("VolumeTracing should create an existing cell and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
+    initialState.tracing.volumes[0].activeCellId as number,
     initialState.tracing.volumes[0].largestSegmentId as number,
   );
   const alteredState = update(initialState, {
@@ -97,7 +100,11 @@ test("VolumeTracing should create an existing cell and not update the largestSeg
 
 test("VolumeTracing should create cells and only update the largestSegmentId after a voxel was annotated", (t) => {
   const LARGEST_SEGMENT_ID = 5;
-  const createCellAction = VolumeTracingActions.createCellAction(LARGEST_SEGMENT_ID);
+  const getCreateCellAction = (state: OxalisState) =>
+    VolumeTracingActions.createCellAction(
+      state.tracing.volumes[0].activeCellId as number,
+      LARGEST_SEGMENT_ID,
+    );
   const finishAnnotationStrokeAction =
     VolumeTracingActions.finishAnnotationStrokeAction("tracingId");
   const alteredState = update(initialState, {
@@ -112,13 +119,13 @@ test("VolumeTracing should create cells and only update the largestSegmentId aft
     },
   });
   // Create two cells without specifying an id
-  let newState = VolumeTracingReducer(alteredState, createCellAction);
-  newState = VolumeTracingReducer(newState, createCellAction);
+  let newState = VolumeTracingReducer(alteredState, getCreateCellAction(alteredState));
+  newState = VolumeTracingReducer(newState, getCreateCellAction(newState));
   // The largestSegmentId should not be updated, since no voxel was annotated yet
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.largestSegmentId, 5);
+    t.is(tracing.largestSegmentId, LARGEST_SEGMENT_ID);
   });
-  newState = VolumeTracingReducer(newState, createCellAction);
+  newState = VolumeTracingReducer(newState, getCreateCellAction(newState));
   newState = VolumeTracingReducer(newState, finishAnnotationStrokeAction);
   // The largestSegmentId should be updated, since a voxel was annotated with id 8
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {

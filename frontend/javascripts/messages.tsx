@@ -173,6 +173,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
+  "tracing.segment_id_out_of_bounds": _.template(
+    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
+  ),
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",

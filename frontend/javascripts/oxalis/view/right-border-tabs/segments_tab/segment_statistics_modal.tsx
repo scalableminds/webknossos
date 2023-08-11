@@ -1,17 +1,27 @@
-import { getSegmentVolume } from "admin/admin_rest_api";
 import { Modal } from "antd";
-import { formatNumberToVolume } from "libs/format_utils";
-import { useFetch } from "libs/react_helpers";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { Vector3 } from "oxalis/constants";
+import {
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getSegmentsForLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { Store } from "oxalis/singletons";
+import { OxalisState, SegmentMap, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import React from "react";
+import { connect } from "react-redux";
+import { APIDataLayer } from "types/api_flow_types";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
-  visibleSegmentationLayer;
-  tracingId;
-  tracingStoreUrl;
-  segmentId;
+  visibleSegmentationLayer: any;
+  tracingId: any;
+  tracingStoreUrl: any;
+  segmentIds: any;
 };
 
 const exportStatisticsToCSV = () => {
@@ -24,12 +34,12 @@ const exportStatisticsToCSV = () => {
 export function SegmentStatisticsModal({
   isOpen,
   onCancel,
-  visibleSegmentationLayer,
   tracingId,
   tracingStoreUrl,
-  segmentId,
+  segmentIds,
 }: Props) {
-  const segmentSize = useFetch(
+  console.log(tracingId);
+  /*   const segmentSize = useFetch(
     async () => {
       const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const segmentSize = await getSegmentVolume(
@@ -43,7 +53,7 @@ export function SegmentStatisticsModal({
     },
     "loading", //TODO make pretty with spinner
     [isOpen],
-  );
+  ); */
 
   return (
     <Modal
@@ -58,3 +68,19 @@ export function SegmentStatisticsModal({
     </Modal>
   );
 }
+
+/* function mapStateToProps(state: OxalisState): StateProps {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  return {
+    volumeTracing: getActiveSegmentationTracing(state),
+    datasetScale: state.dataset.dataSource.scale,
+    visibleSegmentationLayer,
+    segments:
+      visibleSegmentationLayer != null
+        ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+        : null,
+  };
+}
+
+const connector = connect(mapStateToProps);
+export default connector(SegmentStatisticsModal); */

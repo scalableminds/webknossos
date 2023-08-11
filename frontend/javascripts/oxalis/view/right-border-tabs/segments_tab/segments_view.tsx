@@ -1325,15 +1325,17 @@ class SegmentsView extends React.Component<Props, State> {
 
   getSegmentStatisticsModal = (groupId: number) => {
     //handle per group: get object of tracing id, tracing store, id
+    const segmentIds = this.getSegmentsOfGroup(groupId)?.map((segment) => segment.id);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
       visibleSegmentationLayer != null &&
       "fallbackLayer" in visibleSegmentationLayer &&
       visibleSegmentationLayer.fallbackLayer == null;
     if (hasNoFallbackLayer && this.props.hasVolumeTracing) {
-      //TODO second check, useful?
-      const tracingId = this.props; //TODO! how to get tracing?
-      const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+      const state = Store.getState();
+      const volumeTracing = getActiveSegmentationTracing(state);
+      const tracingId = volumeTracing?.tracingId;
+      const tracingStoreUrl = state.tracing.tracingStore.url;
       return (
         <SegmentStatisticsModal
           isOpen={this.state.isSegmentStatisticsModalOpen}
@@ -1343,7 +1345,7 @@ class SegmentsView extends React.Component<Props, State> {
           visibleSegmentationLayer={visibleSegmentationLayer}
           tracingId={tracingId}
           tracingStoreUrl={tracingStoreUrl}
-          segmentId={undefined}
+          segmentIds={segmentIds}
         />
       );
     }
@@ -1485,6 +1487,7 @@ class SegmentsView extends React.Component<Props, State> {
                           onRenameEnd={this.onRenameEnd}
                         />
                       </Dropdown>
+                      {this.getSegmentStatisticsModal(id)}
                     </div>
                   </>
                 );

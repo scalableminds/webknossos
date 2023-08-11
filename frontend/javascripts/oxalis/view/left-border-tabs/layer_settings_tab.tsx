@@ -188,6 +188,12 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
     thin_plate_spline: "a thin-plate-spline",
   };
 
+  const typeToImage = {
+    none: "icon-no-transformation.svg",
+    thin_plate_spline: "icon-tps-transformation.svg",
+    affine: "icon-affine-transformation.svg",
+  };
+
   const toggleLayerTransforms = () => {
     const state = Store.getState();
     if (state.datasetConfiguration.nativelyRenderedLayerName === layer.name) {
@@ -230,28 +236,18 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
             : "This layer is shown natively (i.e., without any transformations)."
         }
       >
-        {transform != null ? (
-          <img
-            src="/assets/images/icon-transformed-layer.svg"
-            alt="Transformed Layer Icon"
-            style={{
-              cursor: "pointer",
-              width: 14,
-              height: 14,
-              marginBottom: 4,
-              marginRight: 5,
-            }}
-            onClick={toggleLayerTransforms}
-          />
-        ) : (
-          <i
-            className="fas fa-th"
-            style={{
-              color: "gray",
-            }}
-            onClick={toggleLayerTransforms}
-          />
-        )}
+        <img
+          src={`/assets/images/${typeToImage[transform?.type || "none"]}`}
+          alt="Transformed Layer Icon"
+          style={{
+            cursor: transform != null ? "pointer" : "default",
+            width: 14,
+            height: 14,
+            marginBottom: 4,
+            marginRight: 5,
+          }}
+          onClick={toggleLayerTransforms}
+        />
       </Tooltip>
     </div>
   );

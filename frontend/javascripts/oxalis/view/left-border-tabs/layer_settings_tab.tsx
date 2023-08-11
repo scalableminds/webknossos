@@ -230,15 +230,28 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
             : "This layer is shown natively (i.e., without any transformations)."
         }
       >
-        <i
-          className="fas fa-th"
-          style={{
-            transform: transform != null ? "rotate(45deg)" : "",
-            color: "gray",
-            cursor: transform != null ? "pointer" : "default",
-          }}
-          onClick={toggleLayerTransforms}
-        />
+        {transform != null ? (
+          <img
+            src="/assets/images/icon-warped-transforms.svg"
+            alt="Transformed Layer Icon"
+            style={{
+              cursor: "pointer",
+              width: 14,
+              height: 14,
+              marginBottom: 4,
+              marginRight: 5,
+            }}
+            onClick={toggleLayerTransforms}
+          />
+        ) : (
+          <i
+            className="fas fa-th"
+            style={{
+              color: "gray",
+            }}
+            onClick={toggleLayerTransforms}
+          />
+        )}
       </Tooltip>
     </div>
   );

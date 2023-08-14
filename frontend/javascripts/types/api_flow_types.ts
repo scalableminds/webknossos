@@ -39,22 +39,22 @@ export type APIMapping = {
   readonly colors?: Array<number>;
   readonly hideUnmappedIds?: boolean;
 };
+export type CoordinateTransformation =
+  | {
+      type: "affine";
+      matrix: [Vector4, Vector4, Vector4, Vector4];
+    }
+  | {
+      type: "thin_plate_spline";
+      correspondences: { source: Vector3[]; target: Vector3[] };
+    };
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
-  readonly coordinateTransformations?: Array<
-    | {
-        type: "affine";
-        matrix: [Vector4, Vector4, Vector4, Vector4];
-      }
-    | {
-        type: "thin_plate_spline";
-        correspondences: { source: Vector3[]; target: Vector3[] };
-      }
-  >;
+  readonly coordinateTransformations?: CoordinateTransformation[] | null;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

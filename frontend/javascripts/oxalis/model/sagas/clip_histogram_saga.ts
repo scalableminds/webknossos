@@ -11,11 +11,7 @@ import { api } from "oxalis/singletons";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {
-  if (firstVal < secVal) {
-    Store.dispatch(updateLayerSettingAction(layerName, "intensityRange", [firstVal, secVal]));
-  } else {
-    Store.dispatch(updateLayerSettingAction(layerName, "intensityRange", [firstVal, secVal]));
-  }
+  Store.dispatch(updateLayerSettingAction(layerName, "intensityRange", [firstVal, secVal]));
 }
 
 async function getClippingValues(

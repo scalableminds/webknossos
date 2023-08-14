@@ -81,7 +81,12 @@ export function* watchZ1Downsampling(): Saga<void> {
       let scaleX = 1;
       let scaleY = 1;
       const transformMatrix = yield* select(
-        (state) => getTransformsForLayer(state.dataset, dataLayer).affineMatrix,
+        (state) =>
+          getTransformsForLayer(
+            state.dataset,
+            dataLayer,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          ).affineMatrix,
       );
       if (transformMatrix !== Identity4x4) {
         const matrix = invertAndTranspose(transformMatrix);

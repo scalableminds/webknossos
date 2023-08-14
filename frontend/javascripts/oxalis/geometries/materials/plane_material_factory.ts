@@ -31,6 +31,7 @@ import {
   getTransformsForLayer,
   getResolutionInfoByLayer,
   getResolutionInfo,
+  getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -226,6 +227,9 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
 
@@ -241,14 +245,18 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
       };
-      const dataset = Store.getState().dataset;
       const layer = getLayerByName(dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix),
+        value: invertAndTranspose(
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+        ),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(getTransformsForLayer(dataset, layer).affineMatrix, Identity4x4),
+        value: !_.isEqual(
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+          Identity4x4,
+        ),
       };
     }
 
@@ -431,8 +439,9 @@ class PlaneMaterialFactory {
           // isn't relevant which is why it can default to [1, 1, 1].
 
           let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
-            const layer = getLayerByName(Store.getState().dataset, layerName);
+            const layer = getLayerByName(state.dataset, layerName);
             const resolutionInfo = getResolutionInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
@@ -443,7 +452,11 @@ class PlaneMaterialFactory {
                 : null;
 
             const hasTransform = !_.isEqual(
-              getTransformsForLayer(Store.getState().dataset, layer).affineMatrix,
+              getTransformsForLayer(
+                state.dataset,
+                layer,
+                state.datasetConfiguration.nativelyRenderedLayerName,
+              ).affineMatrix,
               Identity4x4,
             );
             if (!hasTransform && suitableMag) {
@@ -780,27 +793,37 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.dataLayers,
-        (layers) => {
+        (storeState) =>
+          getTransformsPerLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (transformsPerLayer) => {
           this.scaledTpsInvPerLayer = {};
+          const state = Store.getState();
+          const layers = state.dataset.dataSource.dataLayers;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
-            const transforms = getTransformsForLayer(Store.getState().dataset, layer);
+            const transforms = transformsPerLayer[layer.name];
             const { affineMatrix } = transforms;
             const scaledTpsInv =
               transforms.type === "thin_plate_spline" ? transforms.scaledTpsInv : null;
 
             if (scaledTpsInv) {
               this.scaledTpsInvPerLayer[name] = scaledTpsInv;
+            } else {
+              delete this.scaledTpsInvPerLayer[name];
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
+            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
           }
+          this.recomputeShaders();
         },
         true,
       ),
@@ -857,6 +880,9 @@ class PlaneMaterialFactory {
   }
 
   recomputeShaders = _.throttle(() => {
+    if (this.material == null) {
+      return;
+    }
     const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;

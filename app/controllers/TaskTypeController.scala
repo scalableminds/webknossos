@@ -74,6 +74,12 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.runIf(taskTypeFromForm.summary != taskType.summary) {
+          taskTypeDAO
+            .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
+              GlobalAccessContext)
+            .reverse ?~> Messages("taskType.summary.alreadyTaken", taskTypeFromForm.summary)
+        }
         _ <- taskTypeDAO.updateOne(updatedTaskType)
         js <- taskTypeService.publicWrites(updatedTaskType)
       } yield JsonOk(js, Messages("taskType.editSuccess"))

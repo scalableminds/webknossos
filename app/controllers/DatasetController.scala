@@ -9,7 +9,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Elem
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
-import models.binary.explore.{ExploreRemoteDatasetParameters, ExploreRemoteLayerService}
+import models.binary.explore.{
+  ExploreAndAddRemoteDatasetParameters,
+  ExploreRemoteDatasetParameters,
+  ExploreRemoteLayerService
+}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
@@ -25,6 +29,8 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
+import com.scalableminds.util.tools.TristateOptionJsonHelper
+import models.folder.FolderService
 
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
@@ -60,6 +66,7 @@ class DatasetController @Inject()(userService: UserService,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
+                                  folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   conf: WkConf,
@@ -123,6 +130,25 @@ class DatasetController @Inject()(userService: UserService,
             None
         }
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
+    sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
+      val reportMutable = ListBuffer[String]()
+      val adaptedParameters = ExploreRemoteDatasetParameters(request.body.remoteUri, None, None)
+      for {
+        dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
+                                                                        request.identity,
+                                                                        reportMutable)
+        _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
+          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
+        _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource,
+                                                           request.body.datasetName,
+                                                           request.identity,
+                                                           folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+      } yield Ok
     }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

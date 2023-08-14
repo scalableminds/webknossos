@@ -31,7 +31,7 @@ class TaskService @Inject()(conf: WkConf,
     for {
       annotationBase <- annotationBaseFor(task._id)
       dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
-      status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
+      status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
       scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
@@ -77,14 +77,14 @@ class TaskService @Inject()(conf: WkConf,
       result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
-  def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  private def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
       list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
-  def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
+  private def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[TaskStatus] =
     for {
       activeCount <- annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0)
-    } yield CompletionStatus(task.openInstances, activeCount, task.totalInstances - (activeCount + task.openInstances))
+    } yield TaskStatus(task.pendingInstances, activeCount, task.totalInstances - (activeCount + task.pendingInstances))
 
 }

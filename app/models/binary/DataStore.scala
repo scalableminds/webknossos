@@ -130,6 +130,13 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseAll(r)
     } yield parsed
 
+  def findOneWithUploadsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"select $columns from $existingCollectionName where allowsUpload and $accessQuery".as[DatastoresRow])
+      parsed <- parseFirst(r, "find one with uploads allowed")
+    } yield parsed
+
   def updateUrlByName(name: String, url: String): Fox[Unit] = {
     val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(query.update(url)) } yield ()

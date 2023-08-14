@@ -100,6 +100,7 @@ dataset.initialTeams.teamsNotEmpty=Dataset already has allowed teams
 dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataset.uploader.notEmpty=Dataset already has non-empty uploader
 dataset.delete.disabled=Dataset deletion is disabled for this WEBKNOSSOS instance
+<<<<<<< HEAD
 dataset.delete.webknossos.failed=Could not delete dataset from WEBKNOSSOS database
 dataset.delete.failed=Could not delete the dataset on disk.
 dataset.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
@@ -110,6 +111,7 @@ dataset.upload.noFiles=Tried to finish upload with no files. May be a retry of a
 dataset.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataset.explore.failed.readFile=Failed to read remote file
 dataset.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
+dataset.explore.autoAdd.failed=Failed to automatically import the explored dataset.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system
@@ -283,6 +285,7 @@ script.removalFailed=Failed to remove script
 script.write.failed=Failed to convert script to json
 script.notOwner=You are not the owner of the script you want to edit.
 script.invalid=Script is invalid
+script.name.invalid.characters=Script name is invalid. Please use only letters, digits, dots, space, underscores, hyphens.
 
 serialization.failed=Failed to serialize data.
 
@@ -334,6 +337,7 @@ folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
 folder.noWriteAccess=No write access in this folder
+folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.
 segmentAnything.noUri=No Uri for SAM server configured.

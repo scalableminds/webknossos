@@ -26,11 +26,11 @@ test.serial("getProjects()", async (t) => {
     id: "projects-getProjects()",
   });
 });
-test.serial("getProjectsWithOpenAssignments()", async (t) => {
-  const projects = _.sortBy(await api.getProjectsWithOpenAssignments(), (p) => p.name);
+test.serial("getProjectsWithStatus()", async (t) => {
+  const projects = _.sortBy(await api.getProjectsWithStatus(), (p) => p.name);
 
   t.snapshot(replaceVolatileValues(projects), {
-    id: "projects-getProjectsWithOpenAssignments()",
+    id: "projects-getProjectsWithStatus()",
   });
 });
 test.serial("getProject(projectId: string)", async (t) => {
@@ -54,7 +54,7 @@ test.serial("createProject and deleteProject", async (t) => {
     priority: 1,
     paused: false,
     expectedTime: 1,
-    numberOfOpenAssignments: 1,
+    pendingInstances: 1,
     isBlacklistedFromReport: true,
   };
   const createdProject = await api.createProject(newProject);

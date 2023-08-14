@@ -75,6 +75,9 @@ const M4x4 = {
   // and also returns Array<Vector3>
   transformVectorsAffine(m: Matrix4x4, _points: Vector3[]): Vector3[] {
     const points: Array<Array<number>> = _points as any as Array<Array<number>>;
+    if (!Array.isArray(_points[0])) {
+      throw new Error("transformVectorsAffine doesn't support typed arrays at the moment.");
+    }
     // @ts-ignore
     return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
   },

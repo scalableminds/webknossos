@@ -14,5 +14,9 @@ To set all email addresses as unverified, execute this query:
 UPDATE webknossos.multiUsers SET isEmailVerified = false;
 ```
 
+- When interacting with webknossos via the python library, make sure you update to the latest version, as the task and project api have changed. Compare [webknossos-libs#930](https://github.com/scalableminds/webknossos-libs/pull/930). [#7220](https://github.com/scalableminds/webknossos/pull/7220)
+
 ### Postgres Evolutions:
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
+- [106-folder-no-slashes.sql](conf/evolutions/106-folder-no-slashes.sql)
+- [107-task-terminology.sql](conf/evolutions/107-task-terminology.sql)

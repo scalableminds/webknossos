@@ -60,7 +60,7 @@ class UserTokenController @Inject()(dataSetDAO: DatasetDAO,
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false).toFox
+        bearerTokenService.createAndInitDataStoreTokenForUser(user)
       case None => Fox.successful("")
     }
     for {

@@ -57,6 +57,7 @@ class FolderController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
+        _ <- folderService.assertValidFolderName(params.name)
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"
@@ -115,6 +116,7 @@ class FolderController @Inject()(
   def create(parentId: String, name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
+      _ <- folderService.assertValidFolderName(name)
       newFolder = Folder(ObjectId.generate, name)
       _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"

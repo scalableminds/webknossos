@@ -9,6 +9,7 @@ import {
   CloseCircleOutlined,
   CopyOutlined,
   InfoCircleOutlined,
+  MailOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserAddOutlined,
@@ -62,7 +63,7 @@ type State = {
   isTeamRoleModalOpen: boolean;
   isInviteModalOpen: boolean;
   singleSelectedUser: APIUser | null | undefined;
-  activationFilter: Array<"true" | "false">;
+  activationFilter: Array<"activated" | "deactivated" | "verified" | "unverified">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
 };
@@ -82,7 +83,7 @@ class UserListView extends React.PureComponent<Props, State> {
     isExperienceModalOpen: false,
     isTeamRoleModalOpen: false,
     isInviteModalOpen: false,
-    activationFilter: ["true"],
+    activationFilter: ["activated", "verified", "unverified"],
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
@@ -117,26 +118,31 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
-    const newUserPromises = this.state.users.map((user) => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, {
-          isActive,
-        });
-        return updateUser(newUser);
-      }
+    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUsers = this.state.users.map((user) => (selectedUser.id === user.id ? newUser : user));
 
-      return Promise.resolve(user);
+    this.setState({
+      users: newUsers,
     });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
+
+    if (!isActive) {
+      // Don't ask the user for the team permissions
+      return;
+    }
+    Modal.confirm({
+      title: "Account was activated.",
+      content:
+        "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
+      okText: "Configure teams and permissions",
+      cancelText: "Close",
+      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      onOk: () => {
         this.setState({
-          users: newUsers,
           selectedUserIds: [selectedUser.id],
           isTeamRoleModalOpen: isActive,
         });
       },
-      () => {}, // Do nothing, change did not succeed
-    );
+    });
   };
 
   deactivateUser = (user: APIUser): void => {
@@ -332,7 +338,7 @@ class UserListView extends React.PureComponent<Props, State> {
       }),
       selectedRowKeys: this.state.selectedUserIds,
     };
-    const activationFilterWarning = this.state.activationFilter.includes("true") ? (
+    const activationFilterWarning = this.state.activationFilter.includes("activated") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
         Show Active Users Only
       </Tag>
@@ -555,32 +561,85 @@ class UserListView extends React.PureComponent<Props, State> {
               filters={[
                 {
                   text: "Activated",
-                  value: "true",
+                  value: "activated",
                 },
                 {
                   text: "Deactivated",
-                  value: "false",
+                  value: "deactivated",
+                },
+                {
+                  text: "E-Mail is verified",
+                  value: "verified",
+                },
+                {
+                  text: "E-Mail is not verified",
+                  value: "unverified",
                 },
               ]}
               filtered
               filteredValue={this.state.activationFilter}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: boolean, user: APIUser) => boolean' ... Remove this comment to see the full error message
-              onFilter={(value: boolean, user: APIUser) => user.isActive.toString() === value}
-              render={(isActive) =>
-                isActive ? (
-                  <CheckCircleOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
+              filterMultiple
+              // @ts-ignore
+              onFilter={(
+                value: "activated" | "deactivated" | "verified" | "unverified",
+                user: APIUser,
+              ) => {
+                if (value === "activated") {
+                  return user.isActive;
+                } else if (value === "deactivated") {
+                  return !user.isActive;
+                } else if (value === "verified") {
+                  return user.isEmailVerified;
+                } else if (value === "unverified") {
+                  return !user.isEmailVerified;
+                }
+              }}
+              render={(isActive, user: APIUser) => {
+                const activation = isActive ? (
+                  <Tooltip title="Account is activated">
+                    <CheckCircleOutlined
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Tooltip>
                 ) : (
-                  <CloseCircleOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                )
-              }
+                  <Tooltip title="Account is not activated">
+                    <CloseCircleOutlined
+                      style={{
+                        fontSize: 20,
+                        color: "#e84749",
+                      }}
+                    />
+                  </Tooltip>
+                );
+
+                const mail = user.isEmailVerified ? (
+                  <Tooltip title="Email is verified">
+                    <MailOutlined
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Email is not verified">
+                    <MailOutlined
+                      style={{
+                        fontSize: 20,
+                        color: "#e84749",
+                      }}
+                    />
+                  </Tooltip>
+                );
+
+                return (
+                  <>
+                    {activation}
+                    {mail}
+                  </>
+                );
+              }}
             />
             <Column
               title="Actions"
@@ -598,13 +657,23 @@ class UserListView extends React.PureComponent<Props, State> {
                     // eslint-disable-next-line no-nested-ternary
                     user.isActive ? (
                       this.props.activeUser.isAdmin ? (
-                        <LinkButton onClick={() => this.deactivateUser(user)}>
+                        <LinkButton
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            this.deactivateUser(user);
+                          }}
+                        >
                           <UserDeleteOutlined />
                           Deactivate User
                         </LinkButton>
                       ) : null
                     ) : (
-                      <LinkButton onClick={() => this.activateUser(user)}>
+                      <LinkButton
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          this.activateUser(user);
+                        }}
+                      >
                         <UserAddOutlined />
                         Activate User
                       </LinkButton>

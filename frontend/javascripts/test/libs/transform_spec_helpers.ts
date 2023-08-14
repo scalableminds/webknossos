@@ -7,9 +7,18 @@ export function almostEqual(
   vec2: Vector3,
   threshold: number = 1,
 ) {
-  t.true(Math.abs(vec1[0] - vec2[0]) < threshold);
-  t.true(Math.abs(vec1[1] - vec2[1]) < threshold);
-  t.true(Math.abs(vec1[2] - vec2[2]) < threshold);
+  t.true(
+    Math.abs(vec1[0] - vec2[0]) < threshold,
+    `Values are not similar enough: diff_x=${vec1[0] - vec2[0]}`,
+  );
+  t.true(
+    Math.abs(vec1[1] - vec2[1]) < threshold,
+    `Values are not similar enough: diff_y=${vec1[1] - vec2[1]}`,
+  );
+  t.true(
+    Math.abs(vec1[2] - vec2[2]) < threshold,
+    `Values are not similar enough: diff_z=${vec1[2] - vec2[2]}`,
+  );
 }
 
 export function getPointsC555() {
@@ -67,5 +76,5 @@ export function getPointsC555() {
   sourcePoints.push([482.1100102621723, 492.8521135830212, 633.5717351310861]);
   targetPoints.push([1508.3328498461537, 1977.8310726153848, 185.3605911476923]);
 
-  return [targetPoints, sourcePoints];
+  return [sourcePoints, targetPoints];
 }

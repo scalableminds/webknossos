@@ -72,12 +72,12 @@ test("getProjectProgressReport", async (t) => {
   });
 });
 
-test("getOpenTasksReport", async (t) => {
-  const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
-  writeTypeCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", {
+test("getAvailableTasksReport", async (t) => {
+  const availableTasksReport = await api.getAvailableTasksReport(firstTeam.id);
+  writeTypeCheckingFile(availableTasksReport, "available-tasks", "APIAvailableTasksReport", {
     isArray: true,
   });
-  t.snapshot(openTasksReport, {
-    id: "timetracking-openTasksReport",
+  t.snapshot(availableTasksReport, {
+    id: "timetracking-availableTasksReport",
   });
 });

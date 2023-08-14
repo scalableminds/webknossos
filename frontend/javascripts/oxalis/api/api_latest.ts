@@ -78,6 +78,7 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
+  flatToNestedMatrix,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -2038,7 +2039,7 @@ class DataApi {
    *
    * @example
    *
-   * api.data._setLayerTransforms(
+   * api.data._setAffineLayerTransforms(
    *   "C555_DIAMOND_2f",
    *   new Float32Array([
    *     0.03901274364025348, -0.08498337289603758, 0.00782446404039791, 555.7948181512004,
@@ -2048,8 +2049,15 @@ class DataApi {
    *   ]),
    * );
    */
-  _setLayerTransforms(layerName: string, transforms: Matrix4x4) {
-    Store.dispatch(setLayerTransformsAction(layerName, Array.from(transforms) as Vector16));
+  _setAffineLayerTransforms(layerName: string, transforms: Matrix4x4) {
+    const coordinateTransforms = [
+      {
+        type: "affine" as const,
+        matrix: flatToNestedMatrix(Array.from(transforms) as Vector16),
+      },
+    ];
+
+    Store.dispatch(setLayerTransformsAction(layerName, coordinateTransforms));
   }
 
   /*

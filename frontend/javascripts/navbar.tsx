@@ -276,10 +276,10 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         ),
       },
       {
-        key: "/reports/openTasks",
+        key: "/reports/availableTasks",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/reports/openTasks">Available Task Assignments</Link>
+            <Link to="/reports/availableTasks">Available Task Assignments</Link>
           </PricingEnforcedSpan>
         ),
       },

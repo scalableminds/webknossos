@@ -467,26 +467,28 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       return (
         <div className="info-tab-block">
           <p className="sidebar-label">Description</p>
-          <Typography.Text style={{ position: "relative" }}>
-            {description}
-            <Tooltip title="Edit">
-              <div
-                role="button"
-                className="ant-typography-edit"
-                style={{
-                  display: "inline-block",
-                  ...buttonStylesForMarkdownRendering,
-                }}
-                onClick={() =>
-                  this.setState({
-                    isMarkdownModalOpen: true,
-                  })
-                }
-              >
-                <EditOutlined />
-              </div>
-            </Tooltip>
-          </Typography.Text>
+          <div style={{ position: "relative" }}>
+            <Typography.Text>
+              {description}
+              <Tooltip title="Edit">
+                <div
+                  role="button"
+                  className="ant-typography-edit"
+                  style={{
+                    display: "inline-block",
+                    ...buttonStylesForMarkdownRendering,
+                  }}
+                  onClick={() =>
+                    this.setState({
+                      isMarkdownModalOpen: true,
+                    })
+                  }
+                >
+                  <EditOutlined />
+                </div>
+              </Tooltip>
+            </Typography.Text>
+          </div>
           <MarkdownModal
             label="Annotation Description"
             source={annotationDescription}

@@ -154,6 +154,7 @@ let didShowFailedSimultaneousTracingError = false;
 export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
   const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  console.log("saving", saveQueue.length, "items out of", fullSaveQueue.length);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type } = yield* select((state) =>
     selectTracing(state, saveQueueType, tracingId),

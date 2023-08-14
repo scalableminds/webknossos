@@ -679,6 +679,7 @@ class DataCube {
   }
 
   triggerPushQueue() {
+    console.log("triggerPushQueue");
     this.pushQueue.push();
   }
 

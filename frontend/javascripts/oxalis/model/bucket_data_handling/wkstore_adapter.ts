@@ -13,7 +13,7 @@ import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
+import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
@@ -25,13 +25,20 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
+
+// For 64-bit buckets with 32^3 voxel, a COMPRESSION_BATCH_SIZE of
+// 128 corresponds to 16.8 MB that are sent to a webworker in one
+// go.
+const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
 const compressionPool = new WorkerPool(
-  () => createWorker(ByteArrayToLz4Base64Worker),
+  () => createWorker(ByteArraysToLz4Base64Worker),
   COMPRESSION_WORKER_COUNT,
 );
+
 export const REQUEST_TIMEOUT = 60000;
 export type SendBucketInfo = {
   position: Vector3;
@@ -239,14 +246,25 @@ function sliceBufferIntoPieces(
 }
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const items: Array<UpdateAction> = await Promise.all(
-    batch.map(async (bucket): Promise<UpdateAction> => {
-      const data = bucket.getCopyOfData();
-      const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
-      const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const compressedBase64 = await compressionPool.submit(byteArray);
-      return updateBucket(bucketInfo, compressedBase64);
-    }),
+  const items: Array<UpdateAction> = _.flatten(
+    await Promise.all(
+      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset): Promise<UpdateAction[]> => {
+        const byteArrays = [];
+        for (const bucket of batchSubset) {
+          const data = bucket.getCopyOfData();
+          const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+          byteArrays.push(byteArray);
+        }
+
+        const compressedBase64Strings = await compressionPool.submit(byteArrays);
+        return compressedBase64Strings.map((compressedBase64, index) => {
+          const bucket = batchSubset[index];
+          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
+          return updateBucket(bucketInfo, compressedBase64);
+        });
+      }),
+    ),
   );
+
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

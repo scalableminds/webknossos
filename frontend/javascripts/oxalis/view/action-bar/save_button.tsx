@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-import Store from "oxalis/store";
+import Store, { SaveState } from "oxalis/store";
 import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -17,7 +17,7 @@ import {
 import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
 type OwnProps = {
-  onClick: (arg0: React.SyntheticEvent<HTMLButtonElement>) => Promise<any>;
+  onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
   className?: string;
 };
 type StateProps = {
@@ -113,7 +113,6 @@ class SaveButton extends React.PureComponent<Props, State> {
       this.state.saveInfo.waitingForCompressionBucketCount +
       this.state.saveInfo.compressingBucketCount;
     return (
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <ButtonComponent
         key="save-button"
         type="primary"
@@ -159,8 +158,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'saveQueue' implicitly has an 'any' type... Remove this comment to see the full error message
-function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
+function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null | undefined {
   let oldestUnsavedTimestamp;
 
   if (saveQueue.skeleton.length > 0) {
@@ -168,9 +166,7 @@ function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
   }
 
   for (const volumeQueue of Utils.values(saveQueue.volumes)) {
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     if (volumeQueue.length > 0) {
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       const oldestVolumeTimestamp = volumeQueue[0].timestamp;
       oldestUnsavedTimestamp = Math.min(
         oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,

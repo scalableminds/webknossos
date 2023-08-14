@@ -5,17 +5,16 @@ import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 export const COMPRESSING_BATCH_SIZE = 32;
-// Only process the PushQueue after there was no user interaction
-// for PUSH_DEBOUNCE_TIME milliseconds...
+// Only process the PushQueue after there was no user interaction (or bucket modification due to
+// downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
 const PUSH_DEBOUNCE_TIME = 1000;
 // ...unless a timeout of PUSH_DEBOUNCE_MAX_WAIT_TIME milliseconds
 // is exceeded. Then, initiate a push.
 const PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataSetName' has no initializer and is n... Remove this comment to see the full error message
-  dataSetName: string;
   cube: DataCube;
   compressionTaskQueue: AsyncTaskQueue;
   sendData: boolean;
@@ -65,7 +64,6 @@ class PushQueue {
       this.pendingQueue.add(bucket);
       bucket.dirtyCount++;
     }
-
     this.push();
   }
 
@@ -78,26 +76,27 @@ class PushQueue {
   }
 
   pushImpl = async () => {
+    console.log("pushImpl start");
     await this.cube.temporalBucketManager.getAllLoadedPromise();
+
+    // Ensure that no earlier pushImpl calls are active
+    await this.compressionTaskQueue.join();
 
     if (!this.sendData) {
       return;
     }
 
-    while (this.pendingQueue.size) {
-      let batchSize = Math.min(COMPRESSING_BATCH_SIZE, this.pendingQueue.size);
-      const batch: DataBucket[] = [];
+    console.log("this.pendingQueue.size", this.pendingQueue.size);
 
-      for (const bucket of this.pendingQueue) {
-        if (batchSize <= 0) break;
-        this.pendingQueue.delete(bucket);
-        batch.push(bucket);
-        batchSize--;
-      }
+    // Flush pendingQueue. Note that it's important to do this synchronously.
+    // If other actors could add to queue concurrently, the front-end could
+    // send an inconsistent state for a transaction.
+    const batch: DataBucket[] = Array.from(this.pendingQueue);
+    this.pendingQueue = new Set();
 
-      // fire and forget
-      this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
-    }
+    // fire and forget
+    this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
+    // }
 
     try {
       // wait here
@@ -105,6 +104,7 @@ class PushQueue {
     } catch (_error) {
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }
+    console.log("pushImpl end");
   };
 
   push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
@@ -112,6 +112,7 @@ class PushQueue {
   });
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
+    // The batch will be put into one transaction.
     return sendToStore(batch, this.cube.layerName);
   }
 }

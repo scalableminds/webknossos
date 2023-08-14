@@ -5,7 +5,7 @@ export default class WorkerPool<P, R> {
   //
   // Example:
   // const compressionPool = new WorkerPool(
-  //   () => createWorker(ByteArrayToLz4Base64Worker),
+  //   () => createWorker(ByteArraysToLz4Base64Worker),
   //   COMPRESSION_WORKER_COUNT,
   // );
   // const promise1 = compressionPool.submit(data1);

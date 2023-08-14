@@ -76,7 +76,8 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runIf(taskTypeFromForm.summary != taskType.summary) {
           taskTypeDAO
-            .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
+            .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
+              GlobalAccessContext)
             .reverse ?~> Messages("taskType.summary.alreadyTaken", taskTypeFromForm.summary)
         }
         _ <- taskTypeDAO.updateOne(updatedTaskType)

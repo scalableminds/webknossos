@@ -18,8 +18,13 @@ import scala.concurrent.ExecutionContext
 
 class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
 
-  lazy val oidcConfig: OpenIdConnectConfig =
-    OpenIdConnectConfig(conf.SingleSignOn.OpenIdConnect.providerUrl, conf.SingleSignOn.OpenIdConnect.clientId)
+  private lazy val oidcConfig: OpenIdConnectConfig =
+    OpenIdConnectConfig(
+      conf.SingleSignOn.OpenIdConnect.providerUrl,
+      conf.SingleSignOn.OpenIdConnect.clientId,
+      if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
+      else None
+    )
 
   /*
    Build redirect URL to redirect to OIDC provider for auth request (https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
@@ -49,20 +54,22 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
       _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       serverInfos <- discover
-      tokenResponse <- rpc(serverInfos.token_endpoint).postFormParseJson[OpenIdConnectTokenResponse](
-        Map(
-          "grant_type" -> "authorization_code",
-          "client_id" -> oidcConfig.clientId,
-          "redirect_uri" -> redirectUrl,
-          "code" -> code
-        ))
+      tokenResponse <- rpc(serverInfos.token_endpoint)
+        .withBasicAuthOpt(Some(oidcConfig.clientId), oidcConfig.clientSecret)
+        .postFormParseJson[OpenIdConnectTokenResponse](
+          Map(
+            "grant_type" -> "authorization_code",
+            "client_id" -> oidcConfig.clientId,
+            "redirect_uri" -> redirectUrl,
+            "code" -> code
+          ))
       newToken <- validateOpenIdConnectTokenResponse(tokenResponse) ?~> "failed to parse JWT"
     } yield newToken
 
   /*
   Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
    */
-  def discover: Fox[OpenIdConnectProviderInfo] =
+  private def discover: Fox[OpenIdConnectProviderInfo] =
     for {
       response: WSResponse <- rpc(oidcConfig.discoveryUrl).get
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
@@ -75,7 +82,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
         JwtJson.decodeJson(tr.access_token, JwtOptions.DEFAULT.copy(signature = false)).toFox
     }
 
-  lazy val publicKey: Option[PublicKey] = {
+  private lazy val publicKey: Option[PublicKey] = {
     if (conf.SingleSignOn.OpenIdConnect.publicKey.isEmpty || conf.SingleSignOn.OpenIdConnect.publicKeyAlgorithm.isEmpty) {
       None
     } else {
@@ -103,6 +110,7 @@ object OpenIdConnectProviderInfo {
 case class OpenIdConnectConfig(
     baseUrl: String,
     clientId: String,
+    clientSecret: Option[String],
     scope: String = "openid profile"
 ) {
 
@@ -135,5 +143,5 @@ case class OpenIdConnectClaimSet(iss: String,
 }
 
 object OpenIdConnectClaimSet {
-  implicit val format = Json.format[OpenIdConnectClaimSet]
+  implicit val format: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]
 }

@@ -12,6 +12,7 @@ const CORRECT_DATASET_CONFIGURATION = {
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
   layers: {},
+  colorLayerOrder: [],
 };
 test("Validator should report no errors for valid configuration (without optional values)", (t) => {
   t.is(

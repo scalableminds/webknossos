@@ -48,6 +48,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   blendMode: "Blend Mode",
   renderWatermark: "Logo in Screenshots",
   antialiasRendering: "Antialiasing",
+  colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -79,6 +80,8 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
     "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
+  colorLayerOrder:
+    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
@@ -173,6 +176,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
+  "tracing.segment_id_out_of_bounds": _.template(
+    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
+  ),
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",

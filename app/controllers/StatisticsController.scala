@@ -55,7 +55,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
             numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
             numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
-            numberOfAssignments <- taskDAO.countAllOpenInstancesForOrganization(organizationId)
+            numberOfAssignments <- taskDAO.countAllPendingInstancesForOrganization(organizationId)
           } yield {
             Ok(
               Json.obj(

@@ -221,7 +221,13 @@ function getMaximumZoomForAllResolutionsFromStore(
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(getTransformsForLayer(state.dataset, layer).affineMatrix);
+  const layerMatrix = invertAndTranspose(
+    getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ).affineMatrix,
+  );
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {

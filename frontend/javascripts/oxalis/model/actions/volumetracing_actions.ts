@@ -10,7 +10,7 @@ import { batchActions } from "redux-batched-actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
-type CreateCellAction = ReturnType<typeof createCellAction>;
+export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
 type AddToLayerAction = ReturnType<typeof addToLayerAction>;
 type FloodFillAction = ReturnType<typeof floodFillAction>;
@@ -126,11 +126,16 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
  * has dealt with the case where the maximum segment id is not set. In that case,
  * the create cell action should not be exposed via the UI.
  */
-export const createCellAction = (largestSegmentId: number) =>
-  ({
+export const createCellAction = (activeCellId: number, largestSegmentId: number) => {
+  // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
+  // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids increased by one.
+  const newSegmentId =
+    largestSegmentId && largestSegmentId > activeCellId ? largestSegmentId + 1 : activeCellId + 1;
+  return {
     type: "CREATE_CELL",
-    largestSegmentId,
-  } as const);
+    newSegmentId,
+  } as const;
+};
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
   ({

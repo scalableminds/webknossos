@@ -5,14 +5,16 @@ import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { createDebouncedAbortableParameterlessCallable } from "libs/debounced_abortable_saga";
+import { call } from "redux-saga/effects";
 export const COMPRESSING_BATCH_SIZE = 32;
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
 const PUSH_DEBOUNCE_TIME = 1000;
 // ...unless a timeout of PUSH_DEBOUNCE_MAX_WAIT_TIME milliseconds
 // is exceeded. Then, initiate a push.
-const PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
+// todo: reactivate?
+const _PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   cube: DataCube;
@@ -75,41 +77,38 @@ class PushQueue {
     this.pendingQueue.forEach((e) => console.log(e));
   }
 
-  pushImpl = async () => {
-    console.log("pushImpl start");
-    await this.cube.temporalBucketManager.getAllLoadedPromise();
-
-    // Ensure that no earlier pushImpl calls are active
-    await this.compressionTaskQueue.join();
-
-    if (!this.sendData) {
-      return;
-    }
-
-    console.log("this.pendingQueue.size", this.pendingQueue.size);
-
-    // Flush pendingQueue. Note that it's important to do this synchronously.
-    // If other actors could add to queue concurrently, the front-end could
-    // send an inconsistent state for a transaction.
-    const batch: DataBucket[] = Array.from(this.pendingQueue);
-    this.pendingQueue = new Set();
-
-    // fire and forget
-    this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
-    // }
-
+  pushImpl = function* (this: PushQueue) {
     try {
-      // wait here
-      await this.compressionTaskQueue.join();
+      console.log("pushImpl start");
+      yield call(this.cube.temporalBucketManager.getAllLoadedPromise);
+
+      if (!this.sendData) {
+        return;
+      }
+
+      console.log("this.pendingQueue.size", this.pendingQueue.size);
+
+      // Flush pendingQueue. Note that it's important to do this synchronously.
+      // If other actors could add to queue concurrently, the front-end could
+      // send an inconsistent state for a transaction.
+      const batch: DataBucket[] = Array.from(this.pendingQueue);
+      this.pendingQueue = new Set();
+
+      // fire and forget
+      this.pushBatch(batch);
     } catch (_error) {
+      // todo: somewhere else?
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }
     console.log("pushImpl end");
   };
 
-  push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
-    maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
-  });
+  // push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
+  //   maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
+  // });
+
+  // todo: prevent user from brushing for eternity?
+  push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
     // The batch will be put into one transaction.

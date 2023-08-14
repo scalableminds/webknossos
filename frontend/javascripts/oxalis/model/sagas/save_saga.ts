@@ -163,6 +163,7 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
 
+  // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
     let exceptionDuringMarkBucketsAsNotDirty = false;
 

@@ -24,13 +24,13 @@ import type {
   APIMapping,
   APIMaybeUnimportedDataset,
   APIMeshFile,
-  APIOpenTasksReport,
+  APIAvailableTasksReport,
   APIOrganization,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
   APIProjectUpdater,
-  APIProjectWithAssignments,
+  APIProjectWithStatus,
   APIPublication,
   APIResolutionRestrictions,
   APIScript,
@@ -334,7 +334,7 @@ export function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
-function transformProject<T extends APIProject | APIProjectWithAssignments>(response: T): T {
+function transformProject<T extends APIProject | APIProjectWithStatus>(response: T): T {
   return Object.assign({}, response, {
     expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
   });
@@ -345,14 +345,14 @@ export async function getProjects(): Promise<Array<APIProject>> {
   assertResponseLimit(responses);
   return responses.map(transformProject);
 }
-export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectWithAssignments>> {
-  const responses = await Request.receiveJSON("/api/projects/assignments");
+export async function getProjectsWithStatus(): Promise<Array<APIProjectWithStatus>> {
+  const responses = await Request.receiveJSON("/api/projects/withStatus");
   assertResponseLimit(responses);
   return responses.map(transformProject);
 }
 export async function getProjectsForTaskType(
   taskTypeId: string,
-): Promise<Array<APIProjectWithAssignments>> {
+): Promise<Array<APIProjectWithStatus>> {
   const responses = await Request.receiveJSON(`/api/taskTypes/${taskTypeId}/projects`);
   assertResponseLimit(responses);
   return responses.map(transformProject);
@@ -364,7 +364,7 @@ export async function getProject(projectId: string): Promise<APIProject> {
 export async function increaseProjectTaskInstances(
   projectId: string,
   delta: number = 1,
-): Promise<APIProjectWithAssignments> {
+): Promise<APIProjectWithStatus> {
   const project = await Request.receiveJSON(
     `/api/projects/${projectId}/incrementEachTasksInstances?delta=${delta}`,
     {
@@ -1886,17 +1886,19 @@ export async function getProjectProgressReport(
   teamId: string,
   showErrorToast: boolean = true,
 ): Promise<Array<APIProjectProgressReport>> {
-  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
+  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/projectProgressReport`, {
     showErrorToast,
   });
   assertResponseLimit(progressData);
   return progressData;
 }
 
-export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReport>> {
-  const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
-  assertResponseLimit(openTasksData);
-  return openTasksData;
+export async function getAvailableTasksReport(
+  teamId: string,
+): Promise<Array<APIAvailableTasksReport>> {
+  const availableTasksData = await Request.receiveJSON(`/api/teams/${teamId}/availableTasksReport`);
+  assertResponseLimit(availableTasksData);
+  return availableTasksData;
 }
 
 // ### Organizations

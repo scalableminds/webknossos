@@ -29,3 +29,4 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Removed
 
 ### Breaking Changes
+- The task and project api have changed. Make sure to update to the latest webknossos python library version when interacting with task and projects via the python library. Compare [webknossos-libs#930](https://github.com/scalableminds/webknossos-libs/pull/930). [#7220](https://github.com/scalableminds/webknossos/pull/7220)

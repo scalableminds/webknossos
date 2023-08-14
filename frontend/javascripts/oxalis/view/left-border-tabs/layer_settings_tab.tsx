@@ -13,7 +13,7 @@ import {
   EllipsisOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
@@ -58,8 +58,10 @@ import {
   getTransformsForLayerOrNull,
   getWidestResolutions,
   getLayerBoundingBox,
+  getTransformsForLayer,
+  hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -105,6 +107,10 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -162,6 +168,90 @@ const DragHandle = SortableHandle(() => (
     />
   </div>
 ));
+
+function TransformationIcon({ layer }: { layer: APIDataLayer }) {
+  const dispatch = useDispatch();
+  const transform = useSelector((state: OxalisState) =>
+    getTransformsForLayerOrNull(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
+  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  if (!showIcon) {
+    return null;
+  }
+
+  const typeToLabel = {
+    affine: "an affine",
+    thin_plate_spline: "a thin-plate-spline",
+  };
+
+  const typeToImage = {
+    none: "icon-no-transformation.svg",
+    thin_plate_spline: "icon-tps-transformation.svg",
+    affine: "icon-affine-transformation.svg",
+  };
+
+  const toggleLayerTransforms = () => {
+    const state = Store.getState();
+    if (state.datasetConfiguration.nativelyRenderedLayerName === layer.name) {
+      return;
+    }
+    // Transform current position using the inverse transform
+    // so that the user will still look at the same data location.
+    const currentPosition = getPosition(state.flycam);
+    const currentTransforms = getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const invertedTransform = invertTransform(currentTransforms);
+    const newPosition = transformPointUnscaled(invertedTransform)(currentPosition);
+
+    // Also transform a reference coordinate to determine how the scaling
+    // changed. Then, adapt the zoom accordingly.
+    const referenceOffset: Vector3 = [10, 10, 10];
+    const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+    const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
+
+    const scaleChange = _.mean(
+      // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+      V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+    );
+    dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
+    dispatch(setPositionAction(newPosition));
+    dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
+  };
+
+  return (
+    <div className="flex-item">
+      <Tooltip
+        title={
+          transform != null
+            ? `This layer is rendered with ${
+                typeToLabel[transform.type]
+              } transformation. Click to render this layer without any transforms.`
+            : "This layer is shown natively (i.e., without any transformations)."
+        }
+      >
+        <img
+          src={`/assets/images/${typeToImage[transform?.type || "none"]}`}
+          alt="Transformed Layer Icon"
+          style={{
+            cursor: transform != null ? "pointer" : "default",
+            width: 14,
+            height: 14,
+            marginBottom: 4,
+            marginRight: 5,
+          }}
+          onClick={toggleLayerTransforms}
+        />
+      </Tooltip>
+    </div>
+  );
+}
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -592,6 +682,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               </Tooltip>
             ) : null}
           </div>
+          <TransformationIcon layer={layer} />
           <div className="flex-item">
             {isVolumeTracing ? (
               <Tooltip
@@ -824,7 +915,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (foundPosition && foundResolution) {
       const layer = getLayerByName(dataset, layerName, true);
-      const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
+      const transformMatrix = getTransformsForLayerOrNull(
+        dataset,
+        layer,
+        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+      )?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);
         // Transform the found position according to the matrix.

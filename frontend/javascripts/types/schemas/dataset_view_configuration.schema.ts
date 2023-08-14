@@ -73,6 +73,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   layers: {},
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
+  nativelyRenderedLayerName: null,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,

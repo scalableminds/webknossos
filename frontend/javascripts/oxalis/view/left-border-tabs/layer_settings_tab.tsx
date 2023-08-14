@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, MenuProps, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -11,8 +11,10 @@ import {
   LockOutlined,
   UnlockOutlined,
   EllipsisOutlined,
+  SaveOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
+import ErrorHandling from "libs/error_handling";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -48,6 +50,7 @@ import {
   findDataPositionForVolumeTracing,
   convertToHybridTracing,
   deleteAnnotationLayer,
+  updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
 import {
   getDefaultValueRangeOfLayer,
@@ -100,7 +103,13 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
+import {
+  layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  RecommendedConfiguration,
+  settings,
+  settingsTooltips,
+} from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -135,6 +144,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
+  isAdminOrDatasetManager: boolean;
 };
 
 type State = {
@@ -446,6 +456,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
+    if (!intensityRange) {
+      return null;
+    }
     const defaultIntensityRange = getDefaultValueRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
 
@@ -703,7 +716,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) : null}
           </div>
           <div className="flex-item">
-            {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
               <Tooltip
                 title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
@@ -1179,6 +1192,79 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
+  saveViewConfigurationAsDefault = () => {
+    const { dataset, datasetConfiguration } = this.props;
+    const dataSource: Array<{
+      name: string;
+      description?: string;
+    }> = [{ name: "Position" }, { name: "Zoom" }, { name: "Rotation" }];
+    const additionalData: typeof dataSource = (
+      [
+        "fourBit",
+        "interpolation",
+        "renderMissingDataBlack",
+        "loadingStrategy",
+        "segmentationPatternOpacity",
+        "blendMode",
+      ] as Array<keyof RecommendedConfiguration>
+    ).map((key) => ({
+      name: settings[key] as string,
+      description: settingsTooltips[key],
+    }));
+    dataSource.push(...additionalData);
+    Modal.confirm({
+      title: "Save current view configuration as default?",
+      width: 700,
+      content: (
+        <>
+          Do you really want to save your current view configuration as the dataset's default?
+          <br />
+          This will overwrite the current default view configuration.
+          <br />
+          This includes all color and segmentation layer settings, as well as these additional
+          settings:
+          <br />
+          <br />
+          {dataSource.map((field, index) => {
+            let delimiter = index === dataSource.length - 1 ? "" : ", ";
+            delimiter = index === dataSource.length - 2 ? " and " : delimiter;
+            return field.description ? (
+              <>
+                {field.name}{" "}
+                <Tooltip title={field.description}>
+                  <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
+                </Tooltip>
+                {delimiter}
+              </>
+            ) : (
+              `${field.name}${delimiter}`
+            );
+          })}
+          .
+        </>
+      ),
+      onOk: async () => {
+        try {
+          const { flycam } = Store.getState();
+          const position = V3.floor(getPosition(flycam));
+          const zoom = flycam.zoomStep;
+          const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
+            position,
+            zoom,
+          });
+          await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
+          Toast.success("Successfully saved the current view configuration as default.");
+        } catch (error) {
+          Toast.error(
+            "Failed to save the current view configuration as default. Please look at the console for more details.",
+          );
+          ErrorHandling.notify(error as Error);
+          console.error(error);
+        }
+      },
+    });
+  };
+
   onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
     // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
     document.body.classList.remove("is-dragging");
@@ -1273,6 +1359,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Row>
         ) : null}
 
+        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
+          <Row justify="center" align="middle">
+            <Tooltip title="Save the current view configuration as default for all users.">
+              <Button onClick={this.saveViewConfigurationAsDefault}>
+                <SaveOutlined />
+                Save View Configuration as Default
+              </Button>
+            </Tooltip>
+          </Row>
+        ) : null}
+
         {this.state.volumeTracingToDownsample != null ? (
           <DownsampleVolumeModal
             hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
@@ -1311,6 +1408,8 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  isAdminOrDatasetManager:
+    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

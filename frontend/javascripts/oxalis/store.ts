@@ -277,7 +277,7 @@ export type DatasetLayerConfiguration = {
   readonly brightness?: number;
   readonly contrast?: number;
   readonly alpha: number;
-  readonly intensityRange: Vector2;
+  readonly intensityRange?: Vector2;
   readonly min?: number;
   readonly max?: number;
   readonly isDisabled: boolean;

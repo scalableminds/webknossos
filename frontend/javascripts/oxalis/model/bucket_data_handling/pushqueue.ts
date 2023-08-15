@@ -99,8 +99,6 @@ class PushQueue {
 
   pushImpl = function* (this: PushQueue) {
     try {
-      console.log("throw in pushimpl");
-      console.log("pushImpl start");
       // Wait until there are no temporal buckets, anymore, so that
       // all buckets can be snapshotted and saved to the server.
       yield call(this.cube.temporalBucketManager.getAllLoadedPromise);
@@ -117,7 +115,6 @@ class PushQueue {
       // (notifying the user and stopping further potentially undefined behavior).
       Store.dispatch(escalateErrorAction(error));
     }
-    console.log("pushImpl end");
   };
 
   private flushAndSnapshot() {
@@ -125,7 +122,6 @@ class PushQueue {
     // Flush pendingQueue. Note that it's important to do this synchronously.
     // If other actors could add to queue concurrently, the front-end could
     // send an inconsistent state for a transaction.
-    console.log("Flush pending queue with size:", this.pendingQueue.size);
     const batch: DataBucket[] = Array.from(this.pendingQueue);
     this.pendingQueue = new Set();
 

@@ -16,7 +16,7 @@ const createAbortableFnWithProtocol = () => {
 };
 
 const DEBOUNCE_THRESHOLD = 100;
-test("Test simplest case", async (t) => {
+test("DebouncedAbortableSaga: Test simplest case", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);
@@ -27,7 +27,7 @@ test("Test simplest case", async (t) => {
   t.deepEqual(protocol, ["await-1", "run-1"]);
 });
 
-test("Rapid calls where the last one should win", async (t) => {
+test("DebouncedAbortableSaga: Rapid calls where the last one should win", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);
@@ -40,7 +40,7 @@ test("Rapid calls where the last one should win", async (t) => {
   t.deepEqual(protocol, ["await-3", "run-3"]);
 });
 
-test("Rapid calls with small breaks", async (t) => {
+test("DebouncedAbortableSaga: Rapid calls with small breaks", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);

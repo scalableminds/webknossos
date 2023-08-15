@@ -1,10 +1,15 @@
 import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { alert } from "libs/window";
-import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { createDebouncedAbortableParameterlessCallable } from "libs/debounced_abortable_saga";
 import { call } from "redux-saga/effects";
+import { Store } from "oxalis/singletons";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { UpdateAction } from "../sagas/update_actions";
+import { AsyncFifoResolver } from "libs/async_fifo_resolver";
+
 export const COMPRESSING_BATCH_SIZE = 32;
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
@@ -16,6 +21,8 @@ const _PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   cube: DataCube;
+
+  private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
 
   // The pendingQueue contains all buckets that should be:
   // - snapshotted,
@@ -40,7 +47,7 @@ class PushQueue {
     return (
       this.pendingQueue.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
-      this.pendingTransactionCount == 0
+      this.pendingTransactionCount === 0
     );
   }
 
@@ -80,29 +87,47 @@ class PushQueue {
   };
 
   private flushAndSnapshot() {
-    console.log("this.pendingQueue.size", this.pendingQueue.size);
-
     // Flush pendingQueue. Note that it's important to do this synchronously.
     // If other actors could add to queue concurrently, the front-end could
     // send an inconsistent state for a transaction.
+    console.log("Flush pending queue with size:", this.pendingQueue.size);
     const batch: DataBucket[] = Array.from(this.pendingQueue);
     this.pendingQueue = new Set();
 
-    // Fire and forget
+    // Fire and forget. The correct transaction ordering is ensured
+    // within pushTransaction.
     this.pushTransaction(batch);
   }
 
+  // todo: prevent user from brushing for eternity?
   // push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
   //   maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
   // });
 
-  // todo: prevent user from brushing for eternity?
   push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 
   async pushTransaction(batch: Array<DataBucket>): Promise<void> {
-    // The batch will be put into one transaction.
+    /*
+     * Create a transaction from the batch and push it into the save queue.
+     */
     this.pendingTransactionCount++;
-    await sendToStore(batch, this.cube.layerName);
+
+    // Start the compression job. Note that an older invocation of
+    // createCompressedUpdateBucketActions might still be running.
+    // We can still *start* a new compression job, but we want to ensure
+    // that the jobs are processed in the order they were initiated.
+    // This is done using orderedWaitFor.
+    // Addendum:
+    // In practice, this won't matter much since compression jobs
+    // are processed by a pool of webworkers in fifo-order, anyway.
+    // However, there is a theoretical chance of a race condition,
+    // since the fifo-ordering is only ensured for starting the webworker
+    // and not for receiving the return values.
+    const items = await this.fifoResolver.orderedWaitFor(
+      createCompressedUpdateBucketActions(batch),
+    );
+    Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
+
     this.pendingTransactionCount--;
   }
 }

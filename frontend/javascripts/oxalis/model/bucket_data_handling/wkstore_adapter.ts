@@ -10,7 +10,6 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseAsMaybe } from "libs/utils";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
@@ -245,10 +244,12 @@ function sliceBufferIntoPieces(
   return bucketBuffers;
 }
 
-export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const items: Array<UpdateAction> = _.flatten(
+export async function createCompressedUpdateBucketActions(
+  batch: Array<DataBucket>,
+): Promise<UpdateAction[]> {
+  return _.flatten(
     await Promise.all(
-      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset): Promise<UpdateAction[]> => {
+      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
         const byteArrays = [];
         for (const bucket of batchSubset) {
           const data = bucket.getCopyOfData();
@@ -265,6 +266,4 @@ export async function sendToStore(batch: Array<DataBucket>, tracingId: string): 
       }),
     ),
   );
-
-  Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

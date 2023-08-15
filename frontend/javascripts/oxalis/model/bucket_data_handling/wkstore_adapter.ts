@@ -250,12 +250,10 @@ export async function createCompressedUpdateBucketActions(
   return _.flatten(
     await Promise.all(
       _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
-        const byteArrays = [];
-        for (const bucket of batchSubset) {
+        const byteArrays = batchSubset.map((bucket) => {
           const data = bucket.getCopyOfData();
-          const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-          byteArrays.push(byteArray);
-        }
+          return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        });
 
         const compressedBase64Strings = await compressionPool.submit(byteArrays);
         return compressedBase64Strings.map((compressedBase64, index) => {

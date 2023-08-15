@@ -30,10 +30,7 @@ class PushQueue {
 
   // Everytime the pendingQueue is flushed, its content is put into a transaction.
   // That transaction is compressed asynchronously before it is sent to the store.
-  // During that compression, the transaction is counted as pending.
-  private pendingTransactionCount: number = 0;
-
-  // Store the number of buckets that are currently being compressed.
+  // Buckets that are currently being compressed, are counted in this property.
   private compressingBucketCount: number = 0;
 
   // Helper to ensure the Store's save queue is filled in the correct
@@ -54,7 +51,7 @@ class PushQueue {
     return (
       this.pendingQueue.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
-      this.pendingTransactionCount === 0
+      this.compressingBucketCount === 0
     );
   }
 
@@ -101,6 +98,9 @@ class PushQueue {
     try {
       // Wait until there are no temporal buckets, anymore, so that
       // all buckets can be snapshotted and saved to the server.
+      // If PushQueue.push() is called while we are waiting here,
+      // this generator is aborted and the debounce-time begins
+      // again.
       yield call(this.cube.temporalBucketManager.getAllLoadedPromise);
 
       // It is important that flushAndSnapshot does not use a generator
@@ -137,7 +137,6 @@ class PushQueue {
      * Create a transaction from the batch and push it into the save queue.
      */
     try {
-      this.pendingTransactionCount++;
       this.compressingBucketCount += batch.length;
 
       // Start the compression job. Note that an older invocation of
@@ -156,7 +155,6 @@ class PushQueue {
       );
       Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
 
-      this.pendingTransactionCount--;
       this.compressingBucketCount -= batch.length;
     } catch (error) {
       // See other usage of escalateErrorAction for a detailed explanation.

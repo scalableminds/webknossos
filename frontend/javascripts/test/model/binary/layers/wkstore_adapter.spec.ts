@@ -57,7 +57,10 @@ const StoreMock = {
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestWithFallback, sendToStore } = mockRequire.reRequire(
+
+const PushQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pushqueue").default;
+
+const { requestWithFallback } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 const tokenResponse = {
@@ -263,7 +266,10 @@ test.serial("sendToStore: Request Handling should send the correct request param
     saveQueueType: "volume",
     tracingId,
   };
-  return sendToStore(batch, tracingId).then(() => {
+
+  const pushQueue = new PushQueue({ ...mockedCube, layerName: tracingId });
+
+  return pushQueue.pushTransaction(batch).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;
     t.deepEqual(saveQueueItems, expectedSaveQueueItems);

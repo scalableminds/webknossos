@@ -5,7 +5,7 @@ import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_ha
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { createDebouncedAbortableParameterlessCallable } from "libs/debounced_abortable_saga";
 import { call } from "redux-saga/effects";
-import { Store } from "oxalis/singletons";
+import Store from "oxalis/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { UpdateAction } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async_fifo_resolver";

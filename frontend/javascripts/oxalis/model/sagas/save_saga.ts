@@ -73,7 +73,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
 
     if (saveQueue.length === 0) {
       if (loopCounter % 100 === 0) {
-        // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
+        // See https://github.com/scalableminds/webknossos/pull/6076 (or 82e16e1) for an explanation
         // of this delay call.
         yield* delay(0);
       }
@@ -103,16 +103,14 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    Exactly that many items will be sent to the server.
     //    New items that might be added to the save queue during saving, will
     //    ignored (they will be picked up in the next iteration of this loop).
+    //    Otherwise, the risk of a high number of save-requests (see case 1)
+    //    would be present here, too (note the risk would be greater, because the
+    //    user didn't use the save button which is usually accompanied a small pause).
     const itemCountToSave = forcePush
       ? Infinity
       : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
-      // Saving the tracing automatically (via timeout) only saves the current state.
-      // It does not require to reach an empty saveQueue. This is especially
-      // important when the auto-saving happens during continuous movements.
-      // Always draining the save queue completely would mean that save
-      // requests are sent as long as the user moves.
       saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
 
       if (saveQueue.length > 0) {

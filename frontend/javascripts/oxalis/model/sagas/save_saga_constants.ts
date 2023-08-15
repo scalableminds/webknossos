@@ -11,5 +11,5 @@ export const UNDO_HISTORY_SIZE = 20;
 export const SETTINGS_RETRY_DELAY = 15 * 1000;
 export const SETTINGS_MAX_RETRY_COUNT = 20; // 20 * 15s == 5m
 
-export const maximumActionCountPerBatch = 20;
-export const maximumActionCountPerSave = 60;
+export const maximumActionCountPerBatch = 5000; //20; // 5000
+export const maximumActionCountPerSave = 15000; // 60; // 15000

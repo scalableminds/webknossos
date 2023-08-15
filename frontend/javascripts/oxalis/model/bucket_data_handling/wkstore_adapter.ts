@@ -18,7 +18,7 @@ import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
-import WorkerPool from "libs/worker_pool";
+import WebworkerPool from "libs/webworker_pool";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
@@ -33,7 +33,7 @@ const decodeFourBit = createWorker(DecodeFourBitWorker);
 // go.
 const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
-const compressionPool = new WorkerPool(
+const compressionPool = new WebworkerPool(
   () => createWorker(ByteArraysToLz4Base64Worker),
   COMPRESSION_WORKER_COUNT,
 );

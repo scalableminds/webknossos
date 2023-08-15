@@ -1,10 +1,10 @@
 import _ from "lodash";
-export default class WorkerPool<P, R> {
+export default class WebWorkerPool<P, R> {
   // This class can be used to instantiate multiple web workers
   // which are then used for computation in a simple round-robin manner.
   //
   // Example:
-  // const compressionPool = new WorkerPool(
+  // const compressionPool = new WebWorkerPool(
   //   () => createWorker(ByteArraysToLz4Base64Worker),
   //   COMPRESSION_WORKER_COUNT,
   // );

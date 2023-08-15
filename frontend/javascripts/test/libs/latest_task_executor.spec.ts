@@ -1,6 +1,6 @@
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 import test from "ava";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 
 test("LatestTaskExecutor: One task", async (t) => {
   const executor = new LatestTaskExecutor();

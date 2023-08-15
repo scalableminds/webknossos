@@ -1,5 +1,4 @@
 import _ from "lodash";
-import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
@@ -288,14 +287,13 @@ export class OxalisModel {
 
   getPushQueueStats() {
     const compressingBucketCount = _.sum(
-      Utils.values(this.dataLayers).map(
-        (dataLayer) =>
-          dataLayer.pushQueue.compressionTaskQueue.tasks.length * COMPRESSING_BATCH_SIZE,
+      Utils.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
     const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.pendingQueue.size),
+      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingQueueSize()),
     );
 
     return {

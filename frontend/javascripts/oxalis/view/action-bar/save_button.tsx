@@ -72,9 +72,12 @@ class SaveButton extends React.PureComponent<Props, State> {
   _forceUpdate = () => {
     const isStateSaved = Model.stateSaved();
     const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
+
+    // todo: get oldest unsaved timestamp from push queue.
+    //
+
     const unsavedDuration =
-      // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
-      oldestUnsavedTimestamp != null ? new Date() - oldestUnsavedTimestamp : 0;
+      oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0;
     const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
 
     if (showUnsavedWarning) {

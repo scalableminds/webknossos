@@ -10,7 +10,6 @@ import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { UpdateAction } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async_fifo_resolver";
 
-export const COMPRESSING_BATCH_SIZE = 32;
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
 const PUSH_DEBOUNCE_TIME = 1000;
@@ -38,6 +37,9 @@ class PushQueue {
   // During that compression, the transaction is counted as pending.
   private pendingTransactionCount: number = 0;
 
+  // Store the number of buckets that are currently being compressed.
+  private compressingBucketCount: number = 0;
+
   constructor(cube: DataCube) {
     this.cube = cube;
     this.pendingQueue = new Set();
@@ -57,6 +59,14 @@ class PushQueue {
       bucket.dirtyCount++;
     }
     this.push();
+  }
+
+  getPendingQueueSize(): number {
+    return this.pendingQueue.size;
+  }
+
+  getCompressingBucketCount(): number {
+    return this.compressingBucketCount;
   }
 
   clear(): void {
@@ -111,6 +121,7 @@ class PushQueue {
      * Create a transaction from the batch and push it into the save queue.
      */
     this.pendingTransactionCount++;
+    this.compressingBucketCount += batch.length;
 
     // Start the compression job. Note that an older invocation of
     // createCompressedUpdateBucketActions might still be running.
@@ -129,6 +140,7 @@ class PushQueue {
     Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
 
     this.pendingTransactionCount--;
+    this.compressingBucketCount -= batch.length;
   }
 }
 

@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { UpdateAction } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async_fifo_resolver";
+import { escalateErrorAction } from "../actions/actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
@@ -20,8 +21,6 @@ const _PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   cube: DataCube;
-
-  private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
 
   // The pendingQueue contains all buckets that should be:
   // - snapshotted,
@@ -39,6 +38,10 @@ class PushQueue {
 
   // Store the number of buckets that are currently being compressed.
   private compressingBucketCount: number = 0;
+
+  // Helper to ensure the Store's save queue is filled in the correct
+  // order.
+  private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
 
   constructor(cube: DataCube) {
     this.cube = cube;
@@ -88,10 +91,13 @@ class PushQueue {
       // mechanism, because it could get cancelled due to
       // createDebouncedAbortableParameterlessCallable otherwise.
       this.flushAndSnapshot();
-    } catch (_error) {
-      // Error Recovery!
-      // todo: somewhere else?
-      alert("We've encountered a permanent issue while saving. Please try to reload the page.");
+    } catch (error) {
+      // The above code is critical for saving volume data. Because the
+      // code is invoked asynchronously, there won't be a default error
+      // handling in case it crashes due to a bug.
+      // Therefore, escalate the error manually so that the sagas will crash
+      // (notifying the user and stopping further potentially undefined behavior).
+      Store.dispatch(escalateErrorAction(error));
     }
     console.log("pushImpl end");
   };
@@ -120,27 +126,32 @@ class PushQueue {
     /*
      * Create a transaction from the batch and push it into the save queue.
      */
-    this.pendingTransactionCount++;
-    this.compressingBucketCount += batch.length;
+    try {
+      this.pendingTransactionCount++;
+      this.compressingBucketCount += batch.length;
 
-    // Start the compression job. Note that an older invocation of
-    // createCompressedUpdateBucketActions might still be running.
-    // We can still *start* a new compression job, but we want to ensure
-    // that the jobs are processed in the order they were initiated.
-    // This is done using orderedWaitFor.
-    // Addendum:
-    // In practice, this won't matter much since compression jobs
-    // are processed by a pool of webworkers in fifo-order, anyway.
-    // However, there is a theoretical chance of a race condition,
-    // since the fifo-ordering is only ensured for starting the webworker
-    // and not for receiving the return values.
-    const items = await this.fifoResolver.orderedWaitFor(
-      createCompressedUpdateBucketActions(batch),
-    );
-    Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
+      // Start the compression job. Note that an older invocation of
+      // createCompressedUpdateBucketActions might still be running.
+      // We can still *start* a new compression job, but we want to ensure
+      // that the jobs are processed in the order they were initiated.
+      // This is done using orderedWaitFor.
+      // Addendum:
+      // In practice, this won't matter much since compression jobs
+      // are processed by a pool of webworkers in fifo-order, anyway.
+      // However, there is a theoretical chance of a race condition,
+      // since the fifo-ordering is only ensured for starting the webworker
+      // and not for receiving the return values.
+      const items = await this.fifoResolver.orderedWaitFor(
+        createCompressedUpdateBucketActions(batch),
+      );
+      Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
 
-    this.pendingTransactionCount--;
-    this.compressingBucketCount -= batch.length;
+      this.pendingTransactionCount--;
+      this.compressingBucketCount -= batch.length;
+    } catch (error) {
+      // See other usage of escalateErrorAction for a detailed explanation.
+      Store.dispatch(escalateErrorAction(error));
+    }
   }
 }
 

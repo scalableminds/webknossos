@@ -285,6 +285,14 @@ export class OxalisModel {
     return storeStateSaved && pushQueuesSaved;
   }
 
+  getLongestPushQueueWaitTime() {
+    return (
+      _.max(
+        Utils.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
+      ) || 0
+    );
+  }
+
   getPushQueueStats() {
     const compressingBucketCount = _.sum(
       Utils.values(this.dataLayers).map((dataLayer) =>

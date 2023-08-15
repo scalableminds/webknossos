@@ -73,11 +73,10 @@ class SaveButton extends React.PureComponent<Props, State> {
     const isStateSaved = Model.stateSaved();
     const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
 
-    // todo: get oldest unsaved timestamp from push queue.
-    //
-
-    const unsavedDuration =
-      oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0;
+    const unsavedDuration = Math.max(
+      oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0,
+      Model.getLongestPushQueueWaitTime(),
+    );
     const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
 
     if (showUnsavedWarning) {

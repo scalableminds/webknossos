@@ -1,6 +1,5 @@
 import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { alert } from "libs/window";
 import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { createDebouncedAbortableParameterlessCallable } from "libs/async/debounced_abortable_saga";
@@ -12,12 +11,10 @@ import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { escalateErrorAction } from "../actions/actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
-// downsampling) for PUSH_DEBOUNCE_TIME milliseconds...
+// downsampling) for PUSH_DEBOUNCE_TIME milliseconds.
+// PushQueue.getTransactionWaitTime is used to avoid debounce-related starvation that can happen
+// when the user constantly annotates.
 const PUSH_DEBOUNCE_TIME = 1000;
-// ...unless a timeout of PUSH_DEBOUNCE_MAX_WAIT_TIME milliseconds
-// is exceeded. Then, initiate a push.
-// todo: reactivate?
-const _PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   cube: DataCube;
@@ -43,6 +40,11 @@ class PushQueue {
   // order.
   private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
 
+  // If the timestamp is defined, it encodes when the first bucket
+  // was added to the PushQueue that will be part of the next (to be created)
+  // transaction.
+  private waitTimeStartTimeStamp: number | null = null;
+
   constructor(cube: DataCube) {
     this.cube = cube;
     this.pendingQueue = new Set();
@@ -57,6 +59,9 @@ class PushQueue {
   }
 
   insert(bucket: DataBucket): void {
+    if (this.waitTimeStartTimeStamp == null) {
+      this.waitTimeStartTimeStamp = Date.now();
+    }
     if (!this.pendingQueue.has(bucket)) {
       this.pendingQueue.add(bucket);
       bucket.dirtyCount++;
@@ -70,6 +75,18 @@ class PushQueue {
 
   getCompressingBucketCount(): number {
     return this.compressingBucketCount;
+  }
+
+  getTransactionWaitTime(): number {
+    // Return how long we are waiting for the transaction flush
+    // (waiting time depends on the user activity and on the
+    // time it takes to download buckets).
+    if (this.waitTimeStartTimeStamp == null) {
+      // No pending buckets exist. There's no wait time.
+      return 0;
+    }
+
+    return Date.now() - this.waitTimeStartTimeStamp;
   }
 
   clear(): void {
@@ -104,6 +121,7 @@ class PushQueue {
   };
 
   private flushAndSnapshot() {
+    this.waitTimeStartTimeStamp = null;
     // Flush pendingQueue. Note that it's important to do this synchronously.
     // If other actors could add to queue concurrently, the front-end could
     // send an inconsistent state for a transaction.
@@ -115,11 +133,6 @@ class PushQueue {
     // within pushTransaction.
     this.pushTransaction(batch);
   }
-
-  // todo: prevent user from brushing for eternity?
-  // push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
-  //   maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
-  // });
 
   push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 

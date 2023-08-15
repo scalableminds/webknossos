@@ -177,12 +177,10 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     val y = axes.indexWhere(axisMatches(_, "y"))
     val z = axes.indexWhere(axisMatches(_, "z"))
     val c = axes.indexWhere(_.`type` == "channel")
-    val t = axes.indexWhere(_.`type` == "time")
     val cOpt = if (c == -1) None else Some(c)
-    val tOpt = if (t == -1) None else Some(t)
     for {
       _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder(x, y, z, cOpt, tOpt)
+    } yield AxisOrder(x, y, z, cOpt)
   }
 
   private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =

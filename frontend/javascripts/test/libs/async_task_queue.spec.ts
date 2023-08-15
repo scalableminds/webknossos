@@ -4,6 +4,7 @@ import Deferred from "libs/deferred";
 import * as Utils from "libs/utils";
 import sinon from "sinon";
 import test from "ava";
+
 test("AsyncTaskQueue should run a task (1/2)", async (t) => {
   t.plan(1);
   const queue = new AsyncTaskQueue();

@@ -12,7 +12,7 @@ import { delay, race, take } from "redux-saga/effects";
  * are impossible that way (by design).
  *
  * Also note that the performance of this debouncing mechanism
- * slower than a standard _.debounce. Also see
+ * is slower than a standard _.debounce. Also see
  * debounced_abortable_saga.spec.ts for a small benchmark.
  */
 export function createDebouncedAbortableCallable<T, C>(

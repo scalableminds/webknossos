@@ -16,7 +16,7 @@ const createAbortableFnWithProtocol = () => {
 };
 
 const DEBOUNCE_THRESHOLD = 100;
-test.serial("Test simplest case", async (t) => {
+test("Test simplest case", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);
@@ -27,7 +27,7 @@ test.serial("Test simplest case", async (t) => {
   t.deepEqual(protocol, ["await-1", "run-1"]);
 });
 
-test.serial("Rapid calls where the last one should win", async (t) => {
+test("Rapid calls where the last one should win", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);
@@ -40,7 +40,7 @@ test.serial("Rapid calls where the last one should win", async (t) => {
   t.deepEqual(protocol, ["await-3", "run-3"]);
 });
 
-test.serial("Rapid calls with small breaks", async (t) => {
+test("Rapid calls with small breaks", async (t) => {
   t.plan(1);
   const { abortableFn, protocol } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);
@@ -62,7 +62,7 @@ test.serial("Rapid calls with small breaks", async (t) => {
   t.deepEqual(protocol, ["await-3", "await-5", "await-7", "run-7"]);
 });
 
-test.serial.skip("High volume calls", async () => {
+test.skip("High volume calls", async () => {
   // This is not a unit test, but rather a small speed test
   // to make a note that the classic _.debounce is way faster.
   // For 1000 invocations, _.debounce is roughly 10x faster.

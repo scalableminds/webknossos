@@ -1,10 +1,8 @@
 import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { alert, document } from "libs/window";
+import { alert } from "libs/window";
 import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import AsyncTaskQueue from "libs/async_task_queue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Toast from "libs/toast";
 import { createDebouncedAbortableParameterlessCallable } from "libs/debounced_abortable_saga";
 import { call } from "redux-saga/effects";
 export const COMPRESSING_BATCH_SIZE = 32;
@@ -18,46 +16,31 @@ const _PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   cube: DataCube;
-  compressionTaskQueue: AsyncTaskQueue;
-  sendData: boolean;
-  // The pendingQueue contains all buckets which are marked as
-  // "should be snapshotted and saved". That queue is processed
-  // in a debounced manner and sent to the `compressionTaskQueue`.
-  // The `compressionTaskQueue` compresses the bucket data and
-  // sends it to the save queue.
-  pendingQueue: Set<DataBucket>;
 
-  constructor(cube: DataCube, sendData: boolean = true) {
+  // The pendingQueue contains all buckets that should be:
+  // - snapshotted,
+  // - put into one transaction and then
+  // - saved
+  // That queue is flushed in a debounced manner so that the time of the
+  // snapshot should be suitable for a transaction (since neither WK nor the
+  // user edited the buckets in a certain time window).
+  private pendingQueue: Set<DataBucket>;
+
+  // Everytime the pendingQueue is flushed, its content is put into a transaction.
+  // That transaction is compressed asynchronously before it is sent to the store.
+  // During that compression, the transaction is counted as pending.
+  private pendingTransactionCount: number = 0;
+
+  constructor(cube: DataCube) {
     this.cube = cube;
-    this.compressionTaskQueue = new AsyncTaskQueue(Infinity);
-    this.sendData = sendData;
     this.pendingQueue = new Set();
-    const autoSaveFailureMessage = "Auto-Save failed!";
-    this.compressionTaskQueue.on("failure", () => {
-      console.error("PushQueue failure");
-
-      if (document.body != null) {
-        document.body.classList.add("save-error");
-      }
-
-      Toast.error(autoSaveFailureMessage, {
-        sticky: true,
-      });
-    });
-    this.compressionTaskQueue.on("success", () => {
-      if (document.body != null) {
-        document.body.classList.remove("save-error");
-      }
-
-      Toast.close(autoSaveFailureMessage);
-    });
   }
 
   stateSaved(): boolean {
     return (
       this.pendingQueue.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
-      !this.compressionTaskQueue.isBusy()
+      this.pendingTransactionCount == 0
     );
   }
 
@@ -80,28 +63,34 @@ class PushQueue {
   pushImpl = function* (this: PushQueue) {
     try {
       console.log("pushImpl start");
+      // Wait until there are no temporal buckets, anymore, so that
+      // all buckets can be snapshotted and saved to the server.
       yield call(this.cube.temporalBucketManager.getAllLoadedPromise);
 
-      if (!this.sendData) {
-        return;
-      }
-
-      console.log("this.pendingQueue.size", this.pendingQueue.size);
-
-      // Flush pendingQueue. Note that it's important to do this synchronously.
-      // If other actors could add to queue concurrently, the front-end could
-      // send an inconsistent state for a transaction.
-      const batch: DataBucket[] = Array.from(this.pendingQueue);
-      this.pendingQueue = new Set();
-
-      // fire and forget
-      this.pushBatch(batch);
+      // It is important that flushAndSnapshot does not use a generator
+      // mechanism, because it could get cancelled due to
+      // createDebouncedAbortableParameterlessCallable otherwise.
+      this.flushAndSnapshot();
     } catch (_error) {
+      // Error Recovery!
       // todo: somewhere else?
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }
     console.log("pushImpl end");
   };
+
+  private flushAndSnapshot() {
+    console.log("this.pendingQueue.size", this.pendingQueue.size);
+
+    // Flush pendingQueue. Note that it's important to do this synchronously.
+    // If other actors could add to queue concurrently, the front-end could
+    // send an inconsistent state for a transaction.
+    const batch: DataBucket[] = Array.from(this.pendingQueue);
+    this.pendingQueue = new Set();
+
+    // Fire and forget
+    this.pushTransaction(batch);
+  }
 
   // push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
   //   maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
@@ -110,9 +99,11 @@ class PushQueue {
   // todo: prevent user from brushing for eternity?
   push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 
-  pushBatch(batch: Array<DataBucket>): Promise<void> {
+  async pushTransaction(batch: Array<DataBucket>): Promise<void> {
     // The batch will be put into one transaction.
-    return sendToStore(batch, this.cube.layerName);
+    this.pendingTransactionCount++;
+    await sendToStore(batch, this.cube.layerName);
+    this.pendingTransactionCount--;
   }
 }
 

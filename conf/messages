@@ -284,6 +284,7 @@ script.removalFailed=Failed to remove script
 script.write.failed=Failed to convert script to json
 script.notOwner=You are not the owner of the script you want to edit.
 script.invalid=Script is invalid
+script.name.invalid.characters=Script name is invalid. Please use only letters, digits, dots, space, underscores, hyphens.
 
 serialization.failed=Failed to serialize data.
 

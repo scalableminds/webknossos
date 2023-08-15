@@ -4,7 +4,7 @@ import {
   defaultDatasetViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import type { APIDataset, APIMaybeUnimportedDataset, APIDataLayer } from "types/api_flow_types";
-import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getDefaultValueRangeOfLayer, isColorLayer } from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
 
 const eliminateErrors = (
@@ -31,9 +31,28 @@ const eliminateErrors = (
 };
 
 export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIDataLayer) => ({
-  intensityRange: getDefaultIntensityRangeOfLayer(dataset, layer.name),
+  intensityRange:
+    layer.category === "color" ? getDefaultValueRangeOfLayer(dataset, layer.name) : undefined,
   alpha: layer.category === "color" ? 100 : 20,
 });
+
+export function ensureDatasetSettingsHasLayerOrder(
+  datasetConfiguration: Record<string, any>,
+  dataset: APIDataset,
+) {
+  const colorLayerNames = _.keys(datasetConfiguration.layers).filter((layerName) =>
+    isColorLayer(dataset, layerName),
+  );
+  const onlyExistingLayers =
+    datasetConfiguration?.colorLayerOrder?.filter(
+      (layerName: string) => colorLayerNames.indexOf(layerName) >= 0,
+    ) || [];
+  if (onlyExistingLayers.length < colorLayerNames.length) {
+    datasetConfiguration.colorLayerOrder = colorLayerNames;
+  } else {
+    datasetConfiguration.colorLayerOrder = onlyExistingLayers;
+  }
+}
 
 export const enforceValidatedDatasetViewConfiguration = (
   datasetViewConfiguration: Record<string, any>,
@@ -62,6 +81,11 @@ export const enforceValidatedDatasetViewConfiguration = (
           existingLayerConfig,
         );
         eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
+        if (layer.category === "segmentation") {
+          delete existingLayerConfig.intensityRange;
+        } else if (existingLayerConfig.intensityRange == null && !isOptional) {
+          existingLayerConfig.intensityRange = getDefaultValueRangeOfLayer(dataset, layer.name);
+        }
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = existingLayerConfig;
       } else {
@@ -74,4 +98,8 @@ export const enforceValidatedDatasetViewConfiguration = (
   }
 
   datasetViewConfiguration.layers = newLayerConfig;
+  if (maybeUnimportedDataset.isActive) {
+    const dataset: APIDataset = maybeUnimportedDataset;
+    ensureDatasetSettingsHasLayerOrder(datasetViewConfiguration, dataset);
+  }
 };

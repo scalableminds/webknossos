@@ -301,7 +301,7 @@ export class OxalisModel {
     );
 
     const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingQueueSize()),
+      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingBucketCount()),
     );
 
     const outstandingBucketDownloadCount = _.sum(

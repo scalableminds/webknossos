@@ -66,7 +66,7 @@ class PushQueue {
     this.push();
   }
 
-  getPendingBucketsSize(): number {
+  getPendingBucketCount(): number {
     return this.pendingBuckets.size;
   }
 

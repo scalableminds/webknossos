@@ -28,7 +28,7 @@ import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 
-// For 64-bit buckets with 32^3 voxels, a COMPRESSION_BATCH_SIZE of
+// For 32-bit buckets with 32^3 voxels, a COMPRESSION_BATCH_SIZE of
 // 128 corresponds to 16.8 MB that are sent to a webworker in one
 // go.
 const COMPRESSION_BATCH_SIZE = 128;

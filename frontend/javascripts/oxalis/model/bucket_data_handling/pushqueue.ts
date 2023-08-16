@@ -19,16 +19,16 @@ const PUSH_DEBOUNCE_TIME = 1000;
 class PushQueue {
   cube: DataCube;
 
-  // The pendingQueue contains all buckets that should be:
+  // The pendingBuckets contains all buckets that should be:
   // - snapshotted,
   // - put into one transaction and then
   // - saved
-  // That queue is flushed in a debounced manner so that the time of the
+  // That set is flushed in a debounced manner so that the time of the
   // snapshot should be suitable for a transaction (since neither WK nor the
   // user edited the buckets in a certain time window).
-  private pendingQueue: Set<DataBucket>;
+  private pendingBuckets: Set<DataBucket>;
 
-  // Everytime the pendingQueue is flushed, its content is put into a transaction.
+  // Everytime the pendingBuckets is flushed, its content is put into a transaction.
   // That transaction is compressed asynchronously before it is sent to the store.
   // Buckets that are currently being compressed, are counted in this property.
   private compressingBucketCount: number = 0;
@@ -44,12 +44,12 @@ class PushQueue {
 
   constructor(cube: DataCube) {
     this.cube = cube;
-    this.pendingQueue = new Set();
+    this.pendingBuckets = new Set();
   }
 
   stateSaved(): boolean {
     return (
-      this.pendingQueue.size === 0 &&
+      this.pendingBuckets.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
       this.compressingBucketCount === 0
     );
@@ -59,15 +59,15 @@ class PushQueue {
     if (this.waitTimeStartTimeStamp == null) {
       this.waitTimeStartTimeStamp = Date.now();
     }
-    if (!this.pendingQueue.has(bucket)) {
-      this.pendingQueue.add(bucket);
+    if (!this.pendingBuckets.has(bucket)) {
+      this.pendingBuckets.add(bucket);
       bucket.dirtyCount++;
     }
     this.push();
   }
 
-  getPendingQueueSize(): number {
-    return this.pendingQueue.size;
+  getPendingBucketsSize(): number {
+    return this.pendingBuckets.size;
   }
 
   getCompressingBucketCount(): number {
@@ -87,11 +87,11 @@ class PushQueue {
   }
 
   clear(): void {
-    this.pendingQueue.clear();
+    this.pendingBuckets.clear();
   }
 
   print(): void {
-    this.pendingQueue.forEach((e) => console.log(e));
+    this.pendingBuckets.forEach((e) => console.log(e));
   }
 
   pushImpl = function* (this: PushQueue) {
@@ -119,11 +119,11 @@ class PushQueue {
 
   private flushAndSnapshot() {
     this.waitTimeStartTimeStamp = null;
-    // Flush pendingQueue. Note that it's important to do this synchronously.
-    // Otherwise, other actors might add to the queue concurrently during the flush,
+    // Flush pendingBuckets. Note that it's important to do this synchronously.
+    // Otherwise, other actors might add to pendingBuckets concurrently during the flush,
     // causing an inconsistent state for a transaction.
-    const batch: DataBucket[] = Array.from(this.pendingQueue);
-    this.pendingQueue = new Set();
+    const batch: DataBucket[] = Array.from(this.pendingBuckets);
+    this.pendingBuckets = new Set();
 
     // Fire and forget. The correct transaction ordering is ensured
     // within pushTransaction.

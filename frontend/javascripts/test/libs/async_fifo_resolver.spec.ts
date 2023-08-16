@@ -74,3 +74,36 @@ test("AsyncFifoResolver: New submits shouldn't block old ones.", async (t) => {
   t.deepEqual(protocol, ["started-1", "started-2", "sleep-finished-1", "finished-1"]);
   t.is(resolver.queue.length, 1);
 });
+
+test("AsyncFifoResolver: Trimming of queue should work despite race condition potential.", async (t) => {
+  t.plan(3);
+
+  const { submitter, resolver, protocol } = createSubmitterFnWithProtocol();
+
+  submitter(1, 100);
+  const promise = submitter(2, 100);
+  t.is(resolver.queue.length, 2);
+  submitter(3, 1000);
+
+  await promise;
+  submitter(4, 1);
+
+  // Wait until everything is done
+  await resolver.orderedWaitFor(Promise.resolve());
+
+  t.deepEqual(protocol, [
+    "started-1",
+    "started-2",
+    "started-3",
+    "sleep-finished-1",
+    "finished-1",
+    "sleep-finished-2",
+    "finished-2",
+    "started-4",
+    "sleep-finished-4",
+    "sleep-finished-3",
+    "finished-3",
+    "finished-4",
+  ]);
+  t.is(resolver.queue.length, 0);
+});

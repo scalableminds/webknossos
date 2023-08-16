@@ -25,10 +25,11 @@ export class AsyncFifoResolver<T> {
 
   async orderedWaitFor(promise: Promise<T>): Promise<T> {
     this.queue.push(promise);
-    const promiseCount = this.queue.length;
+    const promiseCountToAwait = this.queue.length;
     const retVals = await Promise.all(this.queue);
-    // Trim awaited promises
-    this.queue = this.queue.slice(promiseCount);
-    return retVals[promiseCount - 1];
+    // Note that this.queue can have changed during the await.
+    // Find the index of the promise and trim the queue accordingly.
+    this.queue = this.queue.slice(this.queue.indexOf(promise) + 1);
+    return retVals[promiseCountToAwait - 1];
   }
 }

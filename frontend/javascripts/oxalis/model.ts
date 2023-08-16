@@ -304,9 +304,16 @@ export class OxalisModel {
       Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingQueueSize()),
     );
 
+    const outstandingBucketDownloadCount = _.sum(
+      Utils.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.cube.temporalBucketManager.getCount(),
+      ),
+    );
+
     return {
       compressingBucketCount,
       waitingForCompressionBucketCount,
+      outstandingBucketDownloadCount,
     };
   }
 

@@ -36,7 +36,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import {
-  maximumActionCountPerSave,
+  MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -131,15 +131,18 @@ export function sendRequestWithToken(
 }
 
 // This function returns the first n batches of the provided array, so that the count of
-// all actions in these n batches does not exceed maximumActionCountPerSave
-function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
+// all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
+function sliceAppropriateBatchCount(
+  batches: Array<SaveQueueEntry>,
+  saveQueueType: SaveQueueType,
+): Array<SaveQueueEntry> {
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
     const newActionCount = actionCount + batch.actions.length;
 
-    if (newActionCount <= maximumActionCountPerSave) {
+    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE[saveQueueType]) {
       actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
@@ -170,7 +173,7 @@ export function* sendRequestToServer(
    */
 
   const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type } = yield* select((state) =>
     selectTracing(state, saveQueueType, tracingId),

@@ -29,6 +29,7 @@ type State = {
   isStateSaved: boolean;
   showUnsavedWarning: boolean;
   saveInfo: {
+    outstandingBucketDownloadCount: number;
     compressingBucketCount: number;
     waitingForCompressionBucketCount: number;
   };
@@ -55,6 +56,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     isStateSaved: false,
     showUnsavedWarning: false,
     saveInfo: {
+      outstandingBucketDownloadCount: 0,
       compressingBucketCount: 0,
       waitingForCompressionBucketCount: 0,
     },
@@ -83,11 +85,16 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const { compressingBucketCount, waitingForCompressionBucketCount } = Model.getPushQueueStats();
+    const {
+      compressingBucketCount,
+      waitingForCompressionBucketCount,
+      outstandingBucketDownloadCount,
+    } = Model.getPushQueueStats();
     this.setState({
       isStateSaved,
       showUnsavedWarning,
       saveInfo: {
+        outstandingBucketDownloadCount,
         compressingBucketCount,
         waitingForCompressionBucketCount,
       },
@@ -111,6 +118,8 @@ class SaveButton extends React.PureComponent<Props, State> {
   render() {
     const { progressFraction } = this.props;
     const { showUnsavedWarning } = this.state;
+    const { outstandingBucketDownloadCount } = this.state.saveInfo;
+
     const totalBucketsToCompress =
       this.state.saveInfo.waitingForCompressionBucketCount +
       this.state.saveInfo.compressingBucketCount;
@@ -127,7 +136,14 @@ class SaveButton extends React.PureComponent<Props, State> {
       >
         <Tooltip
           title={
-            totalBucketsToCompress > 0
+            // Downloading the buckets often takes longer and the progress
+            // is visible (as the count will decrease continually).
+            // If lots of buckets need compression, this can also take a bit.
+            // Don't show both labels at the same time, because the compression
+            // usually can only start after the download is finished.
+            outstandingBucketDownloadCount > 0
+              ? `${outstandingBucketDownloadCount} items remaining to download...`
+              : totalBucketsToCompress > 0
               ? `${totalBucketsToCompress} items remaining to compress...`
               : null
           }

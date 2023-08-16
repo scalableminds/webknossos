@@ -120,8 +120,8 @@ class PushQueue {
   private flushAndSnapshot() {
     this.waitTimeStartTimeStamp = null;
     // Flush pendingQueue. Note that it's important to do this synchronously.
-    // If other actors could add to queue concurrently, the front-end could
-    // send an inconsistent state for a transaction.
+    // Otherwise, other actors might add to the queue concurrently during the flush,
+    // causing an inconsistent state for a transaction.
     const batch: DataBucket[] = Array.from(this.pendingQueue);
     this.pendingQueue = new Set();
 

@@ -13,12 +13,12 @@ export const SETTINGS_MAX_RETRY_COUNT = 20; // 20 * 15s == 5m
 
 export const MAXIMUM_ACTION_COUNT_PER_BATCH = {
   skeleton: 5000,
-  volume: 1000, // Since volume saving is slower, use a lower value here.
+  volume: 2, // Since volume saving is slower, use a lower value here.
   mapping: 5000,
 } as const;
 
 export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
   skeleton: 15000,
-  volume: 3000,
+  volume: 5,
   mapping: 15000,
 } as const;

@@ -207,10 +207,12 @@ export function* sendRequestToServer(
           ),
         );
       }
-
-      yield* put(
-        setVersionNumberAction(version + compactedSaveQueue.length, saveQueueType, tracingId),
-      );
+      const versionIncrement = compactedSaveQueue.filter(
+        (element) => element.transactionGroupIndex === element.transactionGroupCount - 1,
+      ).length;
+      console.log("compactedSaveQueue", compactedSaveQueue);
+      console.log("versionIncrement", versionIncrement);
+      yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
       yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
       yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
 

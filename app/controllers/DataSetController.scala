@@ -50,7 +50,7 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 case class SegmentAnythingEmbeddingParameters(
     mag: Vec3Int,
     boundingBox: BoundingBox,
-    additionalCoordinates: Seq[AdditionalCoordinateRequest]
+    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None
 )
 
 object SegmentAnythingEmbeddingParameters {

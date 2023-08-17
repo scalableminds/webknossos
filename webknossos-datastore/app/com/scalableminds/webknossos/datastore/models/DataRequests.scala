@@ -67,13 +67,13 @@ case class RawCuboidRequest(
     position: Vec3Int,
     cubeSize: Vec3Int,
     mag: Vec3Int,
-    additionalCoordinates: Seq[AdditionalCoordinateRequest]
+    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]]
 ) extends AbstractDataRequest {
   override def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 
   override def settings: DataServiceRequestSettings =
-    DataServiceRequestSettings(additionalCoordinates = Some(additionalCoordinates))
+    DataServiceRequestSettings(additionalCoordinates = additionalCoordinates)
 }
 
 object RawCuboidRequest {

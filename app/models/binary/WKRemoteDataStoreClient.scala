@@ -42,11 +42,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int,
-                   additionalCoordinates: Seq[AdditionalCoordinateRequest]): Fox[Array[Byte]] = {
+                   additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/dataCuboid")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))

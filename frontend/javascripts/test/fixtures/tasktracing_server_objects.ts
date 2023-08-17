@@ -98,7 +98,7 @@ export const annotation: APIAnnotation = {
     },
     created: 1529066010230,
     status: {
-      open: 0,
+      pending: 0,
       active: 1,
       finished: 0,
     },

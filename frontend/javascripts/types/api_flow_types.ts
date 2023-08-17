@@ -46,11 +46,22 @@ export type AdditionalCoordinateWithBounds = {
   index: number;
   name: string;
 };
+
 export type ServerAdditionalCoordinateWithBounds = {
   bounds: { x: number; y: number };
   index: number;
   name: string;
 };
+
+export type CoordinateTransformation =
+  | {
+      type: "affine";
+      matrix: [Vector4, Vector4, Vector4, Vector4];
+    }
+  | {
+      type: "thin_plate_spline";
+      correspondences: { source: Vector3[]; target: Vector3[] };
+    };
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
@@ -58,16 +69,7 @@ type APIDataLayerBase = {
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalCoordinates: Array<AdditionalCoordinateWithBounds> | null;
-  readonly coordinateTransformations?: Array<
-    | {
-        type: "affine";
-        matrix: [Vector4, Vector4, Vector4, Vector4];
-      }
-    | {
-        type: "thin_plate_spline";
-        correspondences: { source: Vector3[]; target: Vector3[] };
-      }
-  >;
+  readonly coordinateTransformations?: CoordinateTransformation[] | null;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -334,7 +336,7 @@ export type APITaskType = {
   readonly tracingType: TracingType;
 };
 export type TaskStatus = {
-  readonly open: number;
+  readonly pending: number;
   readonly active: number;
   readonly finished: number;
 };
@@ -375,8 +377,8 @@ export type APIProjectUpdater = APIProjectTypeBase & {
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;
 };
-export type APIProjectWithAssignments = APIProject & {
-  readonly numberOfOpenAssignments: number;
+export type APIProjectWithStatus = APIProject & {
+  readonly pendingInstances: number;
   readonly tracingTime: number;
 };
 export type APITask = {
@@ -518,17 +520,17 @@ export type APIProjectProgressReport = {
   readonly paused: boolean;
   readonly totalTasks: number;
   readonly totalInstances: number;
-  readonly openInstances: number;
+  readonly pendingInstances: number;
   readonly activeInstances: number;
   readonly finishedInstances: number;
   readonly priority: number;
   readonly billedMilliseconds: number;
 };
-export type APIOpenTasksReport = {
+export type APIAvailableTasksReport = {
   readonly id: string;
   readonly user: string;
-  readonly totalAssignments: number;
-  readonly assignmentsByProjects: Record<string, number>;
+  readonly totalAvailableTasks: number;
+  readonly availableTasksByProjects: Record<string, number>;
 };
 export type APIOrganization = {
   readonly id: string;

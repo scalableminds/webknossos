@@ -232,7 +232,7 @@ export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
   centroid: Vector3; // centroid of the label action
-  plane: OrthoViewWithoutTD; // plane that labeled
+  plane: OrthoViewWithoutTD; // plane that was labeled
 };
 
 export type VolumeTracing = TracingBase & {
@@ -282,7 +282,7 @@ export type DatasetLayerConfiguration = {
   readonly brightness?: number;
   readonly contrast?: number;
   readonly alpha: number;
-  readonly intensityRange: Vector2;
+  readonly intensityRange?: Vector2;
   readonly min?: number;
   readonly max?: number;
   readonly isDisabled: boolean;
@@ -310,6 +310,11 @@ export type DatasetConfiguration = {
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
   readonly blendMode: BLEND_MODES;
+  // If nativelyRenderedLayerName is not-null, the layer with
+  // that name (or id) should be rendered without any transforms.
+  // This means, that all other layers should be transformed so that
+  // they still correlated with each other.
+  readonly nativelyRenderedLayerName: string | null;
 };
 export type PartialDatasetConfiguration = Partial<
   DatasetConfiguration & {

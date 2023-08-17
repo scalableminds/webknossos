@@ -152,16 +152,18 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => {
-        const volumeLayer = getActiveSegmentationTracing(Store.getState());
+        const volumeTracing = getActiveSegmentationTracing(Store.getState());
 
-        if (volumeLayer == null || volumeLayer.tracingId == null) {
+        if (volumeTracing == null || volumeTracing.tracingId == null) {
           return;
         }
 
-        if (volumeLayer.largestSegmentId != null) {
-          Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
+        if (volumeTracing.largestSegmentId != null) {
+          Store.dispatch(
+            createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId),
+          );
         } else {
-          showToastWarningForLargestSegmentIdMissing(volumeLayer);
+          showToastWarningForLargestSegmentIdMissing(volumeTracing);
         }
       },
       v: () => {

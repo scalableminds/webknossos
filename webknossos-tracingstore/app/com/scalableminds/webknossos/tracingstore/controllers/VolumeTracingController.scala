@@ -127,27 +127,16 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def allData(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-          } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
-            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
-          }
-        }
-      }
-  }
-
-  def allDataBlocking(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def allDataZip(token: Option[String],
+                 tracingId: String,
+                 volumeAsZarr: Boolean,
+                 version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            data <- tracingService.allDataFile(tracingId, tracing)
+            data <- tracingService.allDataZip(tracingId, tracing, volumeAsZarr)
           } yield Ok.sendFile(data)
         }
       }

@@ -184,7 +184,8 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def getVolumeTracing(annotationLayer: AnnotationLayer,
                        version: Option[Long] = None,
-                       skipVolumeData: Boolean): Fox[FetchedAnnotationLayer] = {
+                       skipVolumeData: Boolean,
+                       volumeAsZarr: Boolean): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -194,8 +195,9 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- Fox.runIf(!skipVolumeData) {
-        rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking").withLongTimeout
+        rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+          .addQueryString("volumeAsZarr" -> volumeAsZarr.toString)
           .addQueryStringOptional("version", version.map(_.toString))
           .getWithBytesResponse
       }
@@ -203,11 +205,14 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
     } yield fetchedAnnotationLayer
   }
 
-  def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Array[Byte]] = {
+  def getVolumeData(tracingId: String,
+                    version: Option[Long] = None,
+                    volumeAsZarr: Boolean = false): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
     for {
-      data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking").withLongTimeout
+      data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+        .addQueryString("volumeAsZarr" -> volumeAsZarr.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithBytesResponse
     } yield data

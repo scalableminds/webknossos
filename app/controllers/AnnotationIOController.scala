@@ -323,7 +323,8 @@ Expects:
       id: String,
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],
-      skipVolumeData: Option[Boolean]): Action[AnyContent] =
+      skipVolumeData: Option[Boolean],
+      volumeAsZarr: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
@@ -341,7 +342,8 @@ Expects:
                                   request.identity,
                                   skeletonVersion,
                                   volumeVersion,
-                                  skipVolumeData.getOrElse(false)) ?~> "annotation.download.failed"
+                                  skipVolumeData.getOrElse(false),
+                                  volumeAsZarr.getOrElse(false)) ?~> "annotation.download.failed"
         }
       } yield result
     }
@@ -370,7 +372,8 @@ Expects:
                                     issuingUser: Option[User],
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
-                                    skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
+                                    skipVolumeData: Boolean,
+                                    volumeAsZarr: Boolean)(implicit ctx: DBAccessContext) = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 

@@ -144,7 +144,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  val transactionBatchExpiry: FiniteDuration = 20 minutes
+  private val transactionBatchExpiry: FiniteDuration = 20 minutes
 
   private def handleUpdateGroupForTransaction(tracingId: String,
                                               previousVersionFox: Fox[Long],

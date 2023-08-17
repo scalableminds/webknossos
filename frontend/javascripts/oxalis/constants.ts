@@ -205,6 +205,11 @@ export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationTo
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.QUICK_SELECT,
 ];
+export enum MEASUREMENT_UNITS {
+  VX = "VX",
+  NM = "NM",
+}
+export type MEASUREMENT_UNIT = keyof typeof MEASUREMENT_UNITS;
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {

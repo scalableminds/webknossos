@@ -1,5 +1,6 @@
 import "test/mocks/lz4";
 import test from "ava";
+import _ from "lodash";
 import { AnnotationToolEnum, AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
@@ -14,6 +15,11 @@ Object.values(AnnotationToolEnum).forEach((annotationTool) => {
 mockRequire("oxalis/model/accessors/tool_accessor", {
   getDisabledInfoForTools: () => disabledInfoMock,
 });
+mockRequire("oxalis/controller/scene_controller_provider", () => ({
+  lineMeasurementGeometry: {
+    hide: _.noop,
+  },
+}));
 const {
   MoveTool,
   SkeletonTool,
@@ -122,8 +128,10 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   t.true(PickCellTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.PROOFREAD);
   t.true(BoundingBoxTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.MOVE);
+  cycleTool(AnnotationToolEnum.LINE_MEASUREMENT);
   t.true(ProofreadTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.MOVE);
+  t.true(LineMeasurementTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.SKELETON);
   t.true(MoveTool.onToolDeselected.calledTwice);
 });

@@ -43,6 +43,7 @@ import type {
   OrthoViewWithoutTD,
   InterpolationMode,
   TreeType,
+  MEASUREMENT_UNIT,
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -494,7 +495,7 @@ export type BusyBlockingInfo = {
 };
 export type MeasurementTooltipInformation = {
   position: [number, number] | null;
-  value: string;
+  measurementUnit: MEASUREMENT_UNIT;
 };
 
 type UiInformation = {

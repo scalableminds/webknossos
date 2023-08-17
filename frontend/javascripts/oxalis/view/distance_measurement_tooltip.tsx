@@ -1,27 +1,42 @@
-import { connect } from "react-redux";
-import React from "react";
-import type { OxalisState, MeasurementTooltipInformation } from "oxalis/store";
-import { notification } from "antd";
+import { connect, useDispatch } from "react-redux";
+import _ from "lodash";
+import React, { useEffect, useState } from "react";
+import type { OxalisState, MeasurementTooltipInformation, Flycam } from "oxalis/store";
+import { MEASUREMENT_UNITS, Vector3 } from "oxalis/constants";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { CopyOutlined } from "@ant-design/icons";
+import { copyToClipboad } from "admin/voxelytics/utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 
 const TOOLTIP_HEIGHT = 26;
 const ADDITIONAL_OFFSET = 6;
 
-export function showMeasurementResults(distanceInScale: string, distanceInVx: string) {
-  notification.info({
-    message: `The measured length is ${distanceInScale} (${distanceInVx})`,
-    key: "line-measurement-result",
-    icon: <i className="fas fa-ruler" />,
-  });
-}
+type Props = MeasurementTooltipInformation & { flycam: Flycam; datasetScale: Vector3 };
 
-function DistanceMeasurementTooltip(props: MeasurementTooltipInformation) {
-  const { position, value } = props;
+function DistanceMeasurementTooltip(props: Props) {
+  const { position, measurementUnit, flycam, datasetScale } = props;
+  const { lineMeasurementGeometry } = getSceneController();
+  const dispatch = useDispatch();
+  const distance =
+    measurementUnit === MEASUREMENT_UNITS.NM
+      ? formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale))
+      : formatLengthAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]));
+  const currentPosition = getPosition(flycam);
+  const [lastFlycamPosition, setLastFlycamPosition] = useState<Vector3>(currentPosition);
+  useEffect(() => {
+    if (!_.isEqual(lastFlycamPosition, getPosition(flycam))) {
+      setLastFlycamPosition(currentPosition);
+      dispatch(hideMeasurementTooltipAction());
+      getSceneController().lineMeasurementGeometry.hide();
+    }
+  }, [currentPosition]);
   if (position == null) {
     return null;
   }
   return (
     <div
-      id="distance-measurement-tooltip"
       className="node-context-menu"
       style={{
         position: "absolute",
@@ -34,15 +49,22 @@ function DistanceMeasurementTooltip(props: MeasurementTooltipInformation) {
         fontSize: 14,
       }}
     >
-      {value}
+      {distance}{" "}
+      <CopyOutlined
+        onClick={() => {
+          copyToClipboad(distance);
+        }}
+      />
     </div>
   );
 }
 
-function mapStateToProps(state: OxalisState): MeasurementTooltipInformation {
+function mapStateToProps(state: OxalisState): Props {
   return {
     position: state.uiInformation.measurementTooltipInformation.position,
-    value: state.uiInformation.measurementTooltipInformation.value,
+    flycam: state.flycam,
+    measurementUnit: state.uiInformation.measurementTooltipInformation.measurementUnit,
+    datasetScale: state.dataset.dataSource.scale,
   };
 }
 

@@ -65,6 +65,7 @@ type StateProps = {
   is2d: boolean;
   displayName: string;
   organization: string;
+  distanceMeasurementTooltipPosition: [number, number] | null;
 };
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
@@ -324,7 +325,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
+      this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -358,7 +360,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           />
         )}
 
-        {status === "loaded" && <DistanceMeasurementTooltip />}
+        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
+          <DistanceMeasurementTooltip />
+        )}
 
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
@@ -483,6 +487,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
+    distanceMeasurementTooltipPosition: state.uiInformation.measurementTooltipInformation.position,
   };
 }
 

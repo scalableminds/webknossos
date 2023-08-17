@@ -56,8 +56,6 @@ import {
   setQuickSelectStateAction,
   showMeasurementTooltipAction,
 } from "oxalis/model/actions/ui_actions";
-import { formatNumberToLength } from "libs/format_utils";
-import { showMeasurementResults } from "oxalis/view/distance_measurement_tooltip";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -797,7 +795,6 @@ export class LineMeasurementTool {
     let initialPlane: OrthoView = OrthoViews.PLANE_XY;
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
-    const datasetScale = Store.getState().dataset.dataSource.scale;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
         const state = Store.getState();
@@ -808,15 +805,6 @@ export class LineMeasurementTool {
         lineMeasurementGeometry.setEndPoint(startPos);
         currentPos = startPos;
       },
-      leftMouseUp: () => {
-        if (currentPos && startPos !== currentPos) {
-          const distanceInScale = formatNumberToLength(
-            lineMeasurementGeometry.getDistance(datasetScale),
-          );
-          const distanceInVx = lineMeasurementGeometry.getDistance([1, 1, 1]).toFixed(2);
-          showMeasurementResults(distanceInScale, distanceInVx);
-        }
-      },
       leftDownMove: (
         _delta: Point2,
         pos: Point2,
@@ -826,11 +814,11 @@ export class LineMeasurementTool {
         if (startPos == null || plane !== initialPlane) {
           return;
         }
-        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos, initialPlane));
+        const state = Store.getState();
+        const newCurrentPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
         currentPos = newCurrentPos;
         lineMeasurementGeometry.setEndPoint(currentPos);
-        const distance = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale));
-        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY], `${distance} vx`));
+        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(
@@ -864,7 +852,10 @@ export class LineMeasurementTool {
     };
   }
 
-  static onToolDeselected() {}
+  static onToolDeselected() {
+    getSceneController().lineMeasurementGeometry.hide();
+    Store.dispatch(hideMeasurementTooltipAction());
+  }
 }
 
 export class ProofreadTool {

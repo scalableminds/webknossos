@@ -1,4 +1,4 @@
-import type { AnnotationTool } from "oxalis/constants";
+import type { AnnotationTool, MEASUREMENT_UNIT } from "oxalis/constants";
 import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -27,6 +27,7 @@ export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAct
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
 type ShowMeasurementTooltipAction = ReturnType<typeof showMeasurementTooltipAction>;
+type SetMeasurementUnitAction = ReturnType<typeof setMeasurementUnitAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -50,7 +51,8 @@ export type UiAction =
   | SetQuickSelectStateAction
   | ShowQuickSelectSettingsAction
   | HideMeasurementTooltipAction
-  | ShowMeasurementTooltipAction;
+  | ShowMeasurementTooltipAction
+  | SetMeasurementUnitAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -159,9 +161,13 @@ export const hideMeasurementTooltipAction = () =>
   ({
     type: "HIDE_MEASUREMENT_TOOLTIP",
   } as const);
-export const showMeasurementTooltipAction = (position: [number, number], value: string) =>
+export const showMeasurementTooltipAction = (position: [number, number]) =>
   ({
     type: "SHOW_MEASUREMENT_TOOLTIP",
     position,
-    value,
+  } as const);
+export const setMeasurementUnitAction = (measurementUnit: MEASUREMENT_UNIT) =>
+  ({
+    type: "SET_MEASUREMENT_UNIT",
+    measurementUnit,
   } as const);

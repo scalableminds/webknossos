@@ -42,7 +42,11 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import {
+  setMeasurementUnitAction,
+  setToolAction,
+  showQuickSelectSettingsAction,
+} from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -62,6 +66,7 @@ import {
   InterpolationModeEnum,
   InterpolationMode,
   Unicode,
+  MEASUREMENT_UNITS,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { BrushPresets, OxalisState } from "oxalis/store";
@@ -1288,6 +1293,10 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+
+      {adaptedActiveTool === AnnotationToolEnum.LINE_MEASUREMENT ? (
+        <LineMeasurementUnitSwitch />
+      ) : null}
     </>
   );
 }
@@ -1379,5 +1388,40 @@ function ProofReadingComponents() {
         <i className="fas fa-dice-d20" />
       </ButtonComponent>
     </>
+  );
+}
+
+function LineMeasurementUnitSwitch() {
+  const dispatch = useDispatch();
+  const measurementUnit = useSelector(
+    (state: OxalisState) => state.uiInformation.measurementTooltipInformation.measurementUnit,
+  );
+  const handleSetMeasurementUnit = (evt: RadioChangeEvent) => {
+    console.log("newMeasurementUnit", evt.target.value);
+    dispatch(setMeasurementUnitAction(evt.target.value));
+  };
+  return (
+    <Radio.Group
+      value={measurementUnit}
+      onChange={handleSetMeasurementUnit}
+      style={{
+        marginLeft: 10,
+      }}
+    >
+      <RadioButtonWithTooltip
+        title="Perform the measurements in dataset scale."
+        style={NARROW_BUTTON_STYLE}
+        value={MEASUREMENT_UNITS.NM}
+      >
+        NM
+      </RadioButtonWithTooltip>
+      <RadioButtonWithTooltip
+        title="Perform the measurements in voxel scale."
+        style={NARROW_BUTTON_STYLE}
+        value={MEASUREMENT_UNITS.VX}
+      >
+        VX
+      </RadioButtonWithTooltip>
+    </Radio.Group>
   );
 }

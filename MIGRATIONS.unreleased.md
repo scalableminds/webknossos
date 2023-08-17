@@ -22,3 +22,4 @@ UPDATE webknossos.multiUsers SET isEmailVerified = false;
 - [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
 - [106-folder-no-slashes.sql](conf/evolutions/106-folder-no-slashes.sql)
 - [107-task-terminology.sql](conf/evolutions/107-task-terminology.sql)
+- [108-scheduled-maintenances.sql](conf/evolutions/108-scheduled-maintenances.sql)

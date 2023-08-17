@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrthoViews, Vector3 } from "oxalis/constants";
+import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
@@ -236,24 +236,26 @@ export class LineMeasurementGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: Float32Array;
+  currentOrthoView: OrthoView;
+  visible: boolean;
 
   constructor() {
+    this.currentOrthoView = OrthoViews.PLANE_XY;
     this.color = CONTOUR_COLOR_NORMAL;
+    this.visible = false;
 
     const lineGeometry = new THREE.BufferGeometry();
+    this.vertexBuffer = new Float32Array(6);
+    const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer, 3);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    lineGeometry.setAttribute("position", positionAttribute);
     this.line = new THREE.Line(
       lineGeometry,
       new THREE.LineBasicMaterial({
         linewidth: 2,
       }),
     );
-    this.vertexBuffer = new Float32Array(6);
-    const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer, 3);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
-    this.reset();
-  }
-
-  reset() {
+    this.line.visible = false;
     this.line.material.color = this.color;
     this.finalizeMesh();
   }
@@ -262,28 +264,40 @@ export class LineMeasurementGeometry {
     return [this.line];
   }
 
-  setStartPoint(pos: Vector3) {
-    this.reset();
+  setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
+    this.visible = true;
+    this.currentOrthoView = initialOrthoView;
     this.vertexBuffer.set(pos, 0);
     this.finalizeMesh();
-    app.vent.emit("rerender");
   }
 
   setEndPoint(pos: Vector3) {
     this.vertexBuffer.set(pos, 3);
     this.finalizeMesh();
-    app.vent.emit("rerender");
+  }
+
+  hide() {
+    this.visible = false;
   }
 
   finalizeMesh() {
     this.line.geometry.attributes.position.needsUpdate = true;
     this.line.geometry.computeBoundingSphere();
+    app.vent.emit("rerender");
   }
 
-  getDistance(): number {
-    const start = new THREE.Vector3(...this.vertexBuffer.subarray(0, 3));
-    const end = new THREE.Vector3(...this.vertexBuffer.subarray(3, 6));
-    console.log(start, end);
+  getDistance(scale: Vector3): number {
+    const scaleVector = new THREE.Vector3(...scale);
+    const start = new THREE.Vector3(...this.vertexBuffer.subarray(0, 3)).multiply(scaleVector);
+    const end = new THREE.Vector3(...this.vertexBuffer.subarray(3, 6)).multiply(scaleVector);
     return start.distanceTo(end);
+  }
+
+  updateForCam(orthoView: OrthoView) {
+    if (orthoView === this.currentOrthoView && this.visible) {
+      this.line.visible = true;
+    } else {
+      this.line.visible = false;
+    }
   }
 }

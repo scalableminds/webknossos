@@ -25,6 +25,8 @@ export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
+type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
+type ShowMeasurementTooltipAction = ReturnType<typeof showMeasurementTooltipAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -46,7 +48,9 @@ export type UiAction =
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
-  | ShowQuickSelectSettingsAction;
+  | ShowQuickSelectSettingsAction
+  | HideMeasurementTooltipAction
+  | ShowMeasurementTooltipAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -150,4 +154,14 @@ export const showQuickSelectSettingsAction = (isOpen: boolean) =>
   ({
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
     isOpen,
+  } as const);
+export const hideMeasurementTooltipAction = () =>
+  ({
+    type: "HIDE_MEASUREMENT_TOOLTIP",
+  } as const);
+export const showMeasurementTooltipAction = (position: [number, number], value: string) =>
+  ({
+    type: "SHOW_MEASUREMENT_TOOLTIP",
+    position,
+    value,
   } as const);

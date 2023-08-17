@@ -337,6 +337,7 @@ class SceneController {
 
     this.segmentMeshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = true || id !== OrthoViews.TDView;
+    this.lineMeasurementGeometry.updateForCam(id);
 
     const originalPosition = getPosition(Store.getState().flycam);
     if (id !== OrthoViews.TDView) {

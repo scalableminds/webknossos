@@ -41,6 +41,7 @@ import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
+import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -356,6 +357,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
           />
         )}
+
+        {status === "loaded" && <DistanceMeasurementTooltip />}
 
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}

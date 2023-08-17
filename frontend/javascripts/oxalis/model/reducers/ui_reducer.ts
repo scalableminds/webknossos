@@ -132,6 +132,18 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "HIDE_MEASUREMENT_TOOLTIP": {
+      return updateKey(state, "uiInformation", {
+        measurementTooltipInformation: { position: null, value: "" },
+      });
+    }
+
+    case "SHOW_MEASUREMENT_TOOLTIP": {
+      return updateKey(state, "uiInformation", {
+        measurementTooltipInformation: { position: action.position, value: action.value },
+      });
+    }
+
     default:
       return state;
   }

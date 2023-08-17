@@ -492,6 +492,11 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
+export type MeasurementTooltipInformation = {
+  position: [number, number] | null;
+  value: string;
+};
+
 type UiInformation = {
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
@@ -513,6 +518,7 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
+  readonly measurementTooltipInformation: MeasurementTooltipInformation;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

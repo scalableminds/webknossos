@@ -51,7 +51,14 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
-import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
+import {
+  hideMeasurementTooltipAction,
+  setQuickSelectStateAction,
+  showMeasurementTooltipAction,
+} from "oxalis/model/actions/ui_actions";
+import { notification } from "antd";
+import { formatNumberToLength } from "libs/format_utils";
+import { showMeasurementResults } from "oxalis/view/distance_measurement_tooltip";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -788,32 +795,44 @@ export class LineMeasurementTool {
   ): any {
     let startPos: Vector3 | null = null;
     let currentPos: Vector3 | null = null;
-    let initialPlan: OrthoView = OrthoViews.PLANE_XY;
+    let initialPlane: OrthoView = OrthoViews.PLANE_XY;
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
+    const datasetScale = Store.getState().dataset.dataSource.scale;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
         const state = Store.getState();
         startPos = V3.floor(calculateGlobalPos(state, pos, plane));
-        initialPlan = plane;
-        lineMeasurementGeometry.setStartPoint(startPos);
+        initialPlane = plane;
+        lineMeasurementGeometry.setStartPoint(startPos, plane);
         // Avoid having a line from the last end point to the start.
         lineMeasurementGeometry.setEndPoint(startPos);
         currentPos = startPos;
       },
       leftMouseUp: () => {
-        if (currentPos) {
-          // lineMeasurementGeometry.setEndPoint(currentPos);
-          console.log("distance is", lineMeasurementGeometry.getDistance());
+        if (currentPos && startPos != currentPos) {
+          const state = Store.getState();
+          const distanceInScale = formatNumberToLength(
+            lineMeasurementGeometry.getDistance(datasetScale),
+          );
+          const distanceInVx = lineMeasurementGeometry.getDistance([1, 1, 1]).toFixed(2);
+          showMeasurementResults(distanceInScale, distanceInVx);
         }
       },
-      leftDownMove: (_delta: Point2, pos: Point2, plane: OrthoView | null | undefined) => {
-        if (startPos == null) {
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        plane: OrthoView | null | undefined,
+        evt: MouseEvent,
+      ) => {
+        if (startPos == null || plane != initialPlane) {
           return;
         }
-        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos, initialPlan));
+        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos, initialPlane));
         currentPos = newCurrentPos;
         lineMeasurementGeometry.setEndPoint(currentPos);
+        const distance = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale));
+        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY], `${distance} vx`));
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(
@@ -824,6 +843,12 @@ export class LineMeasurementTool {
           event,
           showNodeContextMenuAt,
         );
+      },
+      leftClick: () => {
+        lineMeasurementGeometry.hide();
+        Store.dispatch(hideMeasurementTooltipAction());
+        startPos = null;
+        currentPos = null;
       },
     };
   }

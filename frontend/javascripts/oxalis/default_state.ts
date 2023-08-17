@@ -222,6 +222,7 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
+    measurementTooltipInformation: { value: "", position: null },
     activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,

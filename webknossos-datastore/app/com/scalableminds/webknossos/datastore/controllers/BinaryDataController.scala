@@ -128,22 +128,14 @@ class BinaryDataController @Inject()(
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
-  ): Action[List[RawCuboidRequest]] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
+  ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
-          VoxelPosition(x, y, z, magParsed),
-          width,
-          height,
-          depth,
-          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
-        )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- requestData(dataSource, dataLayer, request.body)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }

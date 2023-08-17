@@ -2,7 +2,7 @@ package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinateRequest, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
@@ -48,14 +48,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .addQueryString("mag" -> mag.toMagLiteral())
-      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
-      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
-      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
-      .addQueryString("width" -> targetMagBoundingBox.width.toString)
-      .addQueryString("height" -> targetMagBoundingBox.height.toString)
-      .addQueryString("depth" -> targetMagBoundingBox.depth.toString)
-      .getWithBytesResponse
+      .postJsonWithBytesResponse(
+        RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
   def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =

@@ -63,8 +63,24 @@ object WebKnossosIsosurfaceRequest {
   implicit val jsonFormat: OFormat[WebKnossosIsosurfaceRequest] = Json.format[WebKnossosIsosurfaceRequest]
 }
 
-object DataRequestCollection {
+case class RawCuboidRequest(
+    position: Vec3Int,
+    cubeSize: Vec3Int,
+    mag: Vec3Int,
+    additionalCoordinates: Seq[AdditionalCoordinateRequest]
+) extends AbstractDataRequest {
+  override def cuboid(dataLayer: DataLayer): Cuboid =
+    Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 
+  override def settings: DataServiceRequestSettings =
+    DataServiceRequestSettings(additionalCoordinates = Some(additionalCoordinates))
+}
+
+object RawCuboidRequest {
+  implicit val jsonFormat: OFormat[RawCuboidRequest] = Json.format[RawCuboidRequest]
+}
+
+object DataRequestCollection {
   type DataRequestCollection = List[AbstractDataRequest]
 
   implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)

@@ -521,7 +521,7 @@ Expects:
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
           datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
           targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
-          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.dimensions}"
+          _ <- bool2Fox(targetMagBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.size}"
           data <- datastoreClient.getLayerData(organizationName,
                                                dataset,
                                                dataLayer.name,

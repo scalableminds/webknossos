@@ -7,9 +7,16 @@ GET           /health                                                           
 POST          /analytics/:eventType                                                             controllers.Application.trackAnalyticsEvent(eventType)
 POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert
-GET           /maintenance                                                                      controllers.MaintenanceController.info
-POST          /maintenance                                                                      controllers.MaintenanceController.initMaintenance
-DELETE        /maintenance                                                                      controllers.MaintenanceController.closeMaintenance
+
+# Maintenance
+GET           /maintenance/listCurrentAndUpcoming                                               controllers.MaintenanceController.listCurrentAndUpcoming
+GET           /maintenance/listAll                                                              controllers.MaintenanceController.listAll
+POST          /maintenance                                                                      controllers.MaintenanceController.create
+GET           /maintenance/:id                                                                  controllers.MaintenanceController.readOne(id)
+PUT           /maintenance/:id                                                                  controllers.MaintenanceController.update(id)
+DELETE        /maintenance/:id                                                                  controllers.MaintenanceController.delete(id)
+POST          /maintenance                                                                      controllers.MaintenanceController.create
+POST          /maintenance/adHoc                                                                controllers.MaintenanceController.createAdHocMaintenance
 
 # Authentication
 POST          /auth/register                                                                    controllers.AuthenticationController.register

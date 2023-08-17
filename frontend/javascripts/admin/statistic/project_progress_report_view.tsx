@@ -212,7 +212,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                       // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       b={item.activeInstances}
                       // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                      c={item.openInstances}
+                      c={item.pendingInstances}
                     />
                   ),
                 })}
@@ -244,8 +244,8 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                     }}
                   />
                 }
-                dataIndex="openInstances"
-                sorter={Utils.compareBy(typeHint, (project) => project.openInstances)}
+                dataIndex="pendingInstances"
+                sorter={Utils.compareBy(typeHint, (project) => project.pendingInstances)}
                 render={() => ({
                   props: {
                     colSpan: 0,

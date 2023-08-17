@@ -77,10 +77,6 @@ function useOlvy() {
   const [isInitialized, setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {
-    if (!features().isWkorgInstance) {
-      return;
-    }
-
     const OlvyConfig = {
       organisation: "webknossos",
       // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
@@ -99,9 +95,7 @@ function useOlvy() {
       },
     };
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
     if (window.Olvy != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.Olvy.init(OlvyConfig);
       setIsInitialized(true);
     }
@@ -117,12 +111,10 @@ function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   const isInitialized = useOlvy();
   const unreadCount = useFetch(
     async () => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
-      if (!isInitialized || !features().isWkorgInstance || !window.Olvy) {
+      if (!isInitialized || !window.Olvy) {
         return null;
       }
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       return window.Olvy.getUnreadReleasesCount(
         new Date(lastViewedTimestampWithFallback).toISOString(),
       );
@@ -276,10 +268,10 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         ),
       },
       {
-        key: "/reports/openTasks",
+        key: "/reports/availableTasks",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/reports/openTasks">Available Task Assignments</Link>
+            <Link to="/reports/availableTasks">Available Task Assignments</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -442,9 +434,7 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
     if (window.Olvy) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.Olvy.show();
     }
   };

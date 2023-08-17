@@ -40,7 +40,6 @@ import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
-import type { APIDataLayer } from "types/api_flow_types";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
@@ -453,9 +452,10 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  setLayerBoundingBoxes(layers: APIDataLayer[]): void {
+  updateLayerBoundingBoxes(): void {
     const state = Store.getState();
     const dataset = state.dataset;
+    const layers = getDataLayers(dataset);
 
     const newLayerBoundingBoxGroup = new THREE.Group();
     this.layerBoundingBoxes = Object.fromEntries(
@@ -470,7 +470,11 @@ class SceneController {
           isHighlighted: false,
         });
         bbCube.getMeshes().forEach((mesh) => {
-          const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
+          const transformMatrix = getTransformsForLayerOrNull(
+            dataset,
+            layer,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();
             // @ts-ignore
@@ -562,7 +566,11 @@ class SceneController {
     );
     listenToStoreProperty(
       (storeState) => getDataLayers(storeState.dataset),
-      (layers) => this.setLayerBoundingBoxes(layers),
+      () => this.updateLayerBoundingBoxes(),
+    );
+    listenToStoreProperty(
+      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+      () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(
       (storeState) => getSomeTracing(storeState.tracing).boundingBox,

@@ -1,0 +1,19 @@
+START TRANSACTION;
+
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 107, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+
+DROP TABLE webknossos.maintenance;
+
+CREATE TABLE webknossos.maintenances(
+  _id CHAR(24) PRIMARY KEY,
+  _user CHAR(24) NOT NULL,
+  startTime TIMESTAMPTZ NOT NULL,
+  endTime TIMESTAMPTZ NOT NULL,
+  message TEXT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 108;
+
+COMMIT TRANSACTION;

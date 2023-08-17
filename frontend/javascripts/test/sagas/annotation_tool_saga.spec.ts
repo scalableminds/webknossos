@@ -24,6 +24,7 @@ const {
   PickCellTool,
   QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
 } = mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
 const UiReducer = mockRequire.reRequire("oxalis/model/reducers/ui_reducer").default;
 const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
@@ -39,6 +40,7 @@ const allTools = [
   PickCellTool,
   QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
 ];
 const spies = allTools.map((tool) => sinon.spy(tool, "onToolDeselected"));
 test.beforeEach(() => {
@@ -82,6 +84,8 @@ test.serial(
     t.true(BoundingBoxTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(ProofreadTool.onToolDeselected.calledOnce);
+    cycleTool();
+    t.true(LineMeasurementTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(MoveTool.onToolDeselected.calledTwice);
   },

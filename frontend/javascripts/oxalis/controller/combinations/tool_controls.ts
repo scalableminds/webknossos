@@ -56,7 +56,6 @@ import {
   setQuickSelectStateAction,
   showMeasurementTooltipAction,
 } from "oxalis/model/actions/ui_actions";
-import { notification } from "antd";
 import { formatNumberToLength } from "libs/format_utils";
 import { showMeasurementResults } from "oxalis/view/distance_measurement_tooltip";
 
@@ -810,8 +809,7 @@ export class LineMeasurementTool {
         currentPos = startPos;
       },
       leftMouseUp: () => {
-        if (currentPos && startPos != currentPos) {
-          const state = Store.getState();
+        if (currentPos && startPos !== currentPos) {
           const distanceInScale = formatNumberToLength(
             lineMeasurementGeometry.getDistance(datasetScale),
           );
@@ -825,7 +823,7 @@ export class LineMeasurementTool {
         plane: OrthoView | null | undefined,
         evt: MouseEvent,
       ) => {
-        if (startPos == null || plane != initialPlane) {
+        if (startPos == null || plane !== initialPlane) {
           return;
         }
         const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos, initialPlane));
@@ -856,7 +854,7 @@ export class LineMeasurementTool {
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
-    shiftKey: boolean,
+    _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {

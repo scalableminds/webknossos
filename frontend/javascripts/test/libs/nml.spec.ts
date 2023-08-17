@@ -392,7 +392,7 @@ test("NML serializer should produce correct NMLs", (t) => {
   });
 });
 test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
-  const adaptedState = update(initialState, {
+  let adaptedState = update(initialState, {
     tracing: {
       skeleton: {
         additionalCoordinates: {
@@ -401,6 +401,30 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
       },
     },
   });
+
+  const existingNodeMap = adaptedState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  adaptedState = update(adaptedState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+
   const serializedNml = serializeToNml(
     adaptedState,
     adaptedState.tracing,

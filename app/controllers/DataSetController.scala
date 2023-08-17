@@ -30,6 +30,7 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import com.scalableminds.util.tools.TristateOptionJsonHelper
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
 import models.folder.FolderService
 
 case class DatasetUpdateParameters(
@@ -48,7 +49,8 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 
 case class SegmentAnythingEmbeddingParameters(
     mag: Vec3Int,
-    boundingBox: BoundingBox
+    boundingBox: BoundingBox,
+    additionalCoordinates: Seq[AdditionalCoordinateRequest]
 )
 
 object SegmentAnythingEmbeddingParameters {
@@ -524,7 +526,8 @@ Expects:
                                                dataset,
                                                dataLayer.name,
                                                request.body.boundingBox,
-                                               request.body.mag) ?~> "segmentAnything.getData.failed"
+                                               request.body.mag,
+                                               request.body.additionalCoordinates) ?~> "segmentAnything.getData.failed"
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(

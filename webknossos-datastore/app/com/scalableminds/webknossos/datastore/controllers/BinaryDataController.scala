@@ -22,9 +22,9 @@ import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc._
-import scala.concurrent.duration.DurationInt
+import play.api.mvc.{AnyContent, _}
 
+import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
@@ -103,6 +103,32 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean,
       @ApiParam(value = "If set, apply set mapping name") mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> NOT_FOUND
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
+        request = DataRequest(
+          VoxelPosition(x, y, z, magParsed),
+          width,
+          height,
+          depth,
+          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
+        )
+        (data, indices) <- requestData(dataSource, dataLayer, request)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def requestRawCuboidPost(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String
+  ): Action[List[RawCuboidRequest]] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {

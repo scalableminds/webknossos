@@ -17,12 +17,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a new button to the layer settings in view only dataset mode to save the current view configuration as the dataset's default. [#7205](https://github.com/scalableminds/webknossos/pull/7205)
 - Added option to select multiple segments in the segment list in order to perform batch actions. [#7242](https://github.com/scalableminds/webknossos/pull/7242)
 - If a dataset layer is transformed (using an affine matrix or a thin plate spline), it can be dynamically shown without that transform via the layers sidebar. All other layers will be transformed accordingly. [#7246](https://github.com/scalableminds/webknossos/pull/7246)
+- OpenID Connect authorization can now use a client secret for added security. [#7263](https://github.com/scalableminds/webknossos/pull/7263)
 
 ### Changed
 - Small messages during annotating (e.g. “finished undo”, “applying mapping…”) are now click-through so they do not block users from selecting tools. [7239](https://github.com/scalableminds/webknossos/pull/7239)
 - Annotating volume data uses a transaction-based mechanism now. As a result, WK is more robust against partial saves (i.e., due to a crashing tab). [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- OpenID Connect authorization now fetches the server’s public key automatically. The config keys `singleSignOn.openIdConnect.publicKey` and `singleSignOn.openIdConnect.publicKeyAlgorithm` are now unused. [7267](https://github.com/scalableminds/webknossos/pull/7267)
 
 ### Fixed
 - Fixed that is was possible to have larger active segment ids that supported by the data type of the segmentation layer which caused the segmentation ids to overflow. [#7240](https://github.com/scalableminds/webknossos/pull/7240)

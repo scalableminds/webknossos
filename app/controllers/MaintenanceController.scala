@@ -3,10 +3,10 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.MultiUserDAO
+import models.user.UserService
 import oxalis.security.WkEnv
-import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.lifted.Rep
 import utils.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
@@ -15,38 +15,83 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import com.scalableminds.webknossos.schema.Tables._
-import slick.jdbc.PostgresProfile.api._
 
-class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
-                                      maintenanceDAO: MaintenanceDAO,
-                                      maintenenaceService: MaintenanceService,
-                                      multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
+class MaintenanceController @Inject()(
+    sil: Silhouette[WkEnv],
+    maintenanceDAO: MaintenanceDAO,
+    maintenanceService: MaintenanceService,
+    userService: UserService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
   private val adHocMaintenanceDuration: FiniteDuration = 5 minutes
 
-  def readOne(id: String): Action[AnyContent] = ???
-  def update(id: String): Action[AnyContent] = ???
-  def delete(id: String): Action[AnyContent] = ???
-
   def listCurrentAndUpcoming: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       currentAndUpcomingMaintenances <- maintenanceDAO.findCurrentAndUpcoming
-      js = currentAndUpcomingMaintenances.map(maintenenaceService.publicWrites)
+      js = currentAndUpcomingMaintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
 
-  def listAll: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def readOne(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      idValidated <- ObjectId.fromString(id)
+      maintenance <- maintenanceDAO.findOne(idValidated)
+    } yield Ok(maintenanceService.publicWrites(maintenance))
+  }
+
+  def update(id: String): Action[MaintenanceParameters] = sil.SecuredAction.async(validateJson[MaintenanceParameters]) {
+    implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        idValidated <- ObjectId.fromString(id)
+        _ <- maintenanceDAO.findOne(idValidated) ?~> "maintenance.notFound"
+        _ <- maintenanceDAO.updateOne(idValidated, request.body)
+        updated <- maintenanceDAO.findOne(idValidated)
+      } yield Ok(maintenanceService.publicWrites(updated))
+  }
+
+  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      idValidated <- ObjectId.fromString(id)
+      _ <- maintenanceDAO.deleteOne(idValidated)
+    } yield Ok
+  }
+
+  def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       currentAndUpcomingMaintenances <- maintenanceDAO.findAll
-      js = currentAndUpcomingMaintenances.map(maintenenaceService.publicWrites)
+      js = currentAndUpcomingMaintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
 
-  def create: Action[AnyContent] = ???
+  def create: Action[MaintenanceParameters] = sil.SecuredAction.async(validateJson[MaintenanceParameters]) {
+    implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        newMaintenance = Maintenance(ObjectId.generate,
+                                     request.identity._id,
+                                     request.body.startTime,
+                                     request.body.endTime,
+                                     request.body.message)
+        _ <- maintenanceDAO.insertOne(newMaintenance)
+      } yield Ok(maintenanceService.publicWrites(newMaintenance))
+  }
 
-  def createAdHocMaintenance: Action[AnyContent] = ???
+  def createAdHocMaintenance: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      newMaintenance = Maintenance(ObjectId.generate,
+                                   request.identity._id,
+                                   Instant.now,
+                                   Instant.in(adHocMaintenanceDuration),
+                                   "WEBKNOSSOS is temporarily under maintenance.")
+      _ <- maintenanceDAO.insertOne(newMaintenance)
+    } yield Ok(maintenanceService.publicWrites(newMaintenance))
+  }
 
 }
 
@@ -58,7 +103,13 @@ case class Maintenance(_id: ObjectId,
                        created: Instant = Instant.now,
                        isDeleted: Boolean = false)
 
-class MaintenanceService @Inject()(maintenanceDAO: MaintenanceDAO) {
+case class MaintenanceParameters(startTime: Instant, endTime: Instant, message: String)
+
+object MaintenanceParameters {
+  implicit val jsonFormat: OFormat[MaintenanceParameters] = Json.format[MaintenanceParameters]
+}
+
+class MaintenanceService @Inject()() {
   def publicWrites(m: Maintenance): JsObject =
     Json.obj(
       "id" -> m._id,
@@ -89,22 +140,31 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findCurrentAndUpcoming: Fox[List[Maintenance]] =
     for {
-      rows <- run(q"""SELECT $columns
-            FROM $existingCollectionName
-            WHERE startTime """.as[MaintenancesRow])
+      rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE endTime >= ${Instant.now}".as[MaintenancesRow])
       parsed <- parseAll(rows)
     } yield parsed
 
-  def findAll: Fox[List[Maintenance]] = ???
-
-  def getExpirationTime: Fox[Instant] =
+  def findAll: Fox[List[Maintenance]] =
     for {
-      timeList <- run(q"select maintenanceExpirationTime from webknossos.maintenance".as[Instant])
-      time <- timeList.headOption.toFox
-    } yield time
+      rows <- run(q"SELECT $columns FROM $existingCollectionName".as[MaintenancesRow])
+      parsed <- parseAll(rows)
+    } yield parsed
 
-  def updateExpirationTime(newExpirationTime: Instant): Fox[Unit] =
+  def insertOne(m: Maintenance): Fox[Unit] =
     for {
-      _ <- run(q"update webknossos.maintenance set maintenanceExpirationTime = $newExpirationTime".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.maintenances (_id, _user, startTime, endTime, message, created, isDeleted)
+            VALUES(${m._id}, ${m._user}, ${m.startTime}, ${m.endTime}, ${m.message}, ${m.created}, ${m.isDeleted})
+         """.asUpdate)
     } yield ()
+
+  def updateOne(id: ObjectId, params: MaintenanceParameters): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.maintenances SET
+          startTime = ${params.startTime},
+          endTime = ${params.endTime},
+          message = ${params.message}
+          WHERE _id = $id
+         """.asUpdate)
+    } yield ()
+
 }

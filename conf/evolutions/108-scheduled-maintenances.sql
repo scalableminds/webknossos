@@ -14,6 +14,8 @@ CREATE TABLE webknossos.maintenances(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
+
 UPDATE webknossos.releaseInformation SET schemaVersion = 108;
 
 COMMIT TRANSACTION;

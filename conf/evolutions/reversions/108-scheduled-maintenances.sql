@@ -2,6 +2,8 @@ START TRANSACTION;
 
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 108, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
+
+DROP VIEW webknossos.maintenances_;
 DROP TABLE webknossos.maintenances;
 
 

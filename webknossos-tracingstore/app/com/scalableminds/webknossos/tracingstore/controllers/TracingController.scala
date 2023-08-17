@@ -151,13 +151,13 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                               updateGroup: UpdateActionGroup[T],
                                               userToken: Option[String]): Fox[Long] =
     for {
-      previousVersionTentative <- previousVersionFox
-      currentUncommittedVersion <- tracingService.currentUncommittedVersion(tracingId, updateGroup.transactionId)
-      previousVersion: Long = currentUncommittedVersion.getOrElse(previousVersionTentative)
+      previousCommittedVersion <- previousVersionFox
+      previousVersion: Long = previousCommittedVersion
       result <- if (previousVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
           commitPending(tracingId, updateGroup, userToken)
         } else {
+          // TODO: if transactionGroupIndex > 0, assert previous ones are present
           tracingService
             .saveUncommitted(tracingId,
                              updateGroup.transactionId,
@@ -165,12 +165,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                              updateGroup.version,
                              updateGroup,
                              transactionBatchExpiry)
-            .flatMap(_ =>
-              tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
             .map(_ => updateGroup.version)
         }
       } else {
-        failUnlessAlreadyHandled(updateGroup, tracingId, previousVersion)
+        Fox.failure(s"Incorrect version. Expected: ${previousCommittedVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
       }
     } yield result
 
@@ -208,27 +206,12 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           if (prevVersion + 1 == updateGroup.version) {
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
-              .flatMap(_ =>
-                tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
               .map(_ => updateGroup.version)
           } else {
-            failUnlessAlreadyHandled(updateGroup, tracingId, prevVersion)
+            Fox.failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
           }
         }
       }
-    }
-  }
-
-  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup[T],
-                                       tracingId: String,
-                                       previousVersion: Long): Fox[Long] = {
-    val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
-    updateGroup.transactionId match {
-      case Some(transactionId) =>
-        for {
-          _ <- Fox.assertTrue(tracingService.handledGroupIdStoreContains(tracingId, transactionId, updateGroup.version)) ?~> errorMessage ~> CONFLICT
-        } yield updateGroup.version
-      case None => Fox.failure(errorMessage) ~> CONFLICT
     }
   }
 

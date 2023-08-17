@@ -25,8 +25,6 @@ trait TracingService[T <: GeneratedMessage]
 
   implicit val ec: ExecutionContext
 
-  private val handledGroupCacheExpiry: FiniteDuration = 5 minutes
-
   def tracingType: TracingType
 
   def tracingStore: FossilDBClient
@@ -38,8 +36,6 @@ trait TracingService[T <: GeneratedMessage]
   def tracingMigrationService: TracingMigrationService[T]
 
   def dummyTracing: T
-
-  val handledGroupIdStore: TracingStoreRedisStore
 
   val uncommittedUpdatesStore: TracingStoreRedisStore
 
@@ -102,7 +98,7 @@ trait TracingService[T <: GeneratedMessage]
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
       parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
         JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
-    } yield parsed.toList.sortBy(_.version)
+    } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
   def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
@@ -168,21 +164,6 @@ trait TracingService[T <: GeneratedMessage]
       tracingStore.put(id, version, tracing).map(_ => id)
     }
   }
-
-  private def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
-    s"handledGroup___${tracingId}___${transactionId}___$version"
-
-  def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
-    transactionIdOpt match {
-      case Some(transactionId) =>
-        val key = handledGroupKey(tracingId, transactionId, version)
-        handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
-      case _ =>
-        Fox.successful(())
-    }
-
-  def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
-    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
   def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): T
 

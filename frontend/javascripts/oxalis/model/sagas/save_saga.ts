@@ -179,7 +179,8 @@ export function* sendRequestToServer(
     selectTracing(state, saveQueueType, tracingId),
   );
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
+  let versionIncrement;
+  [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
 
   // This while-loop only exists for the purpose of a retry-mechanism
@@ -207,9 +208,7 @@ export function* sendRequestToServer(
           ),
         );
       }
-      const versionIncrement = compactedSaveQueue.filter(
-        (element) => element.transactionGroupIndex === element.transactionGroupCount - 1,
-      ).length;
+
       console.log("compactedSaveQueue", compactedSaveQueue);
       console.log("versionIncrement", versionIncrement);
       yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
@@ -339,8 +338,16 @@ export function toggleErrorHighlighting(state: boolean, permanentError: boolean 
 export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
-): Array<SaveQueueEntry> {
-  return updateActionsBatches.map((batch) => ({ ...batch, version: ++lastVersion }));
+): [Array<SaveQueueEntry>, number] {
+  console.log("lastVersion", lastVersion);
+  let versionIncrement = 0;
+  const batchesWithVersions = updateActionsBatches.map((batch) => {
+    if (batch.transactionGroupIndex === 0) {
+      versionIncrement++;
+    }
+    return { ...batch, version: lastVersion + versionIncrement };
+  });
+  return [batchesWithVersions, versionIncrement];
 }
 export function performDiffTracing(
   prevTracing: SkeletonTracing | VolumeTracing,

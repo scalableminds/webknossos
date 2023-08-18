@@ -297,12 +297,10 @@ function* loadFullAdHocIsosurface(
     useDataStore = false;
   }
 
-  // Segment stats can only be used for volume tracings without editable mappings and without
-  // fallback layer.
+  // Segment stats can only be used for volume tracings that have a segment index
+  // and that don't have editable mappings.
   const usePositionsFromSegmentStats =
-    volumeTracing != null &&
-    !volumeTracing.mappingIsEditable &&
-    volumeTracing.fallbackLayer == null;
+    volumeTracing != null && volumeTracing.hasSegmentIndex && !volumeTracing.mappingIsEditable;
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,

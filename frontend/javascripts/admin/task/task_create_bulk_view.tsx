@@ -23,7 +23,7 @@ export type NewTask = {
   };
   readonly projectName: string;
   readonly scriptId: string | null | undefined;
-  readonly openInstances: number;
+  readonly pendingInstances: number;
   readonly taskTypeId: string;
   readonly csvFile?: File;
   readonly nmlFiles?: File;
@@ -73,7 +73,7 @@ function TaskCreateBulkView() {
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
-      Number.isNaN(task.openInstances) ||
+      Number.isNaN(task.pendingInstances) ||
       Number.isNaN(task.neededExperience.value) || // Bounding Box is optional and can be null
       (boundingBox != null
         ? boundingBox.topLeft.some(Number.isNaN) ||
@@ -120,7 +120,7 @@ function TaskCreateBulkView() {
     const rotX = parseInt(words[7]);
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
-    const openInstances = parseInt(words[10]);
+    const pendingInstances = parseInt(words[10]);
     const boundingBoxX = parseInt(words[11]);
     const boundingBoxY = parseInt(words[12]);
     const boundingBoxZ = parseInt(words[13]);
@@ -152,7 +152,7 @@ function TaskCreateBulkView() {
       dataSet,
       taskTypeId,
       scriptId,
-      openInstances,
+      pendingInstances,
       boundingBox,
       projectName,
       neededExperience: {

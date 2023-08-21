@@ -51,7 +51,7 @@ message AdditionalCoordinateProto {
   required int32 value = 2;
 }
 
-message AdditionalCoordinateDefinitionProto {
+message AdditionalAxisProto {
   required string name = 1;
   required int32 index = 2;
   required Vec2IntProto bounds = 3;

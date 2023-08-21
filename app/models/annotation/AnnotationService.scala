@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   FetchedAnnotationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinateDefinition,
+  AdditionalAxis,
   ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
@@ -148,7 +148,7 @@ class AnnotationService @Inject()(
     val resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
     val additionalCoordinates =
-      fallbackLayer.map(_.additionalCoordinates).getOrElse(dataSource.additionalCoordinatesUnion)
+      fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalCoordinatesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
     } yield
@@ -169,7 +169,7 @@ class AnnotationService @Inject()(
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty),
-        additionalCoordinates = AdditionalCoordinateDefinition.toProto(additionalCoordinates)
+        additionalAxes = AdditionalAxis.toProto(additionalCoordinates)
       )
   }
 
@@ -246,7 +246,7 @@ class AnnotationService @Inject()(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
               organizationName = Some(datasetOrganizationName),
-              additionalCoordinates = AdditionalCoordinateDefinition.toProto(dataSource.additionalCoordinatesUnion)
+              additionalAxes = AdditionalAxis.toProto(dataSource.additionalCoordinatesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
               skeleton.copy(

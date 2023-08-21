@@ -156,7 +156,7 @@ CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
   insertionOrderIndex INT
 );
 
-CREATE TABLE webknossos.dataSet_layer_additionalCoordinates(
+CREATE TABLE webknossos.dataSet_layer_additionalAxes(
    _dataSet CHAR(24) NOT NULL,
    layerName VARCHAR(256) NOT NULL,
    name VARCHAR(256) NOT NULL,
@@ -768,7 +768,7 @@ ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataSet_layer_coordinateTransformations
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
-ALTER TABLE webknossos.dataSet_layer_additionalCoordinates
+ALTER TABLE webknossos.dataSet_layer_additionalAxes
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

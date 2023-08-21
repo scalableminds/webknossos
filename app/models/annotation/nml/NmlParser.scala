@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedStrin
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
-  AdditionalCoordinateDefinitionProto,
+  AdditionalAxisProto,
   AdditionalCoordinateProto,
   ColorProto,
   NamedBoundingBoxProto,
@@ -58,7 +58,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
-        additionalCoordinates <- parseAdditionalCoordinateDefinitions(parameters \ "additionalCoordinates")
+        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalCoordinates")
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -102,7 +102,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 segmentGroups = v.segmentGroups,
                 hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName),
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
-                additionalCoordinates = additionalCoordinates
+                additionalAxes = additionalAxisProtos
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
@@ -128,7 +128,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 userBoundingBoxes,
                 organizationName,
                 editPositionAdditionalCoordinates,
-                additionalCoordinates = additionalCoordinates
+                additionalAxes = additionalAxisProtos
               )
             )
 
@@ -262,7 +262,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalCoordinateDefinitions(nodes: NodeSeq)(implicit m: MessagesProvider) = {
+  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
     val additionalCoordinates = nodes.headOption.map(
       _.child.flatMap(
         additionalCoordinateNode => {
@@ -274,7 +274,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             min <- minStr.toIntOpt
             maxStr <- getSingleAttributeOpt(additionalCoordinateNode, "max")
             max <- maxStr.toIntOpt
-          } yield new AdditionalCoordinateDefinitionProto(name, index, Vec2IntProto(min, max))
+          } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
         }
       )
     )

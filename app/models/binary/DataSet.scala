@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
-  AdditionalCoordinateDefinition,
+  AdditionalAxis,
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
@@ -612,7 +612,7 @@ class DataSetDataLayerDAO @Inject()(
     sqlClient: SqlClient,
     dataSetResolutionsDAO: DataSetResolutionsDAO,
     datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
-    datasetLayerAdditionalCoordinatesDAO: DatasetLayerAdditionalCoordinatesDAO)(implicit ec: ExecutionContext)
+    datasetLayerAdditionalCoordinatesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
@@ -630,9 +630,8 @@ class DataSetDataLayerDAO @Inject()(
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(dataSetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
-      additionalCoordinates <- datasetLayerAdditionalCoordinatesDAO.findAllForDataSetAndDataLayerName(dataSetId,
-                                                                                                      row.name)
-      additionalCoordinatesOpt = if (additionalCoordinates.isEmpty) None else Some(additionalCoordinates)
+      additionalAxes <- datasetLayerAdditionalCoordinatesDAO.findAllForDataSetAndDataLayerName(dataSetId, row.name)
+      additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
     } yield {
       category match {
         case Category.segmentation =>
@@ -649,7 +648,7 @@ class DataSetDataLayerDAO @Inject()(
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalCoordinatesOpt
+              additionalAxesOpt
             ))
         case Category.color =>
           Fox.successful(
@@ -662,7 +661,7 @@ class DataSetDataLayerDAO @Inject()(
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalCoordinatesOpt
+              additionalAxesOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -723,8 +722,7 @@ class DataSetDataLayerDAO @Inject()(
       _ <- dataSetResolutionsDAO.updateResolutions(dataSetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(dataSetId,
                                                                                source.toUsable.map(_.dataLayers))
-      _ <- datasetLayerAdditionalCoordinatesDAO.updateAdditionalCoordinates(dataSetId,
-                                                                            source.toUsable.map(_.dataLayers))
+      _ <- datasetLayerAdditionalCoordinatesDAO.updateAdditionalAxes(dataSetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 
@@ -819,30 +817,29 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
   }
 }
 
-class DatasetLayerAdditionalCoordinatesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayerAdditionalcoordinatesRow): AdditionalCoordinateDefinition =
-    AdditionalCoordinateDefinition(row.name, Array(row.lowerbound, row.upperbound), row.index)
+  private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
+    AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
 
-  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId,
-                                        dataLayerName: String): Fox[Seq[AdditionalCoordinateDefinition]] =
+  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {
       rows <- run(q"""SELECT *
-           FROM webknossos.dataSet_layer_additionalCoordinates
-           WHERE _dataSet = $dataSetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalcoordinatesRow])
+           FROM webknossos.dataSet_layer_additionalAxes
+           WHERE _dataSet = $dataSetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
       additionalCoordinates = rows.map(parseRow)
     } yield additionalCoordinates
 
-  def updateAdditionalCoordinates(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateAdditionalAxes(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery =
-      q"DELETE FROM webknossos.dataSet_layer_additionalCoordinates WHERE _dataSet = $dataSetId".asUpdate
+      q"DELETE FROM webknossos.dataSet_layer_additionalAxes WHERE _dataSet = $dataSetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.additionalCoordinates.getOrElse(List.empty).map { additionalCoordinate =>
+      layer.additionalAxes.getOrElse(List.empty).map { additionalAxis =>
         {
-          q"""INSERT INTO webknossos.dataSet_layer_additionalCoordinates(_dataSet, layerName, name, lowerBound, upperBound, index)
+          q"""INSERT INTO webknossos.dataSet_layer_additionalAxes(_dataSet, layerName, name, lowerBound, upperBound, index)
               values(
-              $dataSetId, ${layer.name}, ${additionalCoordinate.name}, ${additionalCoordinate.lowerBound}, ${additionalCoordinate.upperBound}, ${additionalCoordinate.index})
+              $dataSetId, ${layer.name}, ${additionalAxis.name}, ${additionalAxis.lowerBound}, ${additionalAxis.upperBound}, ${additionalAxis.index})
               """.asUpdate
         }
 

@@ -19,20 +19,20 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
-    dataSetName: String,
-    organizationName: String,
-    description: Option[String],
-    wkUrl: String,
-    scale: Option[Vec3Double],
-    createdTimestamp: Long,
-    editPosition: Vec3IntProto,
-    editRotation: Vec3DoubleProto,
-    zoomLevel: Double,
-    activeNodeId: Option[Int],
-    userBoundingBoxes: Seq[NamedBoundingBoxProto],
-    taskBoundingBox: Option[BoundingBoxProto],
-    additionalCoordinates: Seq[AdditionalCoordinateDefinitionProto],
-    editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
+                          dataSetName: String,
+                          organizationName: String,
+                          description: Option[String],
+                          wkUrl: String,
+                          scale: Option[Vec3Double],
+                          createdTimestamp: Long,
+                          editPosition: Vec3IntProto,
+                          editRotation: Vec3DoubleProto,
+                          zoomLevel: Double,
+                          activeNodeId: Option[Int],
+                          userBoundingBoxes: Seq[NamedBoundingBoxProto],
+                          taskBoundingBox: Option[BoundingBoxProto],
+                          additionalAxisProtos: Seq[AdditionalAxisProto],
+                          editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
 )
 
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
@@ -130,7 +130,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             s.activeNodeId,
             s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             s.boundingBox,
-            s.additionalCoordinates,
+            s.additionalAxes,
             s.editPositionAdditionalCoordinates
           )
         case Right(v) =>
@@ -147,7 +147,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             None,
             v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None,
-            v.additionalCoordinates,
+            v.additionalAxes,
             v.editPositionAdditionalCoordinates
           )
       }
@@ -214,9 +214,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       parameters.taskBoundingBox.foreach { b =>
         Xml.withinElementSync("taskBoundingBox")(writeBoundingBox(b))
       }
-      if (parameters.additionalCoordinates.nonEmpty) {
+      if (parameters.additionalAxisProtos.nonEmpty) {
         Xml.withinElementSync("additionalCoordinates") {
-          parameters.additionalCoordinates.foreach(a => {
+          parameters.additionalAxisProtos.foreach(a => {
             Xml.withinElementSync("additionalCoordinate") {
               writer.writeAttribute("name", a.name)
               writer.writeAttribute("index", a.index.toString)

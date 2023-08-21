@@ -10,7 +10,7 @@ import type {
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
@@ -123,7 +123,10 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
           throw new Error("Tried to save something even though user is not logged in.");
         }
 
-        const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
+        const updateActionChunks = _.chunk(
+          items,
+          MAXIMUM_ACTION_COUNT_PER_BATCH[action.saveQueueType],
+        );
 
         const transactionGroupCount = updateActionChunks.length;
         const actionLogInfo = JSON.stringify(getActionLog().slice(-10));

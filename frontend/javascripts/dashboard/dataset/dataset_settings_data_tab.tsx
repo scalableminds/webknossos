@@ -530,6 +530,17 @@ function SimpleLayerForm({
                     {
                       warningOnly: true,
                       validator: (_rule, value) =>
+                        value != null && value === 2 ** bitDepth - 1
+                          ? Promise.reject(
+                              new Error(
+                                `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
+                              ),
+                            )
+                          : Promise.resolve(),
+                    },
+                    {
+                      warningOnly: true,
+                      validator: (_rule, value) =>
                         value == null || value === ""
                           ? Promise.reject(
                               new Error(

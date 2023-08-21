@@ -6,7 +6,7 @@ import play.api.libs.json.{Format, Json}
 
 case class TaskParameters(taskTypeId: String,
                           neededExperience: Experience,
-                          openInstances: Int,
+                          pendingInstances: Int,
                           projectName: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
@@ -23,7 +23,7 @@ object TaskParameters {
 
 case class NmlTaskParameters(taskTypeId: String,
                              neededExperience: Experience,
-                             openInstances: Int,
+                             pendingInstances: Int,
                              projectName: String,
                              scriptId: Option[String],
                              boundingBox: Option[BoundingBox])

@@ -81,6 +81,8 @@ export const initialState = update(defaultState, {
           color: [0, 0, 0],
           alpha: 100,
           intensityRange: [0, 255],
+          min: 0,
+          max: 255,
           isDisabled: false,
           isInverted: false,
           isInEditMode: false,

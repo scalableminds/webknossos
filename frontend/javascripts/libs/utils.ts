@@ -1149,3 +1149,24 @@ export function minValue(array: Array<number>): number {
   }
   return value;
 }
+
+/*
+ * Iterates over arbitrary objects recursively and calls the callback function.
+ */
+type Obj = Record<string, unknown>;
+export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) => void) => {
+  if (obj == null) {
+    return;
+  }
+  const items = Array.isArray(obj) ? obj : Object.values(obj);
+  items.forEach((item) => {
+    callback(item);
+
+    if (typeof item === "object") {
+      // We know that item is an object or array which matches deepIterate's signature.
+      // However, TS doesn't infer this.
+      // @ts-ignore
+      deepIterate(item, callback);
+    }
+  });
+};

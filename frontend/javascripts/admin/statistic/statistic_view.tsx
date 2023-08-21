@@ -19,7 +19,7 @@ type State = {
     numberOfUsers: number;
     numberOfDatasets: number;
     numberOfAnnotations: number;
-    numberOfOpenAssignments: number;
+    pendingInstances: number;
     tracingTimes: TimeEntry[];
   };
   timeEntries: Array<{
@@ -51,7 +51,7 @@ class StatisticView extends React.PureComponent<{}, State> {
       numberOfUsers: 0,
       numberOfDatasets: 0,
       numberOfAnnotations: 0,
-      numberOfOpenAssignments: 0,
+      pendingInstances: 0,
       tracingTimes: [],
     },
   };
@@ -199,8 +199,8 @@ class StatisticView extends React.PureComponent<{}, State> {
                     {this.state.achievements.numberOfAnnotations}
                   </li>
                   <li>
-                    <div style={listStyle}>Number of Open Assignments</div>
-                    {this.state.achievements.numberOfOpenAssignments}
+                    <div style={listStyle}>Number of Pending Task Instances</div>
+                    {this.state.achievements.pendingInstances}
                   </li>
                 </ul>
               </Spin>

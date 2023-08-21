@@ -20,7 +20,7 @@ import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
-import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
 import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
@@ -321,11 +321,15 @@ class ReactRouter extends React.Component<Props> {
                 component={ProjectProgressReportView}
                 exact
               />
+              <RouteWithErrorBoundary
+                path="/reports/openTasks"
+                render={() => <Redirect to="/reports/availableTasks" />}
+              />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 requiredPricingPlan={PricingPlanEnum.Team}
-                path="/reports/openTasks"
-                component={OpenTasksReportView}
+                path="/reports/availableTasks"
+                component={AvailableTasksReportView}
                 exact
               />
               <SecuredRouteWithErrorBoundary

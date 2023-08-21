@@ -138,9 +138,9 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           val usersInTeamsManagedByRequestingUser =
             q"(SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id}  AND isTeamManager)))"
           if (isEditable) {
-            q"(_id IN $usersInTeamsManagedByRequestingUser OR (isAdmin AND _organization = ${requestingUser._organization})"
+            q"(_id IN $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization})"
           } else {
-            q"(_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (isAdmin AND _organization = ${requestingUser._organization}))"
+            q"(_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization}))"
           }
         case None => q"${true}"
       }

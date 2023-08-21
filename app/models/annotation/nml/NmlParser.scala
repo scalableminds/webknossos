@@ -311,10 +311,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     nodes.headOption.flatMap(n => {
       val xyz = parseVec3Int(n)
       val additionalCoordinates = parseAdditionalCoordinateValues(n)
-      xyz match {
-        case Some(value) => Some(value, additionalCoordinates)
-        case None        => None
-      }
+      xyz.map(value => (value, additionalCoordinates))
     })
 
   private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =

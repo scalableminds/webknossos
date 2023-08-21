@@ -48,7 +48,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         fourBit = None,
         applyAgglomerate = None,
         version = None,
-        additionalCoordinates = None
+        additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
       (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),

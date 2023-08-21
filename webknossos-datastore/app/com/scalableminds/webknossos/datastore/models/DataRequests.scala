@@ -87,7 +87,7 @@ object AdditionalCoordinateRequest {
       case None => Seq()
     }
 
-  def anyValueNegative(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Boolean =
+  def hasNegativeValue(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Boolean =
     acOpt match {
       case Some(additionalCoordinateRequests) => additionalCoordinateRequests.exists(_.value < 0)
       case None                               => false

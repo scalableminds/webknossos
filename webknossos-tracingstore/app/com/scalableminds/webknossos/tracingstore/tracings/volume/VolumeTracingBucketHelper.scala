@@ -6,7 +6,6 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelpe
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalCoordinateDefinition,
   DataLayer,
-  DataLayerLike,
   ElementClass
 }
 import com.scalableminds.webknossos.datastore.models.{
@@ -105,21 +104,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
     val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[]\\[(\\d+),(\\d+),(\\d+)]".r
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
-        resolutionOpt match {
-          case Some(resolution) =>
-            val x = xStr.toInt
-            val y = yStr.toInt
-            val z = zStr.toInt
-            val bucket = BucketPosition(x * resolution.x * DataLayer.bucketLength,
-                                        y * resolution.y * DataLayer.bucketLength,
-                                        z * resolution.z * DataLayer.bucketLength,
-                                        resolution,
-                                        None)
-            Some((name, bucket))
-          case _ => None
-        }
-
+        getBucketPosition(xStr, yStr, zStr, resolutionStr, None).map(bucketPosition => (name, bucketPosition))
       case _ =>
         None
     }
@@ -146,25 +131,35 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
               AdditionalCoordinateRequest(additionalCoordinatesIndexSorted(groupIndexAndCoordIndex._2).name,
                                           aMatch.group(groupIndexAndCoordIndex._1).toInt))
 
-        val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
-        resolutionOpt match {
-          case Some(resolution) =>
-            val x = xStr.toInt
-            val y = yStr.toInt
-            val z = zStr.toInt
-            val bucket = BucketPosition(
-              x * resolution.x * DataLayer.bucketLength,
-              y * resolution.y * DataLayer.bucketLength,
-              z * resolution.z * DataLayer.bucketLength,
-              resolution,
-              Some(additionalCoordinateRequests)
-            )
-            Some((name, bucket))
-          case _ => None
-        }
+        getBucketPosition(xStr, yStr, zStr, resolutionStr, Some(additionalCoordinateRequests)).map(bucketPosition =>
+          (name, bucketPosition))
 
       case _ =>
         None
+    }
+  }
+
+  private def getBucketPosition(
+      xStr: String,
+      yStr: String,
+      zStr: String,
+      resolutionStr: String,
+      additionalCoordinateRequests: Option[Seq[AdditionalCoordinateRequest]]): Option[BucketPosition] = {
+    val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
+    resolutionOpt match {
+      case Some(resolution) =>
+        val x = xStr.toInt
+        val y = yStr.toInt
+        val z = zStr.toInt
+        val bucket = BucketPosition(
+          x * resolution.x * DataLayer.bucketLength,
+          y * resolution.y * DataLayer.bucketLength,
+          z * resolution.z * DataLayer.bucketLength,
+          resolution,
+          additionalCoordinateRequests
+        )
+        Some(bucket)
+      case _ => None
     }
   }
 
@@ -270,13 +265,21 @@ trait VolumeTracingBucketHelper
 
   def bucketStream(dataLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name)
-    new BucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version, dataLayer)
+    new BucketIterator(key,
+                       volumeDataStore,
+                       expectedUncompressedBucketSizeFor(dataLayer),
+                       version,
+                       dataLayer.additionalCoordinates)
   }
 
   def bucketStreamWithVersion(dataLayer: VolumeTracingLayer,
                               version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
     val key = buildKeyPrefix(dataLayer.name)
-    new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version, dataLayer)
+    new VersionedBucketIterator(key,
+                                volumeDataStore,
+                                expectedUncompressedBucketSizeFor(dataLayer),
+                                version,
+                                dataLayer.additionalCoordinates)
   }
 
   def bucketStreamFromTemporaryStore(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
@@ -293,7 +296,7 @@ class VersionedBucketIterator(prefix: String,
                               volumeDataStore: FossilDBClient,
                               expectedUncompressedBucketSize: Int,
                               version: Option[Long] = None,
-                              dataLayer: DataLayerLike)
+                              additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]])
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with KeyValueStoreImplicits
     with VolumeBucketCompression
@@ -319,7 +322,7 @@ class VersionedBucketIterator(prefix: String,
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next
       currentStartAfterKey = Some(bucket.key)
-      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, dataLayer.additionalCoordinates).isEmpty) {
+      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalCoordinates).isEmpty) {
         getNextNonRevertedBucket
       } else {
         Some(bucket)
@@ -342,7 +345,7 @@ class VersionedBucketIterator(prefix: String,
       case None         => getNextNonRevertedBucket.get
     }
     nextBucket = None
-    parseBucketKey(nextRes.key, dataLayer.additionalCoordinates)
+    parseBucketKey(nextRes.key, additionalCoordinates)
       .map(key => {
         val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
         (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
@@ -356,10 +359,10 @@ class BucketIterator(prefix: String,
                      volumeDataStore: FossilDBClient,
                      expectedUncompressedBucketSize: Int,
                      version: Option[Long] = None,
-                     dataLayer: DataLayerLike)
+                     additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]])
     extends Iterator[(BucketPosition, Array[Byte])] {
   private val versionedBucketIterator =
-    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, dataLayer)
+    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalCoordinates)
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next

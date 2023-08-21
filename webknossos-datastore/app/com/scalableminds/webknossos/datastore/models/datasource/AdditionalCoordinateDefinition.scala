@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateDefi
 import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Format, Json}
 
+// bounds: lower bound inclusive, upper bound exclusive
 case class AdditionalCoordinateDefinition(name: String, bounds: Array[Int], index: Int) {
   def lowerBound: Int = bounds(0)
   def upperBound: Int = bounds(1)

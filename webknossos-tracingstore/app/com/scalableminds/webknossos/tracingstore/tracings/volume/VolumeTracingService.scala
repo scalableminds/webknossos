@@ -419,13 +419,11 @@ class VolumeTracingService @Inject()(
       _ <- segmentIndexBuffer.flush()
     } yield ()
 
-  private def volumeTracingLayer(
-      tracingId: String,
-      tracing: VolumeTracing,
-      isTemporaryTracing: Boolean = false,
-      includeFallbackDataIfAvailable: Boolean = false,
-      userToken: Option[String] = None,
-      additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None): VolumeTracingLayer =
+  private def volumeTracingLayer(tracingId: String,
+                                 tracing: VolumeTracing,
+                                 isTemporaryTracing: Boolean = false,
+                                 includeFallbackDataIfAvailable: Boolean = false,
+                                 userToken: Option[String] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
@@ -433,10 +431,7 @@ class VolumeTracingService @Inject()(
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
       userToken = userToken,
-      additionalCoordinates = additionalCoordinates match {
-        case Some(value) => Some(value)
-        case None        => Some(AdditionalCoordinateDefinition.fromProto(tracing.additionalCoordinates))
-      }
+      additionalCoordinates = Some(AdditionalCoordinateDefinition.fromProto(tracing.additionalCoordinates))
     )
 
   def updateActionLog(tracingId: String,

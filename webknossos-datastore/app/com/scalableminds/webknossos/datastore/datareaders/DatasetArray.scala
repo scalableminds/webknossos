@@ -75,7 +75,7 @@ class DatasetArray(vaultPath: VaultPath,
     for (additionalCoordinateRequest <- additionalCoordinateRequests) {
       val index = additionalCoordinates(additionalCoordinateRequest.name).index
       offsetArray(index) = additionalCoordinateRequest.value
-      // Shape for additional coordinates will always be 1e
+      // Shape for additional coordinates will always be 1
     }
     readBytes(shapeArray, offsetArray)
   }

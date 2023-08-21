@@ -188,7 +188,7 @@ trait VolumeTracingDownsampling
         bucketPosition.voxelMag1Y + y * bucketPosition.bucketLength * previousMag.y,
         bucketPosition.voxelMag1Z + z * bucketPosition.bucketLength * previousMag.z,
         previousMag,
-        bucketPosition.additionalCoordinates //TODO?
+        bucketPosition.additionalCoordinates
       )
     }
 

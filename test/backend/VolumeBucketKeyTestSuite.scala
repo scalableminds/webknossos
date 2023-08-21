@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordi
 import com.scalableminds.webknossos.tracingstore.tracings.volume.BucketKeys
 import org.scalatestplus.play.PlaySpec
 
-class BucketKeyTestSuite extends PlaySpec {
+class VolumeBucketKeyTestSuite extends PlaySpec {
 
   class BucketKeyBuilder extends BucketKeys {
     def build(dataLayerName: String,
@@ -14,7 +14,8 @@ class BucketKeyTestSuite extends PlaySpec {
               additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinateDefinition]] = None): String =
       buildBucketKey(dataLayerName, bucket, additionalCoordinateDefinitions)
 
-    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Option[(String, BucketPosition)] =
+    def parse(key: String,
+              additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Option[(String, BucketPosition)] =
       parseBucketKey(key, additionalCoordinates)
   }
   val bucketKeyBuilder = new BucketKeyBuilder

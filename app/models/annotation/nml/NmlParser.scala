@@ -58,7 +58,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
-        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalCoordinates")
+        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -263,25 +263,25 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
   private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
-    val additionalCoordinates = nodes.headOption.map(
+    val additionalAxes = nodes.headOption.map(
       _.child.flatMap(
-        additionalCoordinateNode => {
+        additionalAxisNode => {
           for {
-            name <- getSingleAttributeOpt(additionalCoordinateNode, "name")
-            indexStr <- getSingleAttributeOpt(additionalCoordinateNode, "index")
+            name <- getSingleAttributeOpt(additionalAxisNode, "name")
+            indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
             index <- indexStr.toIntOpt
-            minStr <- getSingleAttributeOpt(additionalCoordinateNode, "min")
+            minStr <- getSingleAttributeOpt(additionalAxisNode, "min")
             min <- minStr.toIntOpt
-            maxStr <- getSingleAttributeOpt(additionalCoordinateNode, "max")
+            maxStr <- getSingleAttributeOpt(additionalAxisNode, "max")
             max <- maxStr.toIntOpt
           } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
         }
       )
     )
-    additionalCoordinates match {
-      case Some(coords) =>
-        if (coords.map(_.name).distinct.size == coords.size) {
-          Full(coords)
+    additionalAxes match {
+      case Some(axes) =>
+        if (axes.map(_.name).distinct.size == axes.size) {
+          Full(axes)
         } else {
           Failure(Messages("nml.additionalCoordinates.notUnique"))
         }

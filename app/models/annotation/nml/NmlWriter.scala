@@ -19,20 +19,20 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
-                          dataSetName: String,
-                          organizationName: String,
-                          description: Option[String],
-                          wkUrl: String,
-                          scale: Option[Vec3Double],
-                          createdTimestamp: Long,
-                          editPosition: Vec3IntProto,
-                          editRotation: Vec3DoubleProto,
-                          zoomLevel: Double,
-                          activeNodeId: Option[Int],
-                          userBoundingBoxes: Seq[NamedBoundingBoxProto],
-                          taskBoundingBox: Option[BoundingBoxProto],
-                          additionalAxisProtos: Seq[AdditionalAxisProto],
-                          editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
+    dataSetName: String,
+    organizationName: String,
+    description: Option[String],
+    wkUrl: String,
+    scale: Option[Vec3Double],
+    createdTimestamp: Long,
+    editPosition: Vec3IntProto,
+    editRotation: Vec3DoubleProto,
+    zoomLevel: Double,
+    activeNodeId: Option[Int],
+    userBoundingBoxes: Seq[NamedBoundingBoxProto],
+    taskBoundingBox: Option[BoundingBoxProto],
+    additionalAxisProtos: Seq[AdditionalAxisProto],
+    editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
 )
 
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
@@ -215,9 +215,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         Xml.withinElementSync("taskBoundingBox")(writeBoundingBox(b))
       }
       if (parameters.additionalAxisProtos.nonEmpty) {
-        Xml.withinElementSync("additionalCoordinates") {
+        Xml.withinElementSync("additionalAxes") {
           parameters.additionalAxisProtos.foreach(a => {
-            Xml.withinElementSync("additionalCoordinate") {
+            Xml.withinElementSync("additionalAxis") {
               writer.writeAttribute("name", a.name)
               writer.writeAttribute("index", a.index.toString)
               writer.writeAttribute("min", a.bounds.x.toString)

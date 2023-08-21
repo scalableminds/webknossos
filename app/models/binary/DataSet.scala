@@ -612,7 +612,7 @@ class DataSetDataLayerDAO @Inject()(
     sqlClient: SqlClient,
     dataSetResolutionsDAO: DataSetResolutionsDAO,
     datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
-    datasetLayerAdditionalCoordinatesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
+    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
@@ -630,7 +630,7 @@ class DataSetDataLayerDAO @Inject()(
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(dataSetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
-      additionalAxes <- datasetLayerAdditionalCoordinatesDAO.findAllForDataSetAndDataLayerName(dataSetId, row.name)
+      additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDataSetAndDataLayerName(dataSetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
     } yield {
       category match {
@@ -722,7 +722,7 @@ class DataSetDataLayerDAO @Inject()(
       _ <- dataSetResolutionsDAO.updateResolutions(dataSetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(dataSetId,
                                                                                source.toUsable.map(_.dataLayers))
-      _ <- datasetLayerAdditionalCoordinatesDAO.updateAdditionalAxes(dataSetId, source.toUsable.map(_.dataLayers))
+      _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(dataSetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 
@@ -828,8 +828,8 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
       rows <- run(q"""SELECT *
            FROM webknossos.dataSet_layer_additionalAxes
            WHERE _dataSet = $dataSetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
-      additionalCoordinates = rows.map(parseRow)
-    } yield additionalCoordinates
+      additionalAxes = rows.map(parseRow)
+    } yield additionalAxes
 
   def updateAdditionalAxes(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery =

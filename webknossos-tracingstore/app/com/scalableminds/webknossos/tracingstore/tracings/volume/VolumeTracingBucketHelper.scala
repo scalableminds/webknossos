@@ -70,10 +70,10 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     val additionalCoordinateString = (bucket.additionalCoordinates, additionalAxes) match {
-      case (Some(additionalCoordinates), Some(definitions)) =>
+      case (Some(additionalCoordinates), Some(axes)) =>
         // Bucket key additional coordinates need to be ordered to be found later.
         val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
-        val sortedValues = definitions.sortBy(_.index).map(a => valueMap(a.name))
+        val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))
         sortedValues.map(_.toString).mkString(",")
       case _ => ""
     }
@@ -241,8 +241,8 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean,
-                           additionalCoordinates: Option[Seq[AdditionalAxis]]): Fox[Unit] = {
-    val key = buildBucketKey(tracingId, bucket, additionalCoordinates)
+                           additionalAxes: Option[Seq[AdditionalAxis]]): Fox[Unit] = {
+    val key = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toTemporaryStore) {
       // Note that this temporary store is for temporary volumes only (e.g. compound projects)
@@ -286,7 +286,7 @@ class VersionedBucketIterator(prefix: String,
                               volumeDataStore: FossilDBClient,
                               expectedUncompressedBucketSize: Int,
                               version: Option[Long] = None,
-                              additionalCoordinates: Option[Seq[AdditionalAxis]])
+                              additionalAxes: Option[Seq[AdditionalAxis]])
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with KeyValueStoreImplicits
     with VolumeBucketCompression
@@ -312,7 +312,7 @@ class VersionedBucketIterator(prefix: String,
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next
       currentStartAfterKey = Some(bucket.key)
-      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalCoordinates).isEmpty) {
+      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalAxes).isEmpty) {
         getNextNonRevertedBucket
       } else {
         Some(bucket)
@@ -335,7 +335,7 @@ class VersionedBucketIterator(prefix: String,
       case None         => getNextNonRevertedBucket.get
     }
     nextBucket = None
-    parseBucketKey(nextRes.key, additionalCoordinates)
+    parseBucketKey(nextRes.key, additionalAxes)
       .map(key => {
         val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
         (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
@@ -349,10 +349,10 @@ class BucketIterator(prefix: String,
                      volumeDataStore: FossilDBClient,
                      expectedUncompressedBucketSize: Int,
                      version: Option[Long] = None,
-                     additionalCoordinates: Option[Seq[AdditionalAxis]])
+                     additionalAxes: Option[Seq[AdditionalAxis]])
     extends Iterator[(BucketPosition, Array[Byte])] {
   private val versionedBucketIterator =
-    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalCoordinates)
+    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next

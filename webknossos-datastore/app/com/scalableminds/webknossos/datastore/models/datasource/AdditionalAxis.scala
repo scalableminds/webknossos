@@ -13,8 +13,8 @@ case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
 object AdditionalAxis {
   implicit val jsonFormat: Format[AdditionalAxis] = Json.format[AdditionalAxis]
 
-  def toProto(additionalCoordinatesDefinitionsOpt: Option[Seq[AdditionalAxis]]): Seq[AdditionalAxisProto] =
-    additionalCoordinatesDefinitionsOpt match {
+  def toProto(additionalAxesOpt: Option[Seq[AdditionalAxis]]): Seq[AdditionalAxisProto] =
+    additionalAxesOpt match {
       case Some(additionalCoordinates) =>
         additionalCoordinates.map(
           additionalCoordinate =>
@@ -30,11 +30,11 @@ object AdditionalAxis {
     )
 
   def merge(additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Option[Seq[AdditionalAxis]] = {
-    val additionalCoordinatesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
+    val additionalAxesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
     additionalAxeses.foreach {
       case Some(additionalAxes) =>
         for (additionalAxis <- additionalAxes) {
-          val additionalCoordinateToInsert = additionalCoordinatesMap.get(additionalAxis.name) match {
+          val additionalAxisToInsert = additionalAxesMap.get(additionalAxis.name) match {
             case Some((existingIndex, existingLowerBound, existingUpperBound)) =>
               /* Index: The index can not be merged as it may describe data on a different server. Currently one index
               is chosen arbitrarily. For annotations this is fine, since the index is only used for sorting there;
@@ -47,33 +47,33 @@ object AdditionalAxis {
             case None =>
               (additionalAxis.index, additionalAxis.lowerBound, additionalAxis.upperBound)
           }
-          additionalCoordinatesMap(additionalAxis.name) = additionalCoordinateToInsert
+          additionalAxesMap(additionalAxis.name) = additionalAxisToInsert
         }
       case None =>
     }
-    val additionalCoordinates = additionalCoordinatesMap.iterator.map {
+    val additionalAxes = additionalAxesMap.iterator.map {
       case (name, (index, lowerBound, upperBound)) =>
         AdditionalAxis(name, Array(lowerBound, upperBound), index)
     }.toSeq
-    if (additionalCoordinates.isEmpty) {
+    if (additionalAxes.isEmpty) {
       None
     } else {
-      Some(additionalCoordinates)
+      Some(additionalAxes)
     }
   }
 
   def mergeAndAssertSameAdditionalAxes(
-      additionalCoordinateDefinitions: Seq[Option[Seq[AdditionalAxis]]]): Box[Option[Seq[AdditionalAxis]]] = {
-    val merged = merge(additionalCoordinateDefinitions)
+      additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Box[Option[Seq[AdditionalAxis]]] = {
+    val merged = merge(additionalAxeses)
     val mergedCount = merged match {
-      case Some(definitions) => definitions.size
-      case None              => 0
+      case Some(axes) => axes.size
+      case None       => 0
     }
-    val sameAdditionalCoordinates = additionalCoordinateDefinitions.forall {
-      case Some(definitions) => definitions.size == mergedCount
-      case None              => 0 == mergedCount
+    val sameAdditionalAxes = additionalAxeses.forall {
+      case Some(axes) => axes.size == mergedCount
+      case None       => 0 == mergedCount
     }
-    if (sameAdditionalCoordinates) {
+    if (sameAdditionalAxes) {
       Full(merged)
     } else {
       Failure("dataSet.additionalCoordinates.different")

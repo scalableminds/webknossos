@@ -52,7 +52,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                                        remotePath: VaultPath,
                                        credentialId: Option[String],
                                        channelCount: Int,
-                                       channelAttributes: Option[Seq[(Option[Color], Option[String])]] = None,
+                                       channelAttributes: Option[Seq[ChannelAttributes]] = None,
                                        isSegmentation: Boolean = false): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
@@ -74,9 +74,9 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
           (viewConfig: LayerViewConfiguration, channelName: String) = channelAttributes match {
             case Some(attributes) => {
-              val color = attributes(channelIndex)._1
+              val color = attributes(channelIndex).color
               val attributeName: String =
-                attributes(channelIndex)._2
+                attributes(channelIndex).name
                   .map(TextUtils.normalizeStrong(_).getOrElse(name).replaceAll(" ", ""))
                   .getOrElse(name)
               (color match {
@@ -106,13 +106,15 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       })
     } yield layerTuples
 
+  private case class ChannelAttributes(color: Option[Color], name: Option[String])
+
   private def getChannelAttributes(
       ngffHeader: NgffMetadata
-  ): Option[Seq[(Option[Color], Option[String])]] =
+  ): Option[Seq[ChannelAttributes]] =
     ngffHeader.omero match {
       case Some(value) =>
         Some(value.channels.map(omeroChannelAttributes =>
-          (omeroChannelAttributes.color.map(Color.fromHTML), omeroChannelAttributes.label)))
+          ChannelAttributes(omeroChannelAttributes.color.map(Color.fromHTML), omeroChannelAttributes.label)))
       case None => None
     }
 

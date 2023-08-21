@@ -24,9 +24,6 @@ import {
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
 
-const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) =>
-  isVolumeAnnotationDisallowedForZoom(tool, state);
-
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
   isInMergerMode: boolean,

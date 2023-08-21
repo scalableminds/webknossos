@@ -41,13 +41,13 @@ export type APIMapping = {
   readonly colors?: Array<number>;
   readonly hideUnmappedIds?: boolean;
 };
-export type AdditionalCoordinateWithBounds = {
+export type AdditionalAxis = {
   bounds: [number, number];
   index: number;
   name: string;
 };
 
-export type ServerAdditionalCoordinateWithBounds = {
+export type ServerAdditionalAxis = {
   bounds: { x: number; y: number };
   index: number;
   name: string;
@@ -68,7 +68,7 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
-  readonly additionalCoordinates: Array<AdditionalCoordinateWithBounds> | null;
+  readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
 };
 type APIColorLayer = APIDataLayerBase & {
@@ -712,7 +712,7 @@ export type ServerTracingBase = {
   error?: string;
   version: number;
   zoomLevel: number;
-  additionalCoordinates: ServerAdditionalCoordinateWithBounds[];
+  additionalAxes: ServerAdditionalAxis[];
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the

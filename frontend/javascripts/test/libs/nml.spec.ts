@@ -162,7 +162,7 @@ const initialSkeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
-  additionalCoordinates: [],
+  additionalAxes: [],
 };
 
 const initialState: OxalisState = _.extend({}, defaultState, {
@@ -395,7 +395,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   let adaptedState = update(initialState, {
     tracing: {
       skeleton: {
-        additionalCoordinates: {
+        additionalAxes: {
           $set: [{ name: "t", bounds: [0, 100], index: 0 }],
         },
       },

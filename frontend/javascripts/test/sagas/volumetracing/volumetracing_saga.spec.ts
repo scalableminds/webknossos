@@ -70,7 +70,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
     y: 0,
     z: 0,
   },
-  additionalCoordinates: [],
+  additionalAxes: [],
   userBoundingBoxes: [],
   largestSegmentId: 0,
 };
@@ -83,7 +83,7 @@ const volumeTracingLayer: APISegmentationLayer = {
   elementClass: serverVolumeTracing.elementClass,
   largestSegmentId: serverVolumeTracing.largestSegmentId,
   tracingId: volumeTracing.tracingId,
-  additionalCoordinates: [],
+  additionalAxes: [],
 };
 const initialState = update(defaultState, {
   tracing: {

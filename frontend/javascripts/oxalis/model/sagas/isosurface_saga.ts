@@ -201,7 +201,7 @@ function* loadAdHocIsosurface(
     return;
   }
 
-  if (_.size(layer.cube.additionalCoordinatesBounds) > 0) {
+  if (_.size(layer.cube.additionalAxes) > 0) {
     // Also see https://github.com/scalableminds/webknossos/issues/7229
     Toast.warning(
       "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",

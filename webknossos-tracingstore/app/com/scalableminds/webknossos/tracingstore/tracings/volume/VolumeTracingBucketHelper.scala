@@ -69,15 +69,18 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
-    val additionalCoordinateString = (bucket.additionalCoordinates, additionalAxes) match {
+    (bucket.additionalCoordinates, additionalAxes) match {
       case (Some(additionalCoordinates), Some(axes)) =>
         // Bucket key additional coordinates need to be ordered to be found later.
         val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
         val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))
-        sortedValues.map(_.toString).mkString(",")
-      case _ => ""
+
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${sortedValues
+          .map(_.toString)
+          .mkString(",")}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+      case _ =>
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
-    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[$additionalCoordinateString][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
 
   }
 
@@ -92,7 +95,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
     }
 
   private def parseBucketKeyXYZ(key: String) = {
-    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[]\\[(\\d+),(\\d+),(\\d+)]".r
+    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
         getBucketPosition(xStr, yStr, zStr, resolutionStr, None).map(bucketPosition => (name, bucketPosition))

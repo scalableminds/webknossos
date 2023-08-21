@@ -113,8 +113,10 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
   ): Option[Seq[ChannelAttributes]] =
     ngffHeader.omero match {
       case Some(value) =>
-        Some(value.channels.map(omeroChannelAttributes =>
-          ChannelAttributes(omeroChannelAttributes.color.map(Color.fromHTML), omeroChannelAttributes.label)))
+        Some(
+          value.channels.map(omeroChannelAttributes =>
+            ChannelAttributes(omeroChannelAttributes.color.map(Color.fromHTML(_).getOrElse(Color(1, 1, 1, 0))),
+                              omeroChannelAttributes.label)))
       case None => None
     }
 

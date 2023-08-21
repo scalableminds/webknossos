@@ -51,13 +51,20 @@ const dummyLocation = {
   /* noop */
   toString: () => "",
   /* noop */
-};
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Location | { ancestorOrigins: never[]; hash:... Remove this comment to see the full error message
+} as any as Window["location"];
 export const location: Location = typeof window === "undefined" ? dummyLocation : window.location;
 
 let performanceCounterForMocking = 0;
 
-const _window =
+type Olvy =
+  | {
+      init: (obj: Object) => void;
+      getUnreadReleasesCount: (timestamp: string) => number;
+      show: () => void;
+    }
+  | undefined;
+
+const _window: Window & typeof globalThis & { Olvy?: Olvy } =
   typeof window === "undefined"
     ? ({
         alert: console.log.bind(console),
@@ -72,6 +79,7 @@ const _window =
         },
         pageXOffset: 0,
         pageYOffset: 0,
+        Olvy: undefined,
         addEventListener,
         removeEventListener,
         open: (_url: string) => {},

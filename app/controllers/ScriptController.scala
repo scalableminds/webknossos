@@ -33,6 +33,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
         _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- bool2Fox(script._owner == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- scriptService.assertValidScriptName(script.name)
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield Ok(js)
@@ -64,6 +65,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         scriptIdValidated <- ObjectId.fromString(scriptId)
         oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
+        _ <- scriptService.assertValidScriptName(scriptFromForm.name)
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
         js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"

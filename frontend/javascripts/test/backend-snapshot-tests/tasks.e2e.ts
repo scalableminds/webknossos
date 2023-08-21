@@ -54,16 +54,16 @@ test.serial("updateTask()", async (t) => {
       taskTypeId: taskBase.type.id,
       boundingBox: taskBase.boundingBox ? taskBase.boundingBoxVec6 : null,
       scriptId: taskBase.script ? taskBase.script.id : null,
-      openInstances: taskBase.status.open,
+      pendingInstances: taskBase.status.pending,
     }),
     _.isNull,
   );
 
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
-  const newTask = { ...task, openInstances: task.openInstances + 10 };
+  const newTask = { ...task, pendingInstances: task.pendingInstances + 10 };
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const updatedTask = await api.updateTask(task.id, newTask);
-  t.deepEqual(updatedTask.status.open, newTask.openInstances);
+  t.deepEqual(updatedTask.status.pending, newTask.pendingInstances);
   t.snapshot(updatedTask, {
     id: "tasks-updatedTask",
   });
@@ -71,7 +71,7 @@ test.serial("updateTask()", async (t) => {
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const revertedTask = await api.updateTask(task.id, task);
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
-  t.is(revertedTask.status.open, task.status.open);
+  t.is(revertedTask.status.pending, task.status.pending);
 });
 test.serial("transferTask()", async (t) => {
   const taskAnnotationId = "58135c402faeb34e0081c068";
@@ -93,7 +93,7 @@ const newTask = {
   },
   projectName: "Test_Project4",
   scriptId: null,
-  openInstances: 3,
+  pendingInstances: 3,
   taskTypeId: "570b9f4c2a7c0e4c008da6ee",
 };
 test.serial("createTasks() and deleteTask()", async (t) => {

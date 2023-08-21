@@ -268,7 +268,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             writer.writeAttribute("anchorPositionX", a.x.toString)
             writer.writeAttribute("anchorPositionY", a.y.toString)
             writer.writeAttribute("anchorPositionZ", a.z.toString)
-            s.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
+            s.anchorPositionAdditionalCoordinates.foreach(writeAdditionalCoordinateValue)
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))

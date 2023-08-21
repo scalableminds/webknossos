@@ -277,7 +277,7 @@ case class UpdateSegmentVolumeAction(id: Long,
         creationTime = creationTime,
         color = colorOptToProto(color),
         groupId = groupId,
-        additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

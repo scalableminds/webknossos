@@ -201,7 +201,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case (Some(x), Some(y), Some(z)) => Some(Vec3IntProto(x.toInt, y.toInt, z.toInt))
         case _                           => None
       }
-      val additionalCoordinates = parseAdditionalCoordinateValues(node)
+      val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -209,7 +209,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
         color = parseColorOpt(node),
         groupId = getSingleAttribute(node, "groupId").toIntOpt,
-        additionalCoordinates = additionalCoordinates
+        anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates
       )
     })
 

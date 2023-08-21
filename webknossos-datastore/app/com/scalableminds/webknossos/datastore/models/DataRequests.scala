@@ -51,7 +51,8 @@ case class WebKnossosIsosurfaceRequest(
     subsamplingStrides: Vec3Int,
     scale: Vec3Double,
     mapping: Option[String] = None,
-    mappingType: Option[String] = None
+    mappingType: Option[String] = None,
+    findNeighbors: Option[Boolean] = Some(true)
 ) {
   def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)

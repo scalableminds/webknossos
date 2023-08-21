@@ -32,7 +32,8 @@ case class IsosurfaceRequest(
     subsamplingStrides: Vec3Int,
     scale: Vec3Double,
     mapping: Option[String] = None,
-    mappingType: Option[String] = None
+    mappingType: Option[String] = None,
+    findNeighbors: Option[Boolean] = Some(true)
 )
 
 case class DataTypeFunctors[T, B](
@@ -199,7 +200,10 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
-      neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
+      neighbors = request.findNeighbors match {
+        case Some(true) => findNeighbors(mappedData, dataDimensions, mappedSegmentId)
+        case _          => List()
+      }
     } yield {
       for {
         x <- 0 until dataDimensions.x by 32

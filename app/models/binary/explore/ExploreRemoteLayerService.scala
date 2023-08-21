@@ -149,6 +149,13 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
   private def isPowerOfTwo(x: Int): Boolean =
     x != 0 && (x & (x - 1)) == 0
+
+  private def isPowerOfTwo(x: Double): Boolean = {
+    val epsilon = 0.0001
+    val l = (math.log(x) / math.log(2))
+    math.abs(l - l.round.toDouble) < epsilon
+  }
+
   private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
       implicit ec: ExecutionContext): Fox[Vec3Int] = {
 
@@ -166,7 +173,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
   private def findBaseVoxelSize(minVoxelSize: Vec3Double, preferredVoxelSizeOpt: Option[Vec3Double]): Vec3Double =
     preferredVoxelSizeOpt match {
       case Some(preferredVoxelSize) =>
-        val baseMag = (minVoxelSize / preferredVoxelSize).round.toVec3Int
+        val baseMag = minVoxelSize / preferredVoxelSize
         if (isPowerOfTwo(baseMag.x) && isPowerOfTwo(baseMag.y) && isPowerOfTwo(baseMag.z)) {
           preferredVoxelSize
         } else {

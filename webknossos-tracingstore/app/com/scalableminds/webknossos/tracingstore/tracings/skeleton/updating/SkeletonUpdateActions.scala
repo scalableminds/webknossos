@@ -337,8 +337,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None,
-                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] =
-                                         None)
+                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =

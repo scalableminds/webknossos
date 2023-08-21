@@ -72,13 +72,13 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 }
 
 case class VolumeTracingLayer(
-                               name: String,
-                               volumeTracingService: VolumeTracingService,
-                               isTemporaryTracing: Boolean = false,
-                               includeFallbackDataIfAvailable: Boolean = false,
-                               tracing: VolumeTracing,
-                               userToken: Option[String],
-                               additionalAxes: Option[Seq[AdditionalAxis]]
+    name: String,
+    volumeTracingService: VolumeTracingService,
+    isTemporaryTracing: Boolean = false,
+    includeFallbackDataIfAvailable: Boolean = false,
+    tracing: VolumeTracing,
+    userToken: Option[String],
+    additionalAxes: Option[Seq[AdditionalAxis]]
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],

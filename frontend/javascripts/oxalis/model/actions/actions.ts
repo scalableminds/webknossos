@@ -14,6 +14,8 @@ import type { ConnectomeAction } from "oxalis/model/actions/connectome_actions";
 import { ProofreadAction } from "oxalis/model/actions/proofread_actions";
 import { OrganizationAction } from "oxalis/model/actions/organization_actions";
 
+export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
+
 export type Action =
   | SkeletonTracingAction
   | VolumeTracingAction
@@ -32,7 +34,8 @@ export type Action =
   | OrganizationAction
   | ReturnType<typeof wkReadyAction>
   | ReturnType<typeof sceneControllerReadyAction>
-  | ReturnType<typeof restartSagaAction>;
+  | ReturnType<typeof restartSagaAction>
+  | EscalateErrorAction;
 
 export const wkReadyAction = () =>
   ({
@@ -47,4 +50,10 @@ export const sceneControllerReadyAction = () =>
 export const restartSagaAction = () =>
   ({
     type: "RESTART_SAGA",
+  } as const);
+
+export const escalateErrorAction = (error: unknown) =>
+  ({
+    type: "ESCALATE_ERROR",
+    error,
   } as const);

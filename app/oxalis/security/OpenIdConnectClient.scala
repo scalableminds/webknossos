@@ -1,22 +1,24 @@
 package oxalis.security
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, jsResult2Fox, try2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import play.api.libs.json.{JsObject, Json, OFormat}
-import pdi.jwt.{JwtJson, JwtOptions}
+import pdi.jwt.JwtJson
 import play.api.libs.ws._
 import utils.WkConf
 
+import java.math.BigInteger
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.security.spec.X509EncodedKeySpec
+import java.security.spec.RSAPublicKeySpec
 import java.security.{KeyFactory, PublicKey}
 import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionContext: ExecutionContext) {
+class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext) extends FoxImplicits {
+
+  private val keyTypeRsa = "RSA"
 
   private lazy val oidcConfig: OpenIdConnectConfig =
     OpenIdConnectConfig(
@@ -49,7 +51,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
   Fetches token from the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
    */
-  def getToken(redirectUrl: String, code: String): Fox[JsObject] =
+  def getAndValidateToken(redirectUrl: String, code: String): Fox[JsObject] =
     for {
       _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
@@ -63,7 +65,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
             "redirect_uri" -> redirectUrl,
             "code" -> code
           ))
-      newToken <- validateOpenIdConnectTokenResponse(tokenResponse) ?~> "failed to parse JWT"
+      newToken <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
     } yield newToken
 
   /*
@@ -75,25 +77,26 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
 
-  private def validateOpenIdConnectTokenResponse(tr: OpenIdConnectTokenResponse) =
-    publicKey match {
-      case Some(pk) => JwtJson.decodeJson(tr.access_token, pk).toFox
-      case None =>
-        JwtJson.decodeJson(tr.access_token, JwtOptions.DEFAULT.copy(signature = false)).toFox
-    }
+  private def validateOpenIdConnectTokenResponse(tokenResponse: OpenIdConnectTokenResponse,
+                                                 serverInfos: OpenIdConnectProviderInfo): Fox[JsObject] =
+    for {
+      publicKey <- fetchServerPublicKey(serverInfos)
+      decodedResponse <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
+    } yield decodedResponse
 
-  private lazy val publicKey: Option[PublicKey] = {
-    if (conf.SingleSignOn.OpenIdConnect.publicKey.isEmpty || conf.SingleSignOn.OpenIdConnect.publicKeyAlgorithm.isEmpty) {
-      None
-    } else {
-      val kf = KeyFactory.getInstance("RSA")
-      val base64EncodedKey = conf.SingleSignOn.OpenIdConnect.publicKey
-      val key = Base64.getDecoder.decode(base64EncodedKey.getBytes)
-      val spec = new X509EncodedKeySpec(key)
-      Some(kf.generatePublic(spec))
-    }
-
-  }
+  private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =
+    for {
+      response: WSResponse <- rpc(serverInfos.jwks_uri).get
+      jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
+      firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
+        key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
+      modulusString <- firstRsaKey.n
+      modulus = new BigInteger(1, Base64.getUrlDecoder.decode(modulusString.getBytes))
+      exponentString <- firstRsaKey.e
+      exponent = new BigInteger(1, Base64.getUrlDecoder.decode(exponentString.getBytes))
+      publicKeySpec = new RSAPublicKeySpec(modulus, exponent)
+      publicKey = KeyFactory.getInstance(keyTypeRsa).generatePublic(publicKeySpec)
+    } yield publicKey
 
 }
 
@@ -101,6 +104,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit executionCo
 case class OpenIdConnectProviderInfo(
     authorization_endpoint: String,
     token_endpoint: String,
+    jwks_uri: String
 )
 
 object OpenIdConnectProviderInfo {
@@ -143,5 +147,24 @@ case class OpenIdConnectClaimSet(iss: String,
 }
 
 object OpenIdConnectClaimSet {
-  implicit val format: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]
+  implicit val jsonFormat: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]
+}
+
+case class JsonWebKeySet(keys: Seq[JsonWebKey])
+object JsonWebKeySet {
+  implicit val jsonFormat: OFormat[JsonWebKeySet] = Json.format[JsonWebKeySet]
+}
+
+// Specified by https://datatracker.ietf.org/doc/html/rfc7517#section-4
+// and RSA-specific by https://datatracker.ietf.org/doc/html/rfc7518#section-6.3.1
+case class JsonWebKey(
+    kty: String, // key type
+    alg: String, // algorithm
+    use: String, // usage (sig for signature or enc for encryption)
+    n: Option[String], // rsa modulus
+    e: Option[String] // rsa exponent
+)
+
+object JsonWebKey {
+  implicit val jsonFormat: OFormat[JsonWebKey] = Json.format[JsonWebKey]
 }

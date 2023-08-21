@@ -71,6 +71,7 @@ user.creation.failed=Failed to create user
 
 oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid
+oidc.authentication.failed=Failed to register / log in via Single-Sign-On (SSO with OIDC)
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on WEBKNOSSOS to login.
 braintracing.error=We could not automatically create an account for you on braintracing.org. Please do it on your own.

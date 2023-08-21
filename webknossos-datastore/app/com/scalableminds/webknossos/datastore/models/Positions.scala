@@ -46,7 +46,7 @@ case class BucketPosition(
     voxelMag1Y: Int,
     voxelMag1Z: Int,
     mag: Vec3Int,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]]
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
 ) {
 
   val bucketLength: Int = DataLayer.bucketLength
@@ -94,8 +94,8 @@ case class BucketPosition(
     )
 
   def hasNegativeComponent: Boolean =
-    voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent || AdditionalCoordinateRequest
-      .anyValueNegative(additionalCoordinates)
+    voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent || AdditionalCoordinate
+      .hasNegativeValue(additionalCoordinates)
 
   def toVec3IntProto: Vec3IntProto = Vec3IntProto(bucketX, bucketY, bucketZ)
 

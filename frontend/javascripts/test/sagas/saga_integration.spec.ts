@@ -5,7 +5,7 @@ import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -83,7 +83,10 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t
   const trees = generateDummyTrees(1000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   t.is(Store.getState().save.queue.skeleton.length, 1);
-  t.true(Store.getState().save.queue.skeleton[0].actions.length < maximumActionCountPerBatch);
+  t.true(
+    Store.getState().save.queue.skeleton[0].actions.length <
+      MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton,
+  );
 });
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
@@ -92,7 +95,7 @@ test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) =>
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   const state = Store.getState();
   t.true(state.save.queue.skeleton.length > 1);
-  t.is(state.save.queue.skeleton[0].actions.length, maximumActionCountPerBatch);
+  t.is(state.save.queue.skeleton[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
 });
 test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const nodeCount = 20000;
@@ -108,6 +111,6 @@ test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const { skeleton: skeletonSaveQueue } = Store.getState().save.queue;
   // There should only be one chunk
   t.is(skeletonSaveQueue.length, 1);
-  t.true(skeletonSaveQueue[0].actions.length < maximumActionCountPerBatch);
+  t.true(skeletonSaveQueue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
   t.is(skeletonSaveQueue[0].actions[1].name, "moveTreeComponent");
 });

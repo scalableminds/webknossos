@@ -28,16 +28,16 @@ trait N5Layer extends DataLayer {
 }
 
 case class N5DataLayer(
-    name: String,
-    category: Category.Value,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                        name: String,
+                        category: Category.Value,
+                        boundingBox: BoundingBox,
+                        elementClass: ElementClass.Value,
+                        mags: List[MagLocator],
+                        defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                        adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                        coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                        override val numChannels: Option[Int] = Some(1),
+                        additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends N5Layer
 
 object N5DataLayer {
@@ -45,17 +45,17 @@ object N5DataLayer {
 }
 
 case class N5SegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    largestSegmentId: Option[Long],
-    mappings: Option[Set[String]] = None,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                                name: String,
+                                boundingBox: BoundingBox,
+                                elementClass: ElementClass.Value,
+                                mags: List[MagLocator],
+                                largestSegmentId: Option[Long],
+                                mappings: Option[Set[String]] = None,
+                                defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                override val numChannels: Option[Int] = Some(1),
+                                additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with N5Layer
 

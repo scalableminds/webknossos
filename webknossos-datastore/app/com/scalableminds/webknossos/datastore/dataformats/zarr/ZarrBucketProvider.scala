@@ -28,7 +28,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
         zarrArray.readBytesWithAdditionalCoordinates(shape,
                                                      offset,
                                                      additionalCoordinates,
-                                                     dataLayer.additionalCoordinateMap)
+                                                     dataLayer.additionalAxisMap)
       case None => zarrArray.readBytesXYZ(shape, offset)
     }
   }

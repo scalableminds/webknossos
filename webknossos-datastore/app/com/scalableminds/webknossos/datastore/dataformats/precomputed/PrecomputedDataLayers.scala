@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinateDefinition,
+  AdditionalAxis,
   Category,
   CoordinateTransformation,
   DataFormat,
@@ -37,16 +37,16 @@ trait PrecomputedLayer extends DataLayer {
 }
 
 case class PrecomputedDataLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    category: Category.Value,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                                 name: String,
+                                 boundingBox: BoundingBox,
+                                 category: Category.Value,
+                                 elementClass: ElementClass.Value,
+                                 mags: List[MagLocator],
+                                 defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                 adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                 coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                 override val numChannels: Option[Int] = Some(1),
+                                 additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends PrecomputedLayer
 
 object PrecomputedDataLayer {
@@ -54,17 +54,17 @@ object PrecomputedDataLayer {
 }
 
 case class PrecomputedSegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    largestSegmentId: Option[Long],
-    mappings: Option[Set[String]] = None,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                                         name: String,
+                                         boundingBox: BoundingBox,
+                                         elementClass: ElementClass.Value,
+                                         mags: List[MagLocator],
+                                         largestSegmentId: Option[Long],
+                                         mappings: Option[Set[String]] = None,
+                                         defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                         adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                         coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                         override val numChannels: Option[Int] = Some(1),
+                                         additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with PrecomputedLayer
 

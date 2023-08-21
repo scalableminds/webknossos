@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 
@@ -51,7 +51,7 @@ class PrecomputedArray(vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
-                       additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
+                       additionalAxes: Option[Seq[AdditionalAxis]],
                        sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DatasetArray(vaultPath,
                          dataSourceId,
@@ -59,7 +59,7 @@ class PrecomputedArray(vaultPath: VaultPath,
                          header,
                          axisOrder,
                          channelIndex,
-                         additionalCoordinates,
+                         additionalAxes,
                          sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {

@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedStrin
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
-  AdditionalCoordinateDefinitionProto,
+  AdditionalAxisProto,
   AdditionalCoordinateProto,
   ColorProto,
   NamedBoundingBoxProto,
@@ -58,7 +58,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
-        additionalCoordinates <- parseAdditionalCoordinateDefinitions(parameters \ "additionalCoordinates")
+        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -102,7 +102,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 segmentGroups = v.segmentGroups,
                 hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName),
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
-                additionalCoordinates = additionalCoordinates
+                additionalAxes = additionalAxisProtos
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
@@ -128,7 +128,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 userBoundingBoxes,
                 organizationName,
                 editPositionAdditionalCoordinates,
-                additionalCoordinates = additionalCoordinates
+                additionalAxes = additionalAxisProtos
               )
             )
 
@@ -262,26 +262,26 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalCoordinateDefinitions(nodes: NodeSeq)(implicit m: MessagesProvider) = {
-    val additionalCoordinates = nodes.headOption.map(
+  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
+    val additionalAxes = nodes.headOption.map(
       _.child.flatMap(
-        additionalCoordinateNode => {
+        additionalAxisNode => {
           for {
-            name <- getSingleAttributeOpt(additionalCoordinateNode, "name")
-            indexStr <- getSingleAttributeOpt(additionalCoordinateNode, "index")
+            name <- getSingleAttributeOpt(additionalAxisNode, "name")
+            indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
             index <- indexStr.toIntOpt
-            minStr <- getSingleAttributeOpt(additionalCoordinateNode, "min")
+            minStr <- getSingleAttributeOpt(additionalAxisNode, "min")
             min <- minStr.toIntOpt
-            maxStr <- getSingleAttributeOpt(additionalCoordinateNode, "max")
+            maxStr <- getSingleAttributeOpt(additionalAxisNode, "max")
             max <- maxStr.toIntOpt
-          } yield new AdditionalCoordinateDefinitionProto(name, index, Vec2IntProto(min, max))
+          } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
         }
       )
     )
-    additionalCoordinates match {
-      case Some(coords) =>
-        if (coords.map(_.name).distinct.size == coords.size) {
-          Full(coords)
+    additionalAxes match {
+      case Some(axes) =>
+        if (axes.map(_.name).distinct.size == axes.size) {
+          Full(axes)
         } else {
           Failure(Messages("nml.additionalCoordinates.notUnique"))
         }
@@ -311,10 +311,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     nodes.headOption.flatMap(n => {
       val xyz = parseVec3Int(n)
       val additionalCoordinates = parseAdditionalCoordinateValues(n)
-      xyz match {
-        case Some(value) => Some(value, additionalCoordinates)
-        case None        => None
-      }
+      xyz.map(value => (value, additionalCoordinates))
     })
 
   private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =

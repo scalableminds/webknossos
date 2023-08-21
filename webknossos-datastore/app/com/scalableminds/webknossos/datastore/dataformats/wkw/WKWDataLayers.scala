@@ -34,15 +34,15 @@ trait WKWLayer extends DataLayer {
 }
 
 case class WKWDataLayer(
-    name: String,
-    category: Category.Value,
-    boundingBox: BoundingBox,
-    wkwResolutions: List[WKWResolution],
-    elementClass: ElementClass.Value,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                         name: String,
+                         category: Category.Value,
+                         boundingBox: BoundingBox,
+                         wkwResolutions: List[WKWResolution],
+                         elementClass: ElementClass.Value,
+                         defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                         adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                         coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                         additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -50,16 +50,16 @@ object WKWDataLayer {
 }
 
 case class WKWSegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    wkwResolutions: List[WKWResolution],
-    elementClass: ElementClass.Value,
-    mappings: Option[Set[String]],
-    largestSegmentId: Option[Long] = None,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+                                 name: String,
+                                 boundingBox: BoundingBox,
+                                 wkwResolutions: List[WKWResolution],
+                                 elementClass: ElementClass.Value,
+                                 mappings: Option[Set[String]],
+                                 largestSegmentId: Option[Long] = None,
+                                 defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                 adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                 coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                 additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with WKWLayer
 

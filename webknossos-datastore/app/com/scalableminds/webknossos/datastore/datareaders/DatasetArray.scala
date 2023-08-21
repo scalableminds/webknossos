@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
@@ -43,11 +43,11 @@ class DatasetArray(vaultPath: VaultPath,
     readBytes(shapeArray, offsetArray)
   }
 
-  def readBytesWithAdditionalCoordinates(shape: Vec3Int,
-                                         offset: Vec3Int,
-                                         additionalCoordinates: Seq[AdditionalCoordinateRequest],
-                                         additionalAxesMap: Map[String, AdditionalAxis])(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def readBytesWithAdditionalCoordinates(
+      shape: Vec3Int,
+      offset: Vec3Int,
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxesMap: Map[String, AdditionalAxis])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalAxesMap.size
 
     /*
@@ -72,9 +72,9 @@ class DatasetArray(vaultPath: VaultPath,
       case None    => ()
     }
 
-    for (additionalCoordinateRequest <- additionalCoordinates) {
-      val index = additionalAxesMap(additionalCoordinateRequest.name).index
-      offsetArray(index) = additionalCoordinateRequest.value
+    for (additionalCoordinate <- additionalCoordinates) {
+      val index = additionalAxesMap(additionalCoordinate.name).index
+      offsetArray(index) = additionalCoordinate.value
       // Shape for additional coordinates will always be 1
     }
     readBytes(shapeArray, offsetArray)

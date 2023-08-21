@@ -173,12 +173,12 @@ test("Flycam should get correct subset of additional coordinates value when subs
             {
               name: "color1",
               type: "color",
-              additionalCoordinates: [{ name: "t", bounds: [0, 10] }],
+              additionalAxes: [{ name: "t", bounds: [0, 10] }],
             },
             {
               name: "color2",
               type: "color",
-              additionalCoordinates: [{ name: "u", bounds: [10, 20] }],
+              additionalAxes: [{ name: "u", bounds: [10, 20] }],
             },
           ],
         },
@@ -210,7 +210,7 @@ test("Flycam should get valid additional coordinate value even when invalid valu
             {
               name: "color1",
               type: "color",
-              additionalCoordinates: [{ name: "t", bounds: [0, 10] }],
+              additionalAxes: [{ name: "t", bounds: [0, 10] }],
             },
           ],
         },

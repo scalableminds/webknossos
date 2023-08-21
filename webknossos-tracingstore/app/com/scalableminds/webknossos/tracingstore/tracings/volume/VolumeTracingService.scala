@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinateRequest,
+  AdditionalCoordinate,
   BucketPosition,
   WebKnossosIsosurfaceRequest
 }
@@ -128,7 +128,7 @@ class VolumeTracingService @Inject()(
                     largestSegmentId = a.largestSegmentId,
                     zoomLevel = a.zoomLevel,
                     editPositionAdditionalCoordinates =
-                      AdditionalCoordinateRequest.toProto(a.editPositionAdditionalCoordinates)
+                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)

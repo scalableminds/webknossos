@@ -328,13 +328,16 @@ function* loadFullAdHocIsosurface(
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
       useDataStore,
+      !usePositionsFromSegmentStats,
     );
     isInitialRequest = false;
-    if (!usePositionsFromSegmentStats) {
-      // Only use neighbors if we don't have the positions from the segment
-      // stats.
-      positionsToRequest = positionsToRequest.concat(neighbors);
+
+    // If we are using the positions from the segment index, the backend will
+    // send an empty neighbors array, as it's not necessary to have them.
+    if (usePositionsFromSegmentStats && neighbors.length > 0) {
+      throw new Error("Retrieved neighbor positions even though these were not requested.");
     }
+    positionsToRequest = positionsToRequest.concat(neighbors);
   }
 
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
@@ -374,6 +377,7 @@ function* maybeLoadIsosurfaceChunk(
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
   useDataStore: boolean,
+  findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
@@ -415,6 +419,7 @@ function* maybeLoadIsosurfaceChunk(
   const { segmentMeshController } = getSceneController();
 
   const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -430,6 +435,7 @@ function* maybeLoadIsosurfaceChunk(
           subsamplingStrides,
           cubeSize,
           scale,
+          findNeighbors,
           ...isosurfaceExtraInfo,
         },
       );

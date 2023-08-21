@@ -2084,13 +2084,14 @@ type IsosurfaceRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
-  segmentId: number;
+  segmentId: number; // Segment to build mesh for
   subsamplingStrides: Vector3;
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
+  findNeighbors: boolean;
 };
 
 export function computeIsosurface(
@@ -2102,17 +2103,19 @@ export function computeIsosurface(
 }> {
   const {
     position,
-    mag,
-    segmentId,
-    subsamplingStrides,
     cubeSize,
-    scale,
     mappingName,
-    mappingType,
+    subsamplingStrides,
+
+    ...rest
   } = isosurfaceRequest;
+
   return doWithToken(async (token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/isosurface?token=${token}`,
+      `${requestUrl}/isosurface?${params}`,
       {
         data: {
           // The back-end needs a small padding at the border of the
@@ -2120,15 +2123,11 @@ export function computeIsosurface(
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
-          mag,
-          // Segment to build mesh for
-          segmentId,
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           subsamplingStrides,
-          scale,
+          ...rest,
         },
       },
     );

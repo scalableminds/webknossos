@@ -29,7 +29,8 @@ case class ImageCreatorParameters(
     intensityRange: Option[(Double, Double)] = None,
     blackAndWhite: Boolean,
     isSegmentation: Boolean = false,
-    color: Option[Color] = None
+    color: Option[Color] = None,
+    invertColor: Option[Boolean] = None
 )
 
 object ImageCreator extends LazyLogging {
@@ -106,7 +107,8 @@ object ImageCreator extends LazyLogging {
                          elementClass: ElementClass.Value,
                          isSegmentation: Boolean,
                          intensityRange: Option[(Double, Double)],
-                         color: Option[Color]) = {
+                         color: Option[Color],
+                         invertColor: Option[Boolean]) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
@@ -116,27 +118,25 @@ object ImageCreator extends LazyLogging {
         if (isSegmentation)
           idToRGB(b(idx))
         else {
-          val rF = color.map(_.r).getOrElse(1d) // rF = red factor
-          val gF = color.map(_.g).getOrElse(1d)
-          val bF = color.map(_.b).getOrElse(1d)
+          val isColorInverted = invertColor.getOrElse(false)
+          val colorRed = applyColor(color.map(_.r).getOrElse(1d), isColorInverted)
+          val colorGreen = applyColor(color.map(_.g).getOrElse(1d), isColorInverted)
+          val colorBlue = applyColor(color.map(_.b).getOrElse(1d), isColorInverted)
           elementClass match {
             case ElementClass.uint8 =>
               val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
-              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
-                grayNormalized,
-                bF) << 0)
+              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+                grayNormalized) << 0)
             case ElementClass.uint16 =>
               val grayNormalized = normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
-              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
-                grayNormalized,
-                bF) << 0)
+              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+                grayNormalized) << 0)
             case ElementClass.uint24 => // assume uint24 rgb color data
               (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
             case ElementClass.float =>
               val grayNormalized = normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-              (0xFF << 24) | (applyColor(grayNormalized, rF) << 16) | (applyColor(grayNormalized, gF) << 8) | (applyColor(
-                grayNormalized,
-                bF) << 0)
+              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+                grayNormalized) << 0)
             case _ =>
               throw new Exception(
                 "Can't handle " + bytesPerElement + " bytes per element in Image creator for a color layer.")
@@ -148,8 +148,11 @@ object ImageCreator extends LazyLogging {
     colored
   }
 
-  private def applyColor(valueByte: Int, colorFactor: Double): Int =
-    (valueByte * colorFactor).toInt & 0xFF
+  private def applyColor(colorFactor: Double, invertColor: Boolean): Int => Int =
+    if (invertColor)
+      (valueByte: Int) => (Math.abs(valueByte - 255) * colorFactor).toInt & 0xFF
+    else
+      (valueByte: Int) => (valueByte * colorFactor).toInt & 0xFF
 
   private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Int =
     intensityRangeOpt match {
@@ -230,7 +233,12 @@ object ImageCreator extends LazyLogging {
         0,
         params.slideWidth,
         params.slideHeight,
-        toRGBArray(b, params.elementClass, params.isSegmentation, params.intensityRange, params.color),
+        toRGBArray(b,
+                   params.elementClass,
+                   params.isSegmentation,
+                   params.intensityRange,
+                   params.color,
+                   params.invertColor),
         0,
         params.slideWidth
       )

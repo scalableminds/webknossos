@@ -169,7 +169,8 @@ class BinaryDataController @Inject()(
                     mappingName: Option[String],
                     intensityMin: Option[Double],
                     intensityMax: Option[Double],
-                    color: Option[String]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    color: Option[String],
+                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -197,7 +198,8 @@ class BinaryDataController @Inject()(
           blackAndWhite = false,
           intensityRange = intensityRange,
           isSegmentation = dataLayer.category == Category.segmentation,
-          color = layerColor
+          color = layerColor,
+          invertColor = invertColor
         )
         dataWithFallback = if (data.length == 0)
           new Array[Byte](width * height * dataLayer.bytesPerElement)

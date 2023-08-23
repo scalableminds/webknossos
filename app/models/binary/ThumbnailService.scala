@@ -14,7 +14,7 @@ import models.configuration.DataSetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.JsArray
+import play.api.libs.json.{JsArray, JsBoolean}
 import utils.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
@@ -76,12 +76,12 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       viewConfiguration <- dataSetConfigurationService.getDataSetViewConfigurationForDataset(List.empty,
                                                                                              datasetName,
                                                                                              organizationName)(ctx)
-      (mag1BoundingBox, mag, intensityRangeOpt, colorOpt) = selectParameters(viewConfiguration,
-                                                                             usableDataSource,
-                                                                             layerName,
-                                                                             layer,
-                                                                             width,
-                                                                             height)
+      (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt) = selectParameters(viewConfiguration,
+                                                                                     usableDataSource,
+                                                                                     layerName,
+                                                                                     layer,
+                                                                                     width,
+                                                                                     height)
       client <- dataSetService.clientFor(dataset)
       image <- client.getDataLayerThumbnail(organizationName,
                                             dataset,
@@ -90,7 +90,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                             mag,
                                             mappingName,
                                             intensityRangeOpt,
-                                            colorOpt)
+                                            colorSettingsOpt)
       _ <- thumbnailDAO.upsertThumbnail(dataset._id,
                                         layerName,
                                         width,
@@ -102,12 +102,13 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                         mag1BoundingBox)
     } yield image
 
-  private def selectParameters(viewConfiguration: DataSetViewConfiguration,
-                               usableDataSource: GenericDataSource[DataLayerLike],
-                               layerName: String,
-                               layer: DataLayerLike,
-                               targetMagWidth: Int,
-                               targetMagHeigt: Int): (BoundingBox, Vec3Int, Option[(Double, Double)], Option[Color]) = {
+  private def selectParameters(
+      viewConfiguration: DataSetViewConfiguration,
+      usableDataSource: GenericDataSource[DataLayerLike],
+      layerName: String,
+      layer: DataLayerLike,
+      targetMagWidth: Int,
+      targetMagHeigt: Int): (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings]) = {
     val configuredCenterOpt =
       viewConfiguration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int]))
     val centerOpt =
@@ -118,14 +119,14 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       .flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double]))
       .getOrElse(1.0)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
-    val colorOpt = readColor(viewConfiguration, layerName)
+    val colorSettingsOpt = readColor(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)
     val mag1Width = targetMagWidth * mag.x
     val mag1Height = targetMagHeigt * mag.y
     val x = center.x - mag1Width / 2
     val y = center.y - mag1Height / 2
     val z = center.z
-    (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt, colorOpt)
+    (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt, colorSettingsOpt)
   }
 
   private def readIntensityRange(viewConfiguration: DataSetViewConfiguration,
@@ -137,19 +138,23 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       max <- (intensityRangeJsArray \ 1).asOpt[Double]
     } yield (min, max)
 
-  private def readColor(viewConfiguration: DataSetViewConfiguration, layerName: String): Option[Color] =
+  private def readColor(viewConfiguration: DataSetViewConfiguration,
+                        layerName: String): Option[ThumbnailColorSettings] =
     for {
       layersJsValue <- viewConfiguration.get("layers")
       colorArray <- (layersJsValue \ layerName \ "color").asOpt[JsArray]
+      isInverted = (layersJsValue \ layerName \ "isInverted").asOpt[JsBoolean].exists(_.value)
       r <- colorArray(0).validate[Int].asOpt
       g <- colorArray(1).validate[Int].asOpt
       b <- colorArray(2).validate[Int].asOpt
-    } yield Color(r / 255d, g / 255d, b / 255d, 0)
+    } yield ThumbnailColorSettings(Color(r / 255d, g / 255d, b / 255d, 0), isInverted)
 
   private def magForZoom(dataLayer: DataLayerLike, zoom: Double): Vec3Int =
     dataLayer.resolutions.minBy(r => Math.abs(r.maxDim - zoom))
 
 }
+
+case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
 class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days

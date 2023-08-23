@@ -101,7 +101,7 @@ class DataSetController @Inject()(userService: UserService,
     sil.UserAwareAction.async { implicit request =>
       for {
         _ <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnail(organizationName,
+        image <- thumbnailService.getThumbnail(organizationName, //todo: Revert to using cache
                                                dataSetName,
                                                dataLayerName,
                                                w.getOrElse(1000),

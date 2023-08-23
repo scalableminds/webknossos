@@ -85,7 +85,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -1281,14 +1281,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   render() {
-    const { layers, colorLayerOrder, blendMode } = this.props.datasetConfiguration;
+    const { layers, colorLayerOrder } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
     const SortableLayerSettings = this.SortableLayerSettings;
 
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
-    const isSortingDisabled = colorLayerOrder.length < 2 || blendMode === BLEND_MODES.Additive;
+    const isSortingDisabled = colorLayerOrder.length < 2;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (
         <SortableLayerSettings

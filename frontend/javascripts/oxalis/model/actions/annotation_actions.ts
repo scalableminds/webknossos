@@ -16,7 +16,7 @@ import type {
 import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
 import { Dispatch } from "redux";
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;

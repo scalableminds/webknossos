@@ -152,7 +152,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                               userToken: Option[String]): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
-      _ = logger.info(s"previousCommittedVersion: ${previousCommittedVersion}")
+      _ = logger.info(
+        s"handleUpdateGroupForTransaction. previousCommittedVersion: $previousCommittedVersion, update group version ${updateGroup.version}")
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
           commitPending(tracingId, updateGroup, userToken)
@@ -165,7 +166,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                              updateGroup.version,
                              updateGroup,
                              transactionBatchExpiry)
-            .map(_ => updateGroup.version)
+            .map(_ => previousCommittedVersion) // no updates have been committed, do not yield version increase
         }
       } else {
         Fox.failure(s"Incorrect version. Expected: ${previousCommittedVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT

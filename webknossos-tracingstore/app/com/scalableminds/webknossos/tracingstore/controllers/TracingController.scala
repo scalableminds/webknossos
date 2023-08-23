@@ -144,16 +144,16 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  val transactionBatchExpiry: FiniteDuration = 20 minutes
+  private val transactionBatchExpiry: FiniteDuration = 24 hours
 
   private def handleUpdateGroupForTransaction(tracingId: String,
                                               previousVersionFox: Fox[Long],
                                               updateGroup: UpdateActionGroup[T],
                                               userToken: Option[String]): Fox[Long] =
     for {
-      previousCommittedVersion <- previousVersionFox
-      previousVersion: Long = previousCommittedVersion
-      result <- if (previousVersion + 1 == updateGroup.version) {
+      previousCommittedVersion: Long <- previousVersionFox
+      _ = logger.info(s"previousCommittedVersion: ${previousCommittedVersion}")
+      result <- if (previousCommittedVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
           commitPending(tracingId, updateGroup, userToken)
         } else {
@@ -191,7 +191,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   private def commitUpdates(tracingId: String,
                             updateGroups: List[UpdateActionGroup[T]],
                             userToken: Option[String]): Fox[Long] = {
-    val currentVersion = tracingService.currentVersion(tracingId)
+    val currentVersion: Fox[Long] = tracingService.currentVersion(tracingId)
     val report = TracingUpdatesReport(
       tracingId,
       timestamps = updateGroups.map(g => Instant(g.timestamp)),
@@ -203,12 +203,16 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
-          if (prevVersion + 1 == updateGroup.version) {
+          val versionIncrement = if (updateGroup.transactionGroupIndex.getOrElse(0) == 0) 1 else 0 // version increment happens at the start of each transaction group
+          if (prevVersion + versionIncrement == updateGroup.version) {
+            logger.info(
+              s"Committing version ${updateGroup.version} from transaction id ${updateGroup.transactionId} index ${updateGroup.transactionGroupIndex} of ${updateGroup.transactionGroupCount}")
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
               .map(_ => updateGroup.version)
           } else {
-            Fox.failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+            Fox
+              .failure(s"Incorrect version during commit. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
           }
         }
       }

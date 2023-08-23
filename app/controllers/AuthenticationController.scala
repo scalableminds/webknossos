@@ -535,10 +535,14 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      code <- openIdConnectClient.getAndValidateToken(
+      _ <- Fox.successful(
+        logger.info(
+          s"Received OIDC callback. claim set code: \n ${request.queryString.get("code")}. Fetching token..."))
+      code: JsObject <- openIdConnectClient.getAndValidateToken(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
+      _ = logger.info(s"Extracted claim set json from token: $code. Parsing...")
       oidc: OpenIdConnectClaimSet <- validateJsValue[OpenIdConnectClaimSet](code) ?~> "oidc.parseClaimset.failed" ?~> "oidc.authentication.failed"
       user_result <- loginOrSignupViaOidc(oidc)(request)
     } yield user_result

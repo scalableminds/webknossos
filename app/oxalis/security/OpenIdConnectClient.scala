@@ -2,6 +2,7 @@ package oxalis.security
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OFormat}
 import pdi.jwt.JwtJson
 import play.api.libs.ws._
@@ -16,7 +17,9 @@ import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext) extends FoxImplicits {
+class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   private val keyTypeRsa = "RSA"
 
@@ -25,7 +28,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       conf.SingleSignOn.OpenIdConnect.providerUrl,
       conf.SingleSignOn.OpenIdConnect.clientId,
       if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
-      else None
+      else None,
+      conf.SingleSignOn.OpenIdConnect.scope
     )
 
   /*
@@ -63,8 +67,10 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
             "grant_type" -> "authorization_code",
             "client_id" -> oidcConfig.clientId,
             "redirect_uri" -> redirectUrl,
-            "code" -> code
+            "code" -> code,
+            "scope" -> oidcConfig.scope
           ))
+      _ = logger.info(s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}")
       newToken <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
     } yield newToken
 
@@ -115,7 +121,7 @@ case class OpenIdConnectConfig(
     baseUrl: String,
     clientId: String,
     clientSecret: Option[String],
-    scope: String = "openid profile"
+    scope: String
 ) {
 
   lazy val discoveryUrl: String = baseUrl + ".well-known/openid-configuration"
@@ -137,14 +143,7 @@ object OpenIdConnectTokenResponse {
 }
 
 // Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-case class OpenIdConnectClaimSet(iss: String,
-                                 sub: String,
-                                 preferred_username: String,
-                                 given_name: String,
-                                 family_name: String,
-                                 email: String) {
-  def username: String = preferred_username
-}
+case class OpenIdConnectClaimSet(iss: String, sub: String, given_name: String, family_name: String, email: String)
 
 object OpenIdConnectClaimSet {
   implicit val jsonFormat: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]

@@ -162,7 +162,7 @@ const SortableLayerSettingsContainer = SortableContainer(({ children }: { childr
 });
 
 type DragHandleProps = {
-  hasLessThanTwoColorLayer: boolean;
+  hasLessThanTwoColorLayers: boolean;
 };
 
 function dragHandleIcon(isDisabled: boolean = false) {
@@ -185,8 +185,8 @@ function dragHandleIcon(isDisabled: boolean = false) {
     </div>
   );
 }
-const DragHandle = SortableHandle(({ hasLessThanTwoColorLayer }: DragHandleProps) => {
-  return hasLessThanTwoColorLayer ? (
+const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProps) => {
+  return hasLessThanTwoColorLayers ? (
     <Tooltip title="Order is only changeable with more than one color layer.">
       dragHandleIcon(true)
     </Tooltip>
@@ -508,7 +508,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
-    hasLessThanTwoColorLayer: boolean = true,
+    hasLessThanTwoColorLayers: boolean = true,
   ) => {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
@@ -597,7 +597,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <div className="flex-container">
         {isColorLayer ? (
-          <DragHandle hasLessThanTwoColorLayer={hasLessThanTwoColorLayer} />
+          <DragHandle hasLessThanTwoColorLayers={hasLessThanTwoColorLayers} />
         ) : (
           <DummyDragHandle layerType="Volume" />
         )}
@@ -869,12 +869,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName,
     layerConfiguration,
     isColorLayer,
-    hasLessThanTwoColorLayer = true,
+    hasLessThanTwoColorLayers = true,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
     isColorLayer: boolean;
-    hasLessThanTwoColorLayer?: boolean;
+    hasLessThanTwoColorLayers?: boolean;
   }) => {
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
@@ -891,7 +891,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerName,
           elementClass,
           layerConfiguration,
-          hasLessThanTwoColorLayer,
+          hasLessThanTwoColorLayers,
         )}
         {isDisabled ? null : (
           <div
@@ -1317,7 +1317,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
-    const hasLessThanTwoColorLayer = colorLayerOrder.length < 2;
+    const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (
         <SortableLayerSettings
@@ -1326,8 +1326,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerConfiguration={layers[layerName]}
           isColorLayer
           index={index}
-          disabled={hasLessThanTwoColorLayer}
-          hasLessThanTwoColorLayer={hasLessThanTwoColorLayer}
+          disabled={hasLessThanTwoColorLayers}
+          hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
         />
       );
     });

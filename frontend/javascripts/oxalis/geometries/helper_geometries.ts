@@ -14,9 +14,11 @@ export class ContourGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
+  viewport: OrthoView;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
+    this.viewport = OrthoViews.PLANE_XY;
 
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
@@ -33,9 +35,14 @@ export class ContourGeometry {
   }
 
   reset() {
+    this.viewport = OrthoViews.PLANE_XY;
     this.line.material.color = this.color;
     this.vertexBuffer.clear();
     this.finalizeMesh();
+  }
+
+  setViewport(viewport: OrthoView) {
+    this.viewport = viewport;
   }
 
   getMeshes() {
@@ -78,15 +85,20 @@ export class ContourGeometry {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
     let accArea = 0;
-    const scaleVector = new THREE.Vector3(...scale);
     const pointCount = this.vertexBuffer.getLength();
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
+    const dimIndices = Dimensions.getIndices(this.viewport);
+    const scaleVector = new THREE.Vector2(scale[dimIndices[0]], scale[dimIndices[1]]);
     for (let i = 0; i < pointCount; i++) {
-      const start = new THREE.Vector3(
-        ...points.subarray(previousPointIndex * 3, (previousPointIndex + 1) * 3),
+      const start = new THREE.Vector2(
+        points[previousPointIndex * 3 + dimIndices[0]],
+        points[previousPointIndex * 3 + dimIndices[1]],
       ).multiply(scaleVector);
-      const end = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
+      const end = new THREE.Vector2(
+        points[i * 3 + dimIndices[0]],
+        points[i * 3 + dimIndices[1]],
+      ).multiply(scaleVector);
       accArea += (start.x + end.x) * (start.y - end.y);
       previousPointIndex = i;
     }

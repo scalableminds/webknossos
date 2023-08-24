@@ -865,11 +865,15 @@ export class AreaMeasurementTool {
         id: string | null | undefined,
         event: MouseEvent,
       ) => {
+        if (id == null) {
+          return;
+        }
         if (!isMeasuring) {
           initialPlane = id as OrthoView;
           isMeasuring = true;
           areaMeasurementGeometry.reset();
           areaMeasurementGeometry.line.visible = true;
+          areaMeasurementGeometry.setViewport(id as OrthoView);
         }
         if (id !== initialPlane || !isMeasuring) {
           return;

@@ -945,6 +945,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_HIDE_EDGES": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        hideEdges: {
+                          $set: action.hideEdges,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
         case "CREATE_COMMENT": {
           const { commentText, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)

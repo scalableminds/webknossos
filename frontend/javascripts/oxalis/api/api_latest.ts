@@ -25,6 +25,7 @@ import {
   setTreeVisibilityAction,
   setTreeGroupAction,
   setTreeGroupsAction,
+  setHideEdgesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -379,6 +380,22 @@ class TracingApi {
     }
 
     Store.dispatch(setTreeNameAction(name, treeId));
+  }
+
+  /**
+   * Sets the name for a tree. If no tree id is given, the active tree is used.
+   *
+   * @example
+   * api.tracing.setTreeName("Special tree", 1);
+   */
+  setTreeHideEdges(hideEdges: boolean, treeId: number | null | undefined) {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+
+    if (treeId == null) {
+      treeId = skeletonTracing.activeTreeId;
+    }
+
+    Store.dispatch(setHideEdgesAction(treeId, hideEdges));
   }
 
   /**

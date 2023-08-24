@@ -675,6 +675,7 @@ export type ServerSkeletonTracingTree = {
   groupId?: number | null | undefined;
   isVisible?: boolean;
   type?: TreeType;
+  hideEdges?: boolean;
 };
 type ServerSegment = {
   segmentId: number;

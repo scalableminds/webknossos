@@ -53,6 +53,7 @@ import {
   deleteTreeAction,
   toggleInactiveTreesAction,
   shuffleAllTreeColorsAction,
+  setHideEdgesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -89,6 +90,7 @@ type Props = OwnProps & {
   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   onToggleHideInactiveTrees: () => void;
   onShuffleAllTreeColors: () => void;
+  onSetHideTreeEdges: (treeId: number, hideEdges: boolean) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -622,6 +624,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               icon: <i className="fas fa-eye" />,
               label: "Hide/Show all other trees",
             },
+            {
+              key: "hideTreeEdges",
+              onClick: () => {
+                this.props.onSetActiveTree(tree.treeId);
+                this.props.onSetHideTreeEdges(tree.treeId, !tree.hideEdges);
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Hide/Show edges of this tree",
+              icon: (
+                <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />
+              ),
+              label: "Hide/Show edges of this tree",
+            },
           ],
         };
       };
@@ -796,6 +811,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onToggleTree(treeId: number) {
     dispatch(toggleTreeAction(treeId));
+  },
+
+  onSetHideTreeEdges(treeId: number, hideEdges: boolean) {
+    dispatch(setHideEdgesAction(treeId, hideEdges));
   },
 
   onToggleTreeGroup(groupId: number) {

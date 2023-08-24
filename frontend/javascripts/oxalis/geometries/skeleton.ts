@@ -328,14 +328,20 @@ class Skeleton {
         }
 
         case "createTree": {
-          this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
+          this.updateTreeColor(
+            update.value.id,
+            update.value.color,
+            update.value.isVisible,
+            update.value.hideEdges,
+          );
           break;
         }
 
-        case "updateTreeVisibility": {
+        case "updateTreeVisibility":
+        case "updateTreeEdgesVisibility": {
           const { treeId } = update.value;
           const tree = skeletonTracing.trees[treeId];
-          this.updateTreeColor(treeId, tree.color, tree.isVisible);
+          this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.hideEdges);
           break;
         }
 
@@ -630,14 +636,20 @@ class Skeleton {
    * Updates a node/edge's color based on the tree color. Colors are stored in
    * a texture shared between the node and edge shader.
    */
-  updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
-    const rgba = this.getTreeRGBA(color, isVisible);
+  updateTreeColor(
+    treeId: number,
+    color: Vector3,
+    isVisible: boolean = true,
+    hideEdges: boolean = false,
+  ) {
+    const rgba = this.getTreeRGBA(color, isVisible, hideEdges);
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean): Vector4 {
-    return [...color, isVisible ? 1 : 0];
+  getTreeRGBA(color: Vector3, isVisible: boolean, hideEdges: boolean): Vector4 {
+    const alpha = isVisible ? (hideEdges ? 0.5 : 1) : 0;
+    return [...color, alpha];
   }
 }
 

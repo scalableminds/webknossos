@@ -23,6 +23,7 @@ import {
   deleteNode,
   deleteTree,
   updateTreeVisibility,
+  updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
   updateUserBoundingBoxes,
@@ -576,6 +577,9 @@ export function* diffTrees(
 
       if (prevTree.isVisible !== tree.isVisible) {
         yield updateTreeVisibility(tree);
+      }
+      if (prevTree.hideEdges !== tree.hideEdges) {
+        yield updateTreeEdgesVisibility(tree);
       }
     }
   }

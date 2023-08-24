@@ -156,7 +156,7 @@ object ImageCreator extends LazyLogging {
 
   private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Int =
     intensityRangeOpt match {
-      case None => grayByte
+      case None => grayByte & 0xFF
       case Some(intensityRange) =>
         val grayInt = grayByte & 0xFF
         normalizeIntensityImpl(grayInt.toDouble, intensityRange)
@@ -166,7 +166,7 @@ object ImageCreator extends LazyLogging {
                                        grayLowerByte: Byte,
                                        grayUpperByte: Byte): Int =
     intensityRangeOpt match {
-      case None => grayUpperByte
+      case None => grayUpperByte & 0xFF
       case Some(intensityRange) =>
         val grayInt = ((grayUpperByte & 0xFF) << 8) | (grayLowerByte & 0xFF)
         normalizeIntensityImpl(grayInt.toDouble, intensityRange)

@@ -1,4 +1,4 @@
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 type Task<T> = () => Promise<T>;
 export const SKIPPED_TASK_REASON = "Skipped task";
 /*
@@ -11,6 +11,10 @@ export const SKIPPED_TASK_REASON = "Skipped task";
  * LatestTaskExecutor instance.
  *
  * See the corresponding spec for examples.
+ *
+ * If you need the same behavior plus cancellation of running
+ * tasks, take a look at the saga-based `createDebouncedAbortableCallable`
+ * utility.
  */
 
 export default class LatestTaskExecutor<T> {

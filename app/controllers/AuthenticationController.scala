@@ -537,9 +537,6 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      _ <- Fox.successful(
-        logger.info(
-          s"Received OIDC callback. claim set code: \n ${request.queryString.get("code")}. Fetching token..."))
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateToken(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),

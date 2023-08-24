@@ -29,7 +29,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       conf.SingleSignOn.OpenIdConnect.clientId,
       if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
       else None,
-      conf.SingleSignOn.OpenIdConnect.scope
+      conf.SingleSignOn.OpenIdConnect.scope,
     )
 
   /*
@@ -61,6 +61,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .withBasicAuthOpt(Some(oidcConfig.clientId), oidcConfig.clientSecret)
         .postFormParseJson[OpenIdConnectTokenResponse](
           Map(
@@ -70,8 +71,10 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
             "code" -> code,
             "scope" -> oidcConfig.scope
           ))
-      _ = logger.info(s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}")
+      _ = logDebug(
+        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding...")
       (accessToken, idToken) <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
+      _ = logDebug(s"Got id token $idToken and access token $accessToken.")
     } yield (accessToken, idToken)
 
   /*
@@ -79,7 +82,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   private def discover: Fox[OpenIdConnectProviderInfo] =
     for {
-      response: WSResponse <- rpc(oidcConfig.discoveryUrl).get
+      response: WSResponse <- rpc(oidcConfig.discoveryUrl)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
+        .get
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
 
@@ -95,7 +100,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =
     for {
-      response: WSResponse <- rpc(serverInfos.jwks_uri).get
+      response: WSResponse <- rpc(serverInfos.jwks_uri)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
+        .get
       jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
       firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
         key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
@@ -107,6 +114,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       publicKey = KeyFactory.getInstance(keyTypeRsa).generatePublic(publicKeySpec)
     } yield publicKey
 
+  private def logDebug(message: String): Unit = if (conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled) {
+    logger.info(message)
+  }
 }
 
 // Fields as specified by https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata

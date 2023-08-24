@@ -55,7 +55,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
   Fetches token from the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
    */
-  def getAndValidateToken(redirectUrl: String, code: String): Fox[JsObject] =
+  def getAndValidateToken(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
       _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
@@ -71,8 +71,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
             "scope" -> oidcConfig.scope
           ))
       _ = logger.info(s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}")
-      newToken <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
-    } yield newToken
+      (accessToken, idToken) <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
+    } yield (accessToken, idToken)
 
   /*
   Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
@@ -83,12 +83,15 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
 
-  private def validateOpenIdConnectTokenResponse(tokenResponse: OpenIdConnectTokenResponse,
-                                                 serverInfos: OpenIdConnectProviderInfo): Fox[JsObject] =
+  private def validateOpenIdConnectTokenResponse(
+      tokenResponse: OpenIdConnectTokenResponse,
+      serverInfos: OpenIdConnectProviderInfo): Fox[(JsObject, Option[JsObject])] =
     for {
       publicKey <- fetchServerPublicKey(serverInfos)
-      decodedResponse <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
-    } yield decodedResponse
+      decdoedAccessToken <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
+      decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(itToken =>
+        JwtJson.decodeJson(itToken, publicKey).toFox)
+    } yield (decdoedAccessToken, decodedIdToken)
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =
     for {
@@ -110,6 +113,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
 case class OpenIdConnectProviderInfo(
     authorization_endpoint: String,
     token_endpoint: String,
+    userinfo_endpoint: String,
     jwks_uri: String
 )
 
@@ -133,6 +137,7 @@ case class OpenIdConnectConfig(
 // Fields as specified by https://www.rfc-editor.org/rfc/rfc6749#section-5.1
 case class OpenIdConnectTokenResponse(
     access_token: String,
+    id_token: Option[String],
     token_type: String,
     refresh_token: Option[String],
     scope: Option[String]
@@ -142,12 +147,7 @@ object OpenIdConnectTokenResponse {
   implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
 }
 
-// Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-case class OpenIdConnectClaimSet(iss: String, sub: String, given_name: String, family_name: String, email: String)
-
-object OpenIdConnectClaimSet {
-  implicit val jsonFormat: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]
-}
+case class OpenIdConnectUserInfo(firstName: String, lastName: String, email: String)
 
 case class JsonWebKeySet(keys: Seq[JsonWebKey])
 object JsonWebKeySet {

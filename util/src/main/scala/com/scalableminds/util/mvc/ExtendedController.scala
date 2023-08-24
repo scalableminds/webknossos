@@ -229,7 +229,6 @@ trait ExtendedController
     with FoxImplicits
     with ResultImplicits
     with Status
-    with WithFilters
     with I18nSupport
     with InjectedController
     with MimeTypes

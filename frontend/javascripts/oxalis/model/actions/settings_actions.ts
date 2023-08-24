@@ -7,7 +7,7 @@ import type {
   Mapping,
   MappingType,
 } from "oxalis/store";
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 import { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;

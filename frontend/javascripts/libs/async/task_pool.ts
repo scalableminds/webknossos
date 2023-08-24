@@ -1,5 +1,5 @@
-import type { Saga, Task } from "oxalis/model/sagas/effect-generators";
-import { join, call, fork } from "typed-redux-saga";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { join, call, fork, FixedTask } from "typed-redux-saga";
 
 /*
   Given an array of async tasks, processTaskWithPool
@@ -10,12 +10,11 @@ export default function* processTaskWithPool(
   tasks: Array<() => Saga<void>>,
   poolSize: number,
 ): Saga<void> {
-  const startedTasks: Array<Task<void>> = [];
+  const startedTasks: Array<FixedTask<void>> = [];
   let isFinalResolveScheduled = false;
   let error: Error | null = null;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'fn' implicitly has an 'any' type.
-  function* forkSafely(fn): Saga<void> {
+  function* forkSafely(fn: () => Saga<void>): Saga<void> {
     // Errors from forked tasks cannot be caught, see https://redux-saga.js.org/docs/advanced/ForkModel/#error-propagation
     // However, the task pool should not abort if a single task fails.
     // Therefore, use this wrapper to safely execute all tasks and possibly rethrow the last error in the end.
@@ -32,7 +31,6 @@ export default function* processTaskWithPool(
         isFinalResolveScheduled = true;
         // All tasks were kicked off, which is why all tasks can be
         // awaited now together.
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         yield* join(startedTasks);
         if (error != null) throw error;
       }
@@ -40,9 +38,8 @@ export default function* processTaskWithPool(
       return;
     }
 
-    const task = tasks.shift();
+    const task = tasks.shift() as () => Saga<void>;
     const newTask = yield* fork(forkSafely, task);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'FixedTask<void>' is not assignab... Remove this comment to see the full error message
     startedTasks.push(newTask);
     // If that task is done, process a new one (that way,
     // the pool size stays constant until the queue is almost empty.)

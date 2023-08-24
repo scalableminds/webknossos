@@ -27,9 +27,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - The order of color layers can now also be manipulated in additive blend mode (see [#7188](https://github.com/scalableminds/webknossos/pull/7188)). [#7289](https://github.com/scalableminds/webknossos/pull/7289)
 - OpenID Connect authorization now fetches the server’s public key automatically. The config keys `singleSignOn.openIdConnect.publicKey` and `singleSignOn.openIdConnect.publicKeyAlgorithm` are now unused. [7267](https://github.com/scalableminds/webknossos/pull/7267)
+- When importing a remote dataset and adding another layer with a different voxel size, that layer is now scaled to match the first layer. [#7213](https://github.com/scalableminds/webknossos/pull/7213)
+
 
 ### Fixed
-- Fixed that is was possible to have larger active segment ids that supported by the data type of the segmentation layer which caused the segmentation ids to overflow. [#7240](https://github.com/scalableminds/webknossos/pull/7240)
+- Fixed that it was possible to have larger active segment ids that supported by the data type of the segmentation layer which caused the segmentation ids to overflow. [#7240](https://github.com/scalableminds/webknossos/pull/7240)
 - Fixed that folders could appear in the dataset search output in the dashboard. [#7232](https://github.com/scalableminds/webknossos/pull/7232)
 - Fixed that the edit icon for an annotation description could disappear in Firefox. [#7250](https://github.com/scalableminds/webknossos/pull/7250)
 - Fixed that assigning an invalid script name (e.g. with special characters) would trigger an error in the database. Now leads to a more descriptive error. [#7525](https://github.com/scalableminds/webknossos/pull/7525)

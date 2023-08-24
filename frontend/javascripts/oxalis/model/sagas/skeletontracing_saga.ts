@@ -578,7 +578,7 @@ export function* diffTrees(
       if (prevTree.isVisible !== tree.isVisible) {
         yield updateTreeVisibility(tree);
       }
-      if (prevTree.hideEdges !== tree.hideEdges) {
+      if (prevTree.edgesAreVisible !== tree.edgesAreVisible) {
         yield updateTreeEdgesVisibility(tree);
       }
     }

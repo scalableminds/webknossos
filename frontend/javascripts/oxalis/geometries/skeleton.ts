@@ -332,7 +332,7 @@ class Skeleton {
             update.value.id,
             update.value.color,
             update.value.isVisible,
-            update.value.hideEdges,
+            update.value.edgesAreVisible,
           );
           break;
         }
@@ -341,7 +341,7 @@ class Skeleton {
         case "updateTreeEdgesVisibility": {
           const { treeId } = update.value;
           const tree = skeletonTracing.trees[treeId];
-          this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.hideEdges);
+          this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
           break;
         }
 
@@ -640,15 +640,15 @@ class Skeleton {
     treeId: number,
     color: Vector3,
     isVisible: boolean = true,
-    hideEdges: boolean = false,
+    edgesAreVisible: boolean = false,
   ) {
-    const rgba = this.getTreeRGBA(color, isVisible, hideEdges);
+    const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean, hideEdges: boolean): Vector4 {
-    const alpha = isVisible ? (hideEdges ? 0.5 : 1) : 0;
+  getTreeRGBA(color: Vector3, isVisible: boolean, areEdgesVisible: boolean): Vector4 {
+    const alpha = isVisible ? (areEdgesVisible ? 1 : 0.5) : 0;
     return [...color, alpha];
   }
 }

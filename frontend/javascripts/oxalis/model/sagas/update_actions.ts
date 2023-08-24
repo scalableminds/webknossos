@@ -116,7 +116,7 @@ export function createTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
-      hideEdges: tree.hideEdges,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -142,7 +142,7 @@ export function updateTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
-      hideEdges: tree.hideEdges,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -157,12 +157,12 @@ export function updateTreeVisibility(tree: Tree) {
   } as const;
 }
 export function updateTreeEdgesVisibility(tree: Tree) {
-  const { treeId, hideEdges } = tree;
+  const { treeId, edgesAreVisible } = tree;
   return {
     name: "updateTreeEdgesVisibility",
     value: {
       treeId,
-      hideEdges,
+      edgesAreVisible,
     },
   } as const;
 }

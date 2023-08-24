@@ -945,7 +945,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "SET_HIDE_EDGES": {
+        case "SET_EDGES_ARE_VISIBLE": {
           return getTree(skeletonTracing, action.treeId)
             .map((tree) => {
               return update(state, {
@@ -953,8 +953,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   skeleton: {
                     trees: {
                       [tree.treeId]: {
-                        hideEdges: {
-                          $set: action.hideEdges,
+                        edgesAreVisible: {
+                          $set: action.edgesAreVisible,
                         },
                       },
                     },

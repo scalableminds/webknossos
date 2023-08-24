@@ -33,7 +33,7 @@ type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
 type RequestDeleteBranchPointAction = ReturnType<typeof requestDeleteBranchPointAction>;
 type CreateTreeAction = ReturnType<typeof createTreeAction>;
-type SetHideEdgesAction = ReturnType<typeof setHideEdgesAction>;
+type SetEdgeVisibilityAction = ReturnType<typeof setTreeEdgeVisibilityAction>;
 type AddTreesAndGroupsAction = ReturnType<typeof addTreesAndGroupsAction>;
 type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
 type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
@@ -85,7 +85,7 @@ export type SkeletonTracingAction =
   | DeleteBranchpointByIdAction
   | RequestDeleteBranchPointAction
   | CreateTreeAction
-  | SetHideEdgesAction
+  | SetEdgeVisibilityAction
   | AddTreesAndGroupsAction
   | DeleteTreeAction
   | ResetSkeletonTracingAction
@@ -127,7 +127,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_BRANCHPOINT_BY_ID",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
-  "SET_HIDE_EDGES",
+  "SET_EDGES_ARE_VISIBLE",
   "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
@@ -275,11 +275,14 @@ export const createTreeAction = (timestamp: number = Date.now()) =>
     timestamp,
   } as const);
 
-export const setHideEdgesAction = (treeId: number | null | undefined, hideEdges: boolean) =>
+export const setTreeEdgeVisibilityAction = (
+  treeId: number | null | undefined,
+  edgesAreVisible: boolean,
+) =>
   ({
-    type: "SET_HIDE_EDGES",
+    type: "SET_EDGES_ARE_VISIBLE",
     treeId,
-    hideEdges,
+    edgesAreVisible,
   } as const);
 
 export const addTreesAndGroupsAction = (

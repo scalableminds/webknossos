@@ -138,7 +138,7 @@ export type MutableTree = {
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
-  hideEdges: boolean;
+  edgesAreVisible: boolean;
 };
 export type Tree = {
   readonly treeId: number;
@@ -152,7 +152,7 @@ export type Tree = {
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
-  readonly hideEdges: boolean;
+  readonly edgesAreVisible: boolean;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;

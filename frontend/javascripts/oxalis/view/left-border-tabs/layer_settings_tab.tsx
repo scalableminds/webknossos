@@ -197,7 +197,7 @@ const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProp
 
 function DummyDragHandle({ layerType }: { layerType: string }) {
   return (
-    <Tooltip title={`Layer not movable: ${layerType} layers is always rendered on top`}>
+    <Tooltip title={`Layer not movable: ${layerType} layers are always rendered on top.`}>
       {dragHandleIcon(true)}
     </Tooltip>
   );

@@ -518,13 +518,15 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user <- createUser(organization,
-                               openIdConnectUserInfo.email,
-                               openIdConnectUserInfo.firstName,
-                               openIdConnectUserInfo.lastName,
-                               autoActivate = true,
-                               None,
-                               isEmailVerified = true) // Assuming email verification was done by OIDC provider
+            user <- createUser(
+              organization,
+              openIdConnectUserInfo.email,
+              openIdConnectUserInfo.given_name,
+              openIdConnectUserInfo.family_name,
+              autoActivate = true,
+              None,
+              isEmailVerified = true
+            ) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(loginInfo)
@@ -548,7 +550,10 @@ class AuthenticationController @Inject()(
   }
 
   private def extractUserInfoFromTokenResponses(accessToken: JsObject,
-                                                idToken: Option[JsObject]): Fox[OpenIdConnectUserInfo] = ???
+                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] = {
+    val jsObjectToUse = idTokenOpt.getOrElse(accessToken)
+    jsObjectToUse.validate[OpenIdConnectUserInfo] ?~> "Failed to extract user info from id token or access token"
+  }
 
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)

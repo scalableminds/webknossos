@@ -147,7 +147,11 @@ object OpenIdConnectTokenResponse {
   implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
 }
 
-case class OpenIdConnectUserInfo(firstName: String, lastName: String, email: String)
+// Claims as specified by https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+case class OpenIdConnectUserInfo(given_name: String, family_name: String, email: String)
+object OpenIdConnectUserInfo {
+  implicit val format: OFormat[OpenIdConnectUserInfo] = Json.format[OpenIdConnectUserInfo]
+}
 
 case class JsonWebKeySet(keys: Seq[JsonWebKey])
 object JsonWebKeySet {

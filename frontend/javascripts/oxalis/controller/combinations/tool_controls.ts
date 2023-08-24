@@ -785,56 +785,48 @@ export class QuickSelectTool {
 }
 
 export class LineMeasurementTool {
-  static getPlaneMouseControls(
-    _planeId: OrthoView,
-    planeView: PlaneView,
-    showNodeContextMenuAt: ShowContextMenuFunction,
-  ): any {
-    let startPos: Vector3 | null = null;
-    let currentPos: Vector3 | null = null;
+  static getPlaneMouseControls(_planeId: OrthoView): any {
     let initialPlane: OrthoView = OrthoViews.PLANE_XY;
+    let isMeasuring = false;
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
+    const mouseMove = (
+      _delta: Point2,
+      pos: Point2,
+      plane: OrthoView | null | undefined,
+      evt: MouseEvent,
+    ) => {
+      if (plane !== initialPlane || !isMeasuring) {
+        return;
+      }
+      const state = Store.getState();
+      const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
+      lineMeasurementGeometry.setTopPoint(newPos);
+      Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
+    };
     return {
-      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
-        const state = Store.getState();
-        startPos = V3.floor(calculateGlobalPos(state, pos, plane));
-        initialPlane = plane;
-        lineMeasurementGeometry.setStartPoint(startPos, plane);
-        // Avoid having a line from the last end point to the start.
-        lineMeasurementGeometry.setEndPoint(startPos);
-        currentPos = startPos;
-      },
-      leftDownMove: (
-        _delta: Point2,
-        pos: Point2,
-        plane: OrthoView | null | undefined,
-        evt: MouseEvent,
-      ) => {
-        if (startPos == null || plane !== initialPlane) {
-          return;
+      mouseMove,
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (isMeasuring) {
+          mouseMove({ x: 0, y: 0 }, pos, plane, event);
+          isMeasuring = false;
+        } else {
+          lineMeasurementGeometry.reset();
+          lineMeasurementGeometry.hide();
+          Store.dispatch(hideMeasurementTooltipAction());
         }
+      },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const state = Store.getState();
-        const newCurrentPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
-        currentPos = newCurrentPos;
-        lineMeasurementGeometry.setEndPoint(currentPos);
-        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
-      },
-      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        SkeletonHandlers.handleOpenContextMenu(
-          planeView,
-          pos,
-          plane,
-          isTouch,
-          event,
-          showNodeContextMenuAt,
-        );
-      },
-      leftClick: () => {
-        lineMeasurementGeometry.hide();
-        Store.dispatch(hideMeasurementTooltipAction());
-        startPos = null;
-        currentPos = null;
+        const position = V3.floor(calculateGlobalPos(state, pos, plane));
+        initialPlane = plane;
+        if (!isMeasuring) {
+          lineMeasurementGeometry.setStartPoint(position, plane);
+          isMeasuring = true;
+        } else {
+          lineMeasurementGeometry.addPoint(position);
+          Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
+        }
       },
     };
   }
@@ -847,13 +839,75 @@ export class LineMeasurementTool {
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Drag to measure distance",
-      rightClick: "Context Menu",
+      leftClick: "Left Click to measure distance",
+      rightClick: "Finish Measurement and reset",
     };
   }
 
   static onToolDeselected() {
-    getSceneController().lineMeasurementGeometry.hide();
+    const { lineMeasurementGeometry } = getSceneController();
+    lineMeasurementGeometry.reset();
+    lineMeasurementGeometry.hide();
+    Store.dispatch(hideMeasurementTooltipAction());
+  }
+}
+
+export class AreaMeasurementTool {
+  static getPlaneMouseControls(): any {
+    let initialPlane: OrthoView = OrthoViews.PLANE_XY;
+    let isMeasuring = false;
+    const SceneController = getSceneController();
+    const { areaMeasurementGeometry } = SceneController;
+    return {
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        id: string | null | undefined,
+        event: MouseEvent,
+      ) => {
+        if (!isMeasuring) {
+          initialPlane = id as OrthoView;
+          isMeasuring = true;
+          areaMeasurementGeometry.reset();
+          areaMeasurementGeometry.line.visible = true;
+        }
+        if (id !== initialPlane || !isMeasuring) {
+          return;
+        }
+        const state = Store.getState();
+        const position = V3.floor(calculateGlobalPos(state, pos, initialPlane));
+        areaMeasurementGeometry.addEdgePoint(position);
+        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
+      },
+      leftMouseUp: (event: MouseEvent) => {
+        isMeasuring = false;
+        areaMeasurementGeometry.connectToStartPoint();
+        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
+      },
+      rightClick: () => {
+        areaMeasurementGeometry.reset();
+        Store.dispatch(hideMeasurementTooltipAction());
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Drag to measure area",
+      rightClick: "Reset Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { areaMeasurementGeometry } = getSceneController();
+    areaMeasurementGeometry.reset();
+    areaMeasurementGeometry.hide();
     Store.dispatch(hideMeasurementTooltipAction());
   }
 }
@@ -928,6 +982,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.FILL_CELL]: FillCellTool,
   [AnnotationToolEnum.PICK_CELL]: PickCellTool,
   [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
+  [AnnotationToolEnum.AREA_MEASUREMENT]: AreaMeasurementTool,
 };
 export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolClass[activeTool];

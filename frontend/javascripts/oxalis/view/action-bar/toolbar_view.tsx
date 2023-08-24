@@ -42,11 +42,7 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import {
-  setMeasurementUnitAction,
-  setToolAction,
-  showQuickSelectSettingsAction,
-} from "oxalis/model/actions/ui_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
@@ -66,7 +62,7 @@ import {
   InterpolationModeEnum,
   InterpolationMode,
   Unicode,
-  MEASUREMENT_UNITS,
+  MeasurementTools,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { BrushPresets, OxalisState } from "oxalis/store";
@@ -824,6 +820,7 @@ const TOOL_NAMES = {
   BOUNDING_BOX: "Bounding Box Tool",
   PROOFREAD: "Proofreading Tool",
   LINE_MEASUREMENT: "Measurement Tool",
+  AREA_MEASUREMENT: "Area Measurement Tool",
 };
 
 export default function ToolbarView() {
@@ -1154,7 +1151,7 @@ export default function ToolbarView() {
         ) : null}
         <ToolRadioButton
           name={TOOL_NAMES.LINE_MEASUREMENT}
-          description="Use left-drag to measure the distances."
+          description="Use to measure distances or areas."
           disabledExplanation=""
           disabled={false}
           style={NARROW_BUTTON_STYLE}
@@ -1294,8 +1291,8 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.LINE_MEASUREMENT ? (
-        <LineMeasurementUnitSwitch />
+      {MeasurementTools.includes(adaptedActiveTool) ? (
+        <MeasurementToolSwitch activeTool={adaptedActiveTool} />
       ) : null}
     </>
   );
@@ -1391,36 +1388,33 @@ function ProofReadingComponents() {
   );
 }
 
-function LineMeasurementUnitSwitch() {
+function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   const dispatch = useDispatch();
-  const measurementUnit = useSelector(
-    (state: OxalisState) => state.uiInformation.measurementTooltipInformation.measurementUnit,
-  );
-  const handleSetMeasurementUnit = (evt: RadioChangeEvent) => {
-    console.log("newMeasurementUnit", evt.target.value);
-    dispatch(setMeasurementUnitAction(evt.target.value));
+
+  const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
+    dispatch(setToolAction(evt.target.value));
   };
   return (
     <Radio.Group
-      value={measurementUnit}
-      onChange={handleSetMeasurementUnit}
+      value={activeTool}
+      onChange={handleSetMeasurementTool}
       style={{
         marginLeft: 10,
       }}
     >
       <RadioButtonWithTooltip
-        title="Perform the measurements in dataset scale."
+        title="Measure distances with connected lines by using Left Click."
         style={NARROW_BUTTON_STYLE}
-        value={MEASUREMENT_UNITS.NM}
+        value={AnnotationToolEnum.LINE_MEASUREMENT}
       >
-        NM
+        <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
-        title="Perform the measurements in voxel scale."
+        title="Measure areas by using Left Drag."
         style={NARROW_BUTTON_STYLE}
-        value={MEASUREMENT_UNITS.VX}
+        value={AnnotationToolEnum.AREA_MEASUREMENT}
       >
-        VX
+        <img src="/assets/images/area-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

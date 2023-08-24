@@ -8,7 +8,6 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
-  MEASUREMENT_UNITS,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 const defaultViewportRect = {
@@ -223,7 +222,7 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
-    measurementTooltipInformation: { position: null, measurementUnit: MEASUREMENT_UNITS.NM },
+    measurementTooltipPosition: null,
     activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,

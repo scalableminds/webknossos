@@ -106,6 +106,7 @@ const cursorForTool = {
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
   LINE_MEASUREMENT: "pointer",
+  AREA_MEASUREMENT: "pointer",
 };
 
 function InputCatcher({

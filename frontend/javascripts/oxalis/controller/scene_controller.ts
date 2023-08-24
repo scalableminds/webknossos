@@ -66,6 +66,8 @@ class SceneController {
   quickSelectGeometry: QuickSelectGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lineMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
   lineMeasurementGeometry: LineMeasurementGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'areaMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  areaMeasurementGeometry: ContourGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -246,6 +248,10 @@ class SceneController {
 
     this.lineMeasurementGeometry = new LineMeasurementGeometry();
     this.lineMeasurementGeometry
+      .getMeshes()
+      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
+    this.areaMeasurementGeometry = new ContourGeometry();
+    this.areaMeasurementGeometry
       .getMeshes()
       .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 

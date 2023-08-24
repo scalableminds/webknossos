@@ -43,7 +43,6 @@ import type {
   OrthoViewWithoutTD,
   InterpolationMode,
   TreeType,
-  MEASUREMENT_UNIT,
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -498,10 +497,6 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
-export type MeasurementTooltipInformation = {
-  position: [number, number] | null;
-  measurementUnit: MEASUREMENT_UNIT;
-};
 
 type UiInformation = {
   readonly showDropzoneModal: boolean;
@@ -524,7 +519,7 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
-  readonly measurementTooltipInformation: MeasurementTooltipInformation;
+  readonly measurementTooltipPosition: [number, number] | null;
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

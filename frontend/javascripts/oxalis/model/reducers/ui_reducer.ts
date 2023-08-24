@@ -1,6 +1,6 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
-import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import { updateKey } from "oxalis/model/helpers/deep_update";
 import {
   setToolReducer,
   getNextTool,
@@ -133,24 +133,14 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "HIDE_MEASUREMENT_TOOLTIP": {
-      const measurementUnit = state.uiInformation.measurementTooltipInformation.measurementUnit;
       return updateKey(state, "uiInformation", {
-        measurementTooltipInformation: { position: null, measurementUnit },
+        measurementTooltipPosition: null,
       });
     }
 
     case "SHOW_MEASUREMENT_TOOLTIP": {
-      const measurementUnit = state.uiInformation.measurementTooltipInformation.measurementUnit;
       return updateKey(state, "uiInformation", {
-        measurementTooltipInformation: {
-          position: action.position,
-          measurementUnit,
-        },
-      });
-    }
-    case "SET_MEASUREMENT_UNIT": {
-      return updateKey2(state, "uiInformation", "measurementTooltipInformation", {
-        measurementUnit: action.measurementUnit,
+        measurementTooltipPosition: action.position,
       });
     }
 

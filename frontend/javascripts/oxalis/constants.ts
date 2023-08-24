@@ -183,6 +183,7 @@ export enum AnnotationToolEnum {
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
   LINE_MEASUREMENT = "LINE_MEASUREMENT",
+  AREA_MEASUREMENT = "AREA_MEASUREMENT",
 }
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
@@ -205,11 +206,11 @@ export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationTo
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.QUICK_SELECT,
 ];
-export enum MEASUREMENT_UNITS {
-  VX = "VX",
-  NM = "NM",
-}
-export type MEASUREMENT_UNIT = keyof typeof MEASUREMENT_UNITS;
+
+export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.LINE_MEASUREMENT,
+  AnnotationToolEnum.AREA_MEASUREMENT,
+];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {

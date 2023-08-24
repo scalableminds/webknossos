@@ -48,6 +48,17 @@ export class ContourGeometry {
     app.vent.emit("rerender");
   }
 
+  connectToStartPoint() {
+    const pointCount = this.vertexBuffer.getLength();
+    if (pointCount < 1) {
+      return;
+    }
+    const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
+    this.vertexBuffer.push(startPoint);
+    this.finalizeMesh();
+    app.vent.emit("rerender");
+  }
+
   finalizeMesh() {
     const mesh = this.line;
     if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
@@ -61,6 +72,28 @@ export class ContourGeometry {
     mesh.geometry.attributes.position.needsUpdate = true;
     mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
+  }
+
+  getArea(scale: Vector3): number {
+    // This algorithm is based on the Trapezoid formula for calculating the polygon area.
+    // Source: https://www.mathopenref.com/coordpolygonarea2.html.
+    let accArea = 0;
+    const scaleVector = new THREE.Vector3(...scale);
+    const pointCount = this.vertexBuffer.getLength();
+    const points = this.vertexBuffer.getBuffer();
+    let previousPointIndex = pointCount - 1;
+    for (let i = 0; i < pointCount; i++) {
+      const start = new THREE.Vector3(
+        ...points.subarray(previousPointIndex * 3, (previousPointIndex + 1) * 3),
+      ).multiply(scaleVector);
+      const end = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
+      accArea += (start.x + end.x) * (start.y - end.y);
+      previousPointIndex = i;
+    }
+    return Math.abs(accArea / 2);
+  }
+  hide() {
+    this.line.visible = false;
   }
 }
 
@@ -235,7 +268,7 @@ export class QuickSelectGeometry {
 export class LineMeasurementGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
-  vertexBuffer: Float32Array;
+  vertexBuffer: ResizableBuffer<Float32Array>;
   currentOrthoView: OrthoView;
   visible: boolean;
 
@@ -245,8 +278,7 @@ export class LineMeasurementGeometry {
     this.visible = false;
 
     const lineGeometry = new THREE.BufferGeometry();
-    this.vertexBuffer = new Float32Array(6);
-    const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer, 3);
+    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
     positionAttribute.setUsage(THREE.DynamicDrawUsage);
     lineGeometry.setAttribute("position", positionAttribute);
     this.line = new THREE.Line(
@@ -257,6 +289,7 @@ export class LineMeasurementGeometry {
     );
     this.line.visible = false;
     this.line.material.color = this.color;
+    this.vertexBuffer = new ResizableBuffer(3, Float32Array);
     this.finalizeMesh();
   }
 
@@ -264,15 +297,30 @@ export class LineMeasurementGeometry {
     return [this.line];
   }
 
-  setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
-    this.visible = true;
-    this.currentOrthoView = initialOrthoView;
-    this.vertexBuffer.set(pos, 0);
+  reset() {
+    this.line.material.color = this.color;
+    this.vertexBuffer.clear();
     this.finalizeMesh();
   }
 
-  setEndPoint(pos: Vector3) {
-    this.vertexBuffer.set(pos, 3);
+  setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
+    this.visible = true;
+    this.currentOrthoView = initialOrthoView;
+    this.vertexBuffer.push(pos);
+    // Adding an additional point that will be modified by setTopPoint.
+    this.vertexBuffer.push(pos);
+    this.finalizeMesh();
+  }
+
+  setTopPoint(pos: Vector3) {
+    const pointCount = this.vertexBuffer.getLength();
+    this.vertexBuffer.set(pos, pointCount - 1);
+    this.finalizeMesh();
+  }
+
+  addPoint(pos: Vector3) {
+    this.setTopPoint(pos);
+    this.vertexBuffer.push(pos);
     this.finalizeMesh();
   }
 
@@ -281,16 +329,37 @@ export class LineMeasurementGeometry {
   }
 
   finalizeMesh() {
-    this.line.geometry.attributes.position.needsUpdate = true;
-    this.line.geometry.computeBoundingSphere();
+    const mesh = this.line;
+    if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
+      // Need to rebuild Geometry
+      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setUsage(THREE.DynamicDrawUsage);
+      mesh.geometry.dispose();
+      mesh.geometry.setAttribute("position", positionAttribute);
+    }
+
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
+    mesh.geometry.computeBoundingSphere();
     app.vent.emit("rerender");
   }
 
   getDistance(scale: Vector3): number {
     const scaleVector = new THREE.Vector3(...scale);
-    const start = new THREE.Vector3(...this.vertexBuffer.subarray(0, 3)).multiply(scaleVector);
-    const end = new THREE.Vector3(...this.vertexBuffer.subarray(3, 6)).multiply(scaleVector);
-    return start.distanceTo(end);
+    const points = this.vertexBuffer.getBuffer();
+    const pointCount = this.vertexBuffer.getLength();
+    if (pointCount < 2) {
+      return 0;
+    }
+    let accDistance = 0;
+    for (let i = 0; i < pointCount - 1; i++) {
+      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
+      const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
+        scaleVector,
+      );
+      accDistance += start.distanceTo(end);
+    }
+    return accDistance;
   }
 
   updateForCam(orthoView: OrthoView) {

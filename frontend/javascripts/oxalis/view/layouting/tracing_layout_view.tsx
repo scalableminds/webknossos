@@ -487,7 +487,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    distanceMeasurementTooltipPosition: state.uiInformation.measurementTooltipInformation.position,
+    distanceMeasurementTooltipPosition: state.uiInformation.measurementTooltipPosition,
   };
 }
 

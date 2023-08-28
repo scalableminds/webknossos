@@ -983,7 +983,7 @@ export async function importVolumeTracing(
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing}/importVolumeData?token=${token}`,
+      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
         data: {
           dataFile,

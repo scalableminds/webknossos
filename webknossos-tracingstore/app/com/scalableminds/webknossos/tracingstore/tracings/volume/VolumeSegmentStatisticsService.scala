@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import play.api.libs.json.{Json, OFormat}
 
@@ -88,10 +88,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(bucketData, tracing.elementClass)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
-      _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, mutableBoundingBox)
+      _ = scanDataAndExtendBoundingBox(bucketData,
+                                       elementClassFromProto(tracing.elementClass),
+                                       bucketTopLeftInTargetMagVoxels,
+                                       mutableBoundingBox)
     } yield ()
 
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
+  private def scanDataAndExtendBoundingBox(bucketData: Array[Byte],
+                                           elementClass: ElementClass.Value,
                                            bucketTopLeftInTargetMagVoxels: Vec3Int,
                                            mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
     for {
@@ -100,11 +104,26 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       z <- 0 until DataLayer.bucketLength
       index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
     } yield {
-      if (!dataTyped(index).isZero) {
+      if (!isZeroAtIndex(bucketData, elementClass, index)) {
         val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
         extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
       }
     }
+
+  private def isZeroAtIndex(data: Array[Byte], elementClass: ElementClass.Value, index: Int): Boolean = {
+    val indexFactor = ElementClass.bytesPerElement(elementClass)
+    elementClass match {
+      case ElementClass.uint8  => data(index) == 0x00
+      case ElementClass.uint16 => data(index * indexFactor) == 0x00 && data(index * indexFactor + 1) == 0x00
+      case ElementClass.uint32 =>
+        data(index * indexFactor) == 0x00 && data(index * indexFactor + 1) == 0x00 && data(index * indexFactor + 2) == 0x00 && data(
+          index * indexFactor + 3) == 0x00
+      case ElementClass.uint64 =>
+        data(index * indexFactor) == 0x00 && data(index * indexFactor + 1) == 0x00 && data(index * indexFactor + 2) == 0x00 && data(
+          index * indexFactor + 3) == 0x00 && data(index * indexFactor + 4) == 0x00 && data(index * indexFactor + 5) == 0x00 && data(
+          index * indexFactor + 6) == 0x00 && data(index * indexFactor + 7) == 0x00
+    }
+  }
 
   private def extendBoundingBoxByPosition(mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
                                           position: Vec3Int): Unit = {

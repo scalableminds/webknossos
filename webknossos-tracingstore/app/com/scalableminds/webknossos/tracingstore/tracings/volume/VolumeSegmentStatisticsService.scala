@@ -5,7 +5,12 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebKnossosDataRequest
+}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 
@@ -34,15 +39,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
-      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
+      allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
+      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,
                                                                     Int.MaxValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(bucketPositions.values.toIterator)(bucketPosition =>
+      _ <- Fox.serialCombined(relevantBucketPositions.toIterator)(bucketPosition =>
         extendBouningBoxByData(tracing, tracingId, mag, boundingBoxMutable, bucketPosition, userToken))
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
@@ -55,22 +61,38 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
           boundingBoxMutable(5) - boundingBoxMutable(2) + 1
         )
 
+  // The buckets that form the outer walls of the bounding box are relevant (in each of those the real min/max voxel positions could occur)
+  private def filterOutInnerBucketPositions(bucketPositions: ListOfVec3IntProto): Seq[Vec3Int] =
+    if (bucketPositions.values.isEmpty) List.empty
+    else {
+      val minX = bucketPositions.values.map(_.x).min
+      val minY = bucketPositions.values.map(_.y).min
+      val minZ = bucketPositions.values.map(_.z).min
+      val maxX = bucketPositions.values.map(_.x).max
+      val maxY = bucketPositions.values.map(_.y).max
+      val maxZ = bucketPositions.values.map(_.z).max
+      bucketPositions.values
+        .filter(pos =>
+          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
+        .map(vec3IntFromProto)
+    }
+
   private def extendBouningBoxByData(tracing: VolumeTracing,
                                      tracingId: String,
                                      mag: Vec3Int,
                                      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                     bucketPosition: Vec3IntProto,
-                                     userToken: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+                                     bucketPosition: Vec3Int,
+                                     userToken: Option[String]): Fox[Unit] =
     for {
-      bucketData <- data(tracing, tracingId, mag, Seq(vec3IntFromProto(bucketPosition)), userToken)
+      bucketData <- data(tracing, tracingId, mag, Seq(bucketPosition), userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(bucketData, tracing.elementClass)
-      bucketTopLeftInTargetMagVoxels = vec3IntFromProto(bucketPosition) * DataLayer.bucketLength
+      bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, mutableBoundingBox)
     } yield ()
 
   private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
-                       bucketTopLeftInTargetMagVoxels: Vec3Int,
-                       mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
+                                           bucketTopLeftInTargetMagVoxels: Vec3Int,
+                                           mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
     for {
       x <- 0 until DataLayer.bucketLength
       y <- 0 until DataLayer.bucketLength

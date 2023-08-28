@@ -217,7 +217,7 @@ trait DataLayer extends DataLayerLike {
 object DataLayer {
 
   /**
-    * Defines the length of a buckets. This is the minimal size that can be loaded from a file.
+    * Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
     */
   val bucketLength: Int = 32
 

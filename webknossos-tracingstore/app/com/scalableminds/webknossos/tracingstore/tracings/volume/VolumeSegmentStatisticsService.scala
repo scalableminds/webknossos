@@ -50,7 +50,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
       _ <- Fox.serialCombined(relevantBucketPositions.toIterator)(bucketPosition =>
-        extendBouningBoxByData(tracing, tracingId, mag, boundingBoxMutable, bucketPosition, userToken))
+        extendBouningBoxByData(tracing, tracingId, mag, segmentId, boundingBoxMutable, bucketPosition, userToken))
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
         BoundingBox.empty
@@ -81,18 +81,22 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
   private def extendBouningBoxByData(tracing: VolumeTracing,
                                      tracingId: String,
                                      mag: Vec3Int,
+                                     segmentId: Long,
                                      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
                                      bucketPosition: Vec3Int,
                                      userToken: Option[String]): Fox[Unit] =
     for {
       bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), userToken)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(bucketData, tracing.elementClass)
+      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(
+        bucketData,
+        elementClassFromProto(tracing.elementClass))
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
-      _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, mutableBoundingBox)
+      _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
     } yield ()
 
   private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
                                            bucketTopLeftInTargetMagVoxels: Vec3Int,
+                                           segmentId: Long,
                                            mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
     for {
       x <- 0 until DataLayer.bucketLength
@@ -100,7 +104,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       z <- 0 until DataLayer.bucketLength
       index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
     } yield {
-      if (!dataTyped(index).isZero) {
+      if (dataTyped(index).toPositiveLong == segmentId) {
         val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
         extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
       }

@@ -99,7 +99,9 @@ import DeleteGroupModalView from "../delete_group_modal_view";
 import {
   callDeep,
   createGroupToSegmentsMap,
+  createGroupToTreesMap,
   findParentIdForGroupId,
+  getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
@@ -1497,6 +1499,21 @@ class SegmentsView extends React.Component<Props, State> {
     return groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
   };
 
+  getSegmentsOfGroupRecursively = (groupId: number): Segment[] | null => {
+    const { segments, segmentGroups } = this.props;
+
+    if (segments == null || segmentGroups == null) {
+      return null;
+    }
+    if (groupId === MISSING_GROUP_ID) {
+      return Array.from(segments.values());
+    }
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    const relevantGroupIds = getGroupByIdWithSubgroups(segmentGroups, groupId);
+    const segmentIdsNested = relevantGroupIds.map((groupId) => groupToSegmentsMap[groupId]);
+    return segmentIdsNested.flat();
+  };
+
   onRenameStart = () => {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter + 1 }));
   };
@@ -1517,7 +1534,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentStatisticsModal = (groupId: number) => {
-    const segments = this.getSegmentsOfGroup(groupId);
+    const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
       visibleSegmentationLayer != null &&

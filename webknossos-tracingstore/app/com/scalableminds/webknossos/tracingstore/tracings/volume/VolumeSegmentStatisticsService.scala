@@ -3,14 +3,9 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{
-  BucketPosition,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  WebKnossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 
@@ -106,15 +101,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     }
 
   private def extendBoundingBoxByPosition(mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                          position: Vec3Int): Unit =
-    mutableBoundingBox.synchronized {
-      mutableBoundingBox(0) = Math.min(mutableBoundingBox(0), position.x)
-      mutableBoundingBox(1) = Math.min(mutableBoundingBox(1), position.y)
-      mutableBoundingBox(2) = Math.min(mutableBoundingBox(2), position.z)
-      mutableBoundingBox(3) = Math.max(mutableBoundingBox(3), position.x)
-      mutableBoundingBox(4) = Math.max(mutableBoundingBox(4), position.y)
-      mutableBoundingBox(5) = Math.max(mutableBoundingBox(5), position.z)
-    }
+                                          position: Vec3Int): Unit = {
+    mutableBoundingBox(0) = Math.min(mutableBoundingBox(0), position.x)
+    mutableBoundingBox(1) = Math.min(mutableBoundingBox(1), position.y)
+    mutableBoundingBox(2) = Math.min(mutableBoundingBox(2), position.z)
+    mutableBoundingBox(3) = Math.max(mutableBoundingBox(3), position.x)
+    mutableBoundingBox(4) = Math.max(mutableBoundingBox(4), position.y)
+    mutableBoundingBox(5) = Math.max(mutableBoundingBox(5), position.z)
+  }
 
   private def data(tracing: VolumeTracing,
                    tracingId: String,

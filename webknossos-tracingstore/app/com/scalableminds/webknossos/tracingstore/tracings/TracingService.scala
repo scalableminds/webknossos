@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
+import play.api.http.Status.CONFLICT
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -85,13 +86,19 @@ trait TracingService[T <: GeneratedMessage]
 
   def saveUncommitted(tracingId: String,
                       transactionIdOpt: Option[String],
-                      transactionGroupindexOpt: Option[Int],
+                      transactionGroupIndexOpt: Option[Int],
                       version: Long,
                       updateGroup: UpdateActionGroup[T],
                       expiry: FiniteDuration): Fox[Unit] =
-    uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionIdOpt, transactionGroupindexOpt, version),
-                                   Json.toJson(updateGroup).toString(),
-                                   Some(expiry))
+    for {
+      _ <- Fox.runIf(transactionGroupIndexOpt.getOrElse(0) > 0)(
+        Fox.assertTrue(uncommittedUpdatesStore.contains(
+          transactionBatchKey(tracingId, transactionIdOpt, Some(transactionGroupIndexOpt.getOrElse(0) - 1), version))) ?~> s"Incorrect transaction index. Got: ${transactionGroupIndexOpt.getOrElse(0)} but ${transactionGroupIndexOpt.getOrElse(0) - 1} does not exist" ~> CONFLICT)
+      _ <- uncommittedUpdatesStore.insert(
+        transactionBatchKey(tracingId, transactionIdOpt, transactionGroupIndexOpt, version),
+        Json.toJson(updateGroup).toString(),
+        Some(expiry))
+    } yield ()
 
   def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] =
     for {

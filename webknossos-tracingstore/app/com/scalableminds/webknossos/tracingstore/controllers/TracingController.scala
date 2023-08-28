@@ -152,13 +152,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                               userToken: Option[String]): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
-      _ = logger.info(
-        s"handleUpdateGroupForTransaction. previousCommittedVersion: $previousCommittedVersion, update group version ${updateGroup.version}")
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
           commitPending(tracingId, updateGroup, userToken)
         } else {
-          // TODO: if transactionGroupIndex > 0, assert previous ones are present
           tracingService
             .saveUncommitted(tracingId,
                              updateGroup.transactionId,
@@ -179,13 +176,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
       count = previousActionGroupsToCommit.length + 1
-      _ = if (count > 1)
-        logger.info(
-          s"Committing $count updateActionGroups for batched transaction ${updateGroup.transactionId} of tracing $tracingId...")
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
-      _ = if (count > 1)
-        logger.info(
-          s"Successfully Committed $count updateActionGroups for batched transaction ${updateGroup.transactionId} of tracing $tracingId. Now at version $commitResult.")
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
 
@@ -206,8 +197,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
         previousVersion.flatMap { prevVersion: Long =>
           val versionIncrement = if (updateGroup.transactionGroupIndex.getOrElse(0) == 0) 1 else 0 // version increment happens at the start of each transaction group
           if (prevVersion + versionIncrement == updateGroup.version) {
-            logger.info(
-              s"Committing version ${updateGroup.version} from transaction id ${updateGroup.transactionId} index ${updateGroup.transactionGroupIndex} of ${updateGroup.transactionGroupCount}")
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
               .map(_ => updateGroup.version)

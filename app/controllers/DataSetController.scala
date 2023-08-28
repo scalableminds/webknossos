@@ -29,8 +29,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
-import com.scalableminds.util.tools.TristateOptionJsonHelper
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import models.folder.FolderService
 
 case class DatasetUpdateParameters(
@@ -50,7 +49,7 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 case class SegmentAnythingEmbeddingParameters(
     mag: Vec3Int,
     boundingBox: BoundingBox,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 )
 
 object SegmentAnythingEmbeddingParameters {

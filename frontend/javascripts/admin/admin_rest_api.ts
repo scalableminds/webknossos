@@ -962,18 +962,16 @@ export function getSegmentVolume(
   tracingStoreUrl: string,
   tracingId: string,
   mag: Vector3,
-  segmentId: number,
+  segmentIds: number[],
 ): Promise<number> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams({
-      token: token,
-      mag: mag.join("-"),
-      segmentId: String(segmentId),
-    });
-    return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?${params}`,
-    );
-  });
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag: mag, segmentIds: segmentIds },
+      },
+    ),
+  );
 }
 
 export async function importVolumeTracing(

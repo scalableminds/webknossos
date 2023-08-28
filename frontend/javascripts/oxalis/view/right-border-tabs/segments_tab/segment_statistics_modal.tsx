@@ -59,28 +59,27 @@ export function SegmentStatisticsModal({
   segments,
   group,
 }: Props) {
-  console.log(tracingId);
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const nmFactorToUnit = new Map([[1, "nm³"]]);
   const dataSource = useFetch(
     async () => {
-      const volumeStrings = await segments.map(async (segment: Segment) => {
-        return getSegmentVolume(
-          tracingStoreUrl,
-          tracingId,
-          mag.getHighestResolution(),
-          segment.id,
-        ).then((vol) => {
-          const formattedSize = formatNumberToVolume(vol);
-          return {
-            segmentId: segment.id,
-            segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,
-            groupId: group,
-            volumeInVoxel: vol,
-            volumeInNm3: parseInt(formatNumberToUnit(vol, nmFactorToUnit).split(ThinSpace)[0]),
-            formattedSize: formattedSize,
-          };
-        });
+      //simply returns an array of the sizes
+      const volumeStrings = await getSegmentVolume(
+        tracingStoreUrl,
+        tracingId,
+        mag.getHighestResolution(),
+        segments.map((segment) => segment.id),
+      ).then((response) => {
+        console.log(response); //TODO continue here
+        const formattedSize = formatNumberToVolume(response);
+        return {
+          segmentId: segment.id,
+          segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,
+          groupId: group, //TODO this doesnt work for nested segments yet
+          volumeInVoxel: response,
+          volumeInNm3: parseInt(formatNumberToUnit(response, nmFactorToUnit).split(ThinSpace)[0]),
+          formattedSize: formattedSize,
+        };
       });
       return Promise.all(volumeStrings);
     },

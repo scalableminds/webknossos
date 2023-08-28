@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalCoordinateDefinition,
+  AdditionalAxis,
   Category,
   CoordinateTransformation,
   DataFormat,
@@ -47,7 +47,7 @@ case class Zarr3DataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends Zarr3Layer
 
 object Zarr3DataLayer {
@@ -65,7 +65,7 @@ case class Zarr3SegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with Zarr3Layer
 

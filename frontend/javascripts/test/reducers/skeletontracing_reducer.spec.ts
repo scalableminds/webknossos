@@ -64,7 +64,7 @@ const initialSkeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
-  additionalCoordinates: [],
+  additionalAxes: [],
 };
 initialSkeletonTracing.trees[1] = {
   treeId: 1,

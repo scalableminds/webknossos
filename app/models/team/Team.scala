@@ -213,7 +213,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataSet_allowedTeams(_dataSet, _team)
              VALUES($datasetId, $teamId)""".asUpdate)
 
-    insertSequentiallyAsTransaction(clearQuery, insertQueries)
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
   def updateAllowedTeamsForFolder(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
@@ -221,7 +221,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
              VALUES($folderId, $teamId)""".asUpdate)
 
-    insertSequentiallyAsTransaction(clearQuery, insertQueries)
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
   def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =

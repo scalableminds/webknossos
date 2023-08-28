@@ -30,7 +30,7 @@ case class WebKnossosDataRequest(
     cubeSize: Int,
     fourBit: Option[Boolean],
     applyAgglomerate: Option[String],
-    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     version: Option[Long]
 ) extends AbstractDataRequest {
 
@@ -86,26 +86,26 @@ object DataRequestCollection {
   implicit def requestToCollection(request: AbstractDataRequest): DataRequestCollection = List(request)
 }
 
-case class AdditionalCoordinateRequest(
+case class AdditionalCoordinate(
     name: String,
     value: Int
 ) {
   override def toString = s"$name=$value"
 }
 
-object AdditionalCoordinateRequest {
-  implicit val jsonFormat: OFormat[AdditionalCoordinateRequest] = Json.format[AdditionalCoordinateRequest]
+object AdditionalCoordinate {
+  implicit val jsonFormat: OFormat[AdditionalCoordinate] = Json.format[AdditionalCoordinate]
 
-  def toProto(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Seq[AdditionalCoordinateProto] =
+  def toProto(acOpt: Option[Seq[AdditionalCoordinate]]): Seq[AdditionalCoordinateProto] =
     acOpt match {
-      case Some(additionalCoordinateRequests) =>
-        additionalCoordinateRequests.map(ac => AdditionalCoordinateProto(ac.name, ac.value))
+      case Some(additionalCoordinates) =>
+        additionalCoordinates.map(ac => AdditionalCoordinateProto(ac.name, ac.value))
       case None => Seq()
     }
 
-  def anyValueNegative(acOpt: Option[Seq[AdditionalCoordinateRequest]]): Boolean =
+  def hasNegativeValue(acOpt: Option[Seq[AdditionalCoordinate]]): Boolean =
     acOpt match {
-      case Some(additionalCoordinateRequests) => additionalCoordinateRequests.exists(_.value < 0)
-      case None                               => false
+      case Some(additionalCoordinates) => additionalCoordinates.exists(_.value < 0)
+      case None                        => false
     }
 }

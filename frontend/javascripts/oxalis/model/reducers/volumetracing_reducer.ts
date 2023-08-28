@@ -15,7 +15,7 @@ import type {
   RemoveSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  convertServerAdditionalCoordinatesToFrontEnd,
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
@@ -226,9 +226,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
-    additionalCoordinates: convertServerAdditionalCoordinatesToFrontEnd(
-      tracing.additionalCoordinates,
-    ),
+    additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
   return volumeTracing;
 }

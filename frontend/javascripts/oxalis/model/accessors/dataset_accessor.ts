@@ -1,7 +1,7 @@
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
-  AdditionalCoordinateWithBounds,
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -621,29 +621,26 @@ function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
 
 export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
 
-function _getUnifiedAdditionalCoordinates(
+function _getUnifiedAdditionalAxes(
   mutableDataset: APIDataset,
-): Record<string, Omit<AdditionalCoordinateWithBounds, "index">> {
+): Record<string, Omit<AdditionalAxis, "index">> {
   /*
    * Merge additional coordinates from all layers.
    */
-  const unifiedAdditionalCoordinates: Record<
-    string,
-    Omit<AdditionalCoordinateWithBounds, "index">
-  > = {};
+  const unifiedAdditionalAxes: Record<string, Omit<AdditionalAxis, "index">> = {};
   for (const layer of mutableDataset.dataSource.dataLayers) {
-    const { additionalCoordinates } = layer;
+    const { additionalAxes } = layer;
 
-    for (const additionalCoordinate of additionalCoordinates || []) {
+    for (const additionalCoordinate of additionalAxes || []) {
       const { name, bounds } = additionalCoordinate;
-      if (additionalCoordinate.name in unifiedAdditionalCoordinates) {
-        const existingBounds = unifiedAdditionalCoordinates[name].bounds;
-        unifiedAdditionalCoordinates[name].bounds = [
+      if (additionalCoordinate.name in unifiedAdditionalAxes) {
+        const existingBounds = unifiedAdditionalAxes[name].bounds;
+        unifiedAdditionalAxes[name].bounds = [
           Math.min(bounds[0], existingBounds[0]),
           Math.max(bounds[1], existingBounds[1]),
         ];
       } else {
-        unifiedAdditionalCoordinates[name] = {
+        unifiedAdditionalAxes[name] = {
           name,
           bounds,
         };
@@ -651,10 +648,10 @@ function _getUnifiedAdditionalCoordinates(
     }
   }
 
-  return unifiedAdditionalCoordinates;
+  return unifiedAdditionalAxes;
 }
 
-export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalCoordinates);
+export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalAxes);
 
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.

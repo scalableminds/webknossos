@@ -157,7 +157,7 @@ const defaultState: OxalisState = {
       type: "readonly",
       version: 0,
       tracingId: "",
-      additionalCoordinates: [],
+      additionalAxes: [],
     },
     volumes: [],
     mappings: [],

@@ -7,8 +7,8 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -24,7 +24,7 @@ class DatasetArray(vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
-                   additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
+                   additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
@@ -43,12 +43,12 @@ class DatasetArray(vaultPath: VaultPath,
     readBytes(shapeArray, offsetArray)
   }
 
-  def readBytesWithAdditionalCoordinates(shape: Vec3Int,
-                                         offset: Vec3Int,
-                                         additionalCoordinateRequests: Seq[AdditionalCoordinateRequest],
-                                         additionalCoordinates: Map[String, AdditionalCoordinateDefinition])(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalCoordinates.size
+  def readBytesWithAdditionalCoordinates(
+      shape: Vec3Int,
+      offset: Vec3Int,
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxesMap: Map[String, AdditionalAxis])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalAxesMap.size
 
     /*
       readAsFortranOrder only supports a shape/offset with XYZ at the end. This does not really make sense if we assume
@@ -72,10 +72,10 @@ class DatasetArray(vaultPath: VaultPath,
       case None    => ()
     }
 
-    for (additionalCoordinateRequest <- additionalCoordinateRequests) {
-      val index = additionalCoordinates(additionalCoordinateRequest.name).index
-      offsetArray(index) = additionalCoordinateRequest.value
-      // Shape for additional coordinates will always be 1e
+    for (additionalCoordinate <- additionalCoordinates) {
+      val index = additionalAxesMap(additionalCoordinate.name).index
+      offsetArray(index) = additionalCoordinate.value
+      // Shape for additional coordinates will always be 1
     }
     readBytes(shapeArray, offsetArray)
   }

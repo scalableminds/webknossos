@@ -48,8 +48,8 @@ package object datasource {
       case _                        => None
     }
 
-    def additionalCoordinatesUnion: Option[Seq[AdditionalCoordinateDefinition]] =
-      AdditionalCoordinateDefinition.merge(dataLayers.map(_.additionalCoordinates))
+    def additionalCoordinatesUnion: Option[Seq[AdditionalAxis]] =
+      AdditionalAxis.merge(dataLayers.map(_.additionalAxes))
 
   }
 

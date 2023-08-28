@@ -4,7 +4,7 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
-  convertServerAdditionalCoordinatesToFrontEnd,
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
@@ -107,9 +107,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           activeIndex: -1,
         },
         showSkeletons: true,
-        additionalCoordinates: convertServerAdditionalCoordinatesToFrontEnd(
-          action.tracing.additionalCoordinates,
-        ),
+        additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
       };
       return update(state, {
         tracing: {

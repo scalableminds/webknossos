@@ -2,11 +2,7 @@ import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Al
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type {
-  AdditionalCoordinateWithBounds,
-  APIDataLayer,
-  APIDataset,
-} from "types/api_flow_types";
+import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
@@ -65,7 +61,7 @@ type ExportLayerInfos = {
   layerName: string | null;
   tracingId: string | null;
   annotationId: string | null;
-  additionalCoordinates?: AdditionalCoordinateWithBounds[] | null;
+  additionalAxes?: AdditionalAxis[] | null;
 };
 
 enum ExportFormat {
@@ -90,7 +86,7 @@ function getExportLayerInfos(
       layerName: layer.name,
       tracingId: null,
       annotationId: null,
-      additionalCoordinates: layer.additionalCoordinates,
+      additionalAxes: layer.additionalAxes,
     };
   }
 
@@ -108,7 +104,7 @@ function getExportLayerInfos(
     layerName: layer.fallbackLayerInfo?.name ?? null,
     tracingId: volumeTracing.tracingId,
     annotationId,
-    additionalCoordinates: layer.additionalCoordinates,
+    additionalAxes: layer.additionalAxes,
   };
 }
 
@@ -336,7 +332,7 @@ function _DownloadModalView({
       );
       onClose();
     } else if (activeTabKey === "export" && startJob != null) {
-      if ((selectedLayerInfos.additionalCoordinates || []).length > 0) {
+      if ((selectedLayerInfos.additionalAxes || []).length > 0) {
         Toast.warning("Exporting an n-dimensional layer is currently not supported.");
         return;
       }
@@ -497,9 +493,7 @@ function _DownloadModalView({
     (!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled);
 
   // Will be false if no volumes exist.
-  const isVolumeNDimensional = tracing.volumes.some(
-    (tracing) => tracing.additionalCoordinates.length > 0,
-  );
+  const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
 
   return (
     <Modal

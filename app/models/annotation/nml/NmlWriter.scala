@@ -31,7 +31,7 @@ case class NmlParameters(
     activeNodeId: Option[Int],
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     taskBoundingBox: Option[BoundingBoxProto],
-    additionalCoordinates: Seq[AdditionalCoordinateDefinitionProto],
+    additionalAxisProtos: Seq[AdditionalAxisProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
 )
 
@@ -130,7 +130,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             s.activeNodeId,
             s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             s.boundingBox,
-            s.additionalCoordinates,
+            s.additionalAxes,
             s.editPositionAdditionalCoordinates
           )
         case Right(v) =>
@@ -147,7 +147,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             None,
             v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None,
-            v.additionalCoordinates,
+            v.additionalAxes,
             v.editPositionAdditionalCoordinates
           )
       }
@@ -214,10 +214,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       parameters.taskBoundingBox.foreach { b =>
         Xml.withinElementSync("taskBoundingBox")(writeBoundingBox(b))
       }
-      if (parameters.additionalCoordinates.nonEmpty) {
-        Xml.withinElementSync("additionalCoordinates") {
-          parameters.additionalCoordinates.foreach(a => {
-            Xml.withinElementSync("additionalCoordinate") {
+      if (parameters.additionalAxisProtos.nonEmpty) {
+        Xml.withinElementSync("additionalAxes") {
+          parameters.additionalAxisProtos.foreach(a => {
+            Xml.withinElementSync("additionalAxis") {
               writer.writeAttribute("name", a.name)
               writer.writeAttribute("index", a.index.toString)
               writer.writeAttribute("min", a.bounds.x.toString)
@@ -268,7 +268,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             writer.writeAttribute("anchorPositionX", a.x.toString)
             writer.writeAttribute("anchorPositionY", a.y.toString)
             writer.writeAttribute("anchorPositionZ", a.z.toString)
-            s.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
+            s.anchorPositionAdditionalCoordinates.foreach(writeAdditionalCoordinateValue)
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))

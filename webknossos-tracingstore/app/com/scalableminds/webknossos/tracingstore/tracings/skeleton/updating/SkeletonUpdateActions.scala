@@ -4,7 +4,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinateRequest
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
@@ -213,7 +213,7 @@ case class CreateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -229,7 +229,7 @@ case class CreateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -257,7 +257,7 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -274,7 +274,7 @@ case class UpdateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinateRequest.toProto(additionalCoordinates)
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) =
@@ -337,8 +337,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None,
-                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinateRequest]] =
-                                         None)
+                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
@@ -348,7 +347,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
       zoomLevel = zoomLevel,
       userBoundingBox = userBoundingBox,
       activeNodeId = activeNode,
-      editPositionAdditionalCoordinates = AdditionalCoordinateRequest.toProto(editPositionAdditionalCoordinates)
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =

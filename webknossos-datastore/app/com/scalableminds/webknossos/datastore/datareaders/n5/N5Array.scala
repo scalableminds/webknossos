@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
 import ucar.ma2.{Array => MultiArray}
@@ -42,7 +42,7 @@ class N5Array(vaultPath: VaultPath,
               header: DatasetHeader,
               axisOrder: AxisOrder,
               channelIndex: Option[Int],
-              additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
+              additionalAxes: Option[Seq[AdditionalAxis]],
               sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DatasetArray(vaultPath,
                          dataSourceId,
@@ -50,7 +50,7 @@ class N5Array(vaultPath: VaultPath,
                          header,
                          axisOrder,
                          channelIndex,
-                         additionalCoordinates,
+                         additionalAxes,
                          sharedChunkContentsCache)
     with LazyLogging {
 

@@ -27,6 +27,7 @@ import { TreeTypeEnum } from "oxalis/constants";
 import { Action } from "oxalis/model/actions/actions";
 import { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+
 const TIMESTAMP = 1494347146379;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -103,7 +104,7 @@ const skeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
-  additionalCoordinates: [],
+  additionalAxes: [],
 };
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
@@ -119,7 +120,7 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
-  additionalCoordinates: [],
+  additionalAxes: [],
   zoomLevel: 2,
   userBoundingBoxes: [],
   typ: "Skeleton",

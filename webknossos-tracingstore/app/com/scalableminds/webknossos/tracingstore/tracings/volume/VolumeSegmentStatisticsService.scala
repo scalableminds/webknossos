@@ -30,7 +30,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
-      volumeData <- data(tracing, tracingId, mag, bucketPositions, userToken)
+      volumeData <- getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions, userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
@@ -85,7 +85,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                      bucketPosition: Vec3Int,
                                      userToken: Option[String]): Fox[Unit] =
     for {
-      bucketData <- data(tracing, tracingId, mag, Seq(bucketPosition), userToken)
+      bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(bucketData, tracing.elementClass)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, mutableBoundingBox)
@@ -116,18 +116,18 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     mutableBoundingBox(5) = Math.max(mutableBoundingBox(5), position.z)
   }
 
-  private def data(tracing: VolumeTracing,
-                   tracingId: String,
-                   mag: Vec3Int,
-                   bucketPositions: ListOfVec3IntProto,
-                   userToken: Option[String]): Fox[Array[Byte]] =
-    data(tracing, tracingId, mag, bucketPositions.values.map(vec3IntFromProto), userToken)
+  private def getVolumeDataForPositions(tracing: VolumeTracing,
+                                        tracingId: String,
+                                        mag: Vec3Int,
+                                        bucketPositions: ListOfVec3IntProto,
+                                        userToken: Option[String]): Fox[Array[Byte]] =
+    getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions.values.map(vec3IntFromProto), userToken)
 
-  private def data(tracing: VolumeTracing,
-                   tracingId: String,
-                   mag: Vec3Int,
-                   bucketPositions: Seq[Vec3Int],
-                   userToken: Option[String]): Fox[Array[Byte]] = {
+  private def getVolumeDataForPositions(tracing: VolumeTracing,
+                                        tracingId: String,
+                                        mag: Vec3Int,
+                                        bucketPositions: Seq[Vec3Int],
+                                        userToken: Option[String]): Fox[Array[Byte]] = {
     val dataRequests = bucketPositions.map { position =>
       WebKnossosDataRequest(
         position = position * mag * DataLayer.bucketLength,

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
@@ -29,6 +29,18 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
+
+  def getSegmentBoundingBox(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[BoundingBox] =
+    for {
+      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
+      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
+      boundingBoxMutable = BoundingBox(Vec3Int(Int.MaxValue, Int.MaxValue, Int.MaxValue), 0, 0, 0)
+      volumeData <- data(tracing, tracingId, mag, bucketPositions, userToken)
+      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
+      volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+    } yield BoundingBox(Vec3Int(5, 5, 5), 10, 20, 30)
 
   private def data(tracing: VolumeTracing,
                    tracingId: String,

@@ -440,4 +440,21 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def getSegmentBoundingBox(token: Option[String],
+                            tracingId: String,
+                            mag: String,
+                            segmentId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
+          segmentBoundingBox: BoundingBox <- volumeSegmentStatisticsService.getSegmentBoundingBox(
+            tracingId,
+            segmentId,
+            magParsed,
+            urlOrHeaderToken(token, request))
+        } yield Ok(Json.toJson(segmentBoundingBox))
+      }
+    }
+
 }

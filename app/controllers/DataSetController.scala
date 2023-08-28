@@ -136,7 +136,7 @@ class DataSetController @Inject()(userService: UserService,
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
     sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val reportMutable = ListBuffer[String]()
-      val adaptedParameters = ExploreRemoteDatasetParameters(request.body.remoteUri, None, None)
+      val adaptedParameters = ExploreRemoteDatasetParameters(request.body.remoteUri, None, None, None)
       for {
         dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
                                                                         request.identity,

@@ -33,6 +33,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
+  VolumeDataZipFormat,
   VolumeTracingDefaults,
   VolumeTracingDownsampling
 }
@@ -304,7 +305,10 @@ class AnnotationService @Inject()(
           oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
             tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
           else
-            tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true, volumeAsZarr = false)
+            tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
+                                                None,
+                                                skipVolumeData = true,
+                                                volumeDataZipFormat = VolumeDataZipFormat.wkw)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =

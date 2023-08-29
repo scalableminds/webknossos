@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.binary.DataSet
@@ -185,7 +186,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
   def getVolumeTracing(annotationLayer: AnnotationLayer,
                        version: Option[Long] = None,
                        skipVolumeData: Boolean,
-                       volumeAsZarr: Boolean): Fox[FetchedAnnotationLayer] = {
+                       volumeDataZipFormat: VolumeDataZipFormat): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -197,7 +198,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       data <- Fox.runIf(!skipVolumeData) {
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-          .addQueryString("volumeAsZarr" -> volumeAsZarr.toString)
+          .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
           .addQueryStringOptional("version", version.map(_.toString))
           .getWithBytesResponse
       }

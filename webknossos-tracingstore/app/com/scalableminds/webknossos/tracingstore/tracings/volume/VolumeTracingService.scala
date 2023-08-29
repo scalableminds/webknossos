@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, FallbackDataHelper}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -27,7 +28,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import java.io._
@@ -302,24 +302,27 @@ class VolumeTracingService @Inject()(
         } yield savedResolutions.toSet
     }
 
-  def allDataZip(tracingId: String, tracing: VolumeTracing, volumeAsZarr: Boolean): Future[Files.TemporaryFile] = {
+  def allDataZip(tracingId: String,
+                 tracing: VolumeTracing,
+                 volumeDataZipFormat: VolumeDataZipFormat): Future[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
-    allDataToOutputStream(tracingId, tracing, volumeAsZarr, os).map(_ => zipped)
+    allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, os).map(_ => zipped)
   }
 
   private def allDataToOutputStream(tracingId: String,
                                     tracing: VolumeTracing,
-                                    volumeAsZarr: Boolean,
+                                    volumeDataZipFormmat: VolumeDataZipFormat,
                                     os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets: Iterator[NamedStream] = if (volumeAsZarr) {
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                         tracing.mags.map(mag => vec3IntFromProto(mag)))
-    } else {
-      new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                           tracing.mags.map(mag => vec3IntFromProto(mag)),
-                                           tracing.additionalAxes)
+    val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
+      case VolumeDataZipFormat.wkw =>
+        new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                           tracing.mags.map(mag => vec3IntFromProto(mag)))
+      case VolumeDataZipFormat.zarr3 =>
+        new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                             tracing.mags.map(mag => vec3IntFromProto(mag)),
+                                             tracing.additionalAxes)
     }
 
     val before = System.currentTimeMillis()

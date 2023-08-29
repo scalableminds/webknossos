@@ -142,7 +142,7 @@ PATCH         /annotations/:id/addAnnotationLayer                               
 PATCH         /annotations/:id/deleteAnnotationLayer                                            controllers.AnnotationController.deleteAnnotationLayerWithoutType(id: String, layerName: String)
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: String)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeAsZarr: Option[Boolean])
+GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
 PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
 
@@ -153,7 +153,7 @@ PATCH         /annotations/:typ/:id/addAnnotationLayer                          
 PATCH         /annotations/:typ/:id/deleteAnnotationLayer                                       controllers.AnnotationController.deleteAnnotationLayer(typ: String, id: String, layerName: String)
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeAsZarr: Option[Boolean])
+GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
 GET           /annotations/:typ/:id/loggedTime                                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 

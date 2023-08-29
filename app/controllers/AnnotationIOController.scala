@@ -23,7 +23,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  VolumeDataZipFormat,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import io.swagger.annotations._
 
@@ -324,11 +329,12 @@ Expects:
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],
       skipVolumeData: Option[Boolean],
-      volumeAsZarr: Option[Boolean]): Action[AnyContent] =
+      volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
+        volumeDataZipFormatParsed = volumeDataZipFormat.flatMap(VolumeDataZipFormat.fromString)
         _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
@@ -337,13 +343,14 @@ Expects:
           case AnnotationType.CompoundTaskType =>
             downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
           case _ =>
-            downloadExplorational(id,
-                                  typ,
-                                  request.identity,
-                                  skeletonVersion,
-                                  volumeVersion,
-                                  skipVolumeData.getOrElse(false),
-                                  volumeAsZarr.getOrElse(false)) ?~> "annotation.download.failed"
+            downloadExplorational(
+              id,
+              typ,
+              request.identity,
+              skeletonVersion,
+              volumeVersion,
+              skipVolumeData.getOrElse(false),
+              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> "annotation.download.failed"
         }
       } yield result
     }
@@ -360,12 +367,16 @@ Expects:
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
                           skipVolumeData: Option[Boolean],
-                          volumeAsZarr: Option[Boolean]): Action[AnyContent] =
+                          volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity)
-        result <- download(annotation.typ.toString, id, skeletonVersion, volumeVersion, skipVolumeData, volumeAsZarr)(
-          request)
+        result <- download(annotation.typ.toString,
+                           id,
+                           skeletonVersion,
+                           volumeVersion,
+                           skipVolumeData,
+                           volumeDataZipFormat)(request)
       } yield result
     }
 
@@ -375,7 +386,9 @@ Expects:
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
                                     skipVolumeData: Boolean,
-                                    volumeAsZarr: Boolean)(implicit ctx: DBAccessContext) = {
+                                    volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
+
+    logger.info(s"Download Explorational. volumeAsZarr: $volumeDataZipFormat")
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -411,7 +424,10 @@ Expects:
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData, volumeAsZarr)
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
+                                                volumeVersion,
+                                                skipVolumeData,
+                                                volumeDataZipFormat)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>

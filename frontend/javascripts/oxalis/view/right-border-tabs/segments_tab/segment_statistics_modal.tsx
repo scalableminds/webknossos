@@ -1,4 +1,4 @@
-import { getSegmentVolume } from "admin/admin_rest_api";
+import { getSegmentsVolume } from "admin/admin_rest_api";
 import { Modal, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
@@ -7,6 +7,7 @@ import { Unicode } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
+import { getGroupByIdWithSubgroups } from "../tree_hierarchy_view_helpers";
 
 const SEGMENT_STATISTICS_CSV_HEADER = "groupId,segmendId,segmentName,volumeInVoxel,volumeInNm3";
 
@@ -25,7 +26,7 @@ type Props = {
 type SegmentInfo = {
   segmentId: number;
   segmentName: string;
-  groupId: number;
+  groupId: number | undefined | null;
   //groupName: string; TODO
   volumeInNm3: number;
   formattedSize: string;
@@ -57,29 +58,37 @@ export function SegmentStatisticsModal({
   tracingStoreUrl,
   visibleSegmentationLayer,
   segments,
-  group,
 }: Props) {
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const nmFactorToUnit = new Map([[1, "nm³"]]);
   const dataSource = useFetch(
     async () => {
       //simply returns an array of the sizes
-      const volumeStrings = await getSegmentVolume(
+      const volumeStrings = await getSegmentsVolume(
         tracingStoreUrl,
         tracingId,
         mag.getHighestResolution(),
         segments.map((segment) => segment.id),
       ).then((response) => {
-        console.log(response); //TODO continue here
-        const formattedSize = formatNumberToVolume(response);
-        return {
-          segmentId: segment.id,
-          segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,
-          groupId: group, //TODO this doesnt work for nested segments yet
-          volumeInVoxel: response,
-          volumeInNm3: parseInt(formatNumberToUnit(response, nmFactorToUnit).split(ThinSpace)[0]),
-          formattedSize: formattedSize,
-        };
+        let statisticsObjects = [];
+        for (let i = 0; i < segments.length; i++) {
+          // segments in request and their sizes in response are in same order
+          const currentSegment = segments[i];
+          const segmentStatObject = {
+            segmentId: currentSegment.id,
+            segmentName:
+              currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
+            groupId: currentSegment.groupId == null ? -1 : currentSegment.groupId,
+            // TODO groupName:
+            volumeInVoxel: response[i],
+            volumeInNm3: parseInt(
+              formatNumberToUnit(response[i], nmFactorToUnit).split(ThinSpace)[0],
+            ),
+            formattedSize: formatNumberToVolume(response[i]),
+          };
+          statisticsObjects.push(segmentStatObject);
+        }
+        return statisticsObjects;
       });
       return Promise.all(volumeStrings);
     },

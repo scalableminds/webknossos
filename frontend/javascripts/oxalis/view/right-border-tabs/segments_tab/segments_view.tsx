@@ -1540,7 +1540,12 @@ class SegmentsView extends React.Component<Props, State> {
       visibleSegmentationLayer != null &&
       "fallbackLayer" in visibleSegmentationLayer &&
       visibleSegmentationLayer.fallbackLayer == null;
-    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
+    if (
+      hasNoFallbackLayer &&
+      this.props.hasVolumeTracing &&
+      segments != null &&
+      segments.length > 0
+    ) {
       const state = Store.getState();
       const volumeTracing = getActiveSegmentationTracing(state);
       const tracingId = volumeTracing?.tracingId;

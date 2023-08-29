@@ -209,8 +209,6 @@ export function* sendRequestToServer(
         );
       }
 
-      console.log("compactedSaveQueue", compactedSaveQueue);
-      console.log("versionIncrement", versionIncrement);
       yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
       yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
       yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
@@ -339,7 +337,6 @@ export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
 ): [Array<SaveQueueEntry>, number] {
-  console.log("lastVersion", lastVersion);
   let versionIncrement = 0;
   const batchesWithVersions = updateActionsBatches.map((batch) => {
     if (batch.transactionGroupIndex === 0) {

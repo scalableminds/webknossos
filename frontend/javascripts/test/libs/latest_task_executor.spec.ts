@@ -1,13 +1,13 @@
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 import test from "ava";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
-// @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
+
 test("LatestTaskExecutor: One task", async (t) => {
   const executor = new LatestTaskExecutor();
   const deferred1 = new Deferred();
   const scheduledPromise = executor.schedule(() => deferred1.promise());
   deferred1.resolve(true);
-  return scheduledPromise.then((result) => {
+  await scheduledPromise.then((result) => {
     t.true(result);
   });
 });

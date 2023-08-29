@@ -16,7 +16,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store, { PlaneRects, SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
@@ -194,7 +194,10 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
-    const layerMatrix = invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix);
+    const layerMatrix = invertAndTranspose(
+      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
+        .affineMatrix,
+    );
 
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,

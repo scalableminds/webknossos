@@ -132,17 +132,17 @@ export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) =>
   return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
 
-export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
+export function parseMaybe(str: string | null | undefined): unknown | null {
   try {
     const parsedJSON = JSON.parse(str || "");
 
     if (parsedJSON != null) {
-      return Maybe.Just(parsedJSON);
+      return parsedJSON;
     } else {
-      return Maybe.Nothing();
+      return null;
     }
   } catch (_exception) {
-    return Maybe.Nothing();
+    return null;
   }
 }
 
@@ -1149,3 +1149,24 @@ export function minValue(array: Array<number>): number {
   }
   return value;
 }
+
+/*
+ * Iterates over arbitrary objects recursively and calls the callback function.
+ */
+type Obj = Record<string, unknown>;
+export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) => void) => {
+  if (obj == null) {
+    return;
+  }
+  const items = Array.isArray(obj) ? obj : Object.values(obj);
+  items.forEach((item) => {
+    callback(item);
+
+    if (typeof item === "object") {
+      // We know that item is an object or array which matches deepIterate's signature.
+      // However, TS doesn't infer this.
+      // @ts-ignore
+      deepIterate(item, callback);
+    }
+  });
+};

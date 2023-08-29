@@ -1,5 +1,4 @@
-import { Matrix4x4 } from "mjs";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, CoordinateTransformation } from "types/api_flow_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
 type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
@@ -31,11 +30,14 @@ export const setLayerMappingsAction = (
     agglomerateNames,
   } as const);
 
-export const setLayerTransformsAction = (layerName: string, transformMatrix: Matrix4x4) =>
+export const setLayerTransformsAction = (
+  layerName: string,
+  coordinateTransformations: CoordinateTransformation[] | null,
+) =>
   ({
     type: "SET_LAYER_TRANSFORMS",
     layerName,
-    transformMatrix,
+    coordinateTransformations,
   } as const);
 
 export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>

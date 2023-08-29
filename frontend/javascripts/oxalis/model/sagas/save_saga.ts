@@ -36,7 +36,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import {
-  maximumActionCountPerSave,
+  MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -73,7 +73,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
 
     if (saveQueue.length === 0) {
       if (loopCounter % 100 === 0) {
-        // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
+        // See https://github.com/scalableminds/webknossos/pull/6076 (or 82e16e1) for an explanation
         // of this delay call.
         yield* delay(0);
       }
@@ -88,27 +88,35 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     });
     yield* put(setSaveBusyAction(true, saveQueueType));
 
-    if (forcePush) {
-      while (true) {
-        // Send batches to the server until the save queue is empty.
-        saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
-
-        if (saveQueue.length > 0) {
-          yield* call(sendRequestToServer, saveQueueType, tracingId);
-        } else {
-          break;
-        }
-      }
-    } else {
+    // Send (parts) of the save queue to the server.
+    // There are two main cases:
+    // 1) forcePush is true
+    //    The user explicitly requested to save an annotation.
+    //    In this case, batches are sent to the server until the save
+    //    queue is empty. Note that the save queue might be added to
+    //    while saving is in progress. Still, the save queue will be
+    //    drained until it is empty. If the user hits save and continuously
+    //    annotates further, a high number of save-requests might be sent.
+    // 2) forcePush is false
+    //    The auto-save interval was reached at time T. The following code
+    //    will determine how many items are in the save queue at this time T.
+    //    Exactly that many items will be sent to the server.
+    //    New items that might be added to the save queue during saving, will
+    //    ignored (they will be picked up in the next iteration of this loop).
+    //    Otherwise, the risk of a high number of save-requests (see case 1)
+    //    would be present here, too (note the risk would be greater, because the
+    //    user didn't use the save button which is usually accompanied a small pause).
+    const itemCountToSave = forcePush
+      ? Infinity
+      : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
+    let savedItemCount = 0;
+    while (savedItemCount < itemCountToSave) {
       saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
 
       if (saveQueue.length > 0) {
-        // Saving the tracing automatically (via timeout) only saves the current state.
-        // It does not require to reach an empty saveQueue. This is especially
-        // important when the auto-saving happens during continuous movements.
-        // Always draining the save queue completely would mean that save
-        // requests are sent as long as the user moves.
-        yield* call(sendRequestToServer, saveQueueType, tracingId);
+        savedItemCount += yield* call(sendRequestToServer, saveQueueType, tracingId);
+      } else {
+        break;
       }
     }
 
@@ -123,15 +131,18 @@ export function sendRequestWithToken(
 }
 
 // This function returns the first n batches of the provided array, so that the count of
-// all actions in these n batches does not exceed maximumActionCountPerSave
-function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
+// all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
+function sliceAppropriateBatchCount(
+  batches: Array<SaveQueueEntry>,
+  saveQueueType: SaveQueueType,
+): Array<SaveQueueEntry> {
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
     const newActionCount = actionCount + batch.actions.length;
 
-    if (newActionCount <= maximumActionCountPerSave) {
+    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE[saveQueueType]) {
       actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
@@ -151,9 +162,18 @@ function getRetryWaitTime(retryCount: number) {
 // at any time, because the browser page is reloaded after the message is shown, anyway.
 let didShowFailedSimultaneousTracingError = false;
 
-export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
+export function* sendRequestToServer(
+  saveQueueType: SaveQueueType,
+  tracingId: string,
+): Saga<number> {
+  /*
+   * Saves a reasonably-sized part of the save queue (that corresponds to the
+   * tracingId) to the server (plus retry-mechanism).
+   * The saga returns the number of save queue items that were saved.
+   */
+
   const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type } = yield* select((state) =>
     selectTracing(state, saveQueueType, tracingId),
@@ -162,6 +182,7 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
 
+  // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
     let exceptionDuringMarkBucketsAsNotDirty = false;
 
@@ -205,7 +226,7 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
       }
 
       yield* call(toggleErrorHighlighting, false);
-      return;
+      return saveQueue.length;
     } catch (error) {
       if (exceptionDuringMarkBucketsAsNotDirty) {
         throw error;

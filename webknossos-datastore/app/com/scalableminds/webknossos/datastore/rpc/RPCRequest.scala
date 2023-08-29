@@ -36,6 +36,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
+  def withBasicAuthOpt(usernameOpt: Option[String], passwordOpt: Option[String]): RPCRequest = {
+    (usernameOpt, passwordOpt) match {
+      case (Some(username), Some(password)) => request = request.withAuth(username, password, WSAuthScheme.BASIC)
+      case _                                => ()
+    }
+    this
+  }
+
   def withLongTimeout: RPCRequest = {
     request = request.withRequestTimeout(2 hours)
     this

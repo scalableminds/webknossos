@@ -21,6 +21,7 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
             additionalAxes: Seq[AdditionalAxisProto]): Iterator[NamedStream] = {
     val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
     //val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
+    // TODO register shape for metadata
     bucketStream.map {
       case (bucket, data) =>
         val filePath = zarrChunkFilePath(bucket)

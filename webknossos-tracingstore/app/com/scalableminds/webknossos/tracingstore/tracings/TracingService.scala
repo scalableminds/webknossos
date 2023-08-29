@@ -88,17 +88,6 @@ trait TracingService[T <: GeneratedMessage]
                                           Some(expiry))
     } yield ()
 
-  private def handledGroupKey(tracingId: String, transactionId: String, version: Long, transactionGroupIndex: Int) =
-    s"handledGroup___${tracingId}___${transactionId}___${version}___$transactionGroupIndex"
-
-  def saveToHandledGroupIdStore(tracingId: String,
-                                transactionId: String,
-                                version: Long,
-                                transactionGroupIndex: Int): Fox[Unit] = {
-    val key = handledGroupKey(tracingId, transactionId, version, transactionGroupIndex)
-    handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
-  }
-
   def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup[T]]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
@@ -169,6 +158,17 @@ trait TracingService[T <: GeneratedMessage]
     } else {
       tracingStore.put(id, version, tracing).map(_ => id)
     }
+  }
+
+  private def handledGroupKey(tracingId: String, transactionId: String, version: Long, transactionGroupIndex: Int) =
+    s"handledGroup___${tracingId}___${transactionId}___${version}___$transactionGroupIndex"
+
+  def saveToHandledGroupIdStore(tracingId: String,
+                                transactionId: String,
+                                version: Long,
+                                transactionGroupIndex: Int): Fox[Unit] = {
+    val key = handledGroupKey(tracingId, transactionId, version, transactionGroupIndex)
+    handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
   }
 
   def handledGroupIdStoreContains(tracingId: String,

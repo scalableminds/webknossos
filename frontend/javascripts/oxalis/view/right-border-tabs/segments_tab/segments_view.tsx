@@ -1560,7 +1560,7 @@ class SegmentsView extends React.Component<Props, State> {
           tracingId={tracingId}
           tracingStoreUrl={tracingStoreUrl}
           segments={segments}
-          group={groupId}
+          parentGroup={groupId}
         />
       );
     }

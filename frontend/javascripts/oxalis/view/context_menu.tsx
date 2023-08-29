@@ -102,7 +102,7 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
-import { getSegmentsVolume } from "admin/admin_rest_api";
+import { getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 
@@ -1127,7 +1127,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
           const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
           const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
           const segmentId = segmentIdAtPosition;
-          const segmentSize = await getSegmentsVolume(
+          const segmentSize = await getSegmentVolumes(
             tracingStoreUrl,
             tracingId,
             mag.getHighestResolution(),

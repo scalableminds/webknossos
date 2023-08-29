@@ -958,7 +958,7 @@ export function getNewestVersionForTracing(
   );
 }
 
-export function getSegmentsVolume(
+export function getSegmentVolumes(
   tracingStoreUrl: string,
   tracingId: string,
   mag: Vector3,
@@ -967,6 +967,22 @@ export function getSegmentsVolume(
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
+export function getSegmentBoundingBoxes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
       {
         data: { mag, segmentIds },
       },

@@ -1,4 +1,4 @@
-import { getSegmentsVolume } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { Modal, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
@@ -7,7 +7,7 @@ import { Unicode } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
-import { getGroupByIdWithSubgroups } from "../tree_hierarchy_view_helpers";
+import resolutions from "test/fixtures/resolutions";
 
 const SEGMENT_STATISTICS_CSV_HEADER = "groupId,segmendId,segmentName,volumeInVoxel,volumeInNm3";
 
@@ -20,7 +20,7 @@ type Props = {
   tracingStoreUrl: any;
   visibleSegmentationLayer: any;
   segments: Segment[];
-  group: number;
+  parentGroup: number;
 };
 
 type SegmentInfo = {
@@ -33,7 +33,11 @@ type SegmentInfo = {
   volumeInVoxel: number;
 };
 
-const exportStatisticsToCSV = (segmentInformation: Array<SegmentInfo>) => {
+const exportStatisticsToCSV = (
+  segmentInformation: Array<SegmentInfo>,
+  tracingId: string,
+  groupId: number,
+) => {
   if (segmentInformation.length < 0) {
     return;
   }
@@ -44,7 +48,7 @@ const exportStatisticsToCSV = (segmentInformation: Array<SegmentInfo>) => {
     )
     .join("\n");
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
-  const filename = `segmentStatistics-${new Date().toLocaleString().replace(/s/, "-")}.csv`; // TODO useful file naming
+  const filename = `segmentStatistics_tracing-${tracingId}_group-${groupId}.csv`;
   const blob = new Blob([csv], {
     type: "text/plain;charset=utf-8",
   });
@@ -58,21 +62,32 @@ export function SegmentStatisticsModal({
   tracingStoreUrl,
   visibleSegmentationLayer,
   segments,
+  parentGroup,
 }: Props) {
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const nmFactorToUnit = new Map([[1, "nm³"]]);
   const dataSource = useFetch(
     async () => {
       //simply returns an array of the sizes
-      const volumeStrings = await getSegmentsVolume(
-        tracingStoreUrl,
-        tracingId,
-        mag.getHighestResolution(),
-        segments.map((segment) => segment.id),
-      ).then((response) => {
-        let statisticsObjects = [];
+      let resultObjects = await Promise.all([
+        getSegmentVolumes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getHighestResolution(),
+          segments.map((segment) => segment.id),
+        ),
+        getSegmentBoundingBoxes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getHighestResolution(),
+          segments.map((segment) => segment.id),
+        ),
+      ]).then((response) => {
+        const segmentSizes = response[0];
+        const boundingBoxes = response[1];
+        const statisticsObjects = [];
         for (let i = 0; i < segments.length; i++) {
-          // segments in request and their sizes in response are in same order
+          // segments in request and their statistics in response are in same order
           const currentSegment = segments[i];
           const segmentStatObject = {
             segmentId: currentSegment.id,
@@ -80,17 +95,18 @@ export function SegmentStatisticsModal({
               currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
             groupId: currentSegment.groupId == null ? -1 : currentSegment.groupId,
             // TODO groupName:
-            volumeInVoxel: response[i],
+            volumeInVoxel: segmentSizes[i],
             volumeInNm3: parseInt(
-              formatNumberToUnit(response[i], nmFactorToUnit).split(ThinSpace)[0],
+              formatNumberToUnit(segmentSizes[i], nmFactorToUnit).split(ThinSpace)[0],
             ),
-            formattedSize: formatNumberToVolume(response[i]),
+            formattedSize: formatNumberToVolume(segmentSizes[i]),
+            boundingBox: boundingBoxes[i],
           };
           statisticsObjects.push(segmentStatObject);
         }
         return statisticsObjects;
       });
-      return Promise.all(volumeStrings);
+      return resultObjects;
     },
     [], //TODO make pretty with spinner
     [isOpen],
@@ -98,6 +114,7 @@ export function SegmentStatisticsModal({
   const columns = [
     { title: "Segment", dataIndex: "segmentName", key: "segmentName" },
     { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
+    { title: "Boundingbox", dataIndex: "boundingBox", key: "boundingBox" },
   ];
 
   return (
@@ -106,7 +123,7 @@ export function SegmentStatisticsModal({
       open={isOpen}
       onCancel={onCancel}
       style={{ marginRight: 10 }}
-      onOk={() => exportStatisticsToCSV(dataSource)}
+      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
       okText="Export to CSV"
     >
       <Table dataSource={dataSource} columns={columns} />

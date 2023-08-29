@@ -218,6 +218,7 @@ class VoxelyticsController @Inject()(
                                          Some(workflowHash),
                                          conf.staleTimeout,
                                          allowUnlisted = true)
+          _ <- runs.headOption ?~> "voxelytics.runNotFound"
           results <- voxelyticsDAO.getChunkStatistics(runs.map(_.id), taskName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }
@@ -237,6 +238,7 @@ class VoxelyticsController @Inject()(
                                          Some(workflowHash),
                                          conf.staleTimeout,
                                          allowUnlisted = true)
+          _ <- runs.headOption ?~> "voxelytics.runNotFound"
           results <- voxelyticsDAO.getArtifactChecksums(runs.map(_.id), taskName, artifactName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }

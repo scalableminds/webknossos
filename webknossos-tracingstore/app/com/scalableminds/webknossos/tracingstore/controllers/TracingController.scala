@@ -127,7 +127,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
             val updateGroups = request.body
-            if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
+            if (updateGroups.forall(_.transactionGroupCount == 1)) {
               commitUpdates(tracingId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
             } else {
               updateGroups
@@ -153,7 +153,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     for {
       previousCommittedVersion: Long <- previousVersionFox
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
-        if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
+        if (updateGroup.transactionGroupCount == updateGroup.transactionGroupIndex + 1) {
           commitPending(tracingId, updateGroup, userToken)
         } else {
           tracingService
@@ -163,10 +163,16 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                              updateGroup.version,
                              updateGroup,
                              transactionBatchExpiry)
+            .flatMap(
+              _ =>
+                tracingService.saveToHandledGroupIdStore(tracingId,
+                                                         updateGroup.transactionId,
+                                                         updateGroup.version,
+                                                         updateGroup.transactionGroupIndex))
             .map(_ => previousCommittedVersion) // no updates have been committed, do not yield version increase
         }
       } else {
-        Fox.failure(s"Incorrect version. Expected: ${previousCommittedVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+        failUnlessAlreadyHandled(updateGroup, tracingId, previousCommittedVersion)
       }
     } yield result
 
@@ -175,7 +181,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                             userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
-      count = previousActionGroupsToCommit.length + 1
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
@@ -195,18 +200,34 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
-          val versionIncrement = if (updateGroup.transactionGroupIndex.getOrElse(0) == 0) 1 else 0 // version increment happens at the start of each transaction group
+          val versionIncrement = if (updateGroup.transactionGroupIndex == 0) 1 else 0 // version increment happens at the start of each transaction group
           if (prevVersion + versionIncrement == updateGroup.version) {
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
+              .flatMap(
+                _ =>
+                  tracingService.saveToHandledGroupIdStore(tracingId,
+                                                           updateGroup.transactionId,
+                                                           updateGroup.version,
+                                                           updateGroup.transactionGroupIndex))
               .map(_ => updateGroup.version)
-          } else {
-            Fox
-              .failure(s"Incorrect version during commit. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
-          }
+          } else failUnlessAlreadyHandled(updateGroup, tracingId, prevVersion)
         }
       }
     }
+  }
+
+  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup[T],
+                                       tracingId: String,
+                                       previousVersion: Long): Fox[Long] = {
+    val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
+    for {
+      _ <- Fox.assertTrue(
+        tracingService.handledGroupIdStoreContains(tracingId,
+                                                   updateGroup.transactionId,
+                                                   updateGroup.version,
+                                                   updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT
+    } yield updateGroup.version
   }
 
   def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =

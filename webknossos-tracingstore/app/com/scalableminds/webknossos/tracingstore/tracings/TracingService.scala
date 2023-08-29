@@ -38,6 +38,8 @@ trait TracingService[T <: GeneratedMessage]
 
   def dummyTracing: T
 
+  val handledGroupIdStore: TracingStoreRedisStore
+
   val uncommittedUpdatesStore: TracingStoreRedisStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
@@ -52,62 +54,59 @@ trait TracingService[T <: GeneratedMessage]
   // to provide useful error messages to the user if the temporary tracing is no longer present
   private val temporaryIdStoreTimeout = 10 days
 
+  private val handledGroupCacheExpiry: FiniteDuration = 1 hour
+
   def currentVersion(tracingId: String): Fox[Long]
 
   def currentVersion(tracing: T): Long
 
-  private def transactionBatchKey(tracingId: String,
-                                  transactionidOpt: Option[String],
-                                  transactionGroupindexOpt: Option[Int],
-                                  version: Long) =
-    s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+  def transactionBatchKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
+    s"transactionBatch___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
 
   protected def temporaryIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
-  def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
-    transactionIdOpt match {
-      case Some(_) =>
-        for {
-          keys <- uncommittedUpdatesStore.keys(s"transactionBatch___${tracingId}___${transactionIdOpt}___*")
-        } yield if (keys.isEmpty) None else Some(keys.flatMap(versionFromTransactionBatchKey).max)
-      case _ => Fox.successful(None)
-    }
-
-  private def versionFromTransactionBatchKey(key: String) = {
-    val pattern = """transactionBatch___(.*)___(.*)___(.*)___(\d+)""".r
-    pattern.findFirstMatchIn(key).map {
-      _.group(4).toLong
-    }
-  }
-
-  private def patternFor(tracingId: String, transactionIdOpt: Option[String]) =
-    s"transactionBatch___${tracingId}___${transactionIdOpt}___*"
+  private def patternFor(tracingId: String, transactionId: String) =
+    s"transactionBatch___${tracingId}___${transactionId}___*"
 
   def saveUncommitted(tracingId: String,
-                      transactionIdOpt: Option[String],
-                      transactionGroupIndexOpt: Option[Int],
+                      transactionId: String,
+                      transactionGroupIndex: Int,
                       version: Long,
                       updateGroup: UpdateActionGroup[T],
                       expiry: FiniteDuration): Fox[Unit] =
     for {
-      _ <- Fox.runIf(transactionGroupIndexOpt.getOrElse(0) > 0)(
-        Fox.assertTrue(uncommittedUpdatesStore.contains(
-          transactionBatchKey(tracingId, transactionIdOpt, Some(transactionGroupIndexOpt.getOrElse(0) - 1), version))) ?~> s"Incorrect transaction index. Got: ${transactionGroupIndexOpt.getOrElse(0)} but ${transactionGroupIndexOpt.getOrElse(0) - 1} does not exist" ~> CONFLICT)
-      _ <- uncommittedUpdatesStore.insert(
-        transactionBatchKey(tracingId, transactionIdOpt, transactionGroupIndexOpt, version),
-        Json.toJson(updateGroup).toString(),
-        Some(expiry))
+      _ <- Fox.runIf(transactionGroupIndex > 0)(
+        Fox.assertTrue(
+          uncommittedUpdatesStore.contains(transactionBatchKey(
+            tracingId,
+            transactionId,
+            transactionGroupIndex - 1,
+            version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
+      _ <- uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionId, transactionGroupIndex, version),
+                                          Json.toJson(updateGroup).toString(),
+                                          Some(expiry))
     } yield ()
 
-  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] =
+  private def handledGroupKey(tracingId: String, transactionId: String, version: Long, transactionGroupIndex: Int) =
+    s"handledGroup___${tracingId}___${transactionId}___${version}___$transactionGroupIndex"
+
+  def saveToHandledGroupIdStore(tracingId: String,
+                                transactionId: String,
+                                version: Long,
+                                transactionGroupIndex: Int): Fox[Unit] = {
+    val key = handledGroupKey(tracingId, transactionId, version, transactionGroupIndex)
+    handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
+  }
+
+  def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup[T]]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
       parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
         JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
     } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
-  def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
+  def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
   private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
@@ -171,6 +170,12 @@ trait TracingService[T <: GeneratedMessage]
       tracingStore.put(id, version, tracing).map(_ => id)
     }
   }
+
+  def handledGroupIdStoreContains(tracingId: String,
+                                  transactionId: String,
+                                  version: Long,
+                                  transactionGroupIndex: Int): Fox[Boolean] =
+    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version, transactionGroupIndex))
 
   def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): T
 

@@ -691,9 +691,10 @@ class VolumeTracingService @Inject()(
             List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
-            None,
-            None,
-            None)
+            "dummyTransactionId",
+            1,
+            0
+          )
           _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }

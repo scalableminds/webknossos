@@ -42,7 +42,7 @@ case class WKWDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -59,7 +59,7 @@ case class WKWSegmentationLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with WKWLayer
 

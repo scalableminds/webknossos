@@ -25,10 +25,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
     bucket.additionalCoordinates match {
       case Some(additionalCoordinates) =>
-        zarrArray.readBytesWithAdditionalCoordinates(shape,
-                                                     offset,
-                                                     additionalCoordinates,
-                                                     dataLayer.additionalCoordinateMap)
+        zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
       case None => zarrArray.readBytesXYZ(shape, offset)
     }
   }

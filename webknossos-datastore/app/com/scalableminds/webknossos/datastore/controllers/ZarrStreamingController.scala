@@ -128,7 +128,7 @@ class ZarrStreamingController @Inject()(
           d.elementClass,
           d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
-          additionalCoordinates = None
+          additionalAxes = None
         )
     }
 

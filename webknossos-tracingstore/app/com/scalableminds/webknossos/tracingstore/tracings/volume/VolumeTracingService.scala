@@ -9,15 +9,11 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalCoordinateDefinition, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3BucketStreamSink
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinateRequest,
-  BucketPosition,
-  WebKnossosIsosurfaceRequest
-}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -129,7 +125,7 @@ class VolumeTracingService @Inject()(
                     largestSegmentId = a.largestSegmentId,
                     zoomLevel = a.zoomLevel,
                     editPositionAdditionalCoordinates =
-                      AdditionalCoordinateRequest.toProto(a.editPositionAdditionalCoordinates)
+                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
@@ -423,13 +419,11 @@ class VolumeTracingService @Inject()(
       _ <- segmentIndexBuffer.flush()
     } yield ()
 
-  private def volumeTracingLayer(
-      tracingId: String,
-      tracing: VolumeTracing,
-      isTemporaryTracing: Boolean = false,
-      includeFallbackDataIfAvailable: Boolean = false,
-      userToken: Option[String] = None,
-      additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]] = None): VolumeTracingLayer =
+  private def volumeTracingLayer(tracingId: String,
+                                 tracing: VolumeTracing,
+                                 isTemporaryTracing: Boolean = false,
+                                 includeFallbackDataIfAvailable: Boolean = false,
+                                 userToken: Option[String] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
@@ -437,10 +431,7 @@ class VolumeTracingService @Inject()(
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
       userToken = userToken,
-      additionalCoordinates = additionalCoordinates match {
-        case Some(value) => Some(value)
-        case None        => Some(AdditionalCoordinateDefinition.fromProto(tracing.additionalCoordinates))
-      }
+      additionalAxes = Some(AdditionalAxis.fromProto(tracing.additionalAxes))
     )
 
   def updateActionLog(tracingId: String,
@@ -559,8 +550,8 @@ class VolumeTracingService @Inject()(
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
     for {
-      mergedAdditionalCoordinateDefinitions <- AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(
-        Seq(tracingA, tracingB).map(t => Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates))))
+      mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
+        Seq(tracingA, tracingB).map(t => Some(AdditionalAxis.fromProto(t.additionalAxes))))
       tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
       else {
         val labelMap = mergedVolumeStats.labelMaps(indexB)
@@ -582,7 +573,7 @@ class VolumeTracingService @Inject()(
         userBoundingBoxes = userBoundingBoxes,
         segments = tracingA.segments.toList ::: tracingBSegments.toList,
         segmentGroups = mergedGroups,
-        additionalCoordinates = AdditionalCoordinateDefinition.toProto(mergedAdditionalCoordinateDefinitions)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
       )
   }
 
@@ -652,18 +643,11 @@ class VolumeTracingService @Inject()(
       }
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
-        mergedAdditionalCoordinateDefinitions <- Fox.box2Fox(
-          AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(tracings.map(t =>
-            Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates)))))
+        mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
+          Some(AdditionalAxis.fromProto(t.additionalAxes)))))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId,
-                            elementClass,
-                            bucketPosition,
-                            bucketBytes,
-                            newVersion,
-                            toCache,
-                            mergedAdditionalCoordinateDefinitions)
+            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache, mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
           } yield ()

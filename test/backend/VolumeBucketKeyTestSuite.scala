@@ -1,20 +1,20 @@
 package backend
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinateRequest, BucketPosition}
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.BucketKeys
 import org.scalatestplus.play.PlaySpec
 
-class BucketKeyTestSuite extends PlaySpec {
+class VolumeBucketKeyTestSuite extends PlaySpec {
 
   class BucketKeyBuilder extends BucketKeys {
     def build(dataLayerName: String,
               bucket: BucketPosition,
-              additionalCoordinateDefinitions: Option[Seq[AdditionalCoordinateDefinition]] = None): String =
-      buildBucketKey(dataLayerName, bucket, additionalCoordinateDefinitions)
+              additionalAxes: Option[Seq[AdditionalAxis]] = None): String =
+      buildBucketKey(dataLayerName, bucket, additionalAxes)
 
-    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]]): Option[(String, BucketPosition)] =
+    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
       parseBucketKey(key, additionalCoordinates)
   }
   val bucketKeyBuilder = new BucketKeyBuilder
@@ -26,14 +26,14 @@ class BucketKeyTestSuite extends PlaySpec {
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), None)
       "match defined bucket key" in {
         val key = bucketKeyBuilder.build(layerName, bucketPos)
-        assert(key == s"$layerName/1/53-[][1,2,3]")
+        assert(key == s"$layerName/1/53-[1,2,3]")
       }
       "expands mag when anisotropic" in {
         val key = bucketKeyBuilder.build(layerName, BucketPosition(32, 64, 96, Vec3Int(4, 4, 1), None))
-        assert(key == s"$layerName/4-4-1/36-[][0,0,3]")
+        assert(key == s"$layerName/4-4-1/36-[0,0,3]")
       }
       "is parsed as the same bucket position" in {
-        bucketKeyBuilder.parse(s"$layerName/1/53-[][1,2,3]", None) match {
+        bucketKeyBuilder.parse(s"$layerName/1/53-[1,2,3]", None) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
@@ -43,23 +43,23 @@ class BucketKeyTestSuite extends PlaySpec {
 
     }
     "built with additional coordinates" should {
-      val additionalCoordinateDefinitions =
-        Seq(AdditionalCoordinateDefinition("a", Array(0, 10), 0), AdditionalCoordinateDefinition("b", Array(0, 10), 1))
-      val additionalCoordinateRequests = Seq(AdditionalCoordinateRequest("a", 4), AdditionalCoordinateRequest("b", 5))
+      val additionalAxes =
+        Seq(AdditionalAxis("a", Array(0, 10), 0), AdditionalAxis("b", Array(0, 10), 1))
+      val additionalCoordinates = Seq(AdditionalCoordinate("a", 4), AdditionalCoordinate("b", 5))
 
-      val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinateRequests))
+      val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinates))
 
       "match defined bucket key" in {
 
         val key = bucketKeyBuilder.build(
           layerName,
           bucketPos,
-          Some(additionalCoordinateDefinitions)
+          Some(additionalAxes)
         )
         assert(key == s"$layerName/1/53-[4,5][1,2,3]")
       }
       "is parsed as the same bucket position" in {
-        bucketKeyBuilder.parse(s"$layerName/1/53-[4,5][1,2,3]", Some(additionalCoordinateDefinitions)) match {
+        bucketKeyBuilder.parse(s"$layerName/1/53-[4,5][1,2,3]", Some(additionalAxes)) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
@@ -70,8 +70,8 @@ class BucketKeyTestSuite extends PlaySpec {
       "sort additional coordinates" in {
         val key = bucketKeyBuilder.build(
           layerName,
-          BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinateRequests.reverse)),
-          Some(additionalCoordinateDefinitions)
+          BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinates.reverse)),
+          Some(additionalAxes)
         )
         assert(key == s"$layerName/1/53-[4,5][1,2,3]")
       }

@@ -5,7 +5,7 @@ import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 
 import Store from "oxalis/store";
 import {
@@ -67,7 +67,7 @@ import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
 import messages from "messages";
-import processTaskWithPool from "libs/task_pool";
+import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
@@ -201,7 +201,7 @@ function* loadAdHocIsosurface(
     return;
   }
 
-  if (_.size(layer.cube.additionalCoordinatesBounds) > 0) {
+  if (_.size(layer.cube.additionalAxes) > 0) {
     // Also see https://github.com/scalableminds/webknossos/issues/7229
     Toast.warning(
       "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",

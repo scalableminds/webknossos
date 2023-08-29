@@ -11,7 +11,7 @@ message Segment {
 	  optional int64 creationTime = 4;
     optional ColorProto color = 5;
     optional int32 groupId = 6;
-    repeated AdditionalCoordinateProto additionalCoordinates = 7;
+    repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
 }
 
 message VolumeTracing {
@@ -44,7 +44,7 @@ message VolumeTracing {
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
     repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
-    repeated AdditionalCoordinateDefinitionProto additionalCoordinates = 22; // Additional coordinates for which this tracing is defined (may not be the same as those of a data layer)
+    repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }
 
 message SegmentGroup {

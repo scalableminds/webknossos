@@ -27,7 +27,7 @@ export const tracing: ServerVolumeTracing = {
     y: 0,
     z: 0,
   },
-  additionalCoordinates: [],
+  additionalAxes: [],
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,

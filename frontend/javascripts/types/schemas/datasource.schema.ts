@@ -86,7 +86,7 @@ export default {
         numChannels: {
           type: "number",
         },
-        additionalCoordinates: {
+        additionalAxes: {
           type: "array",
           items: {
             type: "object",

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalCoordinateWithBounds, ElementClass } from "types/api_flow_types";
+import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
@@ -67,7 +67,7 @@ class DataCube {
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
   boundingBox: BoundingBox;
-  additionalCoordinatesBounds: Record<string, AdditionalCoordinateWithBounds>;
+  additionalAxes: Record<string, AdditionalAxis>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'pushQueue' has no initializer and is not... Remove this comment to see the full error message
@@ -97,7 +97,7 @@ class DataCube {
   // access-queue and is least recently used. It is then removed from the cube.
   constructor(
     layerBBox: BoundingBox,
-    additionalCoordinatesBounds: AdditionalCoordinateWithBounds[],
+    additionalAxes: AdditionalAxis[],
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
@@ -107,7 +107,7 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
-    this.additionalCoordinatesBounds = _.keyBy(additionalCoordinatesBounds, "name");
+    this.additionalAxes = _.keyBy(additionalAxes, "name");
 
     this.cubes = {};
     this.buckets = [];
@@ -187,7 +187,7 @@ class DataCube {
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
     const relevantCoords = (allCoords ?? []).filter(
-      (coord) => this.additionalCoordinatesBounds[coord.name] != null,
+      (coord) => this.additionalAxes[coord.name] != null,
     );
     return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
@@ -230,8 +230,8 @@ class DataCube {
       }
 
       for (const coord of coords || []) {
-        if (coord.name in this.additionalCoordinatesBounds) {
-          const { bounds } = this.additionalCoordinatesBounds[coord.name];
+        if (coord.name in this.additionalAxes) {
+          const { bounds } = this.additionalAxes[coord.name];
           if (coord.value < bounds[0] || coord.value >= bounds[1]) {
             return null;
           }

@@ -81,7 +81,7 @@ function upsampleVoxelMap(
         ]);
 
         if (currentGoalBucket.type === "null") {
-          console.warn(warnAboutCouldNotCreate([...currentGoalBucketAddress, targetZoomStep]));
+          warnAboutCouldNotCreate([...currentGoalBucketAddress, targetZoomStep]);
           continue;
         }
 

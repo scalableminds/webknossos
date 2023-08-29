@@ -6,7 +6,7 @@ import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
 import scala.collection.immutable.NumericRange
@@ -41,7 +41,7 @@ class Zarr3Array(vaultPath: VaultPath,
                  header: Zarr3ArrayHeader,
                  axisOrder: AxisOrder,
                  channelIndex: Option[Int],
-                 additionalCoordinates: Option[Seq[AdditionalCoordinateDefinition]],
+                 additionalAxes: Option[Seq[AdditionalAxis]],
                  sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DatasetArray(vaultPath,
                          dataSourceId,
@@ -49,7 +49,7 @@ class Zarr3Array(vaultPath: VaultPath,
                          header,
                          axisOrder,
                          channelIndex,
-                         additionalCoordinates,
+                         additionalAxes,
                          sharedChunkContentsCache)
     with LazyLogging {
 

@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalCoordinateDefinition
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{SkeletonTracingMigrationService, TracingType, _}
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Empty, Full}
@@ -175,8 +175,8 @@ class SkeletonTracingService @Inject()(
     for {
       tracingA <- tracingA
       tracingB <- tracingB
-      mergedAdditionalCoordinateDefinitions <- AdditionalCoordinateDefinition.mergeAndAssertSameAdditionalCoordinates(
-        Seq(tracingA, tracingB).map(t => Some(AdditionalCoordinateDefinition.fromProto(t.additionalCoordinates))))
+      mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
+        Seq(tracingA, tracingB).map(t => Some(AdditionalAxis.fromProto(t.additionalAxes))))
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
@@ -193,7 +193,7 @@ class SkeletonTracingService @Inject()(
         boundingBox = mergedBoundingBox,
         userBoundingBox = None,
         userBoundingBoxes = userBoundingBoxes,
-        additionalCoordinates = AdditionalCoordinateDefinition.toProto(mergedAdditionalCoordinateDefinitions)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
       )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed

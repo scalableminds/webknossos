@@ -226,7 +226,7 @@ function serializeParameters(
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
-  const { additionalCoordinates } = skeletonTracing;
+  const { additionalAxes } = skeletonTracing;
 
   const editRotation = getRotation(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
@@ -271,11 +271,11 @@ function serializeParameters(
         ...userBBoxes.map((userBB) => serializeUserBoundingBox(userBB, "userBoundingBox")),
         serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
 
-        ...(additionalCoordinates.length > 0
+        ...(additionalAxes.length > 0
           ? serializeTagWithChildren(
               "additionalCoordinates",
               {},
-              additionalCoordinates.map((coord) =>
+              additionalAxes.map((coord) =>
                 serializeTag("additionalCoordinate", {
                   name: coord.name,
                   index: coord.index,

@@ -65,7 +65,7 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
-  const additionalCoordinatesWithBounds = useSelector((state: OxalisState) =>
+  const additionalAxes = useSelector((state: OxalisState) =>
     getUnifiedAdditionalCoordinates(state.dataset),
   );
   const additionalCoordinates = useSelector(
@@ -98,7 +98,7 @@ function AdditionalCoordinatesInputView() {
       content={
         <div>
           {additionalCoordinates.map((coord, idx) => {
-            const { bounds } = additionalCoordinatesWithBounds[coord.name];
+            const { bounds } = additionalAxes[coord.name];
             return (
               <NumberSliderSetting
                 label={coord.name}

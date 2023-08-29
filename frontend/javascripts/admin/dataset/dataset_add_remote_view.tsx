@@ -36,6 +36,7 @@ import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
+import * as Utils from "libs/utils";
 
 const { Panel } = Collapse;
 const FormItem = Form.Item;
@@ -403,26 +404,37 @@ function AddZarrLayer({
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
     const { dataSource: newDataSource, report } = await (async () => {
+      // @ts-ignore
+      const preferredVoxelSize = Utils.parseMaybe(datasourceConfigStr)?.scale;
+
       if (showCredentialsFields) {
         if (selectedProtocol === "gs") {
           const credentials =
             fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
           if (credentials) {
-            return exploreRemoteDataset([datasourceUrl], {
-              username: "",
-              pass: JSON.stringify(credentials),
-            });
+            return exploreRemoteDataset(
+              [datasourceUrl],
+              {
+                username: "",
+                pass: JSON.stringify(credentials),
+              },
+              preferredVoxelSize,
+            );
           } else {
             // Fall through to exploreRemoteDataset without parameters
           }
         } else if (usernameOrAccessKey && passwordOrSecretKey) {
-          return exploreRemoteDataset([datasourceUrl], {
-            username: usernameOrAccessKey,
-            pass: passwordOrSecretKey,
-          });
+          return exploreRemoteDataset(
+            [datasourceUrl],
+            {
+              username: usernameOrAccessKey,
+              pass: passwordOrSecretKey,
+            },
+            preferredVoxelSize,
+          );
         }
       }
-      return exploreRemoteDataset([datasourceUrl]);
+      return exploreRemoteDataset([datasourceUrl], null, preferredVoxelSize);
     })();
     setExploreLog(report);
     if (!newDataSource) {

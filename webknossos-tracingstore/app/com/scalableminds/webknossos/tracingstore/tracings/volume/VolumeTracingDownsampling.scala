@@ -78,7 +78,7 @@ trait VolumeTracingDownsampling
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      _ <- bool2Fox(tracing.mags.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
@@ -236,7 +236,7 @@ trait VolumeTracingDownsampling
     items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
-    tracing.resolutions.minBy(_.maxDim)
+    tracing.mags.minBy(_.maxDim)
 
   private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
@@ -253,10 +253,10 @@ trait VolumeTracingDownsampling
 
   protected def restrictMagList(tracing: VolumeTracing,
                                 resolutionRestrictions: ResolutionRestrictions): VolumeTracing = {
-    val tracingResolutions =
-      resolveLegacyResolutionList(tracing.resolutions)
-    val allowedResolutions = resolutionRestrictions.filterAllowed(tracingResolutions.map(vec3IntFromProto))
-    tracing.withResolutions(allowedResolutions.map(vec3IntToProto))
+    val tracingMags =
+      resolveLegacyResolutionList(tracing.mags)
+    val allowedMags = resolutionRestrictions.filterAllowed(tracingMags.map(vec3IntFromProto))
+    tracing.withMags(allowedMags.map(vec3IntToProto))
   }
 
   protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =

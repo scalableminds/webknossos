@@ -299,7 +299,7 @@ Expects:
       largestSegmentId =
         annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                fallbackLayerOpt.map(_.largestSegmentId)),
-      resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
+      mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
     )
   }
 
@@ -359,11 +359,13 @@ Expects:
                           id: String,
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
-                          skipVolumeData: Option[Boolean]): Action[AnyContent] =
+                          skipVolumeData: Option[Boolean],
+                          volumeAsZarr: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity)
-        result <- download(annotation.typ.toString, id, skeletonVersion, volumeVersion, skipVolumeData)(request)
+        result <- download(annotation.typ.toString, id, skeletonVersion, volumeVersion, skipVolumeData, volumeAsZarr)(
+          request)
       } yield result
     }
 
@@ -409,7 +411,7 @@ Expects:
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData, volumeAsZarr)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>

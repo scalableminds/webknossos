@@ -167,7 +167,7 @@ class AnnotationService @Inject()(
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
-        resolutions = resolutionsRestricted.map(vec3IntToProto),
+        mags = resolutionsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty),
         additionalAxes = AdditionalAxis.toProto(additionalCoordinates)
       )
@@ -303,7 +303,8 @@ class AnnotationService @Inject()(
           tracingStoreClient <- tracingStoreService.clientFor(dataSet)
           oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
             tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
-          else tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true)
+          else
+            tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true, volumeAsZarr = false)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =

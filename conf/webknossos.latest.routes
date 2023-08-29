@@ -153,7 +153,7 @@ PATCH         /annotations/:typ/:id/addAnnotationLayer                          
 PATCH         /annotations/:typ/:id/deleteAnnotationLayer                                       controllers.AnnotationController.deleteAnnotationLayer(typ: String, id: String, layerName: String)
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
+GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeAsZarr: Option[Boolean])
 
 GET           /annotations/:typ/:id/loggedTime                                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 

@@ -177,8 +177,8 @@ class VolumeTracingService @Inject()(
     } yield volumeTracing
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
-    if (tracing.resolutions.nonEmpty) {
-      bool2Fox(tracing.resolutions.exists(r => vec3IntFromProto(r) == mag))
+    if (tracing.mags.nonEmpty) {
+      bool2Fox(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
     } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
       bool2Fox(mag.isIsotropic)
     }
@@ -238,7 +238,7 @@ class VolumeTracingService @Inject()(
       }
       // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
       if (resolutionSets.isEmpty)
-        Fox.successful(tracing.resolutions.map(vec3IntFromProto).toSet)
+        Fox.successful(tracing.mags.map(vec3IntFromProto).toSet)
       else {
         val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
           resolutionSets.forall(_ == head)
@@ -305,7 +305,7 @@ class VolumeTracingService @Inject()(
   def allDataZip(tracingId: String, tracing: VolumeTracing, volumeAsZarr: Boolean): Future[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
-    allDataToOutputStream(tracingId, tracing, os).map(_ => zipped)
+    allDataToOutputStream(tracingId, tracing, volumeAsZarr, os).map(_ => zipped)
   }
 
   private def allDataToOutputStream(tracingId: String,
@@ -315,11 +315,11 @@ class VolumeTracingService @Inject()(
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = if (volumeAsZarr) {
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
+                                         tracing.mags.map(mag => vec3IntFromProto(mag)))
     } else {
       new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                           tracing.resolutions.map(mag => vec3IntFromProto(mag)),
-                                           tracing.additionalCoordinates)
+                                           tracing.mags.map(mag => vec3IntFromProto(mag)),
+                                           tracing.additionalAxes)
     }
 
     val before = System.currentTimeMillis()
@@ -372,7 +372,7 @@ class VolumeTracingService @Inject()(
       hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions.fallbackLayer)
     )
     for {
-      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
+      _ <- bool2Fox(newTracing.mags.nonEmpty) ?~> "resolutionRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, sourceTracing, newId, newTracing)
     } yield (newId, newTracing)
@@ -408,7 +408,7 @@ class VolumeTracingService @Inject()(
                                                         destinationTracing.version)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
+          if (destinationTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
               _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
@@ -459,7 +459,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(resolutions.nonEmpty) ?~> "Resolution restrictions result in zero resolutions"
-      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+      id <- save(tracing.copy(mags = resolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                  Some(tracingId),
                  tracing.version,
                  toCache)
@@ -668,9 +668,7 @@ class VolumeTracingService @Inject()(
 
       val resolutionSet = resolutionSetFromZipfile(zipFile)
       val resolutionsDoMatch =
-        resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions)
-          .map(vec3IntFromProto)
-          .toSet
+        resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.mags).map(vec3IntFromProto).toSet
 
       if (!resolutionsDoMatch)
         Fox.failure("annotation.volume.resolutionsDoNotMatch")

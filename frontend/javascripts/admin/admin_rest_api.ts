@@ -979,7 +979,7 @@ export function getSegmentBoundingBoxes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
-): Promise<number[]> {
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,

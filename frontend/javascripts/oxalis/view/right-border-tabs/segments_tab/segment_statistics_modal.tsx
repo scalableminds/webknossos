@@ -7,7 +7,6 @@ import { Unicode } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
-import resolutions from "test/fixtures/resolutions";
 
 const SEGMENT_STATISTICS_CSV_HEADER = "groupId,segmendId,segmentName,volumeInVoxel,volumeInNm3";
 
@@ -89,6 +88,8 @@ export function SegmentStatisticsModal({
         for (let i = 0; i < segments.length; i++) {
           // segments in request and their statistics in response are in same order
           const currentSegment = segments[i];
+          const currentBoundingBox = boundingBoxes[i];
+          console.log(currentBoundingBox);
           const segmentStatObject = {
             segmentId: currentSegment.id,
             segmentName:
@@ -100,7 +101,10 @@ export function SegmentStatisticsModal({
               formatNumberToUnit(segmentSizes[i], nmFactorToUnit).split(ThinSpace)[0],
             ),
             formattedSize: formatNumberToVolume(segmentSizes[i]),
-            boundingBox: boundingBoxes[i],
+            topLeft: `x: ${currentBoundingBox.topLeft[0]}, y: ${currentBoundingBox.topLeft[1]}, z: ${currentBoundingBox.topLeft[2]} `, //TODO tostring for vector3?
+            depth: `${currentBoundingBox.depth}${ThinSpace}vx`,
+            height: `${currentBoundingBox.height}${ThinSpace}vx`,
+            width: `${currentBoundingBox.width}${ThinSpace}vx`,
           };
           statisticsObjects.push(segmentStatObject);
         }
@@ -114,7 +118,10 @@ export function SegmentStatisticsModal({
   const columns = [
     { title: "Segment", dataIndex: "segmentName", key: "segmentName" },
     { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
-    { title: "Boundingbox", dataIndex: "boundingBox", key: "boundingBox" },
+    { title: "Top Left Point", dataIndex: "topLeft", key: "topLeft" }, //TODO merge cells of bounding box
+    { title: "Width", dataIndex: "width", key: "width" },
+    { title: "Height", dataIndex: "height", key: "height" },
+    { title: "Depth", dataIndex: "depth", key: "depth" },
   ];
 
   return (

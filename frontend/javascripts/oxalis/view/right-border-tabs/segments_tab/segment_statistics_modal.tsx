@@ -30,6 +30,7 @@ type SegmentInfo = {
   volumeInNm3: number;
   formattedSize: string;
   volumeInVoxel: number;
+  //TODO bounding box kram einbauen
 };
 
 const exportStatisticsToCSV = (
@@ -102,9 +103,9 @@ export function SegmentStatisticsModal({
             ),
             formattedSize: formatNumberToVolume(segmentSizes[i]),
             topLeft: `x: ${currentBoundingBox.topLeft[0]}, y: ${currentBoundingBox.topLeft[1]}, z: ${currentBoundingBox.topLeft[2]} `, //TODO tostring for vector3?
-            depth: `${currentBoundingBox.depth}${ThinSpace}vx`,
-            height: `${currentBoundingBox.height}${ThinSpace}vx`,
-            width: `${currentBoundingBox.width}${ThinSpace}vx`,
+            depth: currentBoundingBox.depth,
+            height: currentBoundingBox.height,
+            width: currentBoundingBox.width,
           };
           statisticsObjects.push(segmentStatObject);
         }
@@ -118,10 +119,11 @@ export function SegmentStatisticsModal({
   const columns = [
     { title: "Segment", dataIndex: "segmentName", key: "segmentName" },
     { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
-    { title: "Top Left Point", dataIndex: "topLeft", key: "topLeft" }, //TODO merge cells of bounding box
-    { title: "Width", dataIndex: "width", key: "width" },
-    { title: "Height", dataIndex: "height", key: "height" },
-    { title: "Depth", dataIndex: "depth", key: "depth" },
+
+    { title: "Top Left Point", dataIndex: "topLeft", key: "topLeft", width: 100 }, //TODO split up
+    { title: "Width in vx", dataIndex: "width", key: "width" },
+    { title: "Height in vx", dataIndex: "height", key: "height" },
+    { title: "Depth in vx", dataIndex: "depth", key: "depth" },
   ];
 
   return (
@@ -130,10 +132,11 @@ export function SegmentStatisticsModal({
       open={isOpen}
       onCancel={onCancel}
       style={{ marginRight: 10 }}
+      width={600}
       onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
       okText="Export to CSV"
     >
-      <Table dataSource={dataSource} columns={columns} />
+      <Table dataSource={dataSource} columns={columns} tableLayout="fixed" />
     </Modal>
   );
 }

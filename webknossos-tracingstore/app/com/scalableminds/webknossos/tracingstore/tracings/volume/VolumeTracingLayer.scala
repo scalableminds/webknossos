@@ -94,7 +94,7 @@ case class VolumeTracingLayer(
   override val mappings: Option[Set[String]] = None
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
-  private lazy val volumeResolutions: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
+  private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 

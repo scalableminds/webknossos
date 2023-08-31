@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   ChunkGridConfiguration,
   ChunkGridSpecification,
@@ -13,9 +12,8 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
 import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 
-import java.io.{DataOutputStream, ObjectOutputStream}
 import java.nio.charset.Charset
 import scala.concurrent.Future
 

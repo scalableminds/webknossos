@@ -5,6 +5,7 @@ import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
@@ -15,7 +16,10 @@ import net.liftweb.util.Helpers.tryo
 import oxalis.files.TempFileService
 import play.api.i18n.MessagesProvider
 
-case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
+case class UploadedVolumeLayer(tracing: VolumeTracing,
+                               dataZipLocation: String,
+                               name: Option[String],
+                               dataZipFormat: VolumeDataZipFormat) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
 }

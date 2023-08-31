@@ -165,7 +165,8 @@ Expects:
         val idx = volumeLayerWithIndex._2
         for {
           savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
-                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles))
+                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                                                     volumeDataZipFormat = uploadedVolumeLayer.dataZipFormat)
         } yield
           AnnotationLayer(
             savedTracingId,
@@ -176,10 +177,12 @@ Expects:
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
       for {
+        dataZipFormat <- assertSameDataZipFormat(uploadedVolumeLayersFlat)
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
-          persistTracing = true
+          persistTracing = true,
+          dataZipFormat
         )
       } yield
         List(
@@ -189,6 +192,8 @@ Expects:
             AnnotationLayer.defaultVolumeLayerName
           ))
     }
+
+  private def assertSameDataZipFormat(volumeLayers: Seq[UploadedVolumeLayer]): Fox[VolumeDataZipFormat] = ??? // TODO
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
                                          tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =

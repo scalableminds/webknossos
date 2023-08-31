@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeDataZipFormat}
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -162,7 +162,11 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               volumeShowFallbackLayer = false,
               resolutionRestrictions = resolutionRestrictions
             )
-            .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
+            .flatMap(
+              tracingStoreClient.saveVolumeTracing(_,
+                                                   initialData = None,
+                                                   resolutionRestrictions = resolutionRestrictions,
+                                                   volumeDataZipFormat = VolumeDataZipFormat.wkw)))
     } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.
@@ -225,7 +229,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       tracingBox.volume match {
         case Full(v) =>
           for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, organizationId) } yield
-            tracingBox.copy(volume = Full(volumeAdapted, v._2))
+            tracingBox.copy(volume = Full(volumeAdapted, v._2, v._3))
         case _ => Fox.successful(tracingBox)
       }
     }
@@ -479,7 +483,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
-            .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
+            .saveVolumeTracing(tracing,
+                               initialFile,
+                               resolutionRestrictions = taskType.settings.resolutionRestrictions,
+                               VolumeDataZipFormat.wkw) // TODO should be passed here as uploaded
             .map(Some(_))
         } yield saveResult
       case f: Failure => box2Fox(f)

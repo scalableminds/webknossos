@@ -145,7 +145,8 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def mergeVolumeTracingsByContents(tracings: VolumeTracings,
                                     initialData: List[Option[File]],
-                                    persistTracing: Boolean): Fox[String] = {
+                                    persistTracing: Boolean,
+                                    volumeDataZipFormat: VolumeDataZipFormat): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
@@ -155,6 +156,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+        .addQueryString("format" -> volumeDataZipFormat.toString)
         .post(packedVolumeDataZips)
     } yield tracingId
   }
@@ -164,7 +166,8 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def saveVolumeTracing(tracing: VolumeTracing,
                         initialData: Option[File] = None,
-                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty): Fox[String] = {
+                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
+                        volumeDataZipFormat: VolumeDataZipFormat): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
@@ -176,6 +179,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
             .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
             .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
             .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
+            .addQueryString("format" -> volumeDataZipFormat.toString)
             .post(file)
         case _ =>
           Fox.successful(())

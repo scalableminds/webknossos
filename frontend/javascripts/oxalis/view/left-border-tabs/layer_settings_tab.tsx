@@ -188,7 +188,7 @@ function dragHandleIcon(isDisabled: boolean = false) {
 const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProps) => {
   return hasLessThanTwoColorLayers ? (
     <Tooltip title="Order is only changeable with more than one color layer.">
-      dragHandleIcon(true)
+      {dragHandleIcon(true)}
     </Tooltip>
   ) : (
     dragHandleIcon()

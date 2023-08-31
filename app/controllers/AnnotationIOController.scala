@@ -77,6 +77,8 @@ class AnnotationIOController @Inject()(
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
+  private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
+
   @ApiOperation(
     value =
       """Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
@@ -401,15 +403,19 @@ Expects:
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneCached(annotation._user)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
-                                          Some(annotation),
-                                          dataSet.scale,
-                                          None,
-                                          organizationName,
-                                          conf.Http.uri,
-                                          dataSet.name,
-                                          Some(user),
-                                          taskOpt)
+        nmlStream = nmlWriter.toNmlStream(
+          fetchedAnnotationLayers,
+          Some(annotation),
+          dataSet.scale,
+          None,
+          organizationName,
+          conf.Http.uri,
+          dataSet.name,
+          Some(user),
+          taskOpt,
+          skipVolumeData,
+          volumeDataZipFormat
+        )
         nmlTemporaryFile = temporaryFileCreator.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
         _ <- NamedEnumeratorStream("", nmlStream).writeTo(temporaryFileStream)
@@ -445,7 +451,8 @@ Expects:
           dataset.name,
           Some(user),
           taskOpt,
-          skipVolumeData
+          skipVolumeData,
+          volumeDataZipFormat
         )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
@@ -510,7 +517,10 @@ Expects:
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
-      zip <- annotationService.zipAnnotations(annotations, project.name, skipVolumeData)
+      zip <- annotationService.zipAnnotations(annotations,
+                                              project.name,
+                                              skipVolumeData,
+                                              volumeDataZipFormatForCompoundAnnotations)
     } yield {
       val file = new File(zip.path.toString)
       Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
@@ -522,7 +532,8 @@ Expects:
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
       annotations =>
         val finished = annotations.filter(_.state == Finished)
-        annotationService.zipAnnotations(finished, task._id.toString, skipVolumeData)
+        annotationService
+          .zipAnnotations(finished, task._id.toString, skipVolumeData, volumeDataZipFormatForCompoundAnnotations)
     }
 
     for {
@@ -548,7 +559,10 @@ Expects:
           .map(_.flatten)
           .toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
-        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary, skipVolumeData)
+        zip <- annotationService.zipAnnotations(finishedAnnotations,
+                                                taskType.summary,
+                                                skipVolumeData,
+                                                volumeDataZipFormatForCompoundAnnotations)
       } yield zip
 
     for {

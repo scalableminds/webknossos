@@ -208,12 +208,12 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def getVolumeData(tracingId: String,
                     version: Option[Long] = None,
-                    volumeAsZarr: Boolean = false): Fox[Array[Byte]] = {
+                    volumeDataZipFormat: VolumeDataZipFormat): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
     for {
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-        .addQueryString("volumeAsZarr" -> volumeAsZarr.toString)
+        .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithBytesResponse
     } yield data

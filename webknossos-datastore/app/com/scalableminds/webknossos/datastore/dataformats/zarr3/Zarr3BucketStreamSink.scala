@@ -3,25 +3,67 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr3
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  Zarr3ArrayHeader
+}
 import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
-import com.scalableminds.webknossos.datastore.models.{BucketPosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import play.api.libs.json.{JsValue, Json}
+
+import java.io.{DataOutputStream, ObjectOutputStream}
+import java.nio.charset.Charset
 import scala.concurrent.Future
 
 class Zarr3BucketStreamSink(val layer: DataLayer) {
 
-  private def zarrChunkFilePath(bucketPosition: BucketPosition): String =
-    // TODO: additional coordinates
-    s"${bucketPosition.mag.toMagLiteral()}/c/${bucketPosition.bucketZ}/${bucketPosition.bucketY}/${bucketPosition.bucketX}"
+  // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
 
-  private def zarrHeaderFilePath(mag: Vec3Int): String = ???
+  private val dimensionSeparator = "/"
+
+  private def zarrChunkFilePath(bucketPosition: BucketPosition): String = {
+    val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
+    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketZ}/${bucketPosition.bucketY}/${bucketPosition.bucketX}"
+  }
+
+  private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
+    additionalCoordinatesOpt match {
+      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
+        additionalCoordinates.map(_.value).mkString("/") + dimensionSeparator
+      case _ => ""
+    }
+
+  private def zarrHeaderFilePath(mag: Vec3Int): String = s"${mag.toMagLiteral()}/zarr.json"
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
             additionalAxes: Seq[AdditionalAxisProto]): Iterator[NamedStream] = {
-    val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
-    //val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
-    // TODO register shape for metadata
+    val header = Zarr3ArrayHeader(
+      zarr_format = 3,
+      node_type = "array",
+      shape = additionalAxes.map(_.bounds.y).toArray ++ layer.boundingBox.bottomRight.toArray,
+      data_type = Left(layer.elementClass.toString),
+      chunk_grid = Left(
+        ChunkGridSpecification(
+          "regular",
+          ChunkGridConfiguration(
+            chunk_shape = Array.fill(additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
+                                                                        DataLayer.bucketLength,
+                                                                        DataLayer.bucketLength))
+        )),
+      chunk_key_encoding =
+        ChunkKeyEncoding("default",
+                         configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(dimensionSeparator)))),
+      fill_value = Right(0),
+      attributes = None,
+      codecs = Seq(),
+      storage_transformers = None,
+      dimension_names = Some((additionalAxes.map(_.name) ++ Seq("z", "y", "x")).toArray)
+    )
     bucketStream.map {
       case (bucket, data) =>
         val filePath = zarrChunkFilePath(bucket)
@@ -29,10 +71,11 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
           filePath,
           os => Future.successful(os.write(data)) // TODO compress?
         )
-    } /* ++ mags.map { mag =>
-      NamedFunctionStream(zarrHeaderFilePath(mag).toString,
-                          os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
-    }*/
+    } ++ mags.map { mag =>
+      NamedFunctionStream(
+        zarrHeaderFilePath(mag),
+        os => Future.successful(os.write(Json.prettyPrint(Json.toJson(header)).getBytes(Charset.forName("UTF-8")))))
+    }
   }
 
 }

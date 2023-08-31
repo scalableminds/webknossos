@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeDataZipFormat, VolumeSegmentIndexService}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIndexService
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
@@ -106,7 +106,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               ),
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
-              v.format
             )
           }
 
@@ -173,9 +172,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          getSingleAttributeOpt(node, "format")
-            .flatMap(VolumeDataZipFormat.fromString)
-            .getOrElse(VolumeDataZipFormat.wkw),
           extractSegmentGroups(node \ "groups").getOrElse(List())
         )
       }

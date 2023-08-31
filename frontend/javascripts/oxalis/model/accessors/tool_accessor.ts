@@ -21,10 +21,8 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 
-const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
-
-const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) =>
-  isVolumeAnnotationDisallowedForZoom(tool, state);
+const zoomInToUseToolMessage =
+  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
@@ -263,16 +261,13 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     );
   }
 
-  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
-  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
-  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
   const agglomerateState = hasAgglomerateMapping(state);
 
   return getDisabledInfoFromArgs(
     hasSkeleton,
-    isZoomStepTooHighForBrushing,
-    isZoomStepTooHighForTracing,
-    isZoomStepTooHighForFilling,
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.BRUSH, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.FILL_CELL, state),
     agglomerateState,
     genericDisabledExplanation,
     state.activeOrganization,

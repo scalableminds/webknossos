@@ -1,39 +1,53 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.{File, FileOutputStream, InputStream}
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Failure}
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 
+import java.util.zip.ZipEntry
 import scala.collection.mutable
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
 
-  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] = {
-    val unzipResult = ZipIO.withUnziped(zipFile) {
-      case (fileName, is) =>
-        WKWFile.read(is) {
-          case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
-              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                if (buckets.hasNext) {
-                  val data = buckets.next()
-                  if (!isAllZero(data)) {
-                    block(bucketPosition, data)
+  private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
+    tryo(new java.util.zip.ZipFile(zipFile)).map { zip =>
+      val relevantFile: Option[ZipEntry] =
+        ZipIO.entries(zip).find(entry => entry.getName == "zarr.json" || entry.getName.endsWith(".wkw"))
+      if (relevantFile.exists(_.getName == "zarr.json")) {
+        VolumeDataZipFormat.zarr3
+      } else VolumeDataZipFormat.wkw
+    }
+
+  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+    for {
+      format <- detectVolumeDataZipFormat(zipFile)
+      _ <- if (format == VolumeDataZipFormat.wkw) {
+        ZipIO.withUnziped(zipFile) {
+          case (fileName, is) =>
+            WKWFile.read(is) {
+              case (header, buckets) =>
+                if (header.numBlocksPerCube == 1) {
+                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                    if (buckets.hasNext) {
+                      val data = buckets.next()
+                      if (!isAllZero(data)) {
+                        block(bucketPosition, data)
+                      }
+                    }
                   }
                 }
-              }
             }
         }
-    }
-    unzipResult.map(_ => ())
-  }
+      } else Failure("Not implemented")
+    } yield ()
 
   protected def resolutionSetFromZipfile(zipFile: File): Set[Vec3Int] = {
     val resolutionSet = new mutable.HashSet[Vec3Int]()

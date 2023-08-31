@@ -875,7 +875,7 @@ export class AreaMeasurementTool {
           areaMeasurementGeometry.line.visible = true;
           areaMeasurementGeometry.setViewport(id as OrthoView);
         }
-        if (id !== initialPlane || !isMeasuring) {
+        if (id !== initialPlane) {
           return;
         }
         const state = Store.getState();
@@ -884,6 +884,10 @@ export class AreaMeasurementTool {
         Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
       },
       leftMouseUp: (event: MouseEvent) => {
+        if (!isMeasuring) {
+          return;
+        }
+        // Stop drawing area and close the drawn area if still measuring.
         isMeasuring = false;
         areaMeasurementGeometry.connectToStartPoint();
         Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));

@@ -59,6 +59,8 @@ function DistanceMeasurementTooltip(props: Props) {
       const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
       lineMeasurementGeometry.hide();
       areaMeasurementGeometry.hide();
+      lineMeasurementGeometry.reset();
+      areaMeasurementGeometry.reset();
     }
   }, [currentPosition]);
   if (position == null || !MeasurementTools.includes(activeTool)) {

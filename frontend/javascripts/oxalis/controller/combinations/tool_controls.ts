@@ -785,49 +785,66 @@ export class QuickSelectTool {
 }
 
 export class LineMeasurementTool {
+  static DOUBLE_CLICK_TIME_THRESHOLD = 600;
   static getPlaneMouseControls(_planeId: OrthoView): any {
     let initialPlane: OrthoView = OrthoViews.PLANE_XY;
     let isMeasuring = false;
+    let lastLeftClickTime = 0;
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
-    const mouseMove = (
-      _delta: Point2,
-      pos: Point2,
-      plane: OrthoView | null | undefined,
-      evt: MouseEvent,
-    ) => {
-      if (plane !== initialPlane || !isMeasuring) {
+    const guardFromResettedTool = (func: Function) => {
+      // TODO: Problem typing is lost
+      return (...args: any) => {
+        if (lineMeasurementGeometry.isResetted && isMeasuring) {
+          isMeasuring = false;
+          return;
+        }
+        func(...args);
+      };
+    };
+    const mouseMove = guardFromResettedTool(
+      (_delta: Point2, pos: Point2, plane: OrthoView | null | undefined, evt: MouseEvent) => {
+        if (plane !== initialPlane || !isMeasuring) {
+          return;
+        }
+        const state = Store.getState();
+        const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
+        lineMeasurementGeometry.setTopPoint(newPos);
+        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
+      },
+    );
+    const rightClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      if (isMeasuring) {
+        mouseMove({ x: 0, y: 0 }, pos, plane, event);
+        isMeasuring = false;
+      } else {
+        lineMeasurementGeometry.reset();
+        lineMeasurementGeometry.hide();
+        Store.dispatch(hideMeasurementTooltipAction());
+      }
+    });
+    const leftClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      const currentTime = Date.now();
+      if (currentTime - lastLeftClickTime <= this.DOUBLE_CLICK_TIME_THRESHOLD) {
+        rightClick(pos, plane, event);
         return;
       }
+      lastLeftClickTime = currentTime;
       const state = Store.getState();
-      const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
-      lineMeasurementGeometry.setTopPoint(newPos);
-      Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
-    };
+      const position = V3.floor(calculateGlobalPos(state, pos, plane));
+      initialPlane = plane;
+      if (!isMeasuring) {
+        lineMeasurementGeometry.setStartPoint(position, plane);
+        isMeasuring = true;
+      } else {
+        lineMeasurementGeometry.addPoint(position);
+        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
+      }
+    });
     return {
       mouseMove,
-      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (isMeasuring) {
-          mouseMove({ x: 0, y: 0 }, pos, plane, event);
-          isMeasuring = false;
-        } else {
-          lineMeasurementGeometry.reset();
-          lineMeasurementGeometry.hide();
-          Store.dispatch(hideMeasurementTooltipAction());
-        }
-      },
-      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const state = Store.getState();
-        const position = V3.floor(calculateGlobalPos(state, pos, plane));
-        initialPlane = plane;
-        if (!isMeasuring) {
-          lineMeasurementGeometry.setStartPoint(position, plane);
-          isMeasuring = true;
-        } else {
-          lineMeasurementGeometry.addPoint(position);
-          Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
-        }
-      },
+      rightClick,
+      leftClick,
     };
   }
 
@@ -872,7 +889,7 @@ export class AreaMeasurementTool {
           initialPlane = id as OrthoView;
           isMeasuring = true;
           areaMeasurementGeometry.reset();
-          areaMeasurementGeometry.line.visible = true;
+          areaMeasurementGeometry.show();
           areaMeasurementGeometry.setViewport(id as OrthoView);
         }
         if (id !== initialPlane) {

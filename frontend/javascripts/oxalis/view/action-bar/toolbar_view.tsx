@@ -184,7 +184,7 @@ function RadioButtonWithTooltip({
   onClick,
   ...props
 }: {
-  title: string;
+  title: string | React.ReactNode;
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
@@ -1410,7 +1410,13 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
-        title="Measure areas by using Left Drag."
+        title={
+          <>
+            Measure areas by using Left Drag.
+            <br />
+            Avoid self-crossing polygon structure for accurate results.
+          </>
+        }
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.AREA_MEASUREMENT}
       >

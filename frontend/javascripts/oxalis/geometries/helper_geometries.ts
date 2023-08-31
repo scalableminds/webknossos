@@ -13,6 +13,7 @@ export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 export class ContourGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  filledMesh: THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
   viewport: OrthoView;
 
@@ -30,6 +31,14 @@ export class ContourGeometry {
         linewidth: 2,
       }),
     );
+    this.filledMesh = new THREE.Mesh(
+      new THREE.ShapeGeometry(),
+      new THREE.MeshBasicMaterial({
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.5,
+      }),
+    );
     this.vertexBuffer = new ResizableBuffer(3, Float32Array);
     this.reset();
   }
@@ -37,6 +46,7 @@ export class ContourGeometry {
   reset() {
     this.viewport = OrthoViews.PLANE_XY;
     this.line.material.color = this.color;
+    this.filledMesh.material.color = new THREE.Color(0x00ffff);
     this.vertexBuffer.clear();
     this.finalizeMesh();
   }
@@ -46,7 +56,7 @@ export class ContourGeometry {
   }
 
   getMeshes() {
-    return [this.line];
+    return [this.line, this.filledMesh];
   }
 
   addEdgePoint(pos: Vector3) {
@@ -79,6 +89,32 @@ export class ContourGeometry {
     mesh.geometry.attributes.position.needsUpdate = true;
     mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
+
+    // create new filled area mesh
+    const pointCount = this.vertexBuffer.getLength();
+    const dimIndices = Dimensions.getIndices(this.viewport);
+    const points = this.vertexBuffer.getAllElements();
+    let pointsIn2D: THREE.Vector2[] | undefined = [];
+    for (let i = 0; i < pointCount; i++) {
+      pointsIn2D.push(
+        new THREE.Vector2(points[i * 3 + dimIndices[0]], points[i * 3 + dimIndices[1]]),
+      );
+    }
+    if (pointsIn2D.length > 0 && pointsIn2D != null) {
+      // Close polygon area
+      pointsIn2D.push(new THREE.Vector2(points[dimIndices[0]], points[dimIndices[1]]));
+    } else {
+      pointsIn2D = undefined;
+    }
+    const updatedShape = new THREE.Shape(pointsIn2D);
+    const updatedGeometry = new THREE.ShapeGeometry(updatedShape);
+    this.filledMesh.geometry.dispose();
+    this.filledMesh.geometry.attributes.position.needsUpdate = true;
+    this.filledMesh.geometry = updatedGeometry;
+    this.filledMesh.geometry.computeBoundingSphere();
+    const rotation = rotations[this.viewport] as THREE.Euler;
+    this.filledMesh.visible = true;
+    this.filledMesh.setRotationFromEuler(rotation);
   }
 
   getArea(scale: Vector3): number {
@@ -106,6 +142,11 @@ export class ContourGeometry {
   }
   hide() {
     this.line.visible = false;
+    this.filledMesh.visible = false;
+  }
+  show() {
+    this.line.visible = true;
+    this.filledMesh.visible = true;
   }
 }
 
@@ -283,8 +324,10 @@ export class LineMeasurementGeometry {
   vertexBuffer: ResizableBuffer<Float32Array>;
   currentOrthoView: OrthoView;
   visible: boolean;
+  isResetted: boolean;
 
   constructor() {
+    this.isResetted = false;
     this.currentOrthoView = OrthoViews.PLANE_XY;
     this.color = CONTOUR_COLOR_NORMAL;
     this.visible = false;
@@ -313,9 +356,11 @@ export class LineMeasurementGeometry {
     this.line.material.color = this.color;
     this.vertexBuffer.clear();
     this.finalizeMesh();
+    this.isResetted = true;
   }
 
   setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
+    this.isResetted = false;
     this.visible = true;
     this.currentOrthoView = initialOrthoView;
     this.vertexBuffer.push(pos);

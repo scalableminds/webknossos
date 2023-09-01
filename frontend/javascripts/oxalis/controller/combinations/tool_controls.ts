@@ -815,9 +815,11 @@ export class LineMeasurementTool {
     );
     const rightClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
       if (isMeasuring) {
+        // Set the last point of the measurement and stop measuring.
         mouseMove({ x: 0, y: 0 }, pos, plane, event);
         isMeasuring = false;
       } else {
+        // If the tool already stopped measuring, reset the tool.
         lineMeasurementGeometry.reset();
         lineMeasurementGeometry.hide();
         Store.dispatch(hideMeasurementTooltipAction());
@@ -826,10 +828,12 @@ export class LineMeasurementTool {
     const leftClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const currentTime = Date.now();
       if (currentTime - lastLeftClickTime <= this.DOUBLE_CLICK_TIME_THRESHOLD) {
+        // A double click should also terminate measuring.
         rightClick(pos, plane, event);
         return;
       }
       lastLeftClickTime = currentTime;
+      // Set a new measurement point.
       const state = Store.getState();
       const position = V3.floor(calculateGlobalPos(state, pos, plane));
       initialPlane = plane;

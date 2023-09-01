@@ -53,7 +53,8 @@ function DistanceMeasurementTooltip(props: Props) {
   const currentPosition = getPosition(flycam);
   const [lastFlycamPosition, setLastFlycamPosition] = useState<Vector3>(currentPosition);
   useEffect(() => {
-    if (!_.isEqual(lastFlycamPosition, getPosition(flycam))) {
+    if (!_.isEqual(lastFlycamPosition, currentPosition)) {
+      // If the position of the flycam has changed, we hide the tooltip and terminate the measurement.
       setLastFlycamPosition(currentPosition);
       dispatch(hideMeasurementTooltipAction());
       const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();

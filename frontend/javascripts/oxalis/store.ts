@@ -497,7 +497,6 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
-
 type UiInformation = {
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;

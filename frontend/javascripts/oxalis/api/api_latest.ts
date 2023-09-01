@@ -383,10 +383,10 @@ class TracingApi {
   }
 
   /**
-   * Sets the name for a tree. If no tree id is given, the active tree is used.
+   * Sets the visibility of the edges for a tree. If no tree id is given, the active tree is used.
    *
    * @example
-   * api.tracing.setTreeName("Special tree", 1);
+   * api.tracing.setTreeEdgeVisibility(false, 1);
    */
   setTreeEdgeVisibility(edgesAreVisible: boolean, treeId: number | null | undefined) {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);

@@ -7,7 +7,7 @@ import { Unicode, Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
-import { TreeNode } from "./segments_view";
+import { TreeNode } from "./segments_view_helper";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -123,7 +123,7 @@ export function SegmentStatisticsModal({
       });
       return resultObjects;
     },
-    [], //TODO make pretty with spinner
+    [],
     [isOpen],
   );
   const columns = [

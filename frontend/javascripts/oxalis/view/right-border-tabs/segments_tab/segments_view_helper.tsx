@@ -1,6 +1,6 @@
 import { Modal } from "antd";
 import type { APIDataLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo } from "oxalis/store";
+import type { ActiveMappingInfo, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
@@ -10,6 +10,21 @@ import { getEditableMappingForVolumeTracingId } from "oxalis/model/accessors/vol
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 
 const { confirm } = Modal;
+
+export type TreeNode =
+  | (Segment & {
+      type: "segment";
+      key: string;
+      title: string;
+    })
+  | {
+      title: string;
+      type: "group";
+      name: string | null | undefined;
+      id: number;
+      key: string;
+      children: Array<TreeNode>;
+    };
 
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return (

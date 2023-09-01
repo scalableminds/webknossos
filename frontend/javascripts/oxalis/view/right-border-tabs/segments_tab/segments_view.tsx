@@ -88,7 +88,10 @@ import type {
 import Store from "oxalis/store";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import {
+  TreeNode,
+  getBaseSegmentationName,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React, { Key } from "react";
 import { connect, useSelector } from "react-redux";
@@ -302,21 +305,6 @@ function renderEmptyMeshFileSelect() {
     />
   );
 }
-
-export type TreeNode =
-  | (Segment & {
-      type: "segment";
-      key: string;
-      title: string;
-    })
-  | {
-      title: string;
-      type: "group";
-      name: string | null | undefined;
-      id: number;
-      key: string;
-      children: Array<TreeNode>;
-    };
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],

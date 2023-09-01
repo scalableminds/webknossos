@@ -374,7 +374,7 @@ class Skeleton {
           });
 
           if (tree.color !== prevTree.color) {
-            this.updateTreeColor(treeId, update.value.color, tree.isVisible);
+            this.updateTreeColor(treeId, update.value.color, tree.isVisible, tree.edgesAreVisible);
           }
 
           break;
@@ -481,7 +481,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target);
     }
 
-    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible);
+    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
   }
 
   /**
@@ -640,7 +640,7 @@ class Skeleton {
     treeId: number,
     color: Vector3,
     isVisible: boolean = true,
-    edgesAreVisible: boolean = false,
+    edgesAreVisible: boolean = true,
   ) {
     const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
     this.treeColorTexture.image.data.set(rgba, treeId * 4);

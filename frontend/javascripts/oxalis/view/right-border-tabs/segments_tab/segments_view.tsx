@@ -99,7 +99,6 @@ import DeleteGroupModalView from "../delete_group_modal_view";
 import {
   callDeep,
   createGroupToSegmentsMap,
-  createGroupToTreesMap,
   findParentIdForGroupId,
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
@@ -1550,6 +1549,7 @@ class SegmentsView extends React.Component<Props, State> {
       const volumeTracing = getActiveSegmentationTracing(state);
       const tracingId = volumeTracing?.tracingId;
       const tracingStoreUrl = state.tracing.tracingStore.url;
+      console.log(this.state.groupTree);
       return (
         <SegmentStatisticsModal
           isOpen={this.state.activeStatisticsModalGroupId === groupId}
@@ -1559,8 +1559,9 @@ class SegmentsView extends React.Component<Props, State> {
           visibleSegmentationLayer={visibleSegmentationLayer}
           tracingId={tracingId}
           tracingStoreUrl={tracingStoreUrl}
-          segments={segments}
+          relevantSegments={segments}
           parentGroup={groupId}
+          groupTree={this.state.searchableTreeItemList}
         />
       );
     }

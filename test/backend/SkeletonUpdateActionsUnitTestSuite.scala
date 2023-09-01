@@ -29,7 +29,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         timestamp = Dummies.timestamp,
         comments = List[UpdateActionComment](),
         groupId = None,
-        isVisible = Option(true)
+        isVisible = Option(true),
+        edgesAreVisible = Option(true)
       )
       val result = applyUpdateAction(createTreeAction)
 
@@ -40,6 +41,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.comments == createTreeAction.comments)
       assert(tree.name === createTreeAction.name)
       assert(tree.isVisible == createTreeAction.isVisible)
+      assert(tree.edgesAreVisible == createTreeAction.edgesAreVisible)
     }
   }
 

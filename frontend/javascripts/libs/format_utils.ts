@@ -143,6 +143,9 @@ const nmFactorToUnit = new Map([
 export function formatNumberToLength(lengthInNm: number, roundTo: number = 2): string {
   return formatNumberToUnit(lengthInNm, nmFactorToUnit, false, roundTo);
 }
+export function formatNumberToArea(lengthInNm: number, roundTo: number = 2): string {
+  return `${formatNumberToUnit(lengthInNm, nmFactorToUnit, false, roundTo)}²`;
+}
 
 const byteFactorToUnit = new Map([
   [1, "B"],
@@ -186,6 +189,9 @@ export function findClosestToUnitFactor(
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
   return `${roundedLength} vx`;
+}
+export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
+  return `${formatLengthAsVx(areaInVx, roundTo)}²`;
 }
 export function formatExtentWithLength(
   extent: BoundingBoxObject,

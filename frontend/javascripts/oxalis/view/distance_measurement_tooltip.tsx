@@ -8,7 +8,12 @@ import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import {
+  formatNumberToLength,
+  formatLengthAsVx,
+  formatAreaAsVx,
+  formatNumberToArea,
+} from "libs/format_utils";
 import { Tooltip } from "antd";
 
 const TOOLTIP_HEIGHT = 48;
@@ -43,8 +48,8 @@ function DistanceMeasurementTooltip(props: Props) {
   let valueInMetricUnit = "";
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]));
-    valueInMetricUnit = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale));
+    valueInVx = formatAreaAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]));
+    valueInMetricUnit = formatNumberToArea(lineMeasurementGeometry.getDistance(datasetScale));
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(areaMeasurementGeometry.getArea([1, 1, 1]));

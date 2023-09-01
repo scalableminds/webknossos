@@ -843,7 +843,7 @@ export function createMutableTreeMapFromTreeArray(
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
-        edgesAreVisible: tree?.edgesAreVisible || false,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       }),
     ),
     "treeId",

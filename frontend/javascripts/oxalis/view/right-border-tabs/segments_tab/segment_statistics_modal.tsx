@@ -8,6 +8,7 @@ import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
 import { TreeNode } from "./segments_view_helper";
+import { api } from "oxalis/singletons";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -74,6 +75,7 @@ export function SegmentStatisticsModal({
   const dataSource = useFetch(
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 10000)); //TODO delete; only for testing
+      await api.tracing.save();
       let resultObjects = await Promise.all([
         getSegmentVolumes(
           tracingStoreUrl,

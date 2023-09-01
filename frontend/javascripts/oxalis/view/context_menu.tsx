@@ -1133,7 +1133,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
             mag.getHighestResolution(),
             [segmentId],
           );
-          console.log(segmentSize);
           return formatNumberToVolume(segmentSize[0]);
         }
       }
@@ -1237,6 +1236,20 @@ function ContextMenuInner(propsWithInputRef: Props) {
         <>
           <i className="fas fa-expand-alt segment-context-icon" />
           Size: {segmentSize}
+          {copyIconWithTooltip(segmentSize as string, "Copy size")}
+          {refreshButton}
+        </>,
+      ),
+    );
+  }
+
+  if (hasNoFallbackLayer) {
+    infoRows.push(
+      getInfoMenuItem(
+        "boundingBoxInfo",
+        <>
+          <i className="fas fa-expand-alt segment-context-icon" />
+          Top Left Point: {segmentSize}
           {copyIconWithTooltip(segmentSize as string, "Copy size")}
           {refreshButton}
         </>,

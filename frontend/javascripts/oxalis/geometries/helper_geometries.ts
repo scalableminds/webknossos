@@ -13,13 +13,16 @@ export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 export class ContourGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
-  filledMesh: THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>;
+  connectingLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
+  connectingLinePositions: Float32Array;
   viewport: OrthoView;
+  showConnectingLine: boolean;
 
-  constructor() {
+  constructor(showConnectingLine: boolean = false) {
     this.color = CONTOUR_COLOR_NORMAL;
     this.viewport = OrthoViews.PLANE_XY;
+    this.showConnectingLine = showConnectingLine;
 
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
@@ -31,23 +34,32 @@ export class ContourGeometry {
         linewidth: 2,
       }),
     );
-    this.filledMesh = new THREE.Mesh(
-      new THREE.ShapeGeometry(),
-      new THREE.MeshBasicMaterial({
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.5,
+    const connectingLineGeometry = new THREE.BufferGeometry();
+    this.connectingLinePositions = new Float32Array(6);
+    const connectingLinePositionAttribute = new THREE.BufferAttribute(
+      this.connectingLinePositions,
+      3,
+    );
+    connectingLinePositionAttribute.setUsage(THREE.DynamicDrawUsage);
+    connectingLineGeometry.setAttribute("position", connectingLinePositionAttribute);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    this.connectingLine = new THREE.Line(
+      connectingLineGeometry,
+      new THREE.LineBasicMaterial({
+        linewidth: 2,
       }),
     );
     this.vertexBuffer = new ResizableBuffer(3, Float32Array);
+    this.connectingLine.visible = false;
     this.reset();
   }
 
   reset() {
     this.viewport = OrthoViews.PLANE_XY;
     this.line.material.color = this.color;
-    this.filledMesh.material.color = new THREE.Color(0x00ffff);
+    this.connectingLine.material.color = new THREE.Color(0x00ffff);
     this.vertexBuffer.clear();
+    this.connectingLinePositions.fill(0);
     this.finalizeMesh();
   }
 
@@ -56,11 +68,15 @@ export class ContourGeometry {
   }
 
   getMeshes() {
-    return [this.line, this.filledMesh];
+    return [this.line, this.connectingLine];
   }
 
   addEdgePoint(pos: Vector3) {
     this.vertexBuffer.push(pos);
+    const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
+    // Setting start and end point to form the connecting line.
+    this.connectingLinePositions.set(startPoint, 0);
+    this.connectingLinePositions.set(pos, 3);
     this.finalizeMesh();
     app.vent.emit("rerender");
   }
@@ -72,6 +88,8 @@ export class ContourGeometry {
     }
     const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
     this.vertexBuffer.push(startPoint);
+    // Hide the connection line upon completing the contour.
+    this.connectingLine.visible = false;
     this.finalizeMesh();
     app.vent.emit("rerender");
   }
@@ -89,32 +107,9 @@ export class ContourGeometry {
     mesh.geometry.attributes.position.needsUpdate = true;
     mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
-
-    // create new filled area mesh
-    const pointCount = this.vertexBuffer.getLength();
-    const dimIndices = Dimensions.getIndices(this.viewport);
-    const points = this.vertexBuffer.getAllElements();
-    let pointsIn2D: THREE.Vector2[] | undefined = [];
-    for (let i = 0; i < pointCount; i++) {
-      pointsIn2D.push(
-        new THREE.Vector2(points[i * 3 + dimIndices[0]], points[i * 3 + dimIndices[1]]),
-      );
-    }
-    if (pointsIn2D.length > 0 && pointsIn2D != null) {
-      // Close polygon area
-      pointsIn2D.push(new THREE.Vector2(points[dimIndices[0]], points[dimIndices[1]]));
-    } else {
-      pointsIn2D = undefined;
-    }
-    const updatedShape = new THREE.Shape(pointsIn2D);
-    const updatedGeometry = new THREE.ShapeGeometry(updatedShape);
-    this.filledMesh.geometry.dispose();
-    this.filledMesh.geometry.attributes.position.needsUpdate = true;
-    this.filledMesh.geometry = updatedGeometry;
-    this.filledMesh.geometry.computeBoundingSphere();
-    const rotation = rotations[this.viewport] as THREE.Euler;
-    this.filledMesh.visible = true;
-    this.filledMesh.setRotationFromEuler(rotation);
+    this.connectingLine.geometry.attributes.position.needsUpdate = true;
+    // this.connectingLine.geometry.setDrawRange(0, 2);
+    this.connectingLine.geometry.computeBoundingSphere();
   }
 
   getArea(scale: Vector3): number {
@@ -142,11 +137,13 @@ export class ContourGeometry {
   }
   hide() {
     this.line.visible = false;
-    this.filledMesh.visible = false;
+    this.connectingLine.visible = false;
   }
   show() {
     this.line.visible = true;
-    this.filledMesh.visible = true;
+    if (this.showConnectingLine) {
+      this.connectingLine.visible = true;
+    }
   }
 }
 

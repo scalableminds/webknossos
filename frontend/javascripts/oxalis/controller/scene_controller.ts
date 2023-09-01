@@ -250,7 +250,7 @@ class SceneController {
     this.lineMeasurementGeometry
       .getMeshes()
       .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
-    this.areaMeasurementGeometry = new ContourGeometry();
+    this.areaMeasurementGeometry = new ContourGeometry(true);
     this.areaMeasurementGeometry
       .getMeshes()
       .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));

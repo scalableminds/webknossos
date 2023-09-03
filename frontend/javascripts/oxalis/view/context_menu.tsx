@@ -102,7 +102,7 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
-import { getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 
@@ -1118,7 +1118,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer != null &&
     "fallbackLayer" in visibleSegmentationLayer &&
     visibleSegmentationLayer.fallbackLayer == null;
-  const segmentSize = useFetch(
+  const [segmentSize, boundingBoxSize] = useFetch(
     async () => {
       if (visibleSegmentationLayer != null && volumeTracing != null) {
         if (hasNoFallbackLayer) {
@@ -1133,12 +1133,19 @@ function ContextMenuInner(propsWithInputRef: Props) {
             mag.getHighestResolution(),
             [segmentId],
           );
-          return formatNumberToVolume(segmentSize[0]);
+          const [boundingBox] = await getSegmentBoundingBoxes(
+            tracingStoreUrl,
+            tracingId,
+            mag.getHighestResolution(),
+            [segmentId],
+          );
+          const boundingBoxString = `(${boundingBox.width}, ${boundingBox.height},${boundingBox.depth})`;
+          return [formatNumberToVolume(segmentSize[0]), boundingBoxString];
         }
       }
     },
-    "loading", //TODO make pretty with spinner
-    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched],
+    ["loading", "loading"],
+    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched], //TODO make pretty with spinner
   );
 
   if (contextMenuPosition == null || maybeViewport == null) {
@@ -1248,9 +1255,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "boundingBoxInfo",
         <>
-          <i className="fas fa-expand-alt segment-context-icon" />
-          Top Left Point: {segmentSize}
-          {copyIconWithTooltip(segmentSize as string, "Copy size")}
+          <i className="fas fa-dice-d6" />
+          Bouding Box: {boundingBoxSize}
+          {copyIconWithTooltip(boundingBoxSize as string, "Copy bounding box size")}
           {refreshButton}
         </>,
       ),

@@ -108,7 +108,7 @@ object ImageCreator extends LazyLogging {
                          isSegmentation: Boolean,
                          intensityRange: Option[(Double, Double)],
                          color: Option[Color],
-                         invertColor: Option[Boolean]) = {
+                         invertColor: Boolean) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
@@ -118,10 +118,9 @@ object ImageCreator extends LazyLogging {
         if (isSegmentation)
           idToRGB(b(idx))
         else {
-          val isColorInverted = invertColor.getOrElse(false)
-          val colorRed = applyColor(color.map(_.r).getOrElse(1d), isColorInverted)
-          val colorGreen = applyColor(color.map(_.g).getOrElse(1d), isColorInverted)
-          val colorBlue = applyColor(color.map(_.b).getOrElse(1d), isColorInverted)
+          val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
+          val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
+          val colorBlue = applyColor(color.map(_.b).getOrElse(1d), invertColor)
           elementClass match {
             case ElementClass.uint8 =>
               val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
@@ -238,7 +237,7 @@ object ImageCreator extends LazyLogging {
                    params.isSegmentation,
                    params.intensityRange,
                    params.color,
-                   params.invertColor),
+                   params.invertColor.getOrElse(false)),
         0,
         params.slideWidth
       )

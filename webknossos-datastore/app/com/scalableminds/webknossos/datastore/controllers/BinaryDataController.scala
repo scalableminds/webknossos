@@ -188,7 +188,7 @@ class BinaryDataController @Inject()(
         )
         (data, _) <- requestData(dataSource, dataLayer, request)
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
-        layerColor = color.map(Color.fromHTML)
+        layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
           dataLayer.elementClass,
           useHalfBytes = false,

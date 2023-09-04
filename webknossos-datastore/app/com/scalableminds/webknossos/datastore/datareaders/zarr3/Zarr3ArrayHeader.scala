@@ -203,10 +203,11 @@ object Zarr3ArrayHeader extends JsonImplicits {
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
           spec: CodecConfiguration <- c("name") match {
-            case JsString(EndianCodecConfiguration.name)    => c(configurationKey).validate[EndianCodecConfiguration]
-            case JsString(TransposeCodecConfiguration.name) => c(configurationKey).validate[TransposeCodecConfiguration]
-            case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
-            case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
+            case JsString(EndianCodecConfiguration.name)       => c(configurationKey).validate[EndianCodecConfiguration]
+            case JsString(EndianCodecConfiguration.legacyName) => c(configurationKey).validate[EndianCodecConfiguration]
+            case JsString(TransposeCodecConfiguration.name)    => c(configurationKey).validate[TransposeCodecConfiguration]
+            case JsString(GzipCodecConfiguration.name)         => c(configurationKey).validate[GzipCodecConfiguration]
+            case JsString(BloscCodecConfiguration.name)        => c(configurationKey).validate[BloscCodecConfiguration]
             case JsString(Crc32CodecConfiguration.name) =>
               JsSuccess(Crc32CodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))

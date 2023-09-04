@@ -111,17 +111,17 @@ class Crc32Codec extends BytesToBytesCodec with ByteUtils {
   override def encode(bytes: Array[Byte]): Array[Byte] = {
     val crc = new CRC32()
     crc.update(bytes)
-    bytes ++ longToBytes(crc.getValue)
+    bytes ++ longToBytes(crc.getValue).slice(0, 4)
   }
 
-  def crc32ByteLength = 8
+  def crc32ByteLength = 4
 
   override def decode(bytes: Array[Byte]): Array[Byte] = {
-    val crcPart = bytes.slice(bytes.length - crc32ByteLength, bytes.length)
-    val dataPart = bytes.slice(0, bytes.length - crc32ByteLength)
+    val crcPart = bytes.takeRight(4)
+    val dataPart = bytes.dropRight(4)
     val crc = new CRC32()
     crc.update(dataPart)
-    val valid = longToBytes(crc.getValue).sameElements(crcPart)
+    val valid = longToBytes(crc.getValue).slice(0, 4).sameElements(crcPart)
     println(s"CRC32 check: $valid")
     dataPart
   }
@@ -145,7 +145,8 @@ final case class EndianCodecConfiguration(endian: String) extends CodecConfigura
 
 object EndianCodecConfiguration {
   implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]
-  val name = "endian"
+  val legacyName = "endian"
+  val name = "bytes"
 }
 final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration // Should also support other parameters
 

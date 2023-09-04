@@ -112,15 +112,21 @@ class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfigurat
   override def decode(bytes: Array[Byte]): MultiArray = ???
 }
 
-sealed trait CodecConfiguration
+sealed trait CodecConfiguration { def name: String }
 
-final case class EndianCodecConfiguration(endian: String) extends CodecConfiguration
+final case class EndianCodecConfiguration(endian: String) extends CodecConfiguration {
+  override def name: String = EndianCodecConfiguration.name
+}
 
 object EndianCodecConfiguration {
   implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]
   val name = "endian"
 }
-final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration // Should also support other parameters
+
+// Should also support other parameters
+final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration {
+  override def name: String = TransposeCodecConfiguration.name
+}
 
 object TransposeCodecConfiguration {
   implicit val jsonFormat: OFormat[TransposeCodecConfiguration] =
@@ -132,14 +138,18 @@ final case class BloscCodecConfiguration(cname: String,
                                          shuffle: CompressionSetting,
                                          typesize: Option[Int],
                                          blocksize: Int)
-    extends CodecConfiguration
+    extends CodecConfiguration {
+  override def name: String = BloscCodecConfiguration.name
+}
 
 object BloscCodecConfiguration {
   implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
 }
 
-final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration
+final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {
+  override def name: String = GzipCodecConfiguration.name
+}
 object GzipCodecConfiguration {
   implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
@@ -161,7 +171,9 @@ object CodecSpecification {
 }
 
 final case class ShardingCodecConfiguration(chunk_shape: Array[Int], codecs: Seq[CodecConfiguration])
-    extends CodecConfiguration
+    extends CodecConfiguration {
+  override def name: String = ShardingCodecConfiguration.name
+}
 
 object ShardingCodecConfiguration {
   implicit val jsonFormat: OFormat[ShardingCodecConfiguration] =

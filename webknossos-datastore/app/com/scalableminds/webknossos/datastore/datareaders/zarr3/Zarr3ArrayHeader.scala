@@ -230,7 +230,9 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(Map("" -> ""))),
-        "codecs" -> zarrArrayHeader.codecs,
+        "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
+          Json.obj("name" -> codec.name, "configuration" -> codec)
+        },
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )

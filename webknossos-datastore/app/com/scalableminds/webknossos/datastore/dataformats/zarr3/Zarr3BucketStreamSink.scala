@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   StringCompressionSetting
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BloscCodecConfiguration,
   ChunkGridConfiguration,
   ChunkGridSpecification,
   ChunkKeyEncoding,
@@ -22,35 +23,8 @@ import play.api.libs.json.Json
 import java.nio.charset.Charset
 import scala.concurrent.Future
 
+// Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: DataLayer) {
-
-  // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
-
-  private val dimensionSeparator = "/"
-
-  private def zarrChunkFilePath(bucketPosition: BucketPosition): String = {
-    val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
-    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketZ}/${bucketPosition.bucketY}/${bucketPosition.bucketX}"
-  }
-
-  private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
-    additionalCoordinatesOpt match {
-      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
-        additionalCoordinates.map(_.value).mkString("/") + dimensionSeparator
-      case _ => ""
-    }
-
-  private def zarrHeaderFilePath(mag: Vec3Int): String = s"${mag.toMagLiteral()}/zarr.json"
-
-  private lazy val compressor =
-    new BloscCompressor(
-      Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
-        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
-        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
-        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
@@ -73,7 +47,15 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
                          configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(dimensionSeparator)))),
       fill_value = Right(0),
       attributes = None,
-      codecs = Seq(),
+      codecs = Seq(
+        BloscCodecConfiguration(
+          BloscCompressor.defaultCname,
+          BloscCompressor.defaultCLevel,
+          IntCompressionSetting(BloscCompressor.defaultShuffle),
+          Some(BloscCompressor.defaultTypesize),
+          BloscCompressor.defaultBlocksize
+        )
+      ),
       storage_transformers = None,
       dimension_names = Some((additionalAxes.map(_.name) ++ Seq("z", "y", "x")).toArray)
     )
@@ -90,5 +72,32 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
         os => Future.successful(os.write(Json.prettyPrint(Json.toJson(header)).getBytes(Charset.forName("UTF-8")))))
     }
   }
+
+  private val dimensionSeparator = "/"
+
+  private def zarrChunkFilePath(bucketPosition: BucketPosition): String = {
+    // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
+    val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
+    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketZ}/${bucketPosition.bucketY}/${bucketPosition.bucketX}"
+  }
+
+  private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
+    additionalCoordinatesOpt match {
+      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
+        additionalCoordinates.map(_.value).mkString("/") + dimensionSeparator
+      case _ => ""
+    }
+
+  private def zarrHeaderFilePath(mag: Vec3Int): String = s"${mag.toMagLiteral()}/zarr.json"
+
+  private lazy val compressor =
+    new BloscCompressor(
+      Map(
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
+        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
+      ))
 
 }

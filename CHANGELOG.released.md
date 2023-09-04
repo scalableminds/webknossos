@@ -7,6 +7,42 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.09.0](https://github.com/scalableminds/webknossos/releases/tag/23.09.0) - 2023-08-29
+[Commits](https://github.com/scalableminds/webknossos/compare/23.08.0...23.09.0)
+
+### Highlights
+- Added option to select multiple segments in the segment list in order to perform batch actions. [#7242](https://github.com/scalableminds/webknossos/pull/7242)
+- Added the option to change the ordering of color layers via drag and drop. This is useful when using the cover blend mode. [#7188](https://github.com/scalableminds/webknossos/pull/7188)
+
+### Added
+- Added configuration to require users' emails to be verified, added flow to verify emails via link. [#7161](https://github.com/scalableminds/webknossos/pull/7161)
+- Added a route to explore and add remote datasets via API. [#7176](https://github.com/scalableminds/webknossos/pull/7176)
+- Added a new button to the layer settings in view only dataset mode to save the current view configuration as the dataset's default. [#7205](https://github.com/scalableminds/webknossos/pull/7205)
+- If a dataset layer is transformed (using an affine matrix or a thin plate spline), it can be dynamically shown without that transform via the layers sidebar. All other layers will be transformed accordingly. [#7246](https://github.com/scalableminds/webknossos/pull/7246)
+- OpenID Connect authorization can now use a client secret for added security. [#7263](https://github.com/scalableminds/webknossos/pull/7263)
+
+### Changed
+- Small messages during annotating (e.g. “finished undo”, “applying mapping…”) are now click-through, so they do not block users from selecting tools. [#7239](https://github.com/scalableminds/webknossos/pull/7239)
+- When exploring remote NGFF datasets with channels, layer names and colors are automatically imported if available in the metadata. [#7251](https://github.com/scalableminds/webknossos/pull/7251)
+- Annotating volume data uses a transaction-based mechanism now. As a result, WK is more robust against partial saves (i.e., due to a crashing tab). [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- The order of color layers can now also be manipulated in additive blend mode (see [#7188](https://github.com/scalableminds/webknossos/pull/7188)). [#7289](https://github.com/scalableminds/webknossos/pull/7289)
+- OpenID Connect authorization now fetches the server’s public key automatically. The config keys `singleSignOn.openIdConnect.publicKey` and `singleSignOn.openIdConnect.publicKeyAlgorithm` are now unused. [7267](https://github.com/scalableminds/webknossos/pull/7267)
+- When importing a remote dataset and adding another layer with a different voxel size, that layer is now scaled to match the first layer. [#7213](https://github.com/scalableminds/webknossos/pull/7213)
+
+
+### Fixed
+- Fixed that it was possible to have larger active segment ids than supported by the data type of the segmentation layer which caused the segmentation ids to overflow. [#7240](https://github.com/scalableminds/webknossos/pull/7240)
+- Fixed that folders could appear in the dataset search output in the dashboard. [#7232](https://github.com/scalableminds/webknossos/pull/7232)
+- Fixed that the edit icon for an annotation description could disappear in Firefox. [#7250](https://github.com/scalableminds/webknossos/pull/7250)
+- Fixed that assigning an invalid script name (e.g. with special characters) would trigger an error in the database. Now leads to a more descriptive error. [#7525](https://github.com/scalableminds/webknossos/pull/7525)
+- Fixed rendering error when multiple segmentation layers exist and the user switched between these. [#7291](https://github.com/scalableminds/webknossos/pull/7291)
+
+### Breaking Changes
+- The task and project api have changed. Make sure to update to the latest webknossos python library version when interacting with task and projects via the python library. Compare [webknossos-libs#930](https://github.com/scalableminds/webknossos-libs/pull/930). [#7220](https://github.com/scalableminds/webknossos/pull/7220)
+
+
 ## [23.08.0](https://github.com/scalableminds/webknossos/releases/tag/23.08.0) - 2023-07-24
 [Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...23.08.0)
 
@@ -459,7 +495,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed isosurface loading for volume annotations with mappings. [#6458](https://github.com/scalableminds/webknossos/pull/6458)
 - Fixed importing of remote datastore (e.g., zarr) when datastore is set up separately. [#6462](https://github.com/scalableminds/webknossos/pull/6462)
 - Fixed a crash which could happen when using the "Automatically clip histogram" feature in certain scenarios. [#6433](https://github.com/scalableminds/webknossos/pull/6433)
-- Fixed loading agglomeate skeletons for agglomerate ids larger than 2^31. [#6472](https://github.com/scalableminds/webknossos/pull/6472)
+- Fixed loading agglomerate skeletons for agglomerate ids larger than 2^31. [#6472](https://github.com/scalableminds/webknossos/pull/6472)
 - Fixed bug which could lead to conflict-warnings even though there weren't any. [#6477](https://github.com/scalableminds/webknossos/pull/6477)
 - Fixed that one could not change the color of a segment or tree in Firefox. [#6488](https://github.com/scalableminds/webknossos/pull/6488)
 - Fixed validation of layer selection when trying to start globalization of floodfills. [#6497](https://github.com/scalableminds/webknossos/pull/6497)
@@ -746,7 +782,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where dataset uploads that contained files larger than 2 GB failed. [#5889](https://github.com/scalableminds/webknossos/pull/5889)
 - Fixed that dataset uploads did not survive back-end restarts. [#5831](https://github.com/scalableminds/webknossos/pull/5831)
 - Fixed a bug where NMLs with unconnected trees and nested tree groups could not be uploaded due to wrong tree group IDs. [#5893](https://github.com/scalableminds/webknossos/pull/5893)
-- Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
+- Fixed a security vulnerability by upgrading log4j to the newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
 
 ### Breaking Change
 - When using the front-end API, functions that accept a layer name, such as `api.data.getDataValue`, won't interpret the name "segmentation" as the current volume tracing if it exists. Instead, "segmentation" can only be used if the current dataset has a layer which is named "segmentation". If you want to interact with the volume tracing layer, use `api.data.getVolumeTracingLayerIds()` instead. Also see `api.data.getSegmentationLayerNames` and `api.data.getVisibleSegmentationLayer`. [#5771](https://github.com/scalableminds/webknossos/pull/5771)

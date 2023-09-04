@@ -57,7 +57,7 @@ class Zarr3Array(vaultPath: VaultPath,
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
       case GzipCodecConfiguration(level)                   => new GzipCodec(level)
       case Crc32CodecConfiguration => new Crc32Codec
-      case ShardingCodecConfiguration(chunk_shape, codecs) => new ShardingCodec(chunk_shape, codecs)
+      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs) => new ShardingCodec(chunk_shape, codecs, index_codecs)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {
       case codec: ShardingCodec => Some(codec)

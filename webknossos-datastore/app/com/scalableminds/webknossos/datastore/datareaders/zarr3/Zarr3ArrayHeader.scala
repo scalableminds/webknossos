@@ -77,8 +77,8 @@ case class Zarr3ArrayHeader(
 
   private def getChunkSize: Array[Int] = {
     val shardingCodecInnerChunkSize = codecs.flatMap {
-      case ShardingCodecConfiguration(chunk_shape, _) => Some(chunk_shape)
-      case _                                          => None
+      case ShardingCodecConfiguration(chunk_shape, _, _) => Some(chunk_shape)
+      case _                                             => None
     }.headOption
     shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
   }
@@ -191,7 +191,8 @@ object Zarr3ArrayHeader extends JsonImplicits {
       for {
         chunk_shape <- config("chunk_shape").validate[Array[Int]]
         codecs = readCodecs(config("codecs"))
-      } yield ShardingCodecConfiguration(chunk_shape, codecs)
+        index_codecs = readCodecs(config("index_codecs"))
+      } yield ShardingCodecConfiguration(chunk_shape, codecs, index_codecs)
 
     private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
       val rawCodecSpecs: Seq[JsValue] = value match {

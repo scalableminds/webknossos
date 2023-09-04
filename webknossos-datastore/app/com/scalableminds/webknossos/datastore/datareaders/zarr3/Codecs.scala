@@ -111,13 +111,26 @@ class Crc32Codec extends BytesToBytesCodec with ByteUtils {
   override def encode(bytes: Array[Byte]): Array[Byte] = {
     val crc = new CRC32()
     crc.update(bytes)
-    longToBytes(crc.getValue)
+    bytes ++ longToBytes(crc.getValue)
   }
 
-  override def decode(bytes: Array[Byte]): Array[Byte] = ???
+  def crc32ByteLength = 8
+
+  override def decode(bytes: Array[Byte]): Array[Byte] = {
+    val crcPart = bytes.slice(bytes.length - crc32ByteLength, bytes.length)
+    val dataPart = bytes.slice(0, bytes.length - crc32ByteLength)
+    val crc = new CRC32()
+    crc.update(dataPart)
+    val valid = longToBytes(crc.getValue).sameElements(crcPart)
+    println(s"CRC32 check: $valid")
+    dataPart
+  }
 }
 
-class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfiguration]) extends ArrayToBytesCodec {
+class ShardingCodec(val chunk_shape: Array[Int],
+                    val codecs: Seq[CodecConfiguration],
+                    val index_codecs: Seq[CodecConfiguration])
+    extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
   // encode, decode not implemented as sharding is done in Zarr3Array
@@ -186,7 +199,9 @@ object CodecSpecification {
   implicit val jsonFormat: OFormat[CodecSpecification] = Json.format[CodecSpecification]
 }
 
-final case class ShardingCodecConfiguration(chunk_shape: Array[Int], codecs: Seq[CodecConfiguration])
+final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
+                                            codecs: Seq[CodecConfiguration],
+                                            index_codecs: Seq[CodecConfiguration])
     extends CodecConfiguration
 
 object ShardingCodecConfiguration {

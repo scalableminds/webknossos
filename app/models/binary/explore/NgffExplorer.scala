@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, AxisOrder2D, AxisOrder3D}
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
@@ -142,16 +142,21 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     val c = axes.indexWhere(_.`type` == "channel")
     val cOpt = if (c == -1) None else Some(c)
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder(x, y, z, cOpt)
+      _ <- bool2Fox(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
+    } yield
+      if (z >= 0) {
+        AxisOrder3D(x, y, z, cOpt)
+      } else {
+        AxisOrder2D(x, y, cOpt)
+      }
   }
 
   private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =
     for {
       xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
       yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitFactor <- axes(axisOrder.z).spaceUnitToNmFactor
-    } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
+      zUnitFactor <- Fox.runIf(axisOrder.z >= 0)(axes(axisOrder.z).spaceUnitToNmFactor)
+    } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor.getOrElse(1))
 
   private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                 voxelSizeInAxisUnits: Vec3Double,
@@ -162,7 +167,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     val combinedScale = extractAndCombineScaleTransforms(coordinateTransforms, axisOrder)
     val mag = (combinedScale / voxelSizeInAxisUnits).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
@@ -189,7 +194,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     val scalesFromTransforms = filtered.flatMap(_.scale)
     val xFactors = scalesFromTransforms.map(_(axisOrder.x))
     val yFactors = scalesFromTransforms.map(_(axisOrder.y))
-    val zFactors = scalesFromTransforms.map(_(axisOrder.z))
+    val zFactors = if (axisOrder.hasZAxis) scalesFromTransforms.map(_(axisOrder.z)) else Seq(1.0, 1.0)
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 }

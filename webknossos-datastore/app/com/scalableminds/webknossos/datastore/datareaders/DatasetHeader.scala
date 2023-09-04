@@ -40,7 +40,11 @@ trait DatasetHeader {
     if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)
       None
     else
-      Some(BoundingBox(Vec3Int.zeros, datasetShape(axisOrder.x), datasetShape(axisOrder.y), datasetShape(axisOrder.z)))
+      Some(
+        BoundingBox(Vec3Int.zeros,
+                    datasetShape(axisOrder.x),
+                    datasetShape(axisOrder.y),
+                    if (axisOrder.hasZAxis) datasetShape(axisOrder.z) else 1))
 
   lazy val rank: Int = datasetShape.length
 

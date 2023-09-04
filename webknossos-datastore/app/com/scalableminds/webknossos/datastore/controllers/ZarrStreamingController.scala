@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder3D
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
@@ -115,7 +115,7 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder3D.cxyz), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
@@ -126,7 +126,7 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder3D.cxyz), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
         )
     }

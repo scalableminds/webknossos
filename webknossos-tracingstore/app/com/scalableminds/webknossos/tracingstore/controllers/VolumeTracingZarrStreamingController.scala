@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder3D}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
@@ -171,7 +171,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder3D.cxyz), None, None)),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
           )

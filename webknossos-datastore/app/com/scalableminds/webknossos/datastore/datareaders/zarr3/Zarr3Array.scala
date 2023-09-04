@@ -3,11 +3,18 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
 import ucar.ma2.{Array => MultiArray}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  AxisOrder,
+  AxisOrder3D,
+  ChunkReader,
+  ChunkUtils,
+  DatasetArray
+}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
+
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +35,7 @@ object Zarr3Array extends LazyLogging {
                      dataSourceId,
                      layerName,
                      header,
-                     axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+                     axisOrderOpt.getOrElse(AxisOrder3D.asCxyzFromRank(header.rank)),
                      channelIndex,
                      sharedChunkContentsCache)
 }

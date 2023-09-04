@@ -2,6 +2,11 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  IntCompressionSetting,
+  StringCompressionSetting
+}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   ChunkGridConfiguration,
   ChunkGridSpecification,
@@ -37,6 +42,16 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
 
   private def zarrHeaderFilePath(mag: Vec3Int): String = s"${mag.toMagLiteral()}/zarr.json"
 
+  private lazy val compressor =
+    new BloscCompressor(
+      Map(
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
+        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
+      ))
+
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
             additionalAxes: Seq[AdditionalAxisProto]): Iterator[NamedStream] = {
@@ -67,7 +82,7 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
         val filePath = zarrChunkFilePath(bucket)
         NamedFunctionStream(
           filePath,
-          os => Future.successful(os.write(data)) // TODO compress?
+          os => Future.successful(os.write(compressor.compress(data)))
         )
     } ++ mags.map { mag =>
       NamedFunctionStream(

@@ -69,8 +69,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
-    (bucket.additionalCoordinates, additionalAxes) match {
-      case (Some(additionalCoordinates), Some(axes)) =>
+    (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
+      case (Some(additionalCoordinates), Some(axes), true) =>
         // Bucket key additional coordinates need to be ordered to be found later.
         val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
         val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))

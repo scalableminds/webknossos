@@ -234,6 +234,8 @@ function* loadAdHocIsosurface(
     return;
   }
 
+  yield* call([Model, Model.ensureSavedState]);
+
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
 
   const { zoomStep, resolutionInfo } = yield* call(

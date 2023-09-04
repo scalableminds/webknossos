@@ -95,8 +95,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
     for {
       publicKey <- fetchServerPublicKey(serverInfos)
       decdoedAccessToken <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
-      decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(itToken =>
-        JwtJson.decodeJson(itToken, publicKey).toFox)
+      decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(idToken =>
+        JwtJson.decodeJson(idToken, publicKey).toFox)
     } yield (decdoedAccessToken, decodedIdToken)
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =

@@ -148,7 +148,7 @@ class AnnotationService @Inject()(
     val resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
     val additionalCoordinates =
-      fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalCoordinatesUnion)
+      fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
     } yield
@@ -246,7 +246,7 @@ class AnnotationService @Inject()(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
               organizationName = Some(datasetOrganizationName),
-              additionalAxes = AdditionalAxis.toProto(dataSource.additionalCoordinatesUnion)
+              additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
               skeleton.copy(

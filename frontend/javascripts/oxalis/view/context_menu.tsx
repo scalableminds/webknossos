@@ -1118,16 +1118,15 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer != null &&
     "fallbackLayer" in visibleSegmentationLayer &&
     visibleSegmentationLayer.fallbackLayer == null;
-  const [segmentSize, boundingBoxSize] = useFetch(
+  const [segmentSize, boundingBoxInfo] = useFetch(
     async () => {
       if (visibleSegmentationLayer != null && volumeTracing != null) {
         if (hasNoFallbackLayer) {
-          console.log(contextMenuPosition); //TODO
           const tracingId = volumeTracing.tracingId;
           const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
           const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
           const segmentId = segmentIdAtPosition;
-          const segmentSize = await getSegmentVolumes(
+          const [segmentSize] = await getSegmentVolumes(
             tracingStoreUrl,
             tracingId,
             mag.getHighestResolution(),
@@ -1139,13 +1138,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
             mag.getHighestResolution(),
             [segmentId],
           );
-          const boundingBoxString = `(${boundingBox.width}, ${boundingBox.height},${boundingBox.depth})`;
-          return [formatNumberToVolume(segmentSize[0]), boundingBoxString];
+          const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
+          const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
+          return [formatNumberToVolume(segmentSize), `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`];
         }
       }
     },
     ["loading", "loading"],
-    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched], //TODO make pretty with spinner
+    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched],
   );
 
   if (contextMenuPosition == null || maybeViewport == null) {
@@ -1213,7 +1213,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Current Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),
@@ -1253,12 +1253,15 @@ function ContextMenuInner(propsWithInputRef: Props) {
   if (hasNoFallbackLayer) {
     infoRows.push(
       getInfoMenuItem(
-        "boundingBoxInfo",
+        "boundingBoxPositionInfo",
         <>
-          <i className="fas fa-dice-d6" />
-          Bouding Box: {boundingBoxSize}
-          {copyIconWithTooltip(boundingBoxSize as string, "Copy bounding box size")}
+          <i className="fas fa-dice-d6 segment-context-icon" />
+          <>Bounding Box: </>
+          <div style={{ marginLeft: 22, marginTop: -5 }}>
+            {boundingBoxInfo}
+            {copyIconWithTooltip(boundingBoxInfo as string, "Copy BBox top left point and extent")}
           {refreshButton}
+          </div>
         </>,
       ),
     );

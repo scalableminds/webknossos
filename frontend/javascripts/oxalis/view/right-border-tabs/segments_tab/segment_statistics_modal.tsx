@@ -5,7 +5,7 @@ import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Unicode, Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { Segment } from "oxalis/store";
+import { Segment, TreeGroup } from "oxalis/store";
 import React from "react";
 import { TreeNode } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
@@ -76,7 +76,7 @@ export function SegmentStatisticsModal({
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 10000)); //TODO delete; only for testing
       await api.tracing.save();
-      let resultObjects = await Promise.all([
+      const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
@@ -94,7 +94,7 @@ export function SegmentStatisticsModal({
         const boundingBoxes = response[1];
         const statisticsObjects = [];
         for (let i = 0; i < segments.length; i++) {
-          // segments in request and their statistics in response are in the same order
+          // segments in request and their statistics in the response are in the same order
           const currentSegment = segments[i];
           const currentBoundingBox = boundingBoxes[i];
           const segmentStatObject = {
@@ -123,7 +123,7 @@ export function SegmentStatisticsModal({
         }
         return statisticsObjects;
       });
-      return resultObjects;
+      return segmentStatisticsObjects;
     },
     [],
     [isOpen],
@@ -146,10 +146,9 @@ export function SegmentStatisticsModal({
     },
   ];
 
-  const getGroupNameForId = (id: number) => {
-    if (id === -1) return "root";
-    const potentialGroupNode = groupTree.find((node) => node.type === "group" && node.id === id);
-    console.log(`groupname:${potentialGroupNode?.name}`);
+  const getGroupNameForId = (groupId: number) => {
+    if (groupId === -1) return "root";
+    const potentialGroupNode = groupTree.find((node) => node.type === "group" && node.id === groupId);
     return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
   };
 

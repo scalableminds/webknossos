@@ -1097,7 +1097,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
-  const [lastTimeVolumeWasFetched, setLastTimeVolumeWasFetched] = useState(new Date());
+  const [lastTimeSegmentInfoWasFetched, setLastTimeSegmentInfoWasFetched] = useState(new Date());
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1118,38 +1118,37 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer != null &&
     "fallbackLayer" in visibleSegmentationLayer &&
     visibleSegmentationLayer.fallbackLayer == null;
-  const [segmentSize, boundingBoxInfo] = useFetch(
+  const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (contextMenuPosition == null) return [];
-      if (visibleSegmentationLayer != null && volumeTracing != null) {
-        if (hasNoFallbackLayer) {
-          const tracingId = volumeTracing.tracingId;
-          const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
-          const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
-          const segmentId = segmentIdAtPosition;
-          const [segmentSize] = await getSegmentVolumes(
-            tracingStoreUrl,
-            tracingId,
-            mag.getHighestResolution(),
-            [segmentId],
-          );
-          const [boundingBox] = await getSegmentBoundingBoxes(
-            tracingStoreUrl,
-            tracingId,
-            mag.getHighestResolution(),
-            [segmentId],
-          );
-          const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
-          const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
-          return [
-            formatNumberToVolume(segmentSize),
-            `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
-          ];
-        }
+      if (visibleSegmentationLayer != null && volumeTracing != null && hasNoFallbackLayer) {
+        const tracingId = volumeTracing.tracingId;
+        const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+        const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const [segmentSize] = await getSegmentVolumes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getHighestResolution(),
+          [segmentIdAtPosition],
+        );
+        const [boundingBox] = await getSegmentBoundingBoxes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getHighestResolution(),
+          [segmentIdAtPosition],
+        );
+        const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
+        const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
+        return [
+          formatNumberToVolume(segmentSize),
+          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+        ];
       }
     },
     ["loading", "loading"],
-    [segmentIdAtPosition, lastTimeVolumeWasFetched],
+    // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
+    // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
+    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoWasFetched],
   ) as [string, string];
 
   if (contextMenuPosition == null || maybeViewport == null) {
@@ -1217,8 +1216,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Current Position:{" "}
-          {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),
@@ -1227,7 +1225,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const handleRefreshSegmentVolume = async () => {
     await api.tracing.save();
-    setLastTimeVolumeWasFetched(new Date());
+    setLastTimeSegmentInfoWasFetched(new Date());
   };
 
   const refreshButton = (
@@ -1247,8 +1245,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
         "volumeInfo",
         <>
           <i className="fas fa-expand-alt segment-context-icon" />
-          Size: {segmentSize}
-          {copyIconWithTooltip(segmentSize as string, "Copy size")}
+          Volume: {segmentVolume}
+          {copyIconWithTooltip(segmentVolume as string, "Copy volume")}
           {refreshButton}
         </>,
       ),

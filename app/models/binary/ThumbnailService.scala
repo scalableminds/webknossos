@@ -14,7 +14,7 @@ import models.configuration.DataSetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsArray, JsBoolean}
+import play.api.libs.json.JsArray
 import utils.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 

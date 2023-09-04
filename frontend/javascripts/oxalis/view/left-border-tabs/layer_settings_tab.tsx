@@ -161,23 +161,47 @@ const SortableLayerSettingsContainer = SortableContainer(({ children }: { childr
   return <div>{children}</div>;
 });
 
-const DragHandle = SortableHandle(() => (
-  <div
-    style={{
-      display: "inline-flex",
-      justifyContent: "center",
-      cursor: "grab",
-      alignItems: "center",
-    }}
-  >
-    <MenuOutlined
+type DragHandleProps = {
+  hasLessThanTwoColorLayers: boolean;
+};
+
+function dragHandleIcon(isDisabled: boolean = false) {
+  return (
+    <div
       style={{
-        display: "inline-block",
-        marginRight: 8,
+        display: "inline-flex",
+        justifyContent: "center",
+        cursor: "grab",
+        alignItems: "center",
+        color: isDisabled ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.60)",
       }}
-    />
-  </div>
-));
+    >
+      <MenuOutlined
+        style={{
+          display: "inline-block",
+          marginRight: 8,
+        }}
+      />
+    </div>
+  );
+}
+const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProps) => {
+  return hasLessThanTwoColorLayers ? (
+    <Tooltip title="Order is only changeable with more than one color layer.">
+      {dragHandleIcon(true)}
+    </Tooltip>
+  ) : (
+    dragHandleIcon()
+  );
+});
+
+function DummyDragHandle({ layerType }: { layerType: string }) {
+  return (
+    <Tooltip title={`Layer not movable: ${layerType} layers are always rendered on top.`}>
+      {dragHandleIcon(true)}
+    </Tooltip>
+  );
+}
 
 function TransformationIcon({ layer }: { layer: APIDataLayer }) {
   const dispatch = useDispatch();
@@ -484,7 +508,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
-    draggingDisabled: boolean = true,
+    hasLessThanTwoColorLayers: boolean = true,
   ) => {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
@@ -572,7 +596,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el);
     return (
       <div className="flex-container">
-        {draggingDisabled ? null : <DragHandle />}
+        {isColorLayer ? (
+          <DragHandle hasLessThanTwoColorLayers={hasLessThanTwoColorLayers} />
+        ) : (
+          <DummyDragHandle layerType="Volume" />
+        )}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -841,12 +869,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName,
     layerConfiguration,
     isColorLayer,
-    draggingDisabled = true,
+    hasLessThanTwoColorLayers = true,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
     isColorLayer: boolean;
-    draggingDisabled?: boolean;
+    hasLessThanTwoColorLayers?: boolean;
   }) => {
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
@@ -863,7 +891,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerName,
           elementClass,
           layerConfiguration,
-          draggingDisabled,
+          hasLessThanTwoColorLayers,
         )}
         {isDisabled ? null : (
           <div
@@ -1058,6 +1086,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             paddingRight: 1,
           }}
         >
+          <DummyDragHandle layerType="Skeleton" />
           <div
             className="flex-item"
             style={{
@@ -1288,7 +1317,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
     );
-    const isSortingDisabled = colorLayerOrder.length < 2;
+    const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (
         <SortableLayerSettings
@@ -1297,8 +1326,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerConfiguration={layers[layerName]}
           isColorLayer
           index={index}
-          disabled={isSortingDisabled}
-          draggingDisabled={isSortingDisabled}
+          disabled={hasLessThanTwoColorLayers}
+          hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
         />
       );
     });

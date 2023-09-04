@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
@@ -455,7 +456,7 @@ class VolumeTracingController @Inject()(
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed)
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
-            .map(_.scale(32)) // bucket positions raw are indices of 32³ buckets
+            .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / cubeSizeParsed)
             .distinct // divide by requested cube size to map them to larger buckets, select unique
             .map(_ * cubeSizeParsed) // return positions, not indices

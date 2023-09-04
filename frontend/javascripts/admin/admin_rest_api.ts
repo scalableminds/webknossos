@@ -1522,16 +1522,26 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
-  credentials?: { username: string; pass: string },
+  credentials?: { username: string; pass: string } | null,
+  preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
-    data: credentials
-      ? remoteUris.map((uri) => ({
-          remoteUri: uri.trim(),
+    data: remoteUris.map((uri) => {
+      const extendedUri = {
+        remoteUri: uri.trim(),
+        preferredVoxelSize,
+      };
+
+      if (credentials) {
+        return {
+          ...extendedUri,
           credentialIdentifier: credentials.username,
           credentialSecret: credentials.pass,
-        }))
-      : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
+        };
+      }
+
+      return extendedUri;
+    }),
   });
   if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
@@ -2131,7 +2141,7 @@ export function computeIsosurface(
         },
       },
     );
-    const neighbors = Utils.parseAsMaybe(headers.neighbors).getOrElse([]);
+    const neighbors = Utils.parseMaybe(headers.neighbors) || [];
     return {
       buffer,
       neighbors,

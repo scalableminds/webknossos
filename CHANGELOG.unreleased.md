@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added disabled drag handles to volume and skeleton layers for visual consistency. These layer cannot be dragged or reordered. [#7295](https://github.com/scalableminds/webknossos/pull/7295)
+- OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
 
 ### Changed
 

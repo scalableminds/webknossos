@@ -63,8 +63,8 @@ class MaintenanceController @Inject()(
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      currentAndUpcomingMaintenances <- maintenanceDAO.findAll
-      js = currentAndUpcomingMaintenances.map(maintenanceService.publicWrites)
+      maintenances <- maintenanceDAO.findAll
+      js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
 

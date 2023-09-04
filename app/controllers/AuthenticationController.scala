@@ -537,7 +537,7 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateToken(
+      (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"

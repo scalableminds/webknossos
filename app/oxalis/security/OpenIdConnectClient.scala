@@ -54,8 +54,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
   /*
   Fetches token from the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
+  Note that some providers will also reply with an id token next to the auth token, which is also returned as an option.
    */
-  def getAndValidateToken(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
+  def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
       _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"

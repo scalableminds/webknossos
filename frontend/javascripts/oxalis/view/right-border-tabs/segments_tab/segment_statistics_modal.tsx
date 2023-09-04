@@ -5,7 +5,7 @@ import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Unicode, Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { Segment, TreeGroup } from "oxalis/store";
+import { Segment } from "oxalis/store";
 import React from "react";
 import { TreeNode } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
@@ -148,7 +148,9 @@ export function SegmentStatisticsModal({
 
   const getGroupNameForId = (groupId: number) => {
     if (groupId === -1) return "root";
-    const potentialGroupNode = groupTree.find((node) => node.type === "group" && node.id === groupId);
+    const potentialGroupNode = groupTree.find(
+      (node) => node.type === "group" && node.id === groupId,
+    );
     return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
   };
 

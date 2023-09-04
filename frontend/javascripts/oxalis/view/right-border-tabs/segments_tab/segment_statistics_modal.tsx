@@ -21,7 +21,7 @@ type Props = {
   tracingId: any;
   tracingStoreUrl: any;
   visibleSegmentationLayer: any;
-  relevantSegments: Segment[]; //TODO obsolete
+  relevantSegments: Segment[];
   parentGroup: number;
   groupTree: TreeNode[];
 };

@@ -1120,6 +1120,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer.fallbackLayer == null;
   const [segmentSize, boundingBoxInfo] = useFetch(
     async () => {
+      if (contextMenuPosition == null) return [];
       if (visibleSegmentationLayer != null && volumeTracing != null) {
         if (hasNoFallbackLayer) {
           const tracingId = volumeTracing.tracingId;
@@ -1140,13 +1141,16 @@ function ContextMenuInner(propsWithInputRef: Props) {
           );
           const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
           const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
-          return [formatNumberToVolume(segmentSize), `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`];
+          return [
+            formatNumberToVolume(segmentSize),
+            `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+          ];
         }
       }
     },
     ["loading", "loading"],
-    [contextMenuPosition, segmentIdAtPosition, lastTimeVolumeWasFetched],
-  );
+    [segmentIdAtPosition, lastTimeVolumeWasFetched],
+  ) as [string, string];
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
@@ -1213,7 +1217,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Current Position: {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Current Position:{" "}
+          {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),
@@ -1260,7 +1265,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
           <div style={{ marginLeft: 22, marginTop: -5 }}>
             {boundingBoxInfo}
             {copyIconWithTooltip(boundingBoxInfo as string, "Copy BBox top left point and extent")}
-          {refreshButton}
+            {refreshButton}
           </div>
         </>,
       ),

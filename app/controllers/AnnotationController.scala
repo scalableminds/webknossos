@@ -41,7 +41,7 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
                                      name: Option[String],
-                                     additionalCoordinate: Option[Seq[AdditionalAxis]])
+                                     additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]

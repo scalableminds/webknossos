@@ -143,7 +143,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     for {
       layersJsValue <- viewConfiguration.get("layers")
       colorArray <- (layersJsValue \ layerName \ "color").asOpt[JsArray]
-      isInverted = (layersJsValue \ layerName \ "isInverted").asOpt[JsBoolean].exists(_.value)
+      isInverted = (layersJsValue \ layerName \ "isInverted").asOpt[Boolean].getOrElse(false)
       r <- colorArray(0).validate[Int].asOpt
       g <- colorArray(1).validate[Int].asOpt
       b <- colorArray(2).validate[Int].asOpt

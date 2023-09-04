@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
+
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -55,6 +56,7 @@ class Zarr3Array(vaultPath: VaultPath,
       case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
       case GzipCodecConfiguration(level)                   => new GzipCodec(level)
+      case Crc32CodecConfiguration => new Crc32Codec
       case ShardingCodecConfiguration(chunk_shape, codecs) => new ShardingCodec(chunk_shape, codecs)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {

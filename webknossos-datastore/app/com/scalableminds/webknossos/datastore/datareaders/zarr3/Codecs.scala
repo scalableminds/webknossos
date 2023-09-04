@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -9,9 +10,11 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   StringCompressionSetting
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import play.api.libs.json.{Format, JsResult, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsObject, JsResult, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
+
+import java.util.zip.CRC32
 
 trait Codec
 
@@ -103,6 +106,17 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
+class Crc32Codec extends BytesToBytesCodec with ByteUtils {
+
+  override def encode(bytes: Array[Byte]): Array[Byte] = {
+    val crc = new CRC32()
+    crc.update(bytes)
+    longToBytes(crc.getValue)
+  }
+
+  override def decode(bytes: Array[Byte]): Array[Byte] = ???
+}
+
 class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfiguration]) extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
@@ -143,6 +157,18 @@ final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration
 object GzipCodecConfiguration {
   implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
+}
+
+case object Crc32CodecConfiguration extends CodecConfiguration {
+  val name = "crc32c"
+
+  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CodecConfiguration.type] {
+    override def reads(json: JsValue): JsResult[Crc32CodecConfiguration.type] = JsSuccess(Crc32CodecConfiguration)
+  }
+
+  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CodecConfiguration.type] {
+    override def writes(o: Crc32CodecConfiguration.type): JsValue = JsObject(Seq())
+  }
 }
 
 object CodecConfiguration extends JsonImplicits {

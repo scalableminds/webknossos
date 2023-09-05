@@ -10,11 +10,12 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   StringCompressionSetting
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Format, JsObject, JsResult, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
 
-import java.util.zip.CRC32
+import java.util.zip.CRC32C
 
 trait Codec
 
@@ -106,10 +107,10 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
-class Crc32Codec extends BytesToBytesCodec with ByteUtils {
+class Crc32Codec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
   override def encode(bytes: Array[Byte]): Array[Byte] = {
-    val crc = new CRC32()
+    val crc = new CRC32C()
     crc.update(bytes)
     bytes ++ longToBytes(crc.getValue).slice(0, 4)
   }
@@ -119,10 +120,12 @@ class Crc32Codec extends BytesToBytesCodec with ByteUtils {
   override def decode(bytes: Array[Byte]): Array[Byte] = {
     val crcPart = bytes.takeRight(4)
     val dataPart = bytes.dropRight(4)
-    val crc = new CRC32()
+    val crc = new CRC32C()
     crc.update(dataPart)
     val valid = longToBytes(crc.getValue).slice(0, 4).sameElements(crcPart)
-    println(s"CRC32 check: $valid")
+    if (!valid) {
+      logger.warn("CRC32C check in Zarr 3 index codec failed, proceeding anyway.")
+    }
     dataPart
   }
 }

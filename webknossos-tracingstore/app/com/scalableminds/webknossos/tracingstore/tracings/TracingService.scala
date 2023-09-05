@@ -55,7 +55,7 @@ trait TracingService[T <: GeneratedMessage]
   // to provide useful error messages to the user if the temporary tracing is no longer present
   private val temporaryIdStoreTimeout = 10 days
 
-  private val handledGroupCacheExpiry: FiniteDuration = 1 hour
+  private val handledGroupCacheExpiry: FiniteDuration = 24 hours
 
   def currentVersion(tracingId: String): Fox[Long]
 

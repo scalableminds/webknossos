@@ -184,6 +184,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                 userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
+      _ <- bool2Fox(previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0)) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
@@ -192,7 +193,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   private def commitUpdates(tracingId: String,
                             updateGroups: List[UpdateActionGroup[T]],
                             userToken: Option[String]): Fox[Long] = {
-    val currentVersion: Fox[Long] = tracingService.currentVersion(tracingId)
+    val currentCommittedVersion: Fox[Long] = tracingService.currentVersion(tracingId)
     val report = TracingUpdatesReport(
       tracingId,
       timestamps = updateGroups.map(g => Instant(g.timestamp)),
@@ -202,9 +203,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       userToken
     )
     remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
-      updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+      updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
-          val versionIncrement = if (updateGroup.transactionGroupIndex == 0) 1 else 0 // version increment happens at the start of each transaction group
+          val versionIncrement = if (updateGroup.transactionGroupIndex == 0) 1 else 0 // version increment happens at the start of each transaction
           if (prevVersion + versionIncrement == updateGroup.version) {
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)

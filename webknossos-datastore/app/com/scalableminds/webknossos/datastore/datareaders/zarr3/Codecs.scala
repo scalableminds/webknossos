@@ -112,17 +112,17 @@ class Crc32Codec extends BytesToBytesCodec with ByteUtils with LazyLogging {
   override def encode(bytes: Array[Byte]): Array[Byte] = {
     val crc = new CRC32C()
     crc.update(bytes)
-    bytes ++ longToBytes(crc.getValue).slice(0, 4)
+    bytes ++ longToBytes(crc.getValue).take(crc32ByteLength)
   }
 
   def crc32ByteLength = 4
 
   override def decode(bytes: Array[Byte]): Array[Byte] = {
-    val crcPart = bytes.takeRight(4)
-    val dataPart = bytes.dropRight(4)
+    val crcPart = bytes.takeRight(crc32ByteLength)
+    val dataPart = bytes.dropRight(crc32ByteLength)
     val crc = new CRC32C()
     crc.update(dataPart)
-    val valid = longToBytes(crc.getValue).slice(0, 4).sameElements(crcPart)
+    val valid = longToBytes(crc.getValue).take(crc32ByteLength).sameElements(crcPart)
     if (!valid) {
       logger.warn("CRC32C check in Zarr 3 index codec failed, proceeding anyway.")
     }

@@ -55,7 +55,7 @@ class AnnotationController @Inject()(
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
     datasetDAO: DatasetDAO,
-    dataSetService: DatasetService,
+    datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
     userService: UserService,
@@ -595,7 +595,7 @@ class AnnotationController @Inject()(
       dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataset.notImported", dataSet.name)
       dataSource <- if (annotation._task.isDefined)
-        dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+        datasetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>

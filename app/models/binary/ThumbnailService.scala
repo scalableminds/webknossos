@@ -22,7 +22,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class ThumbnailService @Inject()(dataSetService: DatasetService,
+class ThumbnailService @Inject()(datasetService: DatasetService,
                                  thumbnailCachingService: ThumbnailCachingService,
                                  datasetConfigurationService: DatasetConfigurationService,
                                  datasetDAO: DatasetDAO,
@@ -70,7 +70,7 @@ class ThumbnailService @Inject()(dataSetService: DatasetService,
                                                         mp: MessagesProvider): Fox[Array[Byte]] =
     for {
       dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
-      dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDataSetViewConfigurationForDataset(List.empty,
@@ -82,7 +82,7 @@ class ThumbnailService @Inject()(dataSetService: DatasetService,
                                                                                      layer,
                                                                                      width,
                                                                                      height)
-      client <- dataSetService.clientFor(dataset)
+      client <- datasetService.clientFor(dataset)
       image <- client.getDataLayerThumbnail(organizationName,
                                             dataset,
                                             layerName,
@@ -156,7 +156,7 @@ class ThumbnailService @Inject()(dataSetService: DatasetService,
 
 case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
-class ThumbnailCachingService @Inject()(dataSetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.
@@ -186,7 +186,7 @@ class ThumbnailCachingService @Inject()(dataSetDAO: DatasetDAO, thumbnailDAO: Th
 
   def removeFromCache(organizationName: String, datasetName: String): Fox[Unit] =
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
       _ <- removeFromCache(dataset._id)
     } yield ()
 

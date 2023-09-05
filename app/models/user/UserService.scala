@@ -31,12 +31,12 @@ class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             multiUserDAO: MultiUserDAO,
                             userExperiencesDAO: UserExperiencesDAO,
-                            userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
-                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
+                            userDataSetConfigurationDAO: UserDatasetConfigurationDAO,
+                            userDataSetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
-                            dataSetDAO: DatasetDAO,
+                            datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
                             emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
@@ -243,7 +243,7 @@ class UserService @Inject()(conf: WkConf,
       dataSetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
+      dataSet <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
         "dataset.notFound",
         dataSetName)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)

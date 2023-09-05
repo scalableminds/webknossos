@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 class UsedStorageService @Inject()(val system: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
-                                   dataSetService: DatasetService,
+                                   datasetService: DatasetService,
                                    dataStoreDAO: DataStoreDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
@@ -97,7 +97,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
 
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
-      dataStore <- dataSetService.dataStoreFor(dataset)
+      dataStore <- datasetService.dataStoreFor(dataset)
       dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       organization <- organizationDAO.findOne(dataset._organization)
       report <- dataStoreClient.fetchStorageReport(organization.name, Some(dataset.name))

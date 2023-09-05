@@ -48,7 +48,7 @@ class AuthenticationController @Inject()(
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
@@ -249,7 +249,7 @@ class AuthenticationController @Inject()(
       case (Some(organizationName), Some(dataSetName), None, None) =>
         for {
           organization <- organizationDAO.findOneByName(organizationName)
-          _ <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
+          _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
         } yield organization
       case (None, None, Some(annotationId), None) =>
         for {
@@ -304,7 +304,7 @@ class AuthenticationController @Inject()(
   private def canAccessDataset(ctx: DBAccessContext, organizationName: String, dataSetName: String): Fox[Boolean] = {
     val foundFox = for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      _ <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
+      _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
     } yield ()
     foundFox.futureBox.map(_.isDefined)
   }

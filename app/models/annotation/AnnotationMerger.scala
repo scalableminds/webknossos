@@ -13,7 +13,7 @@ import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class AnnotationMerger @Inject()(dataSetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(
+class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(
     implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -64,7 +64,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DatasetDAO, tracingStoreService: Tr
   private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
-      dataSet <- dataSetDAO.findOne(dataSetId)
+      dataSet <- datasetDAO.findOne(dataSetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Skeleton))
       volumeLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Volume))

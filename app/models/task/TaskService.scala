@@ -16,7 +16,7 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext
 
 class TaskService @Inject()(conf: WkConf,
-                            dataSetDAO: DatasetDAO,
+                            datasetDAO: DatasetDAO,
                             scriptDAO: ScriptDAO,
                             userService: UserService,
                             annotationDAO: AnnotationDAO,
@@ -30,7 +30,7 @@ class TaskService @Inject()(conf: WkConf,
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBaseFor(task._id)
-      dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
+      dataSet <- datasetDAO.findOne(annotationBase._dataSet)
       status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)

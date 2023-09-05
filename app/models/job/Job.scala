@@ -267,7 +267,7 @@ class JobService @Inject()(wkConf: WkConf,
                            workerDAO: WorkerDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
-                           dataSetDAO: DatasetDAO,
+                           datasetDAO: DatasetDAO,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
@@ -384,8 +384,8 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
         organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
-        _ <- dataSetDAO.deleteDataset(dataset._id)
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
 

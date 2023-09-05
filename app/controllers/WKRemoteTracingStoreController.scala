@@ -25,12 +25,12 @@ class WKRemoteTracingStoreController @Inject()(
     tracingStoreService: TracingStoreService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     timeSpanService: TimeSpanService,
-    dataSetService: DatasetService,
+    datasetService: DatasetService,
     organizationDAO: OrganizationDAO,
     userDAO: UserDAO,
     annotationInformationProvider: AnnotationInformationProvider,
     analyticsService: AnalyticsService,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -77,8 +77,8 @@ class WKRemoteTracingStoreController @Inject()(
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataSet <- dataSetDAO.findOne(annotation._dataSet)
-          dataSource <- dataSetService.dataSourceFor(dataSet)
+          dataSet <- datasetDAO.findOne(annotation._dataSet)
+          dataSource <- datasetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
       }
     }
@@ -89,7 +89,7 @@ class WKRemoteTracingStoreController @Inject()(
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataSet <- dataSetDAO.findOne(annotation._dataSet)
+          dataSet <- datasetDAO.findOne(annotation._dataSet)
           organization <- organizationDAO.findOne(dataSet._organization)
         } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))
       }
@@ -107,12 +107,12 @@ class WKRemoteTracingStoreController @Inject()(
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
+            datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
             "dataset.noAccess",
             dataSetName) ~> FORBIDDEN
-          dataStore <- dataSetService.dataStoreFor(dataSet)
+          dataStore <- datasetService.dataStoreFor(dataSet)
         } yield Ok(Json.toJson(dataStore.url))
       }
     }

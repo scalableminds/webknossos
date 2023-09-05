@@ -15,8 +15,8 @@ import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(
     userService: UserService,
-    dataSetService: DatasetService,
-    dataSetDAO: DatasetDAO,
+    datasetService: DatasetService,
+    datasetDAO: DatasetDAO,
     dataSetConfigurationService: DatasetConfigurationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
@@ -78,8 +78,8 @@ class ConfigurationController @Inject()(
   def updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
-        _ <- dataSetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
+        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
         _ <- dataSetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))

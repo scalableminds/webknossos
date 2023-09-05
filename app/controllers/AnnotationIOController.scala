@@ -52,9 +52,9 @@ class AnnotationIOController @Inject()(
     nmlWriter: NmlWriter,
     annotationDAO: AnnotationDAO,
     projectDAO: ProjectDAO,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
-    dataSetService: DatasetService,
+    datasetService: DatasetService,
     userService: UserService,
     taskDAO: TaskDAO,
     taskTypeDAO: TaskTypeDAO,
@@ -213,9 +213,9 @@ Expects:
              } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        dataSetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
+        datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
       } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
+      dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
                                                                                                "dataset.noAccess.wrongHost",
                                                                                                dataSetName,
@@ -271,7 +271,7 @@ Expects:
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
                                                  dataSet: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       allAdapted = volumeLayersGrouped.map { volumeLayers =>
         volumeLayers.map { volumeLayer =>
           volumeLayer.copy(tracing = adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource))
@@ -469,7 +469,7 @@ Expects:
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
     } yield {

@@ -21,7 +21,7 @@ import scala.concurrent.duration.Duration
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      userDAO: UserDAO,
                                      userService: UserService,
-                                     dataSetDAO: DatasetDAO,
+                                     datasetDAO: DatasetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
@@ -53,7 +53,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                                            end.map(Instant(_)),
                                                            organizationId)
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
-            numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
+            numberOfDatasets <- datasetDAO.countAllForOrganization(organizationId)
             numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
             numberOfAssignments <- taskDAO.countAllPendingInstancesForOrganization(organizationId)
           } yield {

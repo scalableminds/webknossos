@@ -33,14 +33,14 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
-    dataSetService: DatasetService,
+    datasetService: DatasetService,
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
     analyticsService: AnalyticsService,
     userService: UserService,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     userDAO: UserDAO,
     folderDAO: FolderDAO,
     jobDAO: JobDAO,
@@ -69,16 +69,16 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
             bool2Fox(usedStorageBytes <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- dataSetService.assertValidDatasetName(uploadInfo.name)
-          _ <- dataSetService.assertNewDatasetName(uploadInfo.name, organization._id) ?~> "dataset.name.alreadyTaken"
+          _ <- datasetService.assertValidDatasetName(uploadInfo.name)
+          _ <- datasetService.assertNewDatasetName(uploadInfo.name, organization._id) ?~> "dataset.name.alreadyTaken"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          dataSet <- dataSetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
-          _ <- dataSetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
-          _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
-          _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
+          dataSet <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
+          _ <- datasetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
+          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
+          _ <- datasetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
         } yield Ok
       }
     }
@@ -89,7 +89,7 @@ class WKRemoteDataStoreController @Inject()(
       organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.organizationName) ~> NOT_FOUND
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+      dataSet <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataSet._organization)
       _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataSet.isPublic) ?~> "dataset.upload.linkRestricted"
@@ -106,7 +106,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataSet))
@@ -153,8 +153,8 @@ class WKRemoteDataStoreController @Inject()(
             _ <- Fox.successful(
               logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
                 s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
-            existingIds <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-            _ <- dataSetService.deactivateUnreportedDataSources(existingIds, dataStore)
+            existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+            _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
           } yield {
             JsonOk
           }
@@ -171,7 +171,7 @@ class WKRemoteDataStoreController @Inject()(
       request.body.validate[InboxDataSource] match {
         case JsSuccess(dataSource, _) =>
           for {
-            _ <- dataSetService.updateDataSources(dataStore, List(dataSource))(GlobalAccessContext)
+            _ <- datasetService.updateDataSources(dataStore, List(dataSource))(GlobalAccessContext)
           } yield {
             JsonOk
           }
@@ -186,12 +186,12 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        existingDataset = dataSetDAO
+        existingDataset = datasetDAO
           .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
         _ <- existingDataset.flatMap {
           case Full(dataset) =>
-            dataSetDAO
+            datasetDAO
               .deleteDataset(dataset._id)
               .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
           case _ => Fox.successful(())

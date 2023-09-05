@@ -101,7 +101,6 @@ dataset.initialTeams.teamsNotEmpty=Dataset already has allowed teams
 dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataset.uploader.notEmpty=Dataset already has non-empty uploader
 dataset.delete.disabled=Dataset deletion is disabled for this WEBKNOSSOS instance
-<<<<<<< HEAD
 dataset.delete.webknossos.failed=Could not delete dataset from WEBKNOSSOS database
 dataset.delete.failed=Could not delete the dataset on disk.
 dataset.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.

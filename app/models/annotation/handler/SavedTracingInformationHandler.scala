@@ -13,7 +13,7 @@ import utils.ObjectId
 import scala.concurrent.ExecutionContext
 
 class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
-                                               dataSetDAO: DatasetDAO,
+                                               datasetDAO: DatasetDAO,
                                                annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                                userService: UserService)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
@@ -26,7 +26,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
     for {
       userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).futureBox
       userName <- userBox.map(_.abreviatedName).getOrElse("")
-      dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
+      dataSetName <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = formatHash(annotation.id)

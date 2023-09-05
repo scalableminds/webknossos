@@ -24,17 +24,17 @@ case class Publication(_id: ObjectId,
                        created: Instant = Instant.now,
                        isDeleted: Boolean = false)
 
-class PublicationService @Inject()(dataSetService: DatasetService,
-                                   dataSetDAO: DatasetDAO,
+class PublicationService @Inject()(datasetService: DatasetService,
+                                   datasetDAO: DatasetDAO,
                                    annotationService: AnnotationService,
                                    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
 
   def publicWrites(publication: Publication): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSets <- dataSetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
+      dataSets <- datasetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
       annotations <- annotationDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
-      dataSetsJson <- Fox.serialCombined(dataSets)(d => dataSetService.publicWrites(d, None, None, None))
+      dataSetsJson <- Fox.serialCombined(dataSets)(d => datasetService.publicWrites(d, None, None, None))
       annotationsJson <- Fox.serialCombined(annotations) { annotation =>
         annotationService.writesWithDataset(annotation)
       }

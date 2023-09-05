@@ -23,7 +23,7 @@ class FolderController @Inject()(
     teamDAO: TeamDAO,
     userService: UserService,
     teamService: TeamService,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -89,7 +89,7 @@ class FolderController @Inject()(
       _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.delete.root"
       _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       childrenCount <- folderDAO.countChildren(idValidated)
-      datasetsCount <- dataSetDAO.countByFolder(idValidated)
+      datasetsCount <- datasetDAO.countByFolder(idValidated)
       _ <- bool2Fox(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
       _ <- bool2Fox(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
       _ <- folderDAO.deleteOne(idValidated)

@@ -120,17 +120,17 @@ Expects:
             // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
             // This is what determines the merging strategy for volume layers
             volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
-            dataSet <- findDataSetForUploadedAnnotations(skeletonTracings,
+            dataset <- findDataSetForUploadedAnnotations(skeletonTracings,
                                                          volumeLayersGroupedRaw.flatten.map(_.tracing),
                                                          wkUrl)
-            volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataSet)
-            tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+            volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset)
+            tracingStoreClient <- tracingStoreService.clientFor(dataset)
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
                                                            tracingStoreClient,
                                                            parsedFiles.otherFiles)
             mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
             annotation <- annotationService.createFrom(request.identity,
-                                                       dataSet,
+                                                       dataset,
                                                        mergedSkeletonLayers ::: mergedVolumeLayers,
                                                        AnnotationType.Explorational,
                                                        name,
@@ -204,7 +204,7 @@ Expects:
       volumeTracings: List[VolumeTracing],
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
     for {
-      dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
+      datasetName <- assertAllOnSameDataset(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationNameOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
         organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
@@ -213,20 +213,20 @@ Expects:
              } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
-      } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-      dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
+        datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+      } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
                                                                                                "dataset.noAccess.wrongHost",
-                                                                                               dataSetName,
+                                                                                               datasetName,
                                                                                                wkUrl,
                                                                                                conf.Http.uri)
                                                                                            } else {
                                                                                              Messages(
                                                                                                "dataset.noAccess",
-                                                                                               dataSetName)
+                                                                                               datasetName)
                                                                                            }) ~> FORBIDDEN
-    } yield dataSet
+    } yield dataset
 
   private def nameForUploaded(fileNames: Seq[String]) =
     if (fileNames.size == 1)
@@ -252,12 +252,12 @@ Expects:
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
     }
 
-  private def assertAllOnSameDataSet(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
+  private def assertAllOnSameDataset(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
     for {
-      dataSetName <- volumes.headOption.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
-      _ <- bool2Fox(skeletons.forall(_.dataSetName == dataSetName))
-      _ <- bool2Fox(volumes.forall(_.dataSetName == dataSetName))
-    } yield dataSetName
+      datasetName <- volumes.headOption.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
+      _ <- bool2Fox(skeletons.forall(_.dataSetName == datasetName))
+      _ <- bool2Fox(volumes.forall(_.dataSetName == datasetName))
+    } yield datasetName
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] = {
@@ -269,9 +269,9 @@ Expects:
   }
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
-                                                 dataSet: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
+                                                 dataset: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       allAdapted = volumeLayersGrouped.map { volumeLayers =>
         volumeLayers.map { volumeLayer =>
           volumeLayer.copy(tracing = adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource))
@@ -374,22 +374,22 @@ Expects:
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
-    def skeletonToTemporaryFile(dataSet: Dataset,
+    def skeletonToTemporaryFile(dataset: Dataset,
                                 annotation: Annotation,
                                 organizationName: String): Fox[TemporaryFile] =
       for {
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneCached(annotation._user)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
                                           Some(annotation),
-                                          dataSet.scale,
+                                          dataset.scale,
                                           None,
                                           organizationName,
                                           conf.Http.uri,
-                                          dataSet.name,
+                                          dataset.name,
                                           Some(user),
                                           taskOpt)
         nmlTemporaryFile = temporaryFileCreator.create()
@@ -440,14 +440,14 @@ Expects:
         _ = zipper.close()
       } yield temporaryFile
 
-    def annotationToTemporaryFile(dataSet: Dataset,
+    def annotationToTemporaryFile(dataset: Dataset,
                                   annotation: Annotation,
                                   name: String,
                                   organizationName: String): Fox[TemporaryFile] =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToTemporaryFile(dataSet, annotation, organizationName) ?~> "annotation.download.skeletonToFile.failed"
+        skeletonToTemporaryFile(dataset, annotation, organizationName) ?~> "annotation.download.skeletonToFile.failed"
       else
-        volumeOrHybridToTemporaryFile(dataSet, annotation, name, organizationName) ?~> "annotation.download.hybridToFile.failed"
+        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationName) ?~> "annotation.download.hybridToFile.failed"
 
     def exportExtensionForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
@@ -469,9 +469,9 @@ Expects:
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
-      temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
+      dataset <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
+      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
     } yield {
       Ok.sendFile(temporaryFile, inline = false)
         .as(mimeType)

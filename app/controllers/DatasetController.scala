@@ -486,7 +486,7 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getOrganizationForDataSet(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
+  def getOrganizationForDataset(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
         organizationId <- datasetDAO.getOrganizationForDataset(dataSetName)

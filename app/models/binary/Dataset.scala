@@ -629,7 +629,7 @@ class DatasetLayerDAO @Inject()(
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(datasetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
-      additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDataSetAndDataLayerName(datasetId, row.name)
+      additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
     } yield {
       category match {
@@ -822,7 +822,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
   private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
     AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
 
-  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
+  def findAllForDatasetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {
       rows <- run(q"""SELECT *
            FROM webknossos.dataSet_layer_additionalAxes

@@ -73,7 +73,7 @@ GET           /datasets                                                         
 POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset
-GET           /datasets/disambiguate/:dataSetName/toNew                                         controllers.DatasetController.getOrganizationForDataSet(dataSetName: String)
+GET           /datasets/disambiguate/:dataSetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                                   controllers.DatasetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PATCH         /datasets/:organizationName/:dataSetName                                          controllers.DatasetController.update(organizationName: String, dataSetName: String)
 PATCH         /datasets/:organizationName/:dataSetName/updatePartial                            controllers.DatasetController.updatePartial(organizationName: String, dataSetName: String)

@@ -22,23 +22,23 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
   def getDataSetViewConfigurationForUserAndDataset(
       requestedVolumeIds: List[String],
       user: User,
-      dataSetName: String,
+      datasetName: String,
       organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
 
-      dataSetViewConfiguration <- userDatasetConfigurationDAO.findOneForUserAndDataset(user._id, dataset._id)
+      datasetViewConfiguration <- userDatasetConfigurationDAO.findOneForUserAndDataset(user._id, dataset._id)
 
-      dataSetLayers <- datasetService.allLayersFor(dataset)
-      layerConfigurations <- getLayerConfigurations(dataSetLayers, requestedVolumeIds, dataset, Some(user))
-    } yield buildCompleteDataSetConfiguration(dataSetViewConfiguration, layerConfigurations)
+      datasetLayers <- datasetService.allLayersFor(dataset)
+      layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset, Some(user))
+    } yield buildCompleteDataSetConfiguration(datasetViewConfiguration, layerConfigurations)
 
-  def getDataSetViewConfigurationForDataset(
+  def getDatasetViewConfigurationForDataset(
       requestedVolumeIds: List[String],
-      dataSetName: String,
+      datasetName: String,
       organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
 
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
 

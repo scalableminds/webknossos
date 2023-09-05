@@ -238,29 +238,29 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDataSetViewConfiguration(
       user: User,
-      dataSetName: String,
+      datasetName: String,
       organizationName: String,
-      dataSetConfiguration: DatasetViewConfiguration,
+      datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataSet <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext) ?~> Messages(
         "dataset.notFound",
-        dataSetName)
+        datasetName)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
           config.asOpt[LayerViewConfiguration] match {
             case Some(viewConfiguration) =>
               userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
-                                                                                                   dataSet._id,
+                                                                                                   dataset._id,
                                                                                                    name,
                                                                                                    viewConfiguration)
             case None => Fox.successful(())
           }
       }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
-                                                                                   dataSet._id,
-                                                                                   dataSetConfiguration)
+                                                                                   dataset._id,
+                                                                                   datasetConfiguration)
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =

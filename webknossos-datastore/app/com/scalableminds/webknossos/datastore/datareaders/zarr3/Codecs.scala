@@ -38,7 +38,7 @@ trait BytesToBytesCodec extends Codec {
   def decode(bytes: Array[Byte]): Array[Byte]
 }
 
-class EndianCodec(val endian: String) extends ArrayToBytesCodec {
+class EndianCodec(val endian: Option[String]) extends ArrayToBytesCodec {
 
   /*
   https://zarr-specs.readthedocs.io/en/latest/v3/codecs/endian/v1.0.html
@@ -109,13 +109,15 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
 
 class Crc32Codec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/v1.0.html
+
+  private def crc32ByteLength = 4
+
   override def encode(bytes: Array[Byte]): Array[Byte] = {
     val crc = new CRC32C()
     crc.update(bytes)
     bytes ++ longToBytes(crc.getValue).take(crc32ByteLength)
   }
-
-  def crc32ByteLength = 4
 
   override def decode(bytes: Array[Byte]): Array[Byte] = {
     val crcPart = bytes.takeRight(crc32ByteLength)
@@ -144,7 +146,7 @@ class ShardingCodec(val chunk_shape: Array[Int],
 
 sealed trait CodecConfiguration
 
-final case class EndianCodecConfiguration(endian: String) extends CodecConfiguration
+final case class EndianCodecConfiguration(endian: Option[String]) extends CodecConfiguration
 
 object EndianCodecConfiguration {
   implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]

@@ -1000,7 +1000,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getColorOfFirstSegmentOrGrey = (groupId: number | null) => {
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null || relevantSegments[0]?.color == null) {
       return [0.5, 0.5, 0.5] as Vector3;
     }
@@ -1200,7 +1200,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return;
 
     const actions = relevantSegments.map((segment) =>
@@ -1272,7 +1272,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getSegmentsWithMissingPosition = (groupId: number | null): number[] => {
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
     let segmentsWithoutPosition: number[] = relevantSegments
       .filter((segment) => segment.somePosition == null)
@@ -1321,7 +1321,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     relevantSegments?.forEach(callback);
   }
 
@@ -1340,7 +1340,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return;
 
     const segmentsArray = relevantSegments.map((segment) => {
@@ -1475,16 +1475,6 @@ class SegmentsView extends React.Component<Props, State> {
       ]),
     );
   }
-
-  getSegmentsOfGroup = (groupId: number): Segment[] | null => {
-    const { segments, segmentGroups } = this.props;
-
-    if (segments == null || segmentGroups == null) {
-      return null;
-    }
-    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    return groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
-  };
 
   getSegmentsOfGroupRecursively = (groupId: number): Segment[] | null => {
     const { segments, segmentGroups } = this.props;
@@ -1835,7 +1825,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return false;
     const relevantSegments =
-      groupId != null ? this.getSegmentsOfGroup(groupId) : this.getSelectedSegments();
+      groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return false;
     const isosurfacesOfLayer =
       Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces;

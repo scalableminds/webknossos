@@ -98,6 +98,7 @@ export function SegmentStatisticsModal({
           const currentSegment = segments[i];
           const currentBoundingBox = boundingBoxes[i];
           const segmentStatObject = {
+            key: currentSegment.id,
             segmentId: currentSegment.id,
             segmentName:
               currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,

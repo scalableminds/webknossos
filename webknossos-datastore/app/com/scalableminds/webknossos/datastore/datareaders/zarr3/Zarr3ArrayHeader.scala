@@ -208,6 +208,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
             case JsString(TransposeCodecConfiguration.name)    => c(configurationKey).validate[TransposeCodecConfiguration]
             case JsString(GzipCodecConfiguration.name)         => c(configurationKey).validate[GzipCodecConfiguration]
             case JsString(BloscCodecConfiguration.name)        => c(configurationKey).validate[BloscCodecConfiguration]
+            case JsString(ZstdCodecConfiguration.name)         => c(configurationKey).validate[ZstdCodecConfiguration]
             case JsString(Crc32CCodecConfiguration.name) =>
               JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))

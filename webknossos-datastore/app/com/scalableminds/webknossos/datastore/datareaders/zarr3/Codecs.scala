@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   CompressionSetting,
   GzipCompressor,
   IntCompressionSetting,
-  StringCompressionSetting
+  StringCompressionSetting,
+  ZstdCompressor
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
@@ -107,6 +108,18 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
+class ZstdCodec(level: Int, checksum: Boolean) extends BytesToBytesCodec {
+
+  // https://github.com/zarr-developers/zarr-specs/pull/256
+
+  lazy val compressor = new ZstdCompressor(level, checksum)
+
+  override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
+
+  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
+
+}
+
 class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/v1.0.html
@@ -178,6 +191,12 @@ final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration
 object GzipCodecConfiguration {
   implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
+}
+
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration
+object ZstdCodecConfiguration {
+  implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
+  val name = "zstd"
 }
 
 case object Crc32CCodecConfiguration extends CodecConfiguration {

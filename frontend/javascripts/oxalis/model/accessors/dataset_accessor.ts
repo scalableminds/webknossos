@@ -1,6 +1,7 @@
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -619,6 +620,38 @@ function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
 }
 
 export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
+
+function _getUnifiedAdditionalAxes(
+  mutableDataset: APIDataset,
+): Record<string, Omit<AdditionalAxis, "index">> {
+  /*
+   * Merge additional coordinates from all layers.
+   */
+  const unifiedAdditionalAxes: Record<string, Omit<AdditionalAxis, "index">> = {};
+  for (const layer of mutableDataset.dataSource.dataLayers) {
+    const { additionalAxes } = layer;
+
+    for (const additionalCoordinate of additionalAxes || []) {
+      const { name, bounds } = additionalCoordinate;
+      if (additionalCoordinate.name in unifiedAdditionalAxes) {
+        const existingBounds = unifiedAdditionalAxes[name].bounds;
+        unifiedAdditionalAxes[name].bounds = [
+          Math.min(bounds[0], existingBounds[0]),
+          Math.max(bounds[1], existingBounds[1]),
+        ];
+      } else {
+        unifiedAdditionalAxes[name] = {
+          name,
+          bounds,
+        };
+      }
+    }
+  }
+
+  return unifiedAdditionalAxes;
+}
+
+export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalAxes);
 
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.

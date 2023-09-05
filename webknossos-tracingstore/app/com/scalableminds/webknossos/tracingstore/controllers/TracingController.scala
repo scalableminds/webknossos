@@ -144,7 +144,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  private val transactionBatchExpiry: FiniteDuration = 24 hours
+  private val transactionGroupExpiry: FiniteDuration = 24 hours
 
   private def handleUpdateGroupForTransaction(tracingId: String,
                                               previousVersionFox: Fox[Long],
@@ -163,7 +163,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                              updateGroup.transactionGroupIndex,
                              updateGroup.version,
                              updateGroup,
-                             transactionBatchExpiry)
+                             transactionGroupExpiry)
             .flatMap(
               _ =>
                 tracingService.saveToHandledGroupIdStore(tracingId,
@@ -263,7 +263,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
               case Empty                      => Fox.successful(None)
               case f: Failure                 => f.toFox
             }
-            mergedTracing = tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt)
+            mergedTracing <- Fox.box2Fox(
+              tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt))
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield Ok(Json.toJson(newId))
         }

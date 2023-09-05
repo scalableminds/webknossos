@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -233,6 +234,42 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           currentMatrix: {
             $set: matrix,
           },
+        },
+      });
+    }
+
+    case "SET_ADDITIONAL_COORDINATES": {
+      const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(state.dataset);
+
+      // In case the specified additional coordinates don't cover all existing additional
+      // coordinates, add the missing coordinates back.
+      // This *should* not happen, but in case of a bug somewhere, it's better to guard
+      // against this here (for example, if a skeleton node doesn't have the necessary
+      // additional coordinates, the UI shouldn't forget about the other additional
+      // coordinates).
+      let { values } = action;
+
+      const existingAdditionalCoordinates = state.flycam.additionalCoordinates;
+      values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+        const fallbackValue =
+          (existingAdditionalCoordinates != null
+            ? existingAdditionalCoordinates[index]?.value
+            : null) ?? bounds[0];
+        if (values) {
+          const specifiedValue = values.find((element) => element.name === name);
+          if (specifiedValue) {
+            return {
+              name,
+              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
+            };
+          }
+        }
+        return { name, value: fallbackValue };
+      });
+
+      return update(state, {
+        flycam: {
+          additionalCoordinates: { $set: values },
         },
       });
     }

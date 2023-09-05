@@ -1,5 +1,5 @@
-import { Alert } from "antd";
-import { connect } from "react-redux";
+import { Alert, Popover } from "antd";
+import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
@@ -29,8 +29,13 @@ import {
   doesSupportVolumeWithFallback,
   getVisibleSegmentationLayer,
   getMappingInfoForSupportedLayer,
+  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
+import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
+import { NumberSliderSetting } from "./components/setting_input_views";
+import { ArbitraryVectorInput } from "libs/vector_input";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 const VersionRestoreWarning = (
   <Alert
@@ -58,6 +63,75 @@ type Props = OwnProps & StateProps;
 type State = {
   isNewLayoutModalOpen: boolean;
 };
+
+function AdditionalCoordinatesInputView() {
+  const additionalAxes = useSelector((state: OxalisState) =>
+    getUnifiedAdditionalCoordinates(state.dataset),
+  );
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+  const dispatch = useDispatch();
+  const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
+    if (values != null) {
+      dispatch(setAdditionalCoordinatesAction(values));
+    }
+  };
+  const changeAdditionalCoordinatesFromVector = (values: number[]) => {
+    if (additionalCoordinates != null) {
+      dispatch(
+        setAdditionalCoordinatesAction(
+          additionalCoordinates.map((el, index) => ({
+            ...el,
+            value: values[index],
+          })),
+        ),
+      );
+    }
+  };
+
+  if (additionalCoordinates == null || additionalCoordinates.length === 0) {
+    return null;
+  }
+  return (
+    <Popover
+      content={
+        <div>
+          {additionalCoordinates.map((coord, idx) => {
+            const { bounds } = additionalAxes[coord.name];
+            return (
+              <NumberSliderSetting
+                label={coord.name}
+                key={coord.name}
+                min={bounds[0]}
+                max={bounds[1]}
+                value={coord.value}
+                spans={[2, 18, 4]}
+                onChange={(newCoord) => {
+                  const newCoords = additionalCoordinates.slice();
+                  newCoords[idx] = {
+                    ...newCoords[idx],
+                    value: newCoord,
+                  };
+                  changeAdditionalCoordinates(newCoords);
+                }}
+              />
+            );
+          })}
+        </div>
+      }
+    >
+      <ArbitraryVectorInput
+        autoSize
+        vectorLength={additionalCoordinates.length}
+        value={additionalCoordinates.map((el) => el.value)}
+        onChange={changeAdditionalCoordinatesFromVector}
+        style={{ marginLeft: 10, marginRight: 10 }}
+        addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
+      />
+    </Popover>
+  );
+}
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
@@ -173,6 +247,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
+          <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

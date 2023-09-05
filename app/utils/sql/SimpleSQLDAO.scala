@@ -2,7 +2,10 @@ package utils.sql
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
-import slick.dbio.{DBIOAction, NoStream}
+import slick.dbio.{DBIO, DBIOAction, Effect, NoStream}
+import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
+import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}
 import utils.sql.SqlInterpolation.sqlInterpolation
 
@@ -64,5 +67,17 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     val os = new ByteArrayOutputStream()
     treePrinter.print(query, new PrintWriter(os))
     new String(os.toByteArray, StandardCharsets.UTF_8)
+  }
+
+  def replaceSequentiallyAsTransaction(clearQuery: SqlAction[Int, NoStream, Effect],
+                                       insertQueries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] = {
+    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+    for {
+      _ <- run(
+        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
+    } yield ()
   }
 }

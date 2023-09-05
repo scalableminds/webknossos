@@ -9,6 +9,7 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -219,7 +220,8 @@ export function updateSkeletonTracing(
   tracing: {
     activeNodeId: number | null | undefined;
   },
-  position: Vector3,
+  editPosition: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
 ) {
@@ -227,7 +229,8 @@ export function updateSkeletonTracing(
     name: "updateTracing",
     value: {
       activeNode: tracing.activeNodeId,
-      editPosition: position,
+      editPosition,
+      editPositionAdditionalCoordinates,
       editRotation: rotation,
       zoomLevel,
     },
@@ -250,6 +253,7 @@ export function moveTreeComponent(
 export function updateVolumeTracing(
   tracing: VolumeTracing,
   position: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
 ) {
@@ -258,6 +262,7 @@ export function updateVolumeTracing(
     value: {
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
+      editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
       zoomLevel,
@@ -295,6 +300,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -305,6 +311,7 @@ export function updateSegmentVolumeAction(
     value: {
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,

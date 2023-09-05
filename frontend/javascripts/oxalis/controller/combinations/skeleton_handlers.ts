@@ -277,6 +277,7 @@ function addNode(
   Store.dispatch(
     createNodeAction(
       position,
+      state.flycam.additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       // This is the magnification index at which the node was created. Since

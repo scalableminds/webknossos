@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingTyp
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status.CONFLICT
+import net.liftweb.common.Box
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -60,14 +61,14 @@ trait TracingService[T <: GeneratedMessage]
 
   def currentVersion(tracing: T): Long
 
-  def transactionBatchKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
-    s"transactionBatch___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
+  private def transactionGroupKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
+    s"transactionGroup___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
 
   protected def temporaryIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
   private def patternFor(tracingId: String, transactionId: String) =
-    s"transactionBatch___${tracingId}___${transactionId}___*"
+    s"transactionGroup___${tracingId}___${transactionId}___*"
 
   def saveUncommitted(tracingId: String,
                       transactionId: String,
@@ -78,12 +79,12 @@ trait TracingService[T <: GeneratedMessage]
     for {
       _ <- Fox.runIf(transactionGroupIndex > 0)(
         Fox.assertTrue(
-          uncommittedUpdatesStore.contains(transactionBatchKey(
+          uncommittedUpdatesStore.contains(transactionGroupKey(
             tracingId,
             transactionId,
             transactionGroupIndex - 1,
             version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
-      _ <- uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionId, transactionGroupIndex, version),
+      _ <- uncommittedUpdatesStore.insert(transactionGroupKey(tracingId, transactionId, transactionGroupIndex, version),
                                           Json.toJson(updateGroup).toString(),
                                           Some(expiry))
     } yield ()
@@ -177,7 +178,7 @@ trait TracingService[T <: GeneratedMessage]
                                   transactionGroupIndex: Int): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version, transactionGroupIndex))
 
-  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): T
+  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): Box[T]
 
   def remapTooLargeTreeIds(tracing: T): T = tracing
 

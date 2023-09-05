@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -184,7 +185,7 @@ trait TracingService[T <: GeneratedMessage]
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
-  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): T
+  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): Box[T]
 
   def remapTooLargeTreeIds(tracing: T): T = tracing
 

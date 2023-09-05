@@ -35,6 +35,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def toList: List[Int] = List(x, y, z)
 
+  def toArray: Array[Int] = toList.toArray
+
   def toVec3Float: Vec3Float = Vec3Float(x.toFloat, y.toFloat, z.toFloat)
 
   def toVec3Double: Vec3Double = Vec3Double(x.toDouble, y.toDouble, z.toDouble)

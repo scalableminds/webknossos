@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...HEAD)
 
 ### Postgres Evolutions:
+- [108-additional-coordinates](conf/evolutions/108-additional-coordinates.sql)
+

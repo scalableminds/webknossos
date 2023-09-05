@@ -20,7 +20,7 @@ type Entry = [Key, Value];
       requestedMagIdxAndLayerIdxAndBucketAddress
    ]
    From the above definition, the following limits follow:
-   - [x, y, z] is constraint to be smaller than ~4.29 billion
+   - x, y and z are constrained to be smaller than ~4.29 billion each
    - 32 different mags are supported per layer
    - 64 layers are supported
    - ~2 million different bucket can be addressed on the GPU.

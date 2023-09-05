@@ -21,11 +21,13 @@ export const tracing: ServerVolumeTracing = {
     y: 4282,
     z: 2496,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 0,
     y: 0,
     z: 0,
   },
+  additionalAxes: [],
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,

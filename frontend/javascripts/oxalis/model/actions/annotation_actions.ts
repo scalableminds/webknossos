@@ -17,6 +17,7 @@ import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
 import { Dispatch } from "redux";
 import Deferred from "libs/async/deferred";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
@@ -43,7 +44,6 @@ export type StartedLoadingIsosurfaceAction = ReturnType<typeof startedLoadingIso
 export type FinishedLoadingIsosurfaceAction = ReturnType<typeof finishedLoadingIsosurfaceAction>;
 export type UpdateMeshFileListAction = ReturnType<typeof updateMeshFileListAction>;
 export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFileAction>;
-export type ImportIsosurfaceFromSTLAction = ReturnType<typeof importIsosurfaceFromSTLAction>;
 export type RemoveIsosurfaceAction = ReturnType<typeof removeIsosurfaceAction>;
 export type AddAdHocIsosurfaceAction = ReturnType<typeof addAdHocIsosurfaceAction>;
 export type AddPrecomputedIsosurfaceAction = ReturnType<typeof addPrecomputedIsosurfaceAction>;
@@ -74,7 +74,6 @@ export type AnnotationActionTypes =
   | FinishedLoadingIsosurfaceAction
   | UpdateMeshFileListAction
   | UpdateCurrentMeshFileAction
-  | ImportIsosurfaceFromSTLAction
   | RemoveIsosurfaceAction
   | AddAdHocIsosurfaceAction
   | AddPrecomputedIsosurfaceAction
@@ -275,13 +274,6 @@ export const updateCurrentMeshFileAction = (
     meshFileName,
   } as const);
 
-export const importIsosurfaceFromSTLAction = (layerName: string, buffer: ArrayBuffer) =>
-  ({
-    type: "IMPORT_ISOSURFACE_FROM_STL",
-    layerName,
-    buffer,
-  } as const);
-
 export const removeIsosurfaceAction = (layerName: string, segmentId: number) =>
   ({
     type: "REMOVE_ISOSURFACE",
@@ -293,6 +285,7 @@ export const addAdHocIsosurfaceAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
 ) =>
@@ -301,6 +294,7 @@ export const addAdHocIsosurfaceAction = (
     layerName,
     segmentId,
     seedPosition,
+    seedAdditionalCoordinates,
     mappingName,
     mappingType,
   } as const);
@@ -309,6 +303,7 @@ export const addPrecomputedIsosurfaceAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   meshFileName: string,
 ) =>
   ({
@@ -316,6 +311,7 @@ export const addPrecomputedIsosurfaceAction = (
     layerName,
     segmentId,
     seedPosition,
+    seedAdditionalCoordinates,
     meshFileName,
   } as const);
 

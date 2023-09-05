@@ -360,7 +360,10 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     const position = getPosition(Store.getState().flycam);
     const rotation = getRotation(Store.getState().flycam);
-    Store.dispatch(createNodeAction(position, rotation, constants.ARBITRARY_VIEW, 0));
+    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+    Store.dispatch(
+      createNodeAction(position, additionalCoordinates, rotation, constants.ARBITRARY_VIEW, 0),
+    );
   }
 
   changeMoveValue(delta: number): void {

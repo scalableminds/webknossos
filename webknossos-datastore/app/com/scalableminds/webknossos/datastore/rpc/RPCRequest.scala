@@ -54,6 +54,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
+  def silentIf(condition: Boolean): RPCRequest = {
+    if (condition) {
+      verbose = false
+    }
+    this
+  }
+
   def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
     valueOptional match {
       case Some(value: String) => request = request.addQueryStringParameters((key, value))

@@ -3,6 +3,7 @@ import { ContourModeEnum } from "oxalis/constants";
 import type {
   EditableMapping,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   VolumeTracing,
@@ -14,6 +15,7 @@ import type {
   RemoveSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
@@ -177,6 +179,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
+      someAdditionalCoordinates: [],
       ...oldSegment,
       ...segment,
       somePosition,
@@ -205,8 +208,9 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
           somePosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
+          someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-        },
+        } as Segment,
       ]),
     ),
     segmentGroups: tracing.segmentGroups || [],
@@ -223,6 +227,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
+    additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
   return volumeTracing;
 }

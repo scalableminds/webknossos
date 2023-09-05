@@ -14,6 +14,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 22,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -60,6 +61,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 32,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -79,6 +81,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 106,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -141,11 +144,13 @@ export const tracing: ServerSkeletonTracing = {
     y: 32,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 79.99999570976581,
     y: 73.99999869555745,
     z: 4.908922051072295e-7,
   },
+  additionalAxes: [],
   zoomLevel: 2,
   version: 7,
 };

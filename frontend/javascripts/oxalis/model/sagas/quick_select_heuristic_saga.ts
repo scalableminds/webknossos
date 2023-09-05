@@ -186,6 +186,8 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+
   const boundingBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
@@ -210,6 +212,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     colorLayer.name,
     boundingBoxMag1,
     labeledZoomStep,
+    additionalCoordinates,
   );
   const size = boundingBoxTarget.getSize();
   const stride = [1, size[0], size[0] * size[1]];

@@ -98,16 +98,17 @@ class VolumeTracingController @Inject()(
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
-          val tracings: List[Option[VolumeTracing]] = request.body
-          val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings.flatten)
-          val mergedTracing =
-            tracingService
-              .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty)
-              // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
-              .copy(segments = List.empty)
-          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-            Ok(Json.toJson(newId))
-          }
+          for {
+            _ <- Fox.successful(())
+            tracings = request.body
+            shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings.flatten)
+            mt <- tracingService.merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty).toFox
+
+            // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
+            mergedTracing = mt.copy(segments = List.empty)
+
+            newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
+          } yield Ok(Json.toJson(newId))
         }
       }
     }

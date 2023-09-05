@@ -56,6 +56,7 @@ test.serial(
           UpdateActions.updateSkeletonTracing(
             Store.getState().tracing.skeleton,
             [1, 2, 3],
+            [],
             [0, 0, 0],
             2,
           ),

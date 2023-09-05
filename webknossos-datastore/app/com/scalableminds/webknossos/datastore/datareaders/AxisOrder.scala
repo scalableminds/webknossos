@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import play.api.libs.json.{Json, OFormat}
 
-case class AxisOrder(x: Int, y: Int, z: Int, c: Option[Int] = None, t: Option[Int] = None) {
+case class AxisOrder(x: Int, y: Int, z: Int, c: Option[Int] = None) {
   def permutation(rank: Int): Array[Int] =
     c match {
       case Some(channel) =>

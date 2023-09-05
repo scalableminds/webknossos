@@ -246,6 +246,13 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  if (additionalCoordinates && additionalCoordinates.length > 0) {
+    Toast.warning(
+      `Quick select with AI might produce unexpected results for ${
+        3 + additionalCoordinates.length
+      }D datasets.`,
+    );
+  }
 
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {

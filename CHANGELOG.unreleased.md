@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
 
 ### Changed
+- Adapted Zarr 3 implementations to recent changes in the specification (index codecs). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
 
 ### Fixed
 

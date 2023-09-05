@@ -143,6 +143,8 @@ object ElementClass extends ExtendedEnumeration {
 object LayerViewConfiguration {
   type LayerViewConfiguration = Map[String, JsValue]
 
+  def empty: LayerViewConfiguration = Map()
+
   implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 

@@ -14,8 +14,8 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
               additionalAxes: Option[Seq[AdditionalAxis]] = None): String =
       buildBucketKey(dataLayerName, bucket, additionalAxes)
 
-    def parse(key: String, additionalCoordinates: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
-      parseBucketKey(key, additionalCoordinates)
+    def parse(key: String, additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
+      parseBucketKey(key, additionalAxes)
   }
   val bucketKeyBuilder = new BucketKeyBuilder
 

@@ -9,7 +9,7 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
-import { parseAsMaybe } from "libs/utils";
+import { parseMaybe } from "libs/utils";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
@@ -197,7 +197,7 @@ export async function requestFromStore(
           showErrorToast: false,
         });
       const endTime = window.performance.now();
-      const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+      const missingBuckets = (parseMaybe(headers["missing-buckets"]) || []) as number[];
       const receivedBucketsCount = batch.length - missingBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
       getGlobalDataConnectionInfo().log(

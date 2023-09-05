@@ -13,6 +13,7 @@ import org.apache.commons.compress.compressors.gzip.{
   GzipCompressorOutputStream,
   GzipParameters
 }
+import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
@@ -337,6 +338,30 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
     }
 
   override def compress(input: Array[Byte]): Array[Byte] = ???
+}
+
+class ZstdCompressor(level: Int, checksum: Boolean) extends Compressor {
+  override def getId: String = "zstd"
+
+  override def toString: String = s"compressor=$getId/level=$level/checksum=$checksum"
+
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
+    val zstd = new ZstdCompressorOutputStream(os, level, true, checksum)
+    try passThrough(is, zstd)
+    finally if (zstd != null) zstd.close()
+    os.toByteArray
+  }
+
+  override def decompress(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
+    val zstd = new ZstdCompressorInputStream(is)
+    try passThrough(zstd, os)
+    finally if (zstd != null) zstd.close()
+    os.toByteArray
+  }
 }
 
 class ChainedCompressor(compressors: Seq[Compressor]) extends Compressor {

@@ -128,10 +128,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     } yield {
       multiscale.axes.zipWithIndex.flatMap(axisAndIndex =>
         if (!defaultAxes.contains(axisAndIndex._1.name)) {
-          Some(
-            AdditionalAxis(name = axisAndIndex._1.name,
-                           bounds = Array(0, shape(axisAndIndex._2) - 1),
-                           index = axisAndIndex._2))
+          createAdditionalAxis(axisAndIndex._1.name,axisAndIndex._2, Array(0, shape(axisAndIndex._2) - 1))
         } else {
           None
       })

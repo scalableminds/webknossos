@@ -1,7 +1,6 @@
 package models.binary.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
-import com.scalableminds.util.tools.ExtendedTypes.When
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator

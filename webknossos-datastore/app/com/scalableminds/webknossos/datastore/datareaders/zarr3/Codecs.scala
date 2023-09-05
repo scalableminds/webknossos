@@ -107,7 +107,7 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
-class Crc32Codec extends BytesToBytesCodec with ByteUtils with LazyLogging {
+class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/v1.0.html
 
@@ -178,15 +178,15 @@ object GzipCodecConfiguration {
   val name = "gzip"
 }
 
-case object Crc32CodecConfiguration extends CodecConfiguration {
+case object Crc32CCodecConfiguration extends CodecConfiguration {
   val name = "crc32c"
 
-  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CodecConfiguration.type] {
-    override def reads(json: JsValue): JsResult[Crc32CodecConfiguration.type] = JsSuccess(Crc32CodecConfiguration)
+  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
+    override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
   }
 
-  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CodecConfiguration.type] {
-    override def writes(o: Crc32CodecConfiguration.type): JsValue = JsObject(Seq())
+  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
+    override def writes(o: Crc32CCodecConfiguration.type): JsValue = JsObject(Seq())
   }
 }
 

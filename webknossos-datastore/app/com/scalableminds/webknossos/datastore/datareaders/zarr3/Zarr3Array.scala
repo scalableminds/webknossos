@@ -57,7 +57,7 @@ class Zarr3Array(vaultPath: VaultPath,
       case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
       case GzipCodecConfiguration(level) => new GzipCodec(level)
-      case Crc32CodecConfiguration       => new Crc32Codec
+      case Crc32CCodecConfiguration       => new Crc32CCodec
       case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs) =>
         new ShardingCodec(chunk_shape, codecs, index_codecs)
     }

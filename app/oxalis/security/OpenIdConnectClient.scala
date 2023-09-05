@@ -2,6 +2,7 @@ package oxalis.security
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OFormat}
 import pdi.jwt.JwtJson
 import play.api.libs.ws._
@@ -16,7 +17,9 @@ import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext) extends FoxImplicits {
+class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   private val keyTypeRsa = "RSA"
 
@@ -25,7 +28,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       conf.SingleSignOn.OpenIdConnect.providerUrl,
       conf.SingleSignOn.OpenIdConnect.clientId,
       if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
-      else None
+      else None,
+      conf.SingleSignOn.OpenIdConnect.scope,
     )
 
   /*
@@ -50,43 +54,56 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
   /*
   Fetches token from the oidc provider (https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest),
   fields described by https://www.rfc-editor.org/rfc/rfc6749#section-4.4.2
+  Note that some providers will also reply with an id token next to the auth token, which is also returned as an option.
    */
-  def getAndValidateToken(redirectUrl: String, code: String): Fox[JsObject] =
+  def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
       _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
       _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .withBasicAuthOpt(Some(oidcConfig.clientId), oidcConfig.clientSecret)
         .postFormParseJson[OpenIdConnectTokenResponse](
           Map(
             "grant_type" -> "authorization_code",
             "client_id" -> oidcConfig.clientId,
             "redirect_uri" -> redirectUrl,
-            "code" -> code
+            "code" -> code,
+            "scope" -> oidcConfig.scope
           ))
-      newToken <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
-    } yield newToken
+      _ = logDebug(
+        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding...")
+      (accessToken, idToken) <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
+      _ = logDebug(s"Got id token $idToken and access token $accessToken.")
+    } yield (accessToken, idToken)
 
   /*
   Discover endpoints of the provider (https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
    */
   private def discover: Fox[OpenIdConnectProviderInfo] =
     for {
-      response: WSResponse <- rpc(oidcConfig.discoveryUrl).get
+      response: WSResponse <- rpc(oidcConfig.discoveryUrl)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
+        .get
       serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
     } yield serverInfo
 
-  private def validateOpenIdConnectTokenResponse(tokenResponse: OpenIdConnectTokenResponse,
-                                                 serverInfos: OpenIdConnectProviderInfo): Fox[JsObject] =
+  private def validateOpenIdConnectTokenResponse(
+      tokenResponse: OpenIdConnectTokenResponse,
+      serverInfos: OpenIdConnectProviderInfo): Fox[(JsObject, Option[JsObject])] =
     for {
       publicKey <- fetchServerPublicKey(serverInfos)
-      decodedResponse <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
-    } yield decodedResponse
+      decdoedAccessToken <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
+      decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(idToken =>
+        JwtJson.decodeJson(idToken, publicKey).toFox)
+    } yield (decdoedAccessToken, decodedIdToken)
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =
     for {
-      response: WSResponse <- rpc(serverInfos.jwks_uri).get
+      response: WSResponse <- rpc(serverInfos.jwks_uri)
+        .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
+        .get
       jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
       firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
         key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
@@ -98,12 +115,16 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       publicKey = KeyFactory.getInstance(keyTypeRsa).generatePublic(publicKeySpec)
     } yield publicKey
 
+  private def logDebug(message: String): Unit = if (conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled) {
+    logger.info(message)
+  }
 }
 
 // Fields as specified by https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 case class OpenIdConnectProviderInfo(
     authorization_endpoint: String,
     token_endpoint: String,
+    userinfo_endpoint: String,
     jwks_uri: String
 )
 
@@ -115,7 +136,7 @@ case class OpenIdConnectConfig(
     baseUrl: String,
     clientId: String,
     clientSecret: Option[String],
-    scope: String = "openid profile"
+    scope: String
 ) {
 
   lazy val discoveryUrl: String = baseUrl + ".well-known/openid-configuration"
@@ -127,6 +148,7 @@ case class OpenIdConnectConfig(
 // Fields as specified by https://www.rfc-editor.org/rfc/rfc6749#section-5.1
 case class OpenIdConnectTokenResponse(
     access_token: String,
+    id_token: Option[String],
     token_type: String,
     refresh_token: Option[String],
     scope: Option[String]
@@ -136,18 +158,10 @@ object OpenIdConnectTokenResponse {
   implicit val format: OFormat[OpenIdConnectTokenResponse] = Json.format[OpenIdConnectTokenResponse]
 }
 
-// Claims from https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-case class OpenIdConnectClaimSet(iss: String,
-                                 sub: String,
-                                 preferred_username: String,
-                                 given_name: String,
-                                 family_name: String,
-                                 email: String) {
-  def username: String = preferred_username
-}
-
-object OpenIdConnectClaimSet {
-  implicit val jsonFormat: OFormat[OpenIdConnectClaimSet] = Json.format[OpenIdConnectClaimSet]
+// Claims as specified by https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+case class OpenIdConnectUserInfo(given_name: String, family_name: String, email: String)
+object OpenIdConnectUserInfo {
+  implicit val format: OFormat[OpenIdConnectUserInfo] = Json.format[OpenIdConnectUserInfo]
 }
 
 case class JsonWebKeySet(keys: Seq[JsonWebKey])

@@ -104,6 +104,12 @@ case class BucketPosition(
     case None         => ""
   }
 
+  def hasAdditionalCoordinates: Boolean =
+    additionalCoordinates match {
+      case Some(value) => value.nonEmpty
+      case None        => false
+    }
+
   override def toString: String =
     s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag$additionalCoordinateString)"
 }

@@ -8,7 +8,6 @@ import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.JsonHelper.validateJsValue
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
@@ -387,7 +386,7 @@ class AuthenticationController @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim).futureBox.flatMap {
           case Full(user) =>
             for {
-              - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
+              _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
               _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(
                 GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
@@ -414,7 +413,7 @@ class AuthenticationController @Inject()(
                   Future.successful(NotFound(Messages("error.noUser")))
                 case Some(user) =>
                   for {
-                    - <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
+                    _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                     _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                     _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
                     userEmail <- userService.emailFor(user)
@@ -486,7 +485,7 @@ class AuthenticationController @Inject()(
     }
   }
 
-  lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
+  private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
@@ -508,9 +507,10 @@ class AuthenticationController @Inject()(
     }
 
   // Is called after user was successfully authenticated
-  private def loginOrSignupViaOidc(oidc: OpenIdConnectClaimSet): Request[AnyContent] => Future[Result] = {
+  private def loginOrSignupViaOidc(
+      openIdConnectUserInfo: OpenIdConnectUserInfo): Request[AnyContent] => Future[Result] = {
     implicit request: Request[AnyContent] =>
-      userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).futureBox.flatMap {
+      userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(GlobalAccessContext).futureBox.flatMap {
         case Full(user) =>
           val loginInfo = LoginInfo("credentials", user._id.toString)
           loginUser(loginInfo)
@@ -518,13 +518,15 @@ class AuthenticationController @Inject()(
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
               GlobalAccessContext)
-            user <- createUser(organization,
-                               oidc.email,
-                               oidc.given_name,
-                               oidc.family_name,
-                               autoActivate = true,
-                               None,
-                               isEmailVerified = true) // Assuming email verification was done by OIDC provider
+            user <- createUser(
+              organization,
+              openIdConnectUserInfo.email,
+              openIdConnectUserInfo.given_name,
+              openIdConnectUserInfo.family_name,
+              autoActivate = true,
+              None,
+              isEmailVerified = true
+            ) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
             loginResult <- loginUser(loginInfo)
@@ -535,13 +537,19 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      code <- openIdConnectClient.getAndValidateToken(
+      (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
-      oidc: OpenIdConnectClaimSet <- validateJsValue[OpenIdConnectClaimSet](code) ?~> "oidc.parseClaimset.failed" ?~> "oidc.authentication.failed"
-      user_result <- loginOrSignupViaOidc(oidc)(request)
-    } yield user_result
+      userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
+      userResult <- loginOrSignupViaOidc(userInfoFromTokens)(request)
+    } yield userResult
+  }
+
+  private def extractUserInfoFromTokenResponses(accessToken: JsObject,
+                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] = {
+    val jsObjectToUse = idTokenOpt.getOrElse(accessToken)
+    jsObjectToUse.validate[OpenIdConnectUserInfo] ?~> "Failed to extract user info from id token or access token"
   }
 
   private def shaHex(key: String, valueToDigest: String): String =

@@ -47,6 +47,10 @@ package object datasource {
       case layer: SegmentationLayer => Some(layer)
       case _                        => None
     }
+
+    def additionalAxesUnion: Option[Seq[AdditionalAxis]] =
+      AdditionalAxis.merge(dataLayers.map(_.additionalAxes))
+
   }
 
   object GenericDataSource {

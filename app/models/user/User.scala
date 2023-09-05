@@ -127,6 +127,52 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def buildSelectionPredicates(isEditableOpt: Option[Boolean],
+                               isTeamManagerOrAdminOpt: Option[Boolean],
+                               isAdminOpt: Option[Boolean],
+                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      editablePredicate = isEditableOpt match {
+        case Some(isEditable) =>
+          val usersInTeamsManagedByRequestingUser =
+            q"(SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id}  AND isTeamManager)))"
+          if (isEditable) {
+            q"(_id IN $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization})"
+          } else {
+            q"(_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization}))"
+          }
+        case None => q"${true}"
+      }
+      isTeamManagerOrAdminPredicate = isTeamManagerOrAdminOpt match {
+        case Some(isTeamManagerOrAdmin) =>
+          val teamManagers = q"(SELECT _user FROM webknossos.user_team_roles WHERE isTeamManager)"
+          if (isTeamManagerOrAdmin) {
+            q"_id IN $teamManagers OR isAdmin"
+          } else {
+            q"_id NOT IN $teamManagers AND NOT isAdmin"
+          }
+        case None => q"${true}"
+      }
+      adminPredicate = isAdminOpt.map(isAdmin => q"isAdmin = $isAdmin").getOrElse(q"${true}")
+    } yield q"""
+        ($editablePredicate) AND
+        ($isTeamManagerOrAdminPredicate) AND
+        ($adminPredicate) AND
+        $accessQuery
+       """
+
+  def findAllWithFilters(isEditable: Option[Boolean],
+                         isTeamManagerOrAdmin: Option[Boolean],
+                         isAdmin: Option[Boolean],
+                         requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+
+      selectionPredicates <- buildSelectionPredicates(isEditable, isTeamManagerOrAdmin, isAdmin, requestingUser)
+      r <- run(q"select $columns from $existingCollectionName where $selectionPredicates".as[UsersRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teamIds.isEmpty) Fox.successful(List())
     else

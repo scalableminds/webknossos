@@ -14,8 +14,6 @@ import models.task.TaskTypeDAO
 import models.user.User
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
-import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
@@ -215,12 +213,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataSet_allowedTeams(_dataSet, _team)
              VALUES($datasetId, $teamId)""".asUpdate)
 
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for {
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
-    } yield ()
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
   def updateAllowedTeamsForFolder(folderId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
@@ -228,12 +221,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.folder_allowedTeams(_folder, _team)
              VALUES($folderId, $teamId)""".asUpdate)
 
-    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for {
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
-    } yield ()
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
   def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =

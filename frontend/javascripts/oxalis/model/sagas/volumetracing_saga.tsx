@@ -216,12 +216,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
       );
       continue;
     }
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
     yield* put(
       updateSegmentAction(
         activeCellId,
         {
           somePosition: startEditingAction.position,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -320,6 +322,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         activeCellId,
         {
           somePosition: lastPosition,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -385,7 +388,13 @@ export function* floodFill(): Saga<void> {
     );
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+    const oldSegmentIdAtSeed = cube.getDataValue(
+      seedPosition,
+      additionalCoordinates,
+      null,
+      labeledZoomStep,
+    );
 
     if (activeCellId === oldSegmentIdAtSeed) {
       Toast.warning("The clicked voxel's id is already equal to the active segment id.");
@@ -411,6 +420,7 @@ export function* floodFill(): Saga<void> {
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
       wasBoundingBoxExceeded,
@@ -418,6 +428,7 @@ export function* floodFill(): Saga<void> {
     } = yield* call(
       { context: cube, fn: cube.floodFill },
       seedPosition,
+      additionalCoordinates,
       activeCellId,
       dimensionIndices,
       boundingBoxForFloodFill,
@@ -466,6 +477,7 @@ export function* floodFill(): Saga<void> {
         volumeTracing.activeCellId,
         {
           somePosition: seedPosition,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -604,6 +616,7 @@ function* uncachedDiffSegmentLists(
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
+        segment.someAdditionalCoordinates,
         segment.name,
         segment.color,
         segment.groupId,
@@ -622,6 +635,7 @@ export function* diffVolumeTracing(
     yield updateVolumeTracing(
       volumeTracing,
       V3.floor(getPosition(flycam)),
+      flycam.additionalCoordinates,
       getRotation(flycam),
       flycam.zoomStep,
     );
@@ -678,12 +692,13 @@ function* ensureSegmentExists(
   }
 
   if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
-    const { seedPosition } = action;
+    const { seedPosition, seedAdditionalCoordinates } = action;
     yield* put(
       updateSegmentAction(
         segmentId,
         {
           somePosition: seedPosition,
+          someAdditionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -693,7 +708,7 @@ function* ensureSegmentExists(
     // This way the most up-to-date position of a cell is used to jump to when a
     // segment is selected in the segment list. Also, the position of the active
     // cell is used in the proofreading mode.
-    const { somePosition } = action;
+    const { somePosition, someAdditionalCoordinates } = action;
 
     if (somePosition == null) {
       // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
@@ -710,6 +725,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           somePosition,
+          someAdditionalCoordinates: someAdditionalCoordinates,
         },
         layerName,
         undefined,

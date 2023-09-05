@@ -58,7 +58,8 @@ trait WKWDataFormatHelper {
           BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
                          y.toInt * mag.y * DataLayer.bucketLength,
                          z.toInt * mag.z * DataLayer.bucketLength,
-                         mag)
+                         mag,
+                         None)
         }
       case _ =>
         None

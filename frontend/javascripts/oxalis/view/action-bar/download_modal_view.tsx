@@ -2,7 +2,7 @@ import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Al
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { APIDataLayer, APIDataset } from "types/api_flow_types";
+import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
@@ -61,6 +61,7 @@ type ExportLayerInfos = {
   layerName: string | null;
   tracingId: string | null;
   annotationId: string | null;
+  additionalAxes?: AdditionalAxis[] | null;
 };
 
 enum ExportFormat {
@@ -85,6 +86,7 @@ function getExportLayerInfos(
       layerName: layer.name,
       tracingId: null,
       annotationId: null,
+      additionalAxes: layer.additionalAxes,
     };
   }
 
@@ -102,6 +104,7 @@ function getExportLayerInfos(
     layerName: layer.fallbackLayerInfo?.name ?? null,
     tracingId: volumeTracing.tracingId,
     annotationId,
+    additionalAxes: layer.additionalAxes,
   };
 }
 
@@ -325,10 +328,14 @@ function _DownloadModalView({
         tracing.annotationType,
         hasVolumeFallback,
         {},
-        includeVolumeData,
+        includeVolumeData && !isVolumeNDimensional,
       );
       onClose();
     } else if (activeTabKey === "export" && startJob != null) {
+      if ((selectedLayerInfos.additionalAxes || []).length > 0) {
+        Toast.warning("Exporting an n-dimensional layer is currently not supported.");
+        return;
+      }
       await Model.ensureSavedState();
       await startJob(async () => {
         const job = await startExportTiffJob(
@@ -351,9 +358,9 @@ function _DownloadModalView({
   };
 
   const maybeShowWarning = () => {
-    if (activeTabKey === "download" && hasVolumeFallback) {
-      return (
-        <Row>
+    const volumeFallbackWarning =
+      activeTabKey === "download" && hasVolumeFallback ? (
+        <Row key="no-fallback">
           <Text
             style={{
               margin: "0 6px 12px",
@@ -363,10 +370,22 @@ function _DownloadModalView({
             {messages["annotation.no_fallback_data_included"]}
           </Text>
         </Row>
-      );
-    } else if (activeTabKey === "python") {
-      return (
-        <Row>
+      ) : null;
+    const ndVolumeWarning = isVolumeNDimensional ? (
+      <Row key="unsupported-nd">
+        <Text
+          style={{
+            margin: "0 6px 12px",
+          }}
+          type="warning"
+        >
+          Downloading/exporting n-dimensional volume data is not yet supported.
+        </Text>
+      </Row>
+    ) : null;
+    const pythonTokenWarning =
+      activeTabKey === "python" ? (
+        <Row key="python-token-warning">
           <Text
             style={{
               margin: "0 6px 12px",
@@ -378,9 +397,9 @@ function _DownloadModalView({
               : messages["annotation.register_for_token"]}
           </Text>
         </Row>
-      );
-    }
-    return null;
+      ) : null;
+
+    return [volumeFallbackWarning, ndVolumeWarning, pythonTokenWarning];
   };
 
   const handleTabChange = (key: string) => {
@@ -473,6 +492,9 @@ function _DownloadModalView({
     activeTabKey === "export" &&
     (!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled);
 
+  // Will be false if no volumes exist.
+  const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
+
   return (
     <Modal
       title={`Download this ${typeName}`}
@@ -537,8 +559,8 @@ function _DownloadModalView({
                         style={checkboxStyle}
                         value="Volume"
                         // If no skeleton is available, volume is always selected
-                        checked={!hasSkeleton ? true : includeVolumeData}
-                        disabled={!hasSkeleton}
+                        checked={(!hasSkeleton || includeVolumeData) && !isVolumeNDimensional}
+                        disabled={!hasSkeleton || isVolumeNDimensional}
                       >
                         Volume annotations as WKW
                       </Checkbox>
@@ -577,6 +599,7 @@ function _DownloadModalView({
         ) : null}
         <TabPane tab="TIFF Export" key="export">
           <Row>
+            {maybeShowWarning()}
             <Text
               style={{
                 margin: "0 6px 12px",

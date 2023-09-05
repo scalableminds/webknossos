@@ -1,7 +1,9 @@
 // This file is only for documentation:
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
+
 // Please note that some manual changes to the schema are required.
+type Vector2 = [number, number];
 type Vector3 = [number, number, number];
 type BoundingBox = {
   topLeft: Vector3;
@@ -26,6 +28,11 @@ type BaseRemoteLayer = {
     mag: Vector3;
     path: string;
     axisOrder: Record<AxisKey, number>;
+  }>;
+  additionalCoordinates?: Array<{
+    name: string;
+    index: number;
+    bounds: Vector2;
   }>;
 };
 type DataLayerZarrPartial = BaseRemoteLayer & {

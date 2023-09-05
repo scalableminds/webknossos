@@ -1,9 +1,12 @@
 import type { Vector3, OrthoView } from "oxalis/constants";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 type ZoomInAction = ReturnType<typeof zoomInAction>;
 type ZoomOutAction = ReturnType<typeof zoomOutAction>;
 type ZoomByDeltaAction = ReturnType<typeof zoomByDeltaAction>;
 type SetZoomStepAction = ReturnType<typeof setZoomStepAction>;
 type SetPositionAction = ReturnType<typeof setPositionAction>;
+type SetAdditionalCoordinatesAction = ReturnType<typeof setAdditionalCoordinatesAction>;
 type SetRotationAction = ReturnType<typeof setRotationAction>;
 type SetDirectionAction = ReturnType<typeof setDirectionAction>;
 type MoveFlycamOrthoAction = ReturnType<typeof moveFlycamOrthoAction>;
@@ -20,6 +23,7 @@ export type FlycamAction =
   | ZoomByDeltaAction
   | SetZoomStepAction
   | SetPositionAction
+  | SetAdditionalCoordinatesAction
   | SetRotationAction
   | SetDirectionAction
   | MoveFlycamAction
@@ -45,6 +49,7 @@ export const FlycamActions = [
   "ROLL_FLYCAM",
   "PITCH_FLYCAM",
   "ROTATE_FLYCAM",
+  "SET_ADDITIONAL_COORDINATES",
 ];
 export const zoomInAction = () =>
   ({
@@ -73,6 +78,12 @@ export const setPositionAction = (position: Vector3, dimensionToSkip?: number | 
     type: "SET_POSITION",
     position,
     dimensionToSkip,
+  } as const);
+
+export const setAdditionalCoordinatesAction = (values: AdditionalCoordinate[] | null) =>
+  ({
+    type: "SET_ADDITIONAL_COORDINATES",
+    values,
   } as const);
 
 export const setRotationAction = (rotation: Vector3) =>

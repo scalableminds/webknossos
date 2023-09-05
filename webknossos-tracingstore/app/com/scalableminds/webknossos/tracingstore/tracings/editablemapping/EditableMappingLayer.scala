@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
   CoordinateTransformation,
   DataFormat,
   DataLayer,
@@ -46,7 +47,8 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
         fourBit = None,
         applyAgglomerate = None,
-        version = None
+        version = None,
+        additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
       (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),
@@ -93,4 +95,6 @@ case class EditableMappingLayer(name: String,
   override def defaultViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
+
+  override def additionalAxes: Option[Seq[AdditionalAxis]] = None
 }

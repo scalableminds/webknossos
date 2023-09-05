@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
+
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -56,16 +57,20 @@ class Zarr3Array(vaultPath: VaultPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
     s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
 
-  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec]) = initializeCodecs(header.codecs)
+  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) = initializeCodecs(
+    header.codecs)
 
-  private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec]) = {
+  private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
       case EndianCodecConfiguration(endian)   => new EndianCodec(endian)
       case TransposeCodecConfiguration(order) => new TransposeCodec(order)
       case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
-      case GzipCodecConfiguration(level)                   => new GzipCodec(level)
-      case ShardingCodecConfiguration(chunk_shape, codecs) => new ShardingCodec(chunk_shape, codecs)
+      case GzipCodecConfiguration(level)           => new GzipCodec(level)
+      case ZstdCodecConfiguration(level, checksum) => new ZstdCodec(level, checksum)
+      case Crc32CCodecConfiguration                => new Crc32CCodec
+      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs) =>
+        new ShardingCodec(chunk_shape, codecs, index_codecs)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {
       case codec: ShardingCodec => Some(codec)
@@ -74,8 +79,10 @@ class Zarr3Array(vaultPath: VaultPath,
 
     shardingCodecOpt match {
       case Some(shardingCodec: ShardingCodec) =>
-        (Some(shardingCodec), initializeCodecs(shardingCodec.codecs)._2)
-      case None => (None, outerCodecs)
+        (Some(shardingCodec),
+         initializeCodecs(shardingCodec.codecs)._2,
+         initializeCodecs(shardingCodec.index_codecs)._2)
+      case None => (None, outerCodecs, Seq())
     }
   }
 
@@ -111,9 +118,16 @@ class Zarr3Array(vaultPath: VaultPath,
     shardPath.readLastBytes(getShardIndexSize)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
-    val _ = index.takeRight(4) // checksum: not checked for now
-    val indexProper = index.dropRight(4)
-    indexProper
+    val decodedIndex = shardingCodec match {
+      case Some(shardingCodec: ShardingCodec) =>
+        indexCodecs.foldRight(index)((c, bytes) =>
+          c match {
+            case codec: BytesToBytesCodec => codec.decode(bytes)
+            case _                        => bytes
+        })
+      case None => ???
+    }
+    decodedIndex
       .grouped(shardIndexEntryLength)
       .map((bytes: Array[Byte]) => {
         // BigInt constructor is big endian, sharding index stores values little endian, thus reverse is used.

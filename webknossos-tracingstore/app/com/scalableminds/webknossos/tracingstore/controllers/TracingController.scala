@@ -154,7 +154,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       previousCommittedVersion: Long <- previousVersionFox
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount == updateGroup.transactionGroupIndex + 1) {
-          commitPending(tracingId, updateGroup, userToken)
+          // Received the last group of this transaction
+          commitWithPending(tracingId, updateGroup, userToken)
         } else {
           tracingService
             .saveUncommitted(tracingId,
@@ -176,15 +177,18 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     } yield result
 
-  private def commitPending(tracingId: String,
-                            updateGroup: UpdateActionGroup[T],
-                            userToken: Option[String]): Fox[Long] =
+  // For an update group (that is the last of a transaction), fetch all previous uncommitted for the same transaction
+  // and commit them all.
+  private def commitWithPending(tracingId: String,
+                                updateGroup: UpdateActionGroup[T],
+                                userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
 
+  // Perform version check and commit the passed updates
   private def commitUpdates(tracingId: String,
                             updateGroups: List[UpdateActionGroup[T]],
                             userToken: Option[String]): Fox[Long] = {
@@ -217,6 +221,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
+  /* If this update group has already been “handled” (successfully saved as either committed or uncommitted),
+   * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful
+   * despite the backend receiving it just fine.
+   */
   private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup[T],
                                        tracingId: String,
                                        previousVersion: Long): Fox[Long] = {

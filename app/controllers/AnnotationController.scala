@@ -54,7 +54,7 @@ class AnnotationController @Inject()(
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
-    dataSetDAO: DatasetDAO,
+    datasetDAO: DatasetDAO,
     dataSetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
@@ -267,7 +267,7 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
@@ -292,7 +292,7 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
           "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
@@ -592,7 +592,7 @@ class AnnotationController @Inject()(
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataset.notImported", dataSet.name)
       dataSource <- if (annotation._task.isDefined)
         dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))

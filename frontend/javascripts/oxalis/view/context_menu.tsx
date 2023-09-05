@@ -1120,8 +1120,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer.fallbackLayer == null;
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
-      if (contextMenuPosition == null) return [];
-      if (visibleSegmentationLayer != null && volumeTracing != null && hasNoFallbackLayer) {
+      if (contextMenuPosition == null || volumeTracing == null || !hasNoFallbackLayer) {
+        return [];
+      } else {
         const tracingId = volumeTracing.tracingId;
         const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
         const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
@@ -1149,7 +1150,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
     [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoWasFetched],
-  ) as [string, string];
+  ) as [string, string] | [];
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;

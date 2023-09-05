@@ -1029,6 +1029,15 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowSegmentStatistics = (id: number): ItemType => {
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    if (
+      visibleSegmentationLayer == null ||
+      !("fallbackLayer" in visibleSegmentationLayer) ||
+      visibleSegmentationLayer.fallbackLayer != null
+    ) {
+      //in this case there is a fallback layer
+      return null;
+    }
     return {
       key: "segmentStatistics",
       label: (

@@ -139,7 +139,7 @@ class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
     val dataPart = bytes.dropRight(crc32ByteLength)
     val crc = new CRC32C()
     crc.update(dataPart)
-    val valid = longToBytes(crc.getValue + 1).take(crc32ByteLength).sameElements(crcPart)
+    val valid = longToBytes(crc.getValue).take(crc32ByteLength).sameElements(crcPart)
     if (!valid) {
       throw new CRC32CChecksumInvalidException
     }

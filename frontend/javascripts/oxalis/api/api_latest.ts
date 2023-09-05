@@ -124,6 +124,7 @@ import type {
   Vector4,
   AnnotationTool,
   TypedArray,
+  BucketAddress,
 } from "oxalis/constants";
 import Constants, {
   ControlModeEnum,
@@ -161,6 +162,7 @@ import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1406,6 +1408,7 @@ class DataApi {
     layerName: string,
     position: Vector3,
     _zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ): Promise<number> {
     let zoomStep;
 
@@ -1418,10 +1421,11 @@ class DataApi {
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoordinates;
+    const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
     // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(position, null, zoomStep);
+    const dataValue = cube.getDataValue(position, additionalCoordinates, null, zoomStep);
     return dataValue;
   }
 
@@ -1440,7 +1444,7 @@ class DataApi {
     return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
   }
 
-  async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
+  async getLoadedBucket(layerName: string, bucketAddress: BucketAddress): Promise<Bucket> {
     const cube = this.model.getCubeByLayerName(layerName);
     const bucket = await cube.getLoadedBucket(bucketAddress);
     return bucket;
@@ -1466,6 +1470,7 @@ class DataApi {
     layerName: string,
     mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
@@ -1478,7 +1483,12 @@ class DataApi {
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
-    const bucketAddresses = this.getBucketAddressesInCuboid(mag1Bbox, resolutions, zoomStep);
+    const bucketAddresses = this.getBucketAddressesInCuboid(
+      mag1Bbox,
+      resolutions,
+      zoomStep,
+      additionalCoordinates,
+    );
 
     if (bucketAddresses.length > 15000) {
       console.warn(
@@ -1497,6 +1507,7 @@ class DataApi {
     viewport: OrthoView,
     layerName: string,
     maybeResolutionIndex: number | null | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
     const [curU, curV, curW] = dimensions.transDim(
@@ -1540,6 +1551,7 @@ class DataApi {
         max,
       },
       zoomStep,
+      additionalCoordinates,
     );
     return cuboid;
   }
@@ -1548,18 +1560,24 @@ class DataApi {
     bbox: BoundingBoxType,
     resolutions: Array<Vector3>,
     zoomStep: number,
-  ): Array<Vector4> {
+    additionalCoordinates: AdditionalCoordinate[] | null,
+  ): Array<BucketAddress> {
     const buckets = [];
     const bottomRight = bbox.max;
-    const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
+    const minBucket = globalPositionToBucketPosition(
+      bbox.min,
+      resolutions,
+      zoomStep,
+      additionalCoordinates,
+    );
 
-    const topLeft = (bucketAddress: Vector4) =>
+    const topLeft = (bucketAddress: BucketAddress) =>
       bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
 
-    const nextBucketInDim = (bucket: Vector4, dim: 0 | 1 | 2) => {
-      const copy = bucket.slice();
+    const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
+      const copy = bucket.slice() as BucketAddress;
       copy[dim]++;
-      return copy as any as Vector4;
+      return copy;
     };
 
     let bucket = minBucket;
@@ -1727,12 +1745,20 @@ class DataApi {
    * @example // Set the segmentation id for some voxels to 1337
    * await api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  async labelVoxels(voxels: Array<Vector3>, label: number): Promise<void> {
+  async labelVoxels(
+    voxels: Array<Vector3>,
+    label: number,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(
       voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
+          voxel,
+          additionalCoordinates,
+          label,
+        ),
       ),
     );
     segmentationLayer.cube.pushQueue.push();
@@ -1936,6 +1962,7 @@ class DataApi {
     segmentId: number,
     seedPosition: Vector3,
     layerName: string | null | undefined,
+    seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
@@ -1976,7 +2003,13 @@ class DataApi {
     }
 
     Store.dispatch(
-      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+      loadPrecomputedMeshAction(
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        effectiveLayerName,
+      ),
     );
   }
 
@@ -1988,8 +2021,12 @@ class DataApi {
    * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
-  computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition));
+  computeMeshOnDemand(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
   }
 
   /**

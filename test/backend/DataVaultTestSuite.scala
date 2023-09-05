@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.datavault.{
 }
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
-import org.scalatest.{Failed, Outcome, Succeeded}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 

@@ -431,7 +431,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
             autoFallbackLayer = false,
             None,
             request.body.resolutionRestrictions,
-            name = Some(AnnotationLayer.defaultSkeletonLayerName)
+            name = Some(AnnotationLayer.defaultSkeletonLayerName),
+            None
           ))
     val volumeParameters =
       if (request.body.typ == "skeleton") None
@@ -443,7 +444,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
             autoFallbackLayer = false,
             None,
             request.body.resolutionRestrictions,
-            name = Some(AnnotationLayer.defaultVolumeLayerName)
+            name = Some(AnnotationLayer.defaultVolumeLayerName),
+            None
           ))
     List(skeletonParameters, volumeParameters).flatten
   }

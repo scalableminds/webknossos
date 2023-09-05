@@ -27,6 +27,7 @@ import { TreeTypeEnum } from "oxalis/constants";
 import { Action } from "oxalis/model/actions/actions";
 import { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+
 const TIMESTAMP = 1494347146379;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -103,6 +104,7 @@ const skeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
+  additionalAxes: [],
 };
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
@@ -112,11 +114,13 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 0,
     y: 0,
     z: 0,
   },
+  additionalAxes: [],
   zoomLevel: 2,
   userBoundingBoxes: [],
   typ: "Skeleton",
@@ -154,7 +158,13 @@ const initialState = update(defaultState, {
   },
 });
 
-const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2);
+const createNodeAction = SkeletonTracingActions.createNodeAction(
+  [1, 2, 3],
+  null,
+  [0, 1, 0],
+  0,
+  1.2,
+);
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();

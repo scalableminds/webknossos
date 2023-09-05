@@ -20,7 +20,8 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
+    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(
+      _.cutOutBucket(readInstruction.bucket, readInstruction.dataLayer))
 
   private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DataCubeHandle] = {
@@ -46,14 +47,21 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   protected def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String)(
       implicit ec: ExecutionContext): Fox[VaultPath] = {
-    val magPath = FileSystemVaultPath.fromPath(
+    val magPathRelativeToDataset = FileSystemVaultPath.fromPath(
+      readInstruction.baseDir
+        .resolve(readInstruction.dataSource.id.team)
+        .resolve(readInstruction.dataSource.id.name)
+        .resolve(relativeMagPath))
+    val magPathRelativeToLayer = FileSystemVaultPath.fromPath(
       readInstruction.baseDir
         .resolve(readInstruction.dataSource.id.team)
         .resolve(readInstruction.dataSource.id.name)
         .resolve(readInstruction.dataLayer.name)
         .resolve(relativeMagPath))
-    if (magPath.exists) {
-      Fox.successful(magPath)
+    if (magPathRelativeToDataset.exists) {
+      Fox.successful(magPathRelativeToDataset)
+    } else if (magPathRelativeToLayer.exists) {
+      Fox.successful(magPathRelativeToLayer)
     } else Fox.empty
   }
 

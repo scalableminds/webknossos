@@ -30,6 +30,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -48,7 +49,12 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void,
   andCloseContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
@@ -72,7 +78,12 @@ const getLoadPrecomputedMeshMenuItem = (
           return;
         }
         andCloseContextMenu(
-          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+          loadPrecomputedMesh(
+            segment.id,
+            segment.somePosition,
+            segment.someAdditionalCoordinates,
+            currentMeshFile?.meshFileName,
+          ),
         );
       },
       mappingName,
@@ -97,7 +108,11 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment: Segment,
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
+  loadAdHocMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -115,7 +130,9 @@ const getComputeMeshAdHocMenuItem = (
         return;
       }
 
-      andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+      andCloseContextMenu(
+        loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+      );
     },
     disabled,
     label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
@@ -124,7 +141,11 @@ const getComputeMeshAdHocMenuItem = (
 
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void,
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -134,7 +155,14 @@ const getMakeSegmentActiveMenuItem = (
     : "Make this the active segment ID.";
   return {
     key: "setActiveCell",
-    onClick: () => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition)),
+    onClick: () =>
+      andCloseContextMenu(
+        setActiveCell(
+          segment.id,
+          segment.somePosition,
+          segment.someAdditionalCoordinates || undefined,
+        ),
+      ),
     disabled,
     label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
   };
@@ -162,11 +190,25 @@ type Props = {
   removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void;
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void;
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void;
+  loadAdHocMesh: (
+    segmentId: number,
+    somePosition: Vector3,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void;
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void;
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void;
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
@@ -181,6 +223,7 @@ function _MeshInfoItem(props: {
   handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
   const dispatch = useDispatch();
 
@@ -209,7 +252,8 @@ function _MeshInfoItem(props: {
     return null;
   }
 
-  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+  const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } =
+    isosurface;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">
@@ -286,6 +330,9 @@ function _MeshInfoItem(props: {
             className={className}
             onClick={() => {
               props.setPosition(seedPosition);
+              if (seedAdditionalCoordinates) {
+                props.setAdditionalCoordinates(seedAdditionalCoordinates);
+              }
             }}
             style={{ marginLeft: 8 }}
           >
@@ -330,6 +377,7 @@ function _SegmentListItem({
   setActiveCell,
   isosurface,
   setPosition,
+  setAdditionalCoordinates,
   loadPrecomputedMesh,
   currentMeshFile,
   onRenameStart,
@@ -550,6 +598,7 @@ function _SegmentListItem({
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
           visibleSegmentationLayer={visibleSegmentationLayer}
           setPosition={setPosition}
+          setAdditionalCoordinates={setAdditionalCoordinates}
         />
       </div>
     </List.Item>

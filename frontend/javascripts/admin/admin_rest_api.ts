@@ -2062,10 +2062,26 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
+  //TODO adapt to new routes
   const info = await Request.receiveJSON("/api/maintenance", {
     doNotInvestigate: true,
   });
   return info.isMaintenance;
+}
+
+export type MaintenanceInfo = {
+  startTime: number;
+  endTime: number;
+  id: string;
+  message: string;
+}
+
+export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
+  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
+  const currentEpoch = Date.now();
+  return allMaintenances?.filter(maintenance => maintenance.endTime > currentEpoch).sort((a, b) => a.startTime - b.startTime);
+  // TODO unclear whether backend actually only delivers relevant maintenances, because trying it out with curl also returned back maintenances from the past
+  //curl -X 'http://localhost:9000/api/maintenances/listCurrentAndUpcoming' -H 'X-Auth-Token: secretSampleUserToken' -H
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

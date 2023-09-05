@@ -1,7 +1,9 @@
 import Maybe from "data.maybe";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import type {
+  AdditionalAxis,
   APIAnnotation,
+  ServerAdditionalAxis,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
 } from "types/api_flow_types";
@@ -113,6 +115,16 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     blockedByUser: null,
   };
 }
+
+export function convertServerAdditionalAxesToFrontEnd(
+  additionalAxes: ServerAdditionalAxis[],
+): AdditionalAxis[] {
+  return additionalAxes.map((coords) => ({
+    ...coords,
+    bounds: [coords.bounds.x, coords.bounds.y],
+  }));
+}
+
 export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];

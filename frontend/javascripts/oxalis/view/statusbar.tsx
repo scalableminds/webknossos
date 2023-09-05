@@ -37,6 +37,7 @@ import {
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -48,8 +49,12 @@ const moreLinkStyle = {
   marginRight: "auto",
 };
 
-function getPosString(pos: Vector3) {
-  return V3.floor(pos).join(",");
+function getPosString(
+  pos: Vector3,
+  optAdditionalCoordinates: AdditionalCoordinate[] | null | undefined,
+) {
+  const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
+  return V3.floor(pos).concat(additionalCoordinates).join(",");
 }
 
 function ZoomShortcut() {
@@ -490,6 +495,9 @@ function SegmentAndMousePosition() {
   const mousePosition = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.mousePosition,
   );
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const globalMousePosition = useSelector((state: OxalisState) => {
     const { activeViewport } = state.viewModeData.plane;
@@ -509,7 +517,9 @@ function SegmentAndMousePosition() {
       {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
       {isPlaneMode ? (
         <span className="info-element">
-          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
+          Pos [
+          {globalMousePosition ? getPosString(globalMousePosition, additionalCoordinates) : "-,-,-"}
+          ]
         </span>
       ) : null}
     </>

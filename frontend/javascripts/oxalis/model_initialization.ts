@@ -29,6 +29,7 @@ import {
   getSegmentationLayers,
   getLayerByName,
   getSegmentationLayerByName,
+  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
@@ -72,6 +73,7 @@ import {
   setPositionAction,
   setZoomStepAction,
   setRotationAction,
+  setAdditionalCoordinatesAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -102,6 +104,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -403,6 +406,16 @@ function initializeDataset(
   }
 
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
+  initializeAdditionalCoordinates(mutableDataset);
+}
+
+function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
+  const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
+    ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
+  );
+
+  Store.dispatch(setAdditionalCoordinatesAction(initialAdditionalCoordinates));
 }
 
 function initializeSettings(
@@ -511,6 +524,7 @@ function setupLayerForVolumeTracing(
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
+      additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;
@@ -548,6 +562,7 @@ function determineDefaultState(
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
+    additionalCoordinates: urlStateAdditionalCoordinates,
     zoomStep: urlStateZoomStep,
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
@@ -560,6 +575,7 @@ function determineDefaultState(
   const { viewMode } = temporaryConfiguration;
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
+  let additionalCoordinates = null;
 
   if (defaultPosition != null) {
     position = defaultPosition;
@@ -569,10 +585,15 @@ function determineDefaultState(
 
   if (someTracing != null) {
     position = Utils.point3ToVector3(someTracing.editPosition);
+    additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
 
   if (urlStatePosition != null) {
     position = urlStatePosition;
+  }
+
+  if (urlStateAdditionalCoordinates != null) {
+    additionalCoordinates = urlStateAdditionalCoordinates;
   }
 
   let zoomStep = datasetConfiguration.zoom;
@@ -626,6 +647,7 @@ function determineDefaultState(
     rotation,
     activeNode,
     stateByLayer,
+    additionalCoordinates,
     ...rest,
   };
 }
@@ -651,6 +673,10 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
 
   if (state.stateByLayer != null) {
     applyLayerState(state.stateByLayer);
+  }
+
+  if (state.additionalCoordinates != null) {
+    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
   }
 }
 
@@ -737,12 +763,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
 
       for (const mesh of meshes) {
-        const { segmentId, seedPosition } = mesh;
+        const { segmentId, seedPosition, seedAdditionalCoordinates } = mesh;
 
         if (mesh.isPrecomputed) {
           const { meshFileName } = mesh;
           Store.dispatch(
-            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+            loadPrecomputedMeshAction(
+              segmentId,
+              seedPosition,
+              seedAdditionalCoordinates,
+              meshFileName,
+              effectiveLayerName,
+            ),
           );
         } else {
           const { mappingName, mappingType } = mesh;
@@ -750,6 +782,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
             loadAdHocMeshAction(
               segmentId,
               seedPosition,
+              seedAdditionalCoordinates,
               {
                 mappingName,
                 mappingType,

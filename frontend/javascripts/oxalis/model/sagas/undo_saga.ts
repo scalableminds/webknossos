@@ -1,7 +1,7 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
-import { AnnotationToolEnum, type Vector4 } from "oxalis/constants";
+import { AnnotationToolEnum, type BucketAddress } from "oxalis/constants";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -53,7 +53,7 @@ const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
 );
 type UndoBucket = {
-  zoomedBucketAddress: Vector4;
+  zoomedBucketAddress: BucketAddress;
   // The following arrays are Uint8Array due to the compression
   compressedData: Uint8Array;
   compressedBackendData?: Promise<Uint8Array>;
@@ -552,7 +552,7 @@ function getBoundingBoxToUndoState(
 }
 
 function* compressBucketAndAddToList(
-  zoomedBucketAddress: Vector4,
+  zoomedBucketAddress: BucketAddress,
   bucketData: BucketDataArray,
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(arg0: BucketDataArray) => void>,

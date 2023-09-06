@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
 
 ### Fixed
+- Fixed that the deletion of a selected segment would crash the segments tab. [#7316](https://github.com/scalableminds/webknossos/pull/7316)
 
 ### Removed
 

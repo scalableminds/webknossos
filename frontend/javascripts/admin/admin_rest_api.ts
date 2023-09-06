@@ -2062,11 +2062,14 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  //TODO adapt to new routes
-  const info = await Request.receiveJSON("/api/maintenance", {
-    doNotInvestigate: true,
-  });
-  return info.isMaintenance;
+  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
+    "/api/maintenances/listCurrentAndUpcoming",
+  );
+  const currentEpoch = Date.now();
+  const currentMaintenance = allMaintenances?.find(
+    (maintenance) => maintenance.startTime < currentEpoch && maintenance.endTime > currentEpoch,
+  );
+  return currentMaintenance != null;
 }
 
 export type MaintenanceInfo = {

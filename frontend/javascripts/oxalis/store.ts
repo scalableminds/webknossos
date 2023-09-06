@@ -68,6 +68,7 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import MaintenanceReducer from "./model/reducers/maintenance_reducer";
 
 export type MutableCommentType = {
   content: string;
@@ -570,6 +571,7 @@ export type OxalisState = {
       readonly connectomeData: ConnectomeData;
     }
   >;
+  readonly isInMaintenance: boolean | null;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: OxalisState, action: Action) => OxalisState;
@@ -587,6 +589,7 @@ const combinedReducers = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  MaintenanceReducer,
 );
 
 const store = createStore<OxalisState>(

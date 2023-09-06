@@ -223,7 +223,7 @@ class ReactRouter extends React.Component<Props> {
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
-          <MaintenanceBanner />
+          <MaintenanceBanner activeUser={this.props.activeUser} />
           <Content>
             <Switch>
               <RouteWithErrorBoundary

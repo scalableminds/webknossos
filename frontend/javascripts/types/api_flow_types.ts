@@ -233,6 +233,7 @@ export type NovelUserExperienceInfoType = {
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
+  latestAcknowledgedMaintenanceInfo?: string;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {

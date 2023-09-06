@@ -14,6 +14,8 @@ import type { ConnectomeAction } from "oxalis/model/actions/connectome_actions";
 import { ProofreadAction } from "oxalis/model/actions/proofread_actions";
 import { OrganizationAction } from "oxalis/model/actions/organization_actions";
 
+export type MaintenanceAction = ReturnType<typeof setIsUnderMaintenanceAction> | ReturnType<typeof fetchIsUnderMaintenanceAction>;
+
 export type Action =
   | SkeletonTracingAction
   | VolumeTracingAction
@@ -32,7 +34,8 @@ export type Action =
   | OrganizationAction
   | ReturnType<typeof wkReadyAction>
   | ReturnType<typeof sceneControllerReadyAction>
-  | ReturnType<typeof restartSagaAction>;
+  | ReturnType<typeof restartSagaAction>
+  | MaintenanceAction;
 
 export const wkReadyAction = () =>
   ({
@@ -48,3 +51,8 @@ export const restartSagaAction = () =>
   ({
     type: "RESTART_SAGA",
   } as const);
+
+export const setIsUnderMaintenanceAction = (isUnderMaintenance: boolean) =>
+  ({ type: "SET_IS_UNDER_MAINTENANCE", isUnderMaintenance } as const);
+export const fetchIsUnderMaintenanceAction = () =>
+  ({ type: "FETCH_IS_UNDER_MAINTENANCE" } as const);

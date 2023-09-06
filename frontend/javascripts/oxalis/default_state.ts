@@ -246,5 +246,6 @@ const defaultState: OxalisState = {
     areQuickSelectSettingsOpen: false,
   },
   localSegmentationData: {},
+  isInMaintenance: null,
 };
 export default defaultState;

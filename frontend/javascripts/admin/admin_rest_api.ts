@@ -2087,8 +2087,6 @@ export async function listCurrentAndUpcomingMaintenances(): Promise<Array<Mainte
   return allMaintenances
     ?.filter((maintenance) => maintenance.endTime > currentEpoch)
     .sort((a, b) => a.startTime - b.startTime);
-  // TODO unclear whether backend actually only delivers relevant maintenances, because trying it out with curl also returned back maintenances from the past
-  //curl -X 'http://localhost:9000/api/maintenances/listCurrentAndUpcoming' -H 'X-Auth-Token: secretSampleUserToken' -H
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

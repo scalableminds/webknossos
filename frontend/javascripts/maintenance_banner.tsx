@@ -37,7 +37,7 @@ export function MaintenanceBanner() {
   };
 
   const toggleTopOrBottomPosition = () => {
-    setPosition(isTop ? { top: "48px" } : { bottom: "20px" });
+    setPosition(isTop ? { top: 48 } : { bottom: 20 });
     setIsTop(!isTop);
   };
 

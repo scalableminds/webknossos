@@ -25,7 +25,7 @@ case class Task(
     _taskType: ObjectId,
     neededExperience: Experience,
     totalInstances: Long,
-    openInstances: Long,
+    pendingInstances: Long,
     tracingTime: Option[Long],
     boundingBox: Option[BoundingBox],
     editPosition: Vec3Int,
@@ -54,7 +54,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
         ObjectId(r._Tasktype),
         Experience(r.neededexperienceDomain, r.neededexperienceValue),
         r.totalinstances,
-        r.openinstances,
+        r.pendinginstances,
         r.tracingtime,
         r.boundingbox.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
         editPosition,
@@ -123,7 +123,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
                left join (
                  select _task from webknossos.annotations_ where _user = $userId and typ = ${AnnotationType.Task} and not ($isTeamManagerOrAdmin and state = ${AnnotationState.Cancelled})
                ) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-             where webknossos.tasks_.openInstances > 0
+             where webknossos.tasks_.pendingInstances > 0
                    and webknossos.projects_._team in ${SqlToken.tupleFromList(teamIds)}
                    and userAnnotations._task is null
                    and not webknossos.projects_.paused
@@ -133,7 +133,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
 
   private def findNextTaskByIdQ(taskId: ObjectId) =
     q"""select $columns from $existingCollectionName
-        where _id = $taskId and openInstances > 0
+        where _id = $taskId and pendingInstances > 0
         limit 1
         """
 
@@ -156,7 +156,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
       _ <- run(
         insertAnnotationQ.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
+        retryIfErrorContains = List(transactionSerializationError, "Negative pendingInstances for Task")
       )
       r <- run(findTaskOfInsertedAnnotationQ(annotationId))
       parsed <- parseFirst(r, "task assignment query")
@@ -187,7 +187,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
       _ <- run(
         insertAnnotationQ.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
+        retryIfErrorContains = List(transactionSerializationError, "Negative pendingInstances for Task")
       )
       r <- run(findTaskOfInsertedAnnotationQ(annotationId))
       parsed <- parseFirst(r, "task assignment query")
@@ -247,26 +247,26 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     } yield parsed
   }
 
-  def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Long] =
+  def countAllPendingInstancesForOrganization(organizationId: ObjectId): Fox[Long] =
     for {
-      result <- run(q"""SELECT SUM(t.openInstances)
+      result <- run(q"""SELECT SUM(t.pendingInstances)
             FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON t._project = p._id
             WHERE $organizationId in (select _organization from webknossos.users_ where _id = p._owner)""".as[Long])
       firstResult <- result.headOption
     } yield firstResult
 
-  def countOpenInstancesAndTimeForProject(projectId: ObjectId): Fox[(Long, Long)] =
+  def countPendingInstancesAndTimeForProject(projectId: ObjectId): Fox[(Long, Long)] =
     for {
-      result <- run(q"""select sum(openInstances), sum(tracingtime)
+      result <- run(q"""select sum(pendingInstances), sum(tracingtime)
                         from webknossos.tasks_
                         where _project = $projectId
                         group by _project""".as[(Long, Option[Long])])
       firstResult <- result.headOption
     } yield (firstResult._1, firstResult._2.getOrElse(0L))
 
-  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Long, Long)]] =
+  def countPendingInstancesAndTimeByProject: Fox[Map[ObjectId, (Long, Long)]] =
     for {
-      rowsRaw <- run(q"""select _project, sum(openInstances), sum(tracingtime)
+      rowsRaw <- run(q"""select _project, sum(pendingInstances), sum(tracingtime)
                          from webknossos.tasks_
                          group by _project""".as[(String, Long, Option[Long])])
     } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
@@ -281,7 +281,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     for {
       _ <- run(q"""insert into webknossos.tasks(_id, _project, _script, _taskType,
                                          neededExperience_domain, neededExperience_value,
-                                         totalInstances, openInstances, tracingTime, boundingBox,
+                                         totalInstances, pendingInstances, tracingTime, boundingBox,
                                          editPosition, editRotation, creationInfo,
                                          created, isDeleted)
                    values(${t._id}, ${t._project}, ${t._script}, ${t._taskType},

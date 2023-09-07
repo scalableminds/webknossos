@@ -2,42 +2,29 @@ package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
+import utils.ObjectId
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
-  def requestDataLayerThumbnail(organizationName: String,
-                                dataSet: DataSet,
-                                dataLayerName: String,
-                                width: Int,
-                                height: Int,
-                                zoom: Option[Double],
-                                center: Option[Vec3Int]): Fox[Array[Byte]] = {
-    logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
-    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .addQueryString("width" -> width.toString, "height" -> height.toString)
-      .addQueryStringOptional("zoom", zoom.map(_.toString))
-      .addQueryStringOptional("centerX", center.map(_.x.toString))
-      .addQueryStringOptional("centerY", center.map(_.y.toString))
-      .addQueryStringOptional("centerZ", center.map(_.z.toString))
-      .getWithBytesResponse
-  }
-
-  def getLayerData(organizationName: String,
-                   dataset: DataSet,
-                   layerName: String,
-                   mag1BoundingBox: BoundingBox,
-                   mag: Vec3Int): Fox[Array[Byte]] = {
+  def getDataLayerThumbnail(organizationName: String,
+                            dataSet: DataSet,
+                            dataLayerName: String,
+                            mag1BoundingBox: BoundingBox,
+                            mag: Vec3Int,
+                            mappingName: Option[String],
+                            intensityRangeOpt: Option[(Double, Double)],
+                            colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
-    logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
-    rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+    logger.debug(s"Thumbnail called for: $organizationName/${dataSet.name}, Layer: $dataLayerName")
+    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
@@ -45,8 +32,27 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
       .addQueryString("width" -> targetMagBoundingBox.width.toString)
       .addQueryString("height" -> targetMagBoundingBox.height.toString)
-      .addQueryString("depth" -> targetMagBoundingBox.depth.toString)
+      .addQueryStringOptional("mappingName", mappingName)
+      .addQueryStringOptional("intensityMin", intensityRangeOpt.map(_._1.toString))
+      .addQueryStringOptional("intensityMax", intensityRangeOpt.map(_._2.toString))
+      .addQueryStringOptional("color", colorSettingsOpt.map(_.color.toHtml))
+      .addQueryStringOptional("invertColor", colorSettingsOpt.map(_.isInverted.toString))
       .getWithBytesResponse
+  }
+
+  def getLayerData(organizationName: String,
+                   dataset: DataSet,
+                   layerName: String,
+                   mag1BoundingBox: BoundingBox,
+                   mag: Vec3Int,
+                   additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Array[Byte]] = {
+    val targetMagBoundingBox = mag1BoundingBox / mag
+    logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/readData")
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .postJsonWithBytesResponse(
+        RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
   def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
@@ -63,5 +69,17 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("dataSetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
+
+  def addDataSource(organizationName: String,
+                    datasetName: String,
+                    dataSource: GenericDataSource[DataLayer],
+                    folderId: Option[ObjectId],
+                    userToken: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
+        .addQueryString("token" -> userToken)
+        .addQueryStringOptional("folderId", folderId.map(_.toString))
+        .put(dataSource)
+    } yield ()
 
 }

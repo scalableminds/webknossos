@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { document } from "libs/window";
+import { Store } from "oxalis/singletons";
 let renderer: THREE.WebGLRenderer | null = null;
 
 function getRenderer(): THREE.WebGLRenderer {
@@ -19,8 +20,11 @@ function getRenderer(): THREE.WebGLRenderer {
           // varyings that are marked with a flat modifier are still being interpolated.
           // This caused 1-fragment-wide stripes in the rendering output. Debugging the shader code
           // showed that the bucket addresses which are passed from vertex to fragment shader
-          // were interpolated sometimes. Therefore, antialiasing is disabled for now.
-          antialias: false,
+          // were interpolated sometimes. Disabling antialiasing helped a bit for that, but there
+          // were still problems which is why the fragment shader doesn't use the flat varying
+          // for texels close to the bucket borders. Consequently, antialiasing can be enabled
+          // without problems (probably) apart from a potential performance drop.
+          antialias: Store.getState().userConfiguration.antialiasRendering,
         })
       : {}
   ) as THREE.WebGLRenderer;

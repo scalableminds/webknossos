@@ -15,12 +15,7 @@ import { connect } from "react-redux";
 import React, { useEffect, useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import {
-  exploreRemoteDataset,
-  isDatasetNameValid,
-  storeRemoteDataset,
-  updateDatasetPartial,
-} from "admin/admin_rest_api";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -41,6 +36,7 @@ import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
+import * as Utils from "libs/utils";
 
 const { Panel } = Collapse;
 const FormItem = Form.Item;
@@ -226,17 +222,11 @@ function DatasetAddRemoteView(props: Props) {
           configJSON.id.name,
           activeUser.organization,
           datasourceConfigStr,
+          targetFolderId,
         );
       } catch (e) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
-      }
-      if (targetFolderId) {
-        const datasetId = {
-          owningOrganization: activeUser.organization,
-          name: configJSON.id.name,
-        };
-        await updateDatasetPartial(datasetId, { folderId: targetFolderId });
       }
       onAdded(activeUser.organization, configJSON.id.name, true);
     }
@@ -414,26 +404,37 @@ function AddZarrLayer({
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
     const { dataSource: newDataSource, report } = await (async () => {
+      // @ts-ignore
+      const preferredVoxelSize = Utils.parseMaybe(datasourceConfigStr)?.scale;
+
       if (showCredentialsFields) {
         if (selectedProtocol === "gs") {
           const credentials =
             fileList.length > 0 ? await parseCredentials(fileList[0]?.originFileObj) : null;
           if (credentials) {
-            return exploreRemoteDataset([datasourceUrl], {
-              username: "",
-              pass: JSON.stringify(credentials),
-            });
+            return exploreRemoteDataset(
+              [datasourceUrl],
+              {
+                username: "",
+                pass: JSON.stringify(credentials),
+              },
+              preferredVoxelSize,
+            );
           } else {
             // Fall through to exploreRemoteDataset without parameters
           }
         } else if (usernameOrAccessKey && passwordOrSecretKey) {
-          return exploreRemoteDataset([datasourceUrl], {
-            username: usernameOrAccessKey,
-            pass: passwordOrSecretKey,
-          });
+          return exploreRemoteDataset(
+            [datasourceUrl],
+            {
+              username: usernameOrAccessKey,
+              pass: passwordOrSecretKey,
+            },
+            preferredVoxelSize,
+          );
         }
       }
-      return exploreRemoteDataset([datasourceUrl]);
+      return exploreRemoteDataset([datasourceUrl], null, preferredVoxelSize);
     })();
     setExploreLog(report);
     if (!newDataSource) {

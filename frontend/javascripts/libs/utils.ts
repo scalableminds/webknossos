@@ -24,6 +24,10 @@ export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
 
+export function keys<T extends string>(o: Record<T, any>): T[] {
+  return Object.keys(o) as Array<keyof typeof o>;
+}
+
 export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
   return Object.values(o);
 }
@@ -128,17 +132,17 @@ export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) =>
   return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
 
-export function parseAsMaybe(str: string | null | undefined): Maybe<any> {
+export function parseMaybe(str: string | null | undefined): unknown | null {
   try {
     const parsedJSON = JSON.parse(str || "");
 
     if (parsedJSON != null) {
-      return Maybe.Just(parsedJSON);
+      return parsedJSON;
     } else {
-      return Maybe.Nothing();
+      return null;
     }
   } catch (_exception) {
-    return Maybe.Nothing();
+    return null;
   }
 }
 
@@ -1070,16 +1074,6 @@ export function getWindowBounds(): [number, number] {
   return [width, height];
 }
 
-export function disableViewportMetatag() {
-  const viewport = document.querySelector("meta[name=viewport]");
-
-  if (!viewport) {
-    return;
-  }
-
-  viewport.setAttribute("content", "");
-}
-
 /**
  * Deep diff between two object, using lodash
  * @param  {Object} object Object compared
@@ -1155,3 +1149,24 @@ export function minValue(array: Array<number>): number {
   }
   return value;
 }
+
+/*
+ * Iterates over arbitrary objects recursively and calls the callback function.
+ */
+type Obj = Record<string, unknown>;
+export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) => void) => {
+  if (obj == null) {
+    return;
+  }
+  const items = Array.isArray(obj) ? obj : Object.values(obj);
+  items.forEach((item) => {
+    callback(item);
+
+    if (typeof item === "object") {
+      // We know that item is an object or array which matches deepIterate's signature.
+      // However, TS doesn't infer this.
+      // @ts-ignore
+      deepIterate(item, callback);
+    }
+  });
+};

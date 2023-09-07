@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(103);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(108);
 COMMIT TRANSACTION;
 
 
@@ -156,6 +156,15 @@ CREATE TABLE webknossos.dataSet_layer_coordinateTransformations(
   insertionOrderIndex INT
 );
 
+CREATE TABLE webknossos.dataSet_layer_additionalAxes(
+   _dataSet CHAR(24) NOT NULL,
+   layerName VARCHAR(256) NOT NULL,
+   name VARCHAR(256) NOT NULL,
+   lowerBound INT NOT NULL,
+   upperBound INT NOT NULL,
+   index INT NOT NULL
+);
+
 CREATE TABLE webknossos.dataSet_allowedTeams(
   _dataSet CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
@@ -173,6 +182,20 @@ CREATE TABLE webknossos.dataSet_lastUsedTimes(
   _dataSet CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   lastUsedTime TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE webknossos.dataSet_thumbnails(
+  _dataSet CHAR(24) NOT NULL,
+  dataLayerName VARCHAR(256),
+  width INT NOT NULL,
+  height INT NOT NULL,
+  mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
+  image BYTEA NOT NULL,
+  mimetype VARCHAR(256),
+  mag webknossos.VECTOR3 NOT NULL,
+  mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_dataSet, dataLayerName, width, height, mappingName)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
@@ -252,7 +275,7 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  openInstances BIGINT NOT NULL,
+  pendingInstances BIGINT NOT NULL,
   tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
@@ -260,7 +283,7 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
+  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
 );
 
 CREATE TABLE webknossos.experienceDomains(
@@ -387,6 +410,7 @@ CREATE TABLE webknossos.multiUsers(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
+  isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
@@ -483,7 +507,7 @@ CREATE TABLE webknossos.credentials(
 
 CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -500,6 +524,14 @@ CREATE TABLE webknossos.folder_allowedTeams(
   PRIMARY KEY (_folder, _team)
 );
 
+CREATE TABLE webknossos.emailVerificationKeys(
+  _id CHAR(24) PRIMARY KEY,
+  key TEXT NOT NULL,
+  email VARCHAR(512) NOT NULL,
+  _multiUser CHAR(24) NOT NULL,
+  validUntil TIMESTAMPTZ,
+  isUsed BOOLEAN NOT NULL DEFAULT false
+);
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
@@ -628,7 +660,7 @@ SELECT
 u._id AS _user, m.email, u.firstName, u.lastname, o.displayName AS organization_displayName,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o.name AS organization_name, u.created AS user_created,
-m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity
+m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
 FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
@@ -736,6 +768,8 @@ ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataSet_layer_coordinateTransformations
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
+ALTER TABLE webknossos.dataSet_layer_additionalAxes
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs
@@ -766,7 +800,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
     IF NEW.totalInstances <> OLD.totalInstances THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
     END IF;
     RETURN NULL;
   END;
@@ -780,7 +814,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
 CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -799,11 +833,11 @@ CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
     END IF;
     IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = NEW._task;
     END IF;
     IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -817,7 +851,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
     END IF;
     RETURN NULL;
   END;

@@ -44,6 +44,16 @@ type ControlsAndRenderingSettingsTabProps = {
   dataset: APIDataset;
 };
 
+function askUserToReload() {
+  Toast.warning("Please reload the page to allow the changes to take full effect.", {
+    sticky: true,
+  });
+}
+
+const PERFORMANCE_WARNING_ICON = (
+  <ExclamationCircleOutlined style={{ marginLeft: 8, color: "orange", verticalAlign: "middle" }} />
+);
+
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -184,9 +194,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take full effect.", {
-      sticky: true,
-    });
+    askUserToReload();
     this.onChangeUser.gpuMemoryFactor(gpuFactor);
   };
 
@@ -285,6 +293,8 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
             ).toString()}
             onChange={this.onChangeGpuFactor}
+            disabled={this.props.activeUser == null}
+            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
             options={getGpuFactorsWithLabels().map(([factor, label]) => ({
               label,
               value: factor.toString(),
@@ -342,14 +352,32 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               >
                 {this.props.datasetConfiguration.interpolation && (
                   <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
-                    <ExclamationCircleOutlined
-                      style={{ marginLeft: 8, color: "red", verticalAlign: "middle" }}
-                    />
+                    {PERFORMANCE_WARNING_ICON}
                   </Tooltip>
                 )}
               </SwitchSetting>
             </div>
           )}
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.antialiasRendering}>
+                {settingsLabels.antialiasRendering}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.antialiasRendering}
+            disabled={this.props.activeUser == null}
+            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
+            onChange={(arg) => {
+              askUserToReload();
+              this.onChangeUser.antialiasRendering(arg);
+            }}
+          >
+            {this.props.userConfiguration.antialiasRendering && (
+              <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
+                {PERFORMANCE_WARNING_ICON}
+              </Tooltip>
+            )}
+          </SwitchSetting>
           <SwitchSetting
             label={
               <Tooltip title={settingsTooltips.renderMissingDataBlack}>

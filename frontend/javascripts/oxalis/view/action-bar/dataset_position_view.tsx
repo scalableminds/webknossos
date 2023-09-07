@@ -16,6 +16,7 @@ import type { ViewMode, Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import message from "messages";
 import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
+
 type Props = {
   flycam: Flycam;
   viewMode: ViewMode;

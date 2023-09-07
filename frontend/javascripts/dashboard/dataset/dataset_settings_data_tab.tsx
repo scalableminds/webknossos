@@ -25,7 +25,7 @@ import {
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
-import { jsonStringify, parseAsMaybe } from "libs/utils";
+import { jsonStringify, parseMaybe } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
@@ -52,9 +52,7 @@ export const syncDataSourceFields = (
       dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
     });
   } else {
-    const dataSourceFromAdvancedTab = parseAsMaybe(form.getFieldValue("dataSourceJson")).getOrElse(
-      null,
-    );
+    const dataSourceFromAdvancedTab = parseMaybe(form.getFieldValue("dataSourceJson"));
     // Copy from advanced to simple: update form values
     form.setFieldsValue({
       dataSource: dataSourceFromAdvancedTab,
@@ -528,6 +526,17 @@ function SimpleLayerForm({
                                 `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                               ),
                             ),
+                    },
+                    {
+                      warningOnly: true,
+                      validator: (_rule, value) =>
+                        value != null && value === 2 ** bitDepth - 1
+                          ? Promise.reject(
+                              new Error(
+                                `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
+                              ),
+                            )
+                          : Promise.resolve(),
                     },
                     {
                       warningOnly: true,

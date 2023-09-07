@@ -9,32 +9,41 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
-import { parseAsMaybe } from "libs/utils";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
+import { parseMaybe } from "libs/utils";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
+import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
-import WorkerPool from "libs/worker_pool";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import WebworkerPool from "libs/webworker_pool";
+import type { BucketAddress, Vector3 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { AdditionalCoordinate } from "types/api_flow_types";
+import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
+
+// For 32-bit buckets with 32^3 voxels, a COMPRESSION_BATCH_SIZE of
+// 128 corresponds to 16.8 MB that are sent to a webworker in one
+// go.
+const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
-const compressionPool = new WorkerPool(
-  () => createWorker(ByteArrayToLz4Base64Worker),
+const compressionPool = new WebworkerPool(
+  () => createWorker(ByteArraysToLz4Base64Worker),
   COMPRESSION_WORKER_COUNT,
 );
+
 export const REQUEST_TIMEOUT = 60000;
+
 export type SendBucketInfo = {
   position: Vector3;
+  additionalCoordinates: Array<AdditionalCoordinate> | null | undefined;
   mag: Vector3;
   cubeSize: number;
 };
@@ -47,7 +56,7 @@ type RequestBucketInfo = SendBucketInfo & {
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
-  zoomedAddress: Vector4,
+  zoomedAddress: BucketAddress,
   resolutionInfo: ResolutionInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
@@ -68,11 +77,12 @@ const createRequestBucketInfo = (
 });
 
 function createSendBucketInfo(
-  zoomedAddress: Vector4,
+  zoomedAddress: BucketAddress,
   resolutionInfo: ResolutionInfo,
 ): SendBucketInfo {
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
+    additionalCoordinates: zoomedAddress[4],
     mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
@@ -84,7 +94,7 @@ function getNullIndices<T>(arr: Array<T | null | undefined>): Array<number> {
 
 export async function requestWithFallback(
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
   const datasetName = state.dataset.name;
@@ -150,7 +160,7 @@ export async function requestWithFallback(
 export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
   isVolumeFallback: boolean = false,
 ): Promise<Array<Uint8Array | null | undefined>> {
@@ -187,7 +197,7 @@ export async function requestFromStore(
           showErrorToast: false,
         });
       const endTime = window.performance.now();
-      const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+      const missingBuckets = (parseMaybe(headers["missing-buckets"]) || []) as number[];
       const receivedBucketsCount = batch.length - missingBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
       getGlobalDataConnectionInfo().log(
@@ -224,7 +234,7 @@ export async function requestFromStore(
 
 function sliceBufferIntoPieces(
   layerInfo: DataLayerType,
-  batch: Array<Vector4>,
+  batch: Array<BucketAddress>,
   missingBuckets: Array<number>,
   buffer: Uint8Array,
 ): Array<Uint8Array | null | undefined> {
@@ -238,15 +248,24 @@ function sliceBufferIntoPieces(
   return bucketBuffers;
 }
 
-export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const items: Array<UpdateAction> = await Promise.all(
-    batch.map(async (bucket): Promise<UpdateAction> => {
-      const data = bucket.getCopyOfData();
-      const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
-      const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const compressedBase64 = await compressionPool.submit(byteArray);
-      return updateBucket(bucketInfo, compressedBase64);
-    }),
+export async function createCompressedUpdateBucketActions(
+  batch: Array<DataBucket>,
+): Promise<UpdateAction[]> {
+  return _.flatten(
+    await Promise.all(
+      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
+        const byteArrays = batchSubset.map((bucket) => {
+          const data = bucket.getCopyOfData();
+          return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        });
+
+        const compressedBase64Strings = await compressionPool.submit(byteArrays);
+        return compressedBase64Strings.map((compressedBase64, index) => {
+          const bucket = batchSubset[index];
+          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
+          return updateBucket(bucketInfo, compressedBase64);
+        });
+      }),
+    ),
   );
-  Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

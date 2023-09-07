@@ -36,6 +36,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
+  def withBasicAuthOpt(usernameOpt: Option[String], passwordOpt: Option[String]): RPCRequest = {
+    (usernameOpt, passwordOpt) match {
+      case (Some(username), Some(password)) => request = request.withAuth(username, password, WSAuthScheme.BASIC)
+      case _                                => ()
+    }
+    this
+  }
+
   def withLongTimeout: RPCRequest = {
     request = request.withRequestTimeout(2 hours)
     this
@@ -43,6 +51,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   def silent: RPCRequest = {
     verbose = false
+    this
+  }
+
+  def silentIf(condition: Boolean): RPCRequest = {
+    if (condition) {
+      verbose = false
+    }
     this
   }
 
@@ -97,6 +112,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def postWithJsonResponse[T: Reads]: Fox[T] = {
     request = request.withMethod("POST")
     parseJsonResponse(performRequest)
+  }
+
+  def postJsonWithBytesResponse[T: Writes](body: T = Json.obj()): Fox[Array[Byte]] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    extractBytesResponse(performRequest)
   }
 
   def post[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {

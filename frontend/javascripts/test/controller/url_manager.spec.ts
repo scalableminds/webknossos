@@ -125,6 +125,7 @@ test("UrlManager should parse url hash with comment links", (t) => {
 test("UrlManager should parse json url hash", (t) => {
   const state = {
     position: [555, 278, 482],
+    additionalCoordinates: [],
     mode: "flight",
     zoomStep: 2.0,
     rotation: [40.45, 13.65, 0.8],
@@ -137,6 +138,7 @@ test("UrlManager should parse json url hash", (t) => {
 test("UrlManager should parse incomplete json url hash", (t) => {
   const state = {
     position: [555, 278, 482],
+    additionalCoordinates: [],
     mode: "flight",
     zoomStep: 2.0,
     rotation: [40.45, 13.65, 0.8],
@@ -156,6 +158,7 @@ test("UrlManager should build json url hash and parse it again", (t) => {
   const mode = Constants.MODE_ARBITRARY;
   const urlState = {
     position: [0, 0, 0],
+    additionalCoordinates: [],
     mode,
     zoomStep: 1.3,
     rotation: [0, 0, 180],

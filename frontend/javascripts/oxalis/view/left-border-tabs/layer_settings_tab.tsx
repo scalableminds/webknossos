@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, MenuProps, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -11,11 +11,16 @@ import {
   LockOutlined,
   UnlockOutlined,
   EllipsisOutlined,
+  SaveOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
+import ErrorHandling from "libs/error_handling";
+import { connect, useDispatch, useSelector } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
+import update from "immutability-helper";
+import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import {
   APIAnnotationTypeEnum,
   APIDataLayer,
@@ -45,9 +50,10 @@ import {
   findDataPositionForVolumeTracing,
   convertToHybridTracing,
   deleteAnnotationLayer,
+  updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
 import {
-  getDefaultIntensityRangeOfLayer,
+  getDefaultValueRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
   getLayerByName,
@@ -55,8 +61,10 @@ import {
   getTransformsForLayerOrNull,
   getWidestResolutions,
   getLayerBoundingBox,
+  getTransformsForLayer,
+  hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -95,7 +103,13 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
+import {
+  layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  RecommendedConfiguration,
+  settings,
+  settingsTooltips,
+} from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -103,6 +117,10 @@ import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import AddSegmentIndexModal from "./modals/add_segment_index_modal";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -127,6 +145,7 @@ type DatasetSettingsProps = {
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
   isArbitraryMode: boolean;
+  isAdminOrDatasetManager: boolean;
 };
 
 type State = {
@@ -140,6 +159,136 @@ type State = {
   segmentationLayerWasPreselected: boolean | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
+
+const SortableLayerSettingsContainer = SortableContainer(({ children }: { children: any }) => {
+  return <div>{children}</div>;
+});
+
+type DragHandleProps = {
+  hasLessThanTwoColorLayers: boolean;
+};
+
+function dragHandleIcon(isDisabled: boolean = false) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        justifyContent: "center",
+        cursor: "grab",
+        alignItems: "center",
+        color: isDisabled ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.60)",
+      }}
+    >
+      <MenuOutlined
+        style={{
+          display: "inline-block",
+          marginRight: 8,
+        }}
+      />
+    </div>
+  );
+}
+const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProps) => {
+  return hasLessThanTwoColorLayers ? (
+    <Tooltip title="Order is only changeable with more than one color layer.">
+      {dragHandleIcon(true)}
+    </Tooltip>
+  ) : (
+    dragHandleIcon()
+  );
+});
+
+function DummyDragHandle({ layerType }: { layerType: string }) {
+  return (
+    <Tooltip title={`Layer not movable: ${layerType} layers are always rendered on top.`}>
+      {dragHandleIcon(true)}
+    </Tooltip>
+  );
+}
+
+function TransformationIcon({ layer }: { layer: APIDataLayer }) {
+  const dispatch = useDispatch();
+  const transform = useSelector((state: OxalisState) =>
+    getTransformsForLayerOrNull(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
+  );
+  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  if (!showIcon) {
+    return null;
+  }
+
+  const typeToLabel = {
+    affine: "an affine",
+    thin_plate_spline: "a thin-plate-spline",
+  };
+
+  const typeToImage = {
+    none: "icon-no-transformation.svg",
+    thin_plate_spline: "icon-tps-transformation.svg",
+    affine: "icon-affine-transformation.svg",
+  };
+
+  const toggleLayerTransforms = () => {
+    const state = Store.getState();
+    if (state.datasetConfiguration.nativelyRenderedLayerName === layer.name) {
+      return;
+    }
+    // Transform current position using the inverse transform
+    // so that the user will still look at the same data location.
+    const currentPosition = getPosition(state.flycam);
+    const currentTransforms = getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const invertedTransform = invertTransform(currentTransforms);
+    const newPosition = transformPointUnscaled(invertedTransform)(currentPosition);
+
+    // Also transform a reference coordinate to determine how the scaling
+    // changed. Then, adapt the zoom accordingly.
+    const referenceOffset: Vector3 = [10, 10, 10];
+    const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+    const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
+
+    const scaleChange = _.mean(
+      // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+      V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+    );
+    dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
+    dispatch(setPositionAction(newPosition));
+    dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
+  };
+
+  return (
+    <div className="flex-item">
+      <Tooltip
+        title={
+          transform != null
+            ? `This layer is rendered with ${
+                typeToLabel[transform.type]
+              } transformation. Click to render this layer without any transforms.`
+            : "This layer is shown natively (i.e., without any transformations)."
+        }
+      >
+        <img
+          src={`/assets/images/${typeToImage[transform?.type || "none"]}`}
+          alt="Transformed Layer Icon"
+          style={{
+            cursor: transform != null ? "pointer" : "default",
+            width: 14,
+            height: 14,
+            marginBottom: 4,
+            marginRight: 5,
+          }}
+          onClick={toggleLayerTransforms}
+        />
+      </Tooltip>
+    </div>
+  );
+}
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
@@ -359,7 +508,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
-    const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
+    if (!intensityRange) {
+      return null;
+    }
+    const defaultIntensityRange = getDefaultValueRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
 
     return (
@@ -384,6 +536,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
+    hasLessThanTwoColorLayers: boolean = true,
   ) => {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
@@ -477,6 +630,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const items = possibleItems.filter((el) => el && "label" in el && el.label != null);
     return (
       <div className="flex-container">
+        {isColorLayer ? (
+          <DragHandle hasLessThanTwoColorLayers={hasLessThanTwoColorLayers} />
+        ) : (
+          <DummyDragHandle layerType="Volume" />
+        )}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -599,6 +757,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               </Tooltip>
             ) : null}
           </div>
+          <TransformationIcon layer={layer} />
           <div className="flex-item">
             {isVolumeTracing ? (
               <Tooltip
@@ -619,7 +778,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) : null}
           </div>
           <div className="flex-item">
-            {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
               <Tooltip
                 title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
@@ -740,16 +899,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getLayerSettings = (
-    layerName: string,
-    layerConfiguration: DatasetLayerConfiguration | null | undefined,
-    isColorLayer: boolean = true,
-  ) => {
+  LayerSettings = ({
+    layerName,
+    layerConfiguration,
+    isColorLayer,
+    hasLessThanTwoColorLayers = true,
+  }: {
+    layerName: string;
+    layerConfiguration: DatasetLayerConfiguration | null | undefined;
+    isColorLayer: boolean;
+    hasLessThanTwoColorLayers?: boolean;
+  }) => {
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
     }
-
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
     return (
@@ -761,6 +925,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerName,
           elementClass,
           layerConfiguration,
+          hasLessThanTwoColorLayers,
         )}
         {isDisabled ? null : (
           <div
@@ -787,6 +952,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   };
+
+  SortableLayerSettings = SortableElement(this.LayerSettings);
 
   handleFindData = async (
     layerName: string,
@@ -823,7 +990,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (foundPosition && foundResolution) {
       const layer = getLayerByName(dataset, layerName, true);
-      const transformMatrix = getTransformsForLayerOrNull(dataset, layer)?.affineMatrix;
+      const transformMatrix = getTransformsForLayerOrNull(
+        dataset,
+        layer,
+        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+      )?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);
         // Transform the found position according to the matrix.
@@ -949,6 +1120,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             paddingRight: 1,
           }}
         >
+          <DummyDragHandle layerType="Skeleton" />
           <div
             className="flex-item"
             style={{
@@ -1097,22 +1269,126 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
-  render() {
-    const { layers } = this.props.datasetConfiguration;
+  saveViewConfigurationAsDefault = () => {
+    const { dataset, datasetConfiguration } = this.props;
+    const dataSource: Array<{
+      name: string;
+      description?: string;
+    }> = [{ name: "Position" }, { name: "Zoom" }, { name: "Rotation" }];
+    const additionalData: typeof dataSource = (
+      [
+        "fourBit",
+        "interpolation",
+        "renderMissingDataBlack",
+        "loadingStrategy",
+        "segmentationPatternOpacity",
+        "blendMode",
+      ] as Array<keyof RecommendedConfiguration>
+    ).map((key) => ({
+      name: settings[key] as string,
+      description: settingsTooltips[key],
+    }));
+    dataSource.push(...additionalData);
+    Modal.confirm({
+      title: "Save current view configuration as default?",
+      width: 700,
+      content: (
+        <>
+          Do you really want to save your current view configuration as the dataset's default?
+          <br />
+          This will overwrite the current default view configuration.
+          <br />
+          This includes all color and segmentation layer settings, as well as these additional
+          settings:
+          <br />
+          <br />
+          {dataSource.map((field, index) => {
+            let delimiter = index === dataSource.length - 1 ? "" : ", ";
+            delimiter = index === dataSource.length - 2 ? " and " : delimiter;
+            return field.description ? (
+              <>
+                {field.name}{" "}
+                <Tooltip title={field.description}>
+                  <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
+                </Tooltip>
+                {delimiter}
+              </>
+            ) : (
+              `${field.name}${delimiter}`
+            );
+          })}
+          .
+        </>
+      ),
+      onOk: async () => {
+        try {
+          const { flycam } = Store.getState();
+          const position = V3.floor(getPosition(flycam));
+          const zoom = flycam.zoomStep;
+          const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
+            position,
+            zoom,
+          });
+          await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
+          Toast.success("Successfully saved the current view configuration as default.");
+        } catch (error) {
+          Toast.error(
+            "Failed to save the current view configuration as default. Please look at the console for more details.",
+          );
+          ErrorHandling.notify(error as Error);
+          console.error(error);
+        }
+      },
+    });
+  };
 
-    // Show color layer(s) first and then the segmentation layer(s).
-    const layerSettings = _.sortBy(
-      _.entries(layers).map((entry) => {
-        const [layerName, layer] = entry;
-        const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
-        return {
-          layerName,
-          layer,
-          isColorLayer,
-        };
-      }),
-      (el) => !el.isColorLayer,
-    ).map((el) => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
+  onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
+    // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
+    document.body.classList.remove("is-dragging");
+    const { colorLayerOrder } = this.props.datasetConfiguration;
+    const movedElement = colorLayerOrder[oldIndex];
+    newIndex = Math.min(newIndex, colorLayerOrder.length - 1);
+    const newLayerOrder = update(colorLayerOrder, {
+      $splice: [
+        [oldIndex, 1],
+        [newIndex, 0, movedElement],
+      ],
+    });
+    this.props.onChange("colorLayerOrder", newLayerOrder);
+  };
+
+  render() {
+    const { layers, colorLayerOrder } = this.props.datasetConfiguration;
+    const LayerSettings = this.LayerSettings;
+    const SortableLayerSettings = this.SortableLayerSettings;
+
+    const segmentationLayerNames = Object.keys(layers).filter(
+      (layerName) => !getIsColorLayer(this.props.dataset, layerName),
+    );
+    const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
+    const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
+      return (
+        <SortableLayerSettings
+          key={layerName}
+          layerName={layerName}
+          layerConfiguration={layers[layerName]}
+          isColorLayer
+          index={index}
+          disabled={hasLessThanTwoColorLayers}
+          hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+        />
+      );
+    });
+    const segmentationLayerSettings = segmentationLayerNames.map((layerName) => {
+      return (
+        <LayerSettings
+          key={layerName}
+          layerName={layerName}
+          layerConfiguration={layers[layerName]}
+          isColorLayer={false}
+        />
+      );
+    });
 
     const state = Store.getState();
     const canBeMadeHybrid =
@@ -1121,7 +1397,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       state.task === null;
     return (
       <div className="tracing-settings-menu">
-        {layerSettings}
+        <SortableLayerSettingsContainer
+          onSortEnd={this.onSortLayerSettingsEnd}
+          onSortStart={() =>
+            colorLayerOrder.length > 1 && document.body.classList.add("is-dragging")
+          }
+          useDragHandle
+        >
+          {colorLayerSettings}
+        </SortableLayerSettingsContainer>
+        {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
         {this.props.tracing.restrictions.allowUpdate &&
@@ -1148,6 +1433,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <PlusOutlined />
               Add Skeleton Annotation Layer
             </Button>
+          </Row>
+        ) : null}
+
+        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
+          <Row justify="center" align="middle">
+            <Tooltip title="Save the current view configuration as default for all users.">
+              <Button onClick={this.saveViewConfigurationAsDefault}>
+                <SaveOutlined />
+                Save View Configuration as Default
+              </Button>
+            </Tooltip>
           </Row>
         ) : null}
 
@@ -1198,6 +1494,8 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  isAdminOrDatasetManager:
+    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

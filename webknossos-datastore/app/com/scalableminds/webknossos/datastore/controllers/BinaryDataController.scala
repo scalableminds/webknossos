@@ -2,11 +2,12 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
+import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -21,9 +22,8 @@ import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.{AnyContent, _}
 import scala.concurrent.duration.DurationInt
-
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
@@ -121,6 +121,24 @@ class BinaryDataController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
+  def requestRawCuboidPost(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String
+  ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> NOT_FOUND
+        (data, indices) <- requestData(dataSource, dataLayer, request.body)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+    }
+  }
+
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
@@ -159,12 +177,17 @@ class BinaryDataController @Inject()(
                     organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
+                    x: Int,
+                    y: Int,
+                    z: Int,
                     width: Int,
                     height: Int,
-                    centerX: Option[Int],
-                    centerY: Option[Int],
-                    centerZ: Option[Int],
-                    zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    mag: String,
+                    mappingName: Option[String],
+                    intensityMin: Option[Double],
+                    intensityMax: Option[Double],
+                    color: Option[String],
+                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -172,20 +195,31 @@ class BinaryDataController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
-        request = DataRequest(position, width, height, 1)
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
+        request = DataRequest(
+          VoxelPosition(x, y, z, magParsed),
+          width,
+          height,
+          depth = 1,
+          DataServiceRequestSettings(appliedAgglomerate = mappingName)
+        )
         (data, _) <- requestData(dataSource, dataLayer, request)
+        intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
+        layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
-          dataLayer.bytesPerElement,
-          request.settings.halfByte,
-          request.cuboid(dataLayer).width,
-          request.cuboid(dataLayer).height,
+          dataLayer.elementClass,
+          useHalfBytes = false,
+          slideWidth = width,
+          slideHeight = height,
           imagesPerRow = 1,
           blackAndWhite = false,
-          isSegmentation = dataLayer.category == Category.segmentation
+          intensityRange = intensityRange,
+          isSegmentation = dataLayer.category == Category.segmentation,
+          color = layerColor,
+          invertColor = invertColor
         )
         dataWithFallback = if (data.length == 0)
-          new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
+          new Array[Byte](width * height * dataLayer.bytesPerElement)
         else data
         spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
         firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
@@ -194,6 +228,7 @@ class BinaryDataController @Inject()(
       } yield Ok(outputStream.toByteArray).as(jpegMimeType)
     }
   }
+
   @ApiOperation(hidden = true, value = "")
   def mappingJson(
       token: Option[String],

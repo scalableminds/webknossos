@@ -32,6 +32,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
       val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
+
+      object EmailVerification {
+        val activated: Boolean = get[Boolean]("webKnossos.user.emailVerification.activated")
+        val required: Boolean = get[Boolean]("webKnossos.user.emailVerification.required")
+        val gracePeriod: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.gracePeriod")
+        val linkExpiry: Option[FiniteDuration] =
+          getOptional[FiniteDuration]("webKnossos.user.emailVerification.linkExpiry")
+      }
+
     }
 
     val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
@@ -94,8 +103,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     object OpenIdConnect {
       val providerUrl: String = get[String]("singleSignOn.openIdConnect.providerUrl")
       val clientId: String = get[String]("singleSignOn.openIdConnect.clientId")
-      val publicKey: String = get[String]("singleSignOn.openIdConnect.publicKey")
-      val publicKeyAlgorithm: String = get[String]("singleSignOn.openIdConnect.publicKeyAlgorithm")
+      val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
+      val scope: String = get[String]("singleSignOn.openIdConnect.scope")
+      val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
     }
   }
 
@@ -238,6 +248,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object SegmentAnything {
     val uri: String = get[String]("segmentAnything.uri")
+    val user: String = get[String]("segmentAnything.user")
+    val password: String = get[String]("segmentAnything.password")
   }
 
   val children =

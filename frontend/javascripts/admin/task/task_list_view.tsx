@@ -438,7 +438,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 <div className="nowrap">
                   <span title="Pending Instances">
                     <PlayCircleOutlined />
-                    {status.open}
+                    {status.pending}
                   </span>
                   <br />
                   <span title="Active Instances">
@@ -482,7 +482,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                       Edit
                     </a>
                   </div>
-                  {task.status.open > 0 ? (
+                  {task.status.pending > 0 ? (
                     <div>
                       <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
                         <UserAddOutlined />

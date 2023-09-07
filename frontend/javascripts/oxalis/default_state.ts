@@ -91,6 +91,7 @@ const defaultState: OxalisState = {
       dilateValue: 2,
     },
     renderWatermark: true,
+    antialiasRendering: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -156,6 +157,7 @@ const defaultState: OxalisState = {
       type: "readonly",
       version: 0,
       tracingId: "",
+      additionalAxes: [],
     },
     volumes: [],
     mappings: [],
@@ -192,6 +194,7 @@ const defaultState: OxalisState = {
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
+    additionalCoordinates: [],
   },
   viewModeData: {
     plane: {

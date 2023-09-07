@@ -355,7 +355,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         ),
       });
       this.setState({
-        datasetDefaultConfiguration,
+        datasetDefaultConfiguration: datasetDefaultConfiguration,
         dataset,
       });
     } catch (error) {

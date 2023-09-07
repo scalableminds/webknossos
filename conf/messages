@@ -52,6 +52,11 @@ user.lastOwner=Cannot deactivate the organization owner. Please talk to the WEBK
 
 user.email.alreadyInUse=This email address is already in use
 user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts
+user.email.notVerified=Your email address is not yet verified. A new verification email has been sent.
+user.email.verification.keyInvalid=Verification key is invalid.
+user.email.verification.keyUsed=Verification key has already been used.
+user.email.verification.emailDoesNotMatch=This verification key is associated with a different email address.
+user.email.verification.linkExpired=The email verification link is expired.
 user.firstName.invalid=Please check your first name for any special characters
 user.lastName.invalid=Please check your last name for any special characters
 user.configuration.invalid=Could not parse configuration
@@ -66,6 +71,7 @@ user.creation.failed=Failed to create user
 
 oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid
+oidc.authentication.failed=Failed to register / log in via Single-Sign-On (SSO with OIDC)
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on WEBKNOSSOS to login.
 braintracing.error=We could not automatically create an account for you on braintracing.org. Please do it on your own.
@@ -105,6 +111,8 @@ dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a
 dataSet.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataSet.explore.failed.readFile=Failed to read remote file
 dataSet.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
+dataSet.explore.autoAdd.failed=Failed to automatically import the explored dataset.
+dataSet.additionalCoordinates.different=Additional coordinates differ in merged units.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system
@@ -150,6 +158,7 @@ nml.tree.elements.invalid=Invalid {0} in tree {1}
 nml.treegroup.id.invalid=Invalid tree group id {0}
 nml.segmentGroup.id.invalid=Invalid segment group id {0}
 nml.boundingbox.id.invalid=Invalid user bounding box id {0}
+nml.additionalCoordinates.notUnique=Additional coordinates do not have unique names
 
 project.name.alreadyTaken=The name “{0}” is already being used for a different project. Please choose a different name.
 project.name.invalidChars=The project name contains invalid characters. Please use only letters and numbers.
@@ -278,6 +287,7 @@ script.removalFailed=Failed to remove script
 script.write.failed=Failed to convert script to json
 script.notOwner=You are not the owner of the script you want to edit.
 script.invalid=Script is invalid
+script.name.invalid.characters=Script name is invalid. Please use only letters, digits, dots, space, underscores, hyphens.
 
 serialization.failed=Failed to serialize data.
 
@@ -329,6 +339,7 @@ folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
 folder.noWriteAccess=No write access in this folder
+folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.
 segmentAnything.noUri=No Uri for SAM server configured.

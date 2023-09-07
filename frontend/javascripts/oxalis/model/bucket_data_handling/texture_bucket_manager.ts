@@ -140,6 +140,11 @@ export default class TextureBucketManager {
       bucket.zoomedAddress[3],
       this.layerIndex,
     ]);
+
+    // If a bucket is evicted from the GPU, it should not be rendered, anymore.
+    // This is especially important when new buckets take a while to load. In that
+    // time window, old data should not be rendered.
+    app.vent.emit("rerender");
   }
 
   // Takes an array of buckets and ensures that these

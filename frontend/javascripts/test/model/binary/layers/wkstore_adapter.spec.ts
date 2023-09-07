@@ -1,7 +1,7 @@
 import _ from "lodash";
 import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { byteArrayToLz4Base64 } from "oxalis/workers/byte_array_to_lz4_base64.worker";
+import { byteArraysToLz4Base64 } from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -57,7 +57,10 @@ const StoreMock = {
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestWithFallback, sendToStore } = mockRequire.reRequire(
+
+const PushQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pushqueue").default;
+
+const { requestWithFallback } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 const tokenResponse = {
@@ -158,12 +161,14 @@ function createExpectedOptions(fourBit: boolean = false) {
     data: [
       {
         position: [0, 0, 0],
+        additionalCoordinates: undefined,
         mag: [1, 1, 1],
         cubeSize: 32,
         fourBit,
       },
       {
         position: [64, 64, 64],
+        additionalCoordinates: undefined,
         mag: [2, 2, 2],
         cubeSize: 32,
         fourBit,
@@ -244,18 +249,20 @@ test.serial("sendToStore: Request Handling should send the correct request param
         name: "updateBucket",
         value: {
           position: [0, 0, 0],
+          additionalCoordinates: undefined,
           mag: [1, 1, 1],
           cubeSize: 32,
-          base64Data: byteArrayToLz4Base64(data),
+          base64Data: byteArraysToLz4Base64([data])[0],
         },
       },
       {
         name: "updateBucket",
         value: {
           position: [64, 64, 64],
+          additionalCoordinates: undefined,
           mag: [2, 2, 2],
           cubeSize: 32,
-          base64Data: byteArrayToLz4Base64(data),
+          base64Data: byteArraysToLz4Base64([data])[0],
         },
       },
     ],
@@ -263,7 +270,10 @@ test.serial("sendToStore: Request Handling should send the correct request param
     saveQueueType: "volume",
     tracingId,
   };
-  return sendToStore(batch, tracingId).then(() => {
+
+  const pushQueue = new PushQueue({ ...mockedCube, layerName: tracingId });
+
+  return pushQueue.pushTransaction(batch).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;
     t.deepEqual(saveQueueItems, expectedSaveQueueItems);

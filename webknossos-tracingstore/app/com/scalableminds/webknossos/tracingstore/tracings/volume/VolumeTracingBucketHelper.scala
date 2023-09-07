@@ -89,8 +89,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
   protected def parseBucketKey(key: String,
                                additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
     additionalAxes match {
-      case Some(value) => parseBucketKeyWithAdditionalAxes(key, value)
-      case None        => parseBucketKeyXYZ(key)
+      case Some(value) if value.nonEmpty => parseBucketKeyWithAdditionalAxes(key, value)
+      case _                             => parseBucketKeyXYZ(key)
     }
 
   private def parseBucketKeyXYZ(key: String) = {

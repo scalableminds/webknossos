@@ -66,7 +66,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def volume: Long =
     width.toLong * height.toLong * depth.toLong
 
-  def dimensions: Vec3Int =
+  def size: Vec3Int =
     Vec3Int(width, height, depth)
 
   def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"

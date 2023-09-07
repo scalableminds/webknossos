@@ -81,7 +81,6 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
       case _ =>
         s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
-
   }
 
   protected def buildKeyPrefix(dataLayerName: String): String =

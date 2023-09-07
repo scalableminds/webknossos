@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
@@ -17,13 +18,13 @@ import org.apache.commons.io.IOUtils
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits with LazyLogging {
 
   private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
     tryo(new java.util.zip.ZipFile(zipFile)).map { zip =>
       val relevantFile: Option[ZipEntry] =
-        ZipIO.entries(zip).find(entry => entry.getName == "zarr.json" || entry.getName.endsWith(".wkw"))
-      if (relevantFile.exists(_.getName == "zarr.json")) {
+        ZipIO.entries(zip).find(entry => entry.getName.endsWith("zarr.json") || entry.getName.endsWith(".wkw"))
+      if (relevantFile.exists(_.getName.endsWith("zarr.json"))) {
         VolumeDataZipFormat.zarr3
       } else VolumeDataZipFormat.wkw
     }
@@ -52,7 +53,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
         // TODO: first, read additional axes metadata fom zarr.json
         for {
           firstHeaderFilePath <- option2Box(
-            ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName == Zarr3ArrayHeader.ZARR_JSON))
+            ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.ZARR_JSON)))
           firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
           firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
           _ <- ZipIO.withUnziped(zipFile) {
@@ -71,6 +72,8 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
 
   private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
     val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("z", "y", "x"))
+    val dimensionCount = dimensionNames.length
+    logger.info(f"parsing zarr chunk path: $path with $dimensionCount dimensions")
     // TODO: this is as yet just copied from wkw
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {

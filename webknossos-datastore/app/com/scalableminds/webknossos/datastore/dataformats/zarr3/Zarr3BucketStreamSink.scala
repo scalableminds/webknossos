@@ -18,13 +18,14 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
 import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
 import java.nio.charset.Charset
 import scala.concurrent.Future
 
 // Creates data zip from volume tracings
-class Zarr3BucketStreamSink(val layer: DataLayer) {
+class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
@@ -62,6 +63,7 @@ class Zarr3BucketStreamSink(val layer: DataLayer) {
     bucketStream.map {
       case (bucket, data) =>
         val filePath = zarrChunkFilePath(bucket)
+        logger.info(s"adding bucket in zip at file path $filePath")
         NamedFunctionStream(
           filePath,
           os => Future.successful(os.write(compressor.compress(data)))

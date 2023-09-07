@@ -152,12 +152,7 @@ const nmFactorToUnit2D = new Map([
   [1e18, "m²"],
   [1e24, "km²"],
 ]);
-/* TODO: or rather: 
-const nmFactorToUnit2D = new Map(
-  Array.from(nmFactorToUnit).map((entry) => [Math.pow(entry[0], 2), entry[1].concat("²")]),
-); 
-Although I think that the explicit maps are better to read and it's better to have them stored rather than computing them every time they are needed.
-*/
+
 export function formatNumberToArea(lengthInNm2: number): string {
   return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, 0);
 }

@@ -1097,7 +1097,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
-  const [lastTimeSegmentInfoWasFetched, setLastTimeSegmentInfoWasFetched] = useState(new Date());
+  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(new Date());
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1129,13 +1129,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          mag.getLowestResolution(),
           [segmentIdAtPosition],
         );
         const [boundingBox] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          mag.getLowestResolution(),
           [segmentIdAtPosition],
         );
         const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
@@ -1149,7 +1149,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     ["loading", "loading"],
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoWasFetched],
+    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
   ) as [string, string] | [];
 
   if (contextMenuPosition == null || maybeViewport == null) {
@@ -1226,7 +1226,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const handleRefreshSegmentVolume = async () => {
     await api.tracing.save();
-    setLastTimeSegmentInfoWasFetched(new Date());
+    setLastTimeSegmentInfoShouldBeFetched(new Date());
   };
 
   const refreshButton = (

@@ -9,6 +9,7 @@ import { Segment } from "oxalis/store";
 import React from "react";
 import { TreeNode } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
+import { APISegmentationLayer } from "types/api_flow_types";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -18,9 +19,9 @@ const { ThinSpace } = Unicode;
 type Props = {
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
-  tracingId: any;
-  tracingStoreUrl: any;
-  visibleSegmentationLayer: any;
+  tracingId: string;
+  tracingStoreUrl: string;
+  visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
   parentGroup: number;
   groupTree: TreeNode[];
@@ -41,19 +42,20 @@ type SegmentInfo = {
 const exportStatisticsToCSV = (
   segmentInformation: Array<SegmentInfo>,
   tracingId: string,
-  groupId: number,
+  groupIdToExport: number,
 ) => {
-  if (segmentInformation.length < 0) {
+  if (segmentInformation.length === 0) {
     return;
   }
-  const segmentStatisticsAsString = segmentInformation
-    .map(
-      (segmentInfo) =>
-        `${segmentInfo.segmentId},${segmentInfo.segmentName},${segmentInfo.groupId},${segmentInfo.groupName},${segmentInfo.volumeInVoxel},${segmentInfo.volumeInNm3},${segmentInfo.boundingBoxTopLeft},${segmentInfo.boundingBoxPosition}`,
-    )
-    .join("\n");
+  const segmentStatisticsAsString = segmentInformation.map(row =>
+    [row.segmentId, row.segmentName, row.groupId, row.groupName, row.volumeInVoxel, row.volumeInNm3, row.boundingBoxTopLeft, row.boundingBoxPosition]
+      .map(String)  // convert every value to String
+      .map(v => v.replaceAll('"', '""'))  // escape double quotes
+      .map(v => v.includes(",") || v.includes('"') ? `"${v}"` : v)  // quote it if necessary
+      .join(',')  // comma-separated
+  ).join('\r\n');  // rows starting on new lines
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
-  const filename = `segmentStatistics_tracing-${tracingId}_group-${groupId}.csv`;
+  const filename = `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {
     type: "text/plain;charset=utf-8",
   });

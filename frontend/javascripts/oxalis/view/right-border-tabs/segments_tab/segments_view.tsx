@@ -1535,7 +1535,7 @@ class SegmentsView extends React.Component<Props, State> {
       const state = Store.getState();
       const volumeTracing = getActiveSegmentationTracing(state);
       const tracingId = volumeTracing?.tracingId;
-      const tracingStoreUrl = state.tracing.tracingStore.url;
+      const tracingStoreUrl = state.tracing.tracingStore.url;//TODO error if tracingId is null
       return (
         <SegmentStatisticsModal
           isOpen={this.state.activeStatisticsModalGroupId === groupId}

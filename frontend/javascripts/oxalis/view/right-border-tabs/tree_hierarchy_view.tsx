@@ -632,9 +632,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
               title: "Hide/Show edges of this tree",
-              icon: (
-                <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />
-              ),
+              icon: <span className="hide-tree-edges-icon" />,
               label: "Hide/Show edges of this tree",
             },
           ],

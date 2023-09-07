@@ -29,7 +29,7 @@ export default function DownsampleVolumeModal({
       footer={null}
       width={800}
       maskClosable={false}
-      visible
+      open
     >
       <p>
         This annotation does not have volume annotation data in all resolutions. Consequently,

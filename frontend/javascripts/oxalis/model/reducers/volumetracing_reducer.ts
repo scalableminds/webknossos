@@ -218,6 +218,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
+    hasSegmentIndex: tracing.hasSegmentIndex || false,
   };
   return volumeTracing;
 }

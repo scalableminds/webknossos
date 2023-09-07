@@ -1034,6 +1034,15 @@ export async function downsampleSegmentation(
     },
   );
 }
+
+export async function addSegmentIndex(annotationId: string, tracingId: string): Promise<Object> {
+  return await Request.receiveJSON(
+    `/api/annotations/${annotationId}/addSegmentIndex?tracingId=${tracingId}`,
+    {
+      method: "PATCH",
+    },
+  );
+}
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,

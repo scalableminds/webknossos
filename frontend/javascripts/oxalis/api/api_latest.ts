@@ -45,6 +45,7 @@ import {
   requestTask,
   downsampleSegmentation,
   sendAnalyticsEvent,
+  addSegmentIndex,
 } from "admin/admin_rest_api";
 import {
   findTreeByNodeId,
@@ -1064,7 +1065,21 @@ class TracingApi {
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
   }
+
+  async addSegmentIndex(volumeTracingId: string) {
+    const state = Store.getState();
+    const { annotationId } = state.tracing;
+
+    if (state.task != null) {
+      throw new Error("Cannot add segmentation index for a task.");
+    }
+
+    await this.save();
+    await addSegmentIndex(annotationId, volumeTracingId);
+    await this.hardReload();
+  }
 }
+
 /**
  * All binary data / layer related API methods.
  * @example

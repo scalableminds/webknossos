@@ -102,6 +102,8 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import AddSegmentIndexModal from "./modals/add_segment_index_modal";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -132,6 +134,8 @@ type State = {
   // If this is set to not-null, the downsampling modal
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
+  volumeTracingToAddSegmentIndex: VolumeTracing | null | undefined;
+  volumeLayerNameToAddSegmentIndex: string | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
   preselectedSegmentationLayerName: string | undefined;
   segmentationLayerWasPreselected: boolean | undefined;
@@ -142,6 +146,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state: State = {
     volumeTracingToDownsample: null,
+    volumeTracingToAddSegmentIndex: null,
+    volumeLayerNameToAddSegmentIndex: null,
     isAddVolumeLayerModalVisible: false,
     preselectedSegmentationLayerName: undefined,
     segmentationLayerWasPreselected: false,
@@ -296,6 +302,29 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
+  getAddSegmentIndexButton = (
+    layerName: string,
+    volumeTracing: VolumeTracing | null | undefined,
+  ) => {
+    // Re-Calculation of a segment index or with a fallback layer is not possible.
+    console.log(volumeTracing);
+    if (
+      volumeTracing == null ||
+      volumeTracing.fallbackLayer != null ||
+      volumeTracing.hasSegmentIndex
+    ) {
+      return null;
+    }
+    return (
+      <Tooltip title="Add segment index to this layer">
+        <div onClick={() => this.showAddSegmentIndexModal(volumeTracing, layerName)}>
+          <PlusOutlined />
+          Add segment index
+        </div>
+      </Tooltip>
+    );
+  };
+
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
     Object.keys(layers).forEach((otherLayerName) =>
@@ -439,8 +468,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
+      isVolumeTracing && !isDisabled
+        ? {
+            label: this.getAddSegmentIndexButton(layerName, maybeVolumeTracing),
+            key: "addSegmentIndexButton",
+          }
+        : null,
     ];
-    const items = possibleItems.filter((el) => el);
+    const items = possibleItems.filter((el) => el && "label" in el && el.label != null);
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -1029,6 +1064,20 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     });
   };
 
+  showAddSegmentIndexModal = (volumeTracing: VolumeTracing, layerName: string) => {
+    this.setState({
+      volumeTracingToAddSegmentIndex: volumeTracing,
+      volumeLayerNameToAddSegmentIndex: layerName,
+    });
+  };
+
+  hideAddSegmentIndexModal = () => {
+    this.setState({
+      volumeTracingToAddSegmentIndex: null,
+      volumeLayerNameToAddSegmentIndex: null,
+    });
+  };
+
   showAddVolumeLayerModal = () => {
     this.setState({
       isAddVolumeLayerModalVisible: true,
@@ -1108,6 +1157,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
             volumeTracing={this.state.volumeTracingToDownsample}
             magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
+          />
+        ) : null}
+
+        {this.state.volumeTracingToAddSegmentIndex != null &&
+        this.state.volumeLayerNameToAddSegmentIndex != null ? (
+          <AddSegmentIndexModal
+            hideAddSegmentIndexModal={this.hideAddSegmentIndexModal}
+            volumeTracing={this.state.volumeTracingToAddSegmentIndex}
+            volumeLayerName={this.state.volumeLayerNameToAddSegmentIndex}
           />
         ) : null}
 

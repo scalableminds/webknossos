@@ -58,6 +58,7 @@ object Dependencies {
   private val brotli4jLinuxX86 = brotli4j.withName("native-linux-x86_64")
   private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
+  private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -112,7 +113,8 @@ object Dependencies {
     brotli4j,
     brotli4jLinuxX86,
     brotli4cOsXX86,
-    brotli4cOsXArm
+    brotli4cOsXArm,
+    zstdJni
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

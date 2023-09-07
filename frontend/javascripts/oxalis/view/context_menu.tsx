@@ -101,6 +101,7 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -113,32 +114,12 @@ type OwnProps = {
   maybeMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   globalPosition: Vector3 | null | undefined;
+  additionalCoordinates: AdditionalCoordinate[] | undefined;
   maybeViewport: OrthoView | null | undefined;
   hideContextMenu: () => void;
 };
-type DispatchProps = {
-  deleteEdge: (arg0: number, arg1: number) => void;
-  mergeTrees: (arg0: number, arg1: number) => void;
-  minCutAgglomerate: (arg0: number, arg1: number) => void;
-  deleteNode: (arg0: number, arg1: number) => void;
-  setActiveNode: (arg0: number) => void;
-  hideTree: (arg0: number) => void;
-  createTree: () => void;
-  addTreesAndGroups: (arg0: MutableTreeMap) => void;
-  hideBoundingBox: (arg0: number) => void;
-  setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
-  setBoundingBoxName: (arg0: number, arg1: string) => void;
-  addNewBoundingBox: (arg0: Vector3) => void;
-  deleteBoundingBox: (arg0: number) => void;
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void;
-  createBranchPoint: (arg0: number, arg1: number) => void;
-  deleteBranchpointById: (arg0: number, arg1: number) => void;
-  performMinCut: (arg0: number, arg1: number | undefined) => void;
-  removeMesh: (arg0: string, arg1: number) => void;
-  hideMesh: (arg0: string, arg1: number) => void;
-  setPosition: (arg0: Vector3) => void;
-  refreshMesh: (arg0: string, arg1: number) => void;
-};
+
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   datasetScale: Vector3;
@@ -223,8 +204,12 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
   });
 }
 
-function positionToString(pos: Vector3): string {
-  return pos.map((value) => roundTo(value, 2)).join(", ");
+function positionToString(
+  pos: Vector3,
+  optAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): string {
+  const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
+  return [...pos, ...additionalCoordinates].map((value) => roundTo(value, 2)).join(", ");
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
@@ -746,6 +731,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     volumeTracing,
     activeTool,
     globalPosition,
+    additionalCoordinates,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     viewport,
@@ -786,7 +772,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     }
 
     Store.dispatch(
-      loadPrecomputedMeshAction(segmentId, globalPosition, currentMeshFile.meshFileName),
+      loadPrecomputedMeshAction(
+        segmentId,
+        globalPosition,
+        additionalCoordinates,
+        currentMeshFile.meshFileName,
+      ),
     );
   };
 
@@ -802,7 +793,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition));
+    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -936,7 +927,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "select-cell",
                 onClick: () => {
-                  setActiveCell(segmentIdAtPosition, globalPosition);
+                  setActiveCell(segmentIdAtPosition, globalPosition, additionalCoordinates);
                 },
                 label: (
                   <>
@@ -1123,9 +1114,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
       nodeContextMenuTree = tree;
     });
   }
+  // TS doesnt understand the above initialization and assumes the values
+  // are always null. The following NOOP helps TS with the correct typing.
+  nodeContextMenuTree = nodeContextMenuTree as Tree | null;
+  nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
 
   const positionToMeasureDistanceTo =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
     nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
@@ -1141,8 +1135,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
         ]
       : null;
   const nodePositionAsString =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
-    nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+    nodeContextMenuNode != null
+      ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
+      : "";
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const infoRows = [];
 
@@ -1150,7 +1145,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "nodeInfo",
-        // @ts-expect-error FIXME: Property 'treeId' does not exist on type 'never'... Remove this comment to see the full error message
         `Node with Id ${maybeClickedNodeId} in Tree ${nodeContextMenuTree.treeId}`,
       ),
     );
@@ -1168,7 +1162,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   } else if (globalPosition != null) {
-    const positionAsString = positionToString(globalPosition);
+    const positionAsString = positionToString(globalPosition, props.additionalCoordinates);
+
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",
@@ -1323,8 +1318,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(createTreeAction());
   },
 
-  setActiveCell(segmentId: number, somePosition?: Vector3) {
-    dispatch(setActiveCellAction(segmentId, somePosition));
+  setActiveCell(
+    segmentId: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
 
   addNewBoundingBox(center: Vector3) {

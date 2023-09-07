@@ -115,7 +115,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   const cube = model.getCubeByLayerName("segmentation");
   const position = [100, 100, 100];
   const zoomStep = 0;
-  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
   const bucket = cube.getOrCreateBucket(bucketAddress);
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);

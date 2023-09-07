@@ -7,7 +7,7 @@ import { document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
-import type { OrthoView, Vector3, ViewMode } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
@@ -54,19 +54,7 @@ type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
 };
-type StateProps = {
-  viewMode: ViewMode;
-  isUpdateTracingAllowed: boolean;
-  showVersionRestore: boolean;
-  storedLayouts: Record<string, any>;
-  isDatasetOnScratchVolume: boolean;
-  autoSaveLayouts: boolean;
-  datasetName: string;
-  is2d: boolean;
-  displayName: string;
-  organization: string;
-  distanceMeasurementTooltipPosition: [number, number] | null;
-};
+type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
 };
@@ -353,6 +341,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             maybeClickedNodeId={this.state.clickedNodeId}
             clickedBoundingBoxId={this.state.clickedBoundingBoxId}
             globalPosition={this.state.contextMenuGlobalPosition}
+            additionalCoordinates={this.props.additionalCoordinates || undefined}
             contextMenuPosition={contextMenuPosition}
             maybeViewport={contextMenuViewport}
             maybeClickedMeshId={this.state.contextMenuMeshId}
@@ -475,7 +464,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: OxalisState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
@@ -488,6 +477,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
     distanceMeasurementTooltipPosition: state.uiInformation.measurementTooltipPosition,
+    additionalCoordinates: state.flycam.additionalCoordinates,
   };
 }
 

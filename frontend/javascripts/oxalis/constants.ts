@@ -1,3 +1,5 @@
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
@@ -12,6 +14,13 @@ export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
+
+// For 3D data BucketAddress = x, y, z, mag
+// For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
+export type BucketAddress =
+  | Vector4
+  | [number, number, number, number, AdditionalCoordinate[] | null];
+
 export type Point2 = {
   x: number;
   y: number;
@@ -270,11 +279,12 @@ export const Unicode = {
 // to a 2D slice of labeled voxels. These labeled voxels
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
-export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
+
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).
-export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
+export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
 export type ShowContextMenuFunction = (
   arg0: number,
   arg1: number,

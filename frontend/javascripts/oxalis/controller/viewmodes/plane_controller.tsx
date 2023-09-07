@@ -479,6 +479,7 @@ class PlaneController extends React.PureComponent<Props> {
     const baseControls = {
       "ctrl + i": (event: React.KeyboardEvent) => {
         const segmentationLayer = Model.getVisibleSegmentationLayer();
+        const { additionalCoordinates } = Store.getState().flycam;
 
         if (!segmentationLayer) {
           return;
@@ -496,6 +497,7 @@ class PlaneController extends React.PureComponent<Props> {
           const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
             globalMousePosition,
+            additionalCoordinates,
             mapping,
             getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
           );

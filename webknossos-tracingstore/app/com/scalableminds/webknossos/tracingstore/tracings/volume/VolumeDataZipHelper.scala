@@ -3,21 +3,21 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{ByteUtils, JsonHelper}
+import com.scalableminds.util.tools.{BoxImplicits, ByteUtils, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.{Box, Failure}
-import net.liftweb.util.Helpers.{OptionExtension, tryo}
+import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits {
 
   private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
     tryo(new java.util.zip.ZipFile(zipFile)).map { zip =>
@@ -32,7 +32,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     for {
       format <- detectVolumeDataZipFormat(zipFile)
       _ <- if (format == VolumeDataZipFormat.wkw) {
-        ZipIO.withUnziped(zipFile) {
+        tryo(ZipIO.withUnziped(zipFile) {
           case (fileName, is) =>
             WKWFile.read(is) {
               case (header, buckets) =>
@@ -47,14 +47,12 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
                   }
                 }
             }
-        }
+        })
       } else {
         // TODO: first, read additional axes metadata fom zarr.json
         for {
-          firstHeaderFilePath <- ZipIO
-            .entries(new ZipFile(zipFile))
-            .find(entry => entry.getName == Zarr3ArrayHeader.ZARR_JSON)
-            .toBox
+          firstHeaderFilePath <- option2Box(
+            ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName == Zarr3ArrayHeader.ZARR_JSON))
           firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
           firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
           _ <- ZipIO.withUnziped(zipFile) {

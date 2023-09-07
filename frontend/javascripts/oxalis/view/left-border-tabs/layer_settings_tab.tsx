@@ -103,7 +103,6 @@ import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import AddSegmentIndexModal from "./modals/add_segment_index_modal";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;

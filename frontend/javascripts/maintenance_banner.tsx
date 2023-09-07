@@ -15,7 +15,8 @@ export function MaintenanceBanner() {
   const [currentAndUpcomingMaintenances, setcurrentAndUpcomingMaintenances] = useState<
     Array<MaintenanceInfo>
   >([]);
-
+  const [position, setPosition] = useState<Object>({ top: 48 });
+  const [isTop, setIsTop] = useState(true);
   useInterval(
     async () => {
       if (activeUser == null) return;
@@ -33,6 +34,11 @@ export function MaintenanceBanner() {
       latestAcknowledgedMaintenanceInfo: closestUpcomingMaintenance.id,
     });
     Store.dispatch(setActiveUserAction(nextMaintenanceAcknowledged));
+  };
+
+  const toggleTopOrBottomPosition = () => {
+    setPosition(isTop ? { top: "48px" } : { bottom: "20px" });
+    setIsTop(!isTop);
   };
 
   const getClosestUpcomingMaintenanceBanner = () => {
@@ -81,6 +87,10 @@ export function MaintenanceBanner() {
         }
         type="warning"
         banner
+        onMouseEnter={() => {
+          toggleTopOrBottomPosition();
+        }}
+        style={position}
       />
     );
   };

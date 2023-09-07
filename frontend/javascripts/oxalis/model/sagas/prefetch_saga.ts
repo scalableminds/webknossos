@@ -104,6 +104,7 @@ export function* prefetchForPlaneMode(
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
@@ -135,6 +136,7 @@ export function* prefetchForPlaneMode(
           areas,
           resolutions,
           resolutionInfo,
+          additionalCoordinates,
         );
 
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
@@ -177,6 +179,7 @@ export function* prefetchForArbitraryMode(
   const { lastMatrix, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const { pullQueue, cube } = Model.dataLayers[layer.name];
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   if (
     currentBucketPickerTick !== lastBucketPickerTick &&
@@ -188,7 +191,14 @@ export function* prefetchForArbitraryMode(
         strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&
         strategy.inRoundTripTimeRange(lastConnectionStats.avgRoundTripTime)
       ) {
-        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions, resolutionInfo);
+        const buckets = strategy.prefetch(
+          matrix,
+          zoomStep,
+          position,
+          resolutions,
+          resolutionInfo,
+          additionalCoordinates,
+        );
 
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
           for (const item of buckets) {
@@ -199,7 +209,6 @@ export function* prefetchForArbitraryMode(
             }
           }
         }
-
         pullQueue.addAll(buckets);
         break;
       }

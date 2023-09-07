@@ -6,6 +6,11 @@ trait ByteUtils {
       byte == 0
     }
 
+  /**
+    *
+    * @param l a 64 bit number
+    * @return l as array of 8 bytes, little endian
+    */
   protected def longToBytes(l: Long): Array[Byte] = {
     var w = l
     val result = new Array[Byte](8)

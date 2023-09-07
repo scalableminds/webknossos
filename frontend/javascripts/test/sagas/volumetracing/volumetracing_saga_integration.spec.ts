@@ -862,10 +862,10 @@ test.serial("Provoke race condition when bucket compression is very slow", async
 test.serial("Undo for deleting segment group (without recursion)", async (t) => {
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   const position = [1, 2, 3] as Vector3;
-  Store.dispatch(clickSegmentAction(1, position));
-  Store.dispatch(clickSegmentAction(2, position));
-  Store.dispatch(clickSegmentAction(3, position));
-  Store.dispatch(clickSegmentAction(4, position));
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
 
   Store.dispatch(
     setSegmentGroupsAction(
@@ -917,10 +917,10 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
 test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   const position = [1, 2, 3] as Vector3;
-  Store.dispatch(clickSegmentAction(1, position));
-  Store.dispatch(clickSegmentAction(2, position));
-  Store.dispatch(clickSegmentAction(3, position));
-  Store.dispatch(clickSegmentAction(4, position));
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
 
   Store.dispatch(
     setSegmentGroupsAction(
@@ -953,7 +953,8 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
 
   const stateRestored = Store.getState();
   const tracingRestored = stateRestored.tracing.volumes[0];
-  t.is(tracingRestored.segmentGroups.length, 2);
+  t.is(tracingRestored.segmentGroups.length, 1);
+  t.is(tracingRestored.segmentGroups[0]?.children.length || 0, 1);
   t.is(tracingRestored.segments.size(), 4);
 
   t.is(tracingRestored.segments.get(1).groupId, 1);
@@ -962,13 +963,13 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   t.is(tracingRestored.segments.get(4).groupId, 2);
 });
 
-test.serial.only("Undo for deleting segment group (bug repro)", async (t) => {
+test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   const position = [1, 2, 3] as Vector3;
-  Store.dispatch(clickSegmentAction(1, position));
-  Store.dispatch(clickSegmentAction(2, position));
-  Store.dispatch(clickSegmentAction(3, position));
-  Store.dispatch(clickSegmentAction(4, position));
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
 
   /* Set up
     Group 1

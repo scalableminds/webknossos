@@ -7,7 +7,7 @@ import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volu
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -15,6 +15,8 @@ import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
@@ -48,6 +50,12 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
 }, WARNING_THROTTLE_THRESHOLD);
+
+export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
+  if (bucket.type === "null") {
+    throw new Error("Unexpected null bucket.");
+  }
+}
 
 export class NullBucket {
   type: "null" = "null";
@@ -138,7 +146,7 @@ export class DataBucket {
   accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: Vector4;
+  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
@@ -152,7 +160,7 @@ export class DataBucket {
 
   constructor(
     elementClass: ElementClass,
-    zoomedAddress: Vector4,
+    zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
     cube: DataCube,
   ) {
@@ -270,15 +278,20 @@ export class DataBucket {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
+  getAdditionalCoordinates(): AdditionalCoordinate[] | undefined | null {
+    return this.zoomedAddress[4];
+  }
+
   is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
     // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
     // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position
     // is also returned along with the adjusted voxel coordinate in that neighboring bucket.
-    const neighbourBucketAddress: Vector4 = [
+    const neighbourBucketAddress: BucketAddress = [
       this.zoomedAddress[0],
       this.zoomedAddress[1],
       this.zoomedAddress[2],
       zoomStep,
+      this.getAdditionalCoordinates() || [],
     ];
     let isVoxelOutside = false;
     const adjustedVoxel: Vector3 = [voxel[0], voxel[1], voxel[2]];
@@ -290,7 +303,7 @@ export class DataBucket {
         const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
         // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
         // bucket address
-        neighbourBucketAddress[dimensionIndex] += sign * offset;
+        (neighbourBucketAddress[dimensionIndex] as number) += sign * offset;
       }
 
       adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);

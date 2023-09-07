@@ -10,8 +10,13 @@ function compressLz4Block(data: Uint8Array): Uint8Array {
   return newCompressed.slice(4);
 }
 
-export function byteArrayToLz4Base64(byteArray: Uint8Array): string {
-  const compressed = compressLz4Block(byteArray);
-  return Base64.fromByteArray(compressed);
+export function byteArraysToLz4Base64(byteArrays: Uint8Array[]): string[] {
+  const base64Strings: string[] = [];
+  for (const byteArray of byteArrays) {
+    const compressed = compressLz4Block(byteArray);
+    base64Strings.push(Base64.fromByteArray(compressed));
+  }
+
+  return base64Strings;
 }
-export default expose(byteArrayToLz4Base64);
+export default expose(byteArraysToLz4Base64);

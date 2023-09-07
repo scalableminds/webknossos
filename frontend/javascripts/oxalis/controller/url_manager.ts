@@ -19,10 +19,14 @@ import messages from "messages";
 import { validateUrlStateJSON } from "types/validation";
 import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 const MAX_UPDATE_INTERVAL = 1000;
+
 type BaseMeshUrlDescriptor = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
 };
 type AdHocMeshUrlDescriptor = BaseMeshUrlDescriptor & {
   readonly isPrecomputed: false;
@@ -82,6 +86,7 @@ export type UrlManagerState = {
   activeNode?: number;
   rotation?: Vector3;
   stateByLayer?: UrlStateByLayer;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -291,6 +296,7 @@ class UrlManager {
       position,
       mode,
       zoomStep,
+      additionalCoordinates: state.flycam.additionalCoordinates,
       ...rotationOptional,
       ...activeNodeOptional,
       ...stateByLayerOptional,

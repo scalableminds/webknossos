@@ -321,9 +321,9 @@ class VolumeTracingController @Inject()(
                                                List(volumeUpdate),
                                                None,
                                                None,
-                                               None,
-                                               None,
-                                               None),
+                                               "dummyTransactionId",
+                                               1,
+                                               0),
               tracing.version,
               urlOrHeaderToken(token, request)
             )

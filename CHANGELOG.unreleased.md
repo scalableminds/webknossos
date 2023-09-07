@@ -17,6 +17,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
 
 ### Changed
+- Annotating volume data uses a transaction-based mechanism now. As a result, WK is more robust against partial saves (i.e., due to a crashing tab). [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
 
 ### Fixed

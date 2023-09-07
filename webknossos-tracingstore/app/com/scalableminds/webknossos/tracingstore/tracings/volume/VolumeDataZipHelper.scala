@@ -6,6 +6,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Box, Failure}
@@ -46,8 +47,36 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
                 }
             }
         }
-      } else Failure("Not implemented")
+      } else {
+        // TODO: first, read additional axes metadata fom zarr.json
+        ZipIO.withUnziped(zipFile) {
+          case (filename, inputStream) =>
+            if (filename.endsWith("zarr.json")) ()
+            else {
+              parseZarrChunkPath(filename.toString).map { bucketPosition =>
+                val data = IOUtils.toByteArray(inputStream)
+                block(bucketPosition, data)
+              }
+            }
+        }
+      }
     } yield ()
+
+  private def parseZarrChunkPath(path: String): Option[BucketPosition] = {
+    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
+    path match {
+      case CubeRx(_, resolutionStr, z, y, x) =>
+        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true).map { mag =>
+          BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
+                         y.toInt * mag.y * DataLayer.bucketLength,
+                         z.toInt * mag.z * DataLayer.bucketLength,
+                         mag,
+                         None)
+        }
+      case _ =>
+        None
+    }
+  }
 
   protected def resolutionSetFromZipfile(zipFile: File): Set[Vec3Int] = {
     val resolutionSet = new mutable.HashSet[Vec3Int]()

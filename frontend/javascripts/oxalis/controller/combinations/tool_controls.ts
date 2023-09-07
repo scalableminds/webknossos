@@ -792,28 +792,31 @@ export class LineMeasurementTool {
     let lastLeftClickTime = 0;
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
-    const guardFromResettedTool = (func: Function) => {
-      // TODO: Problem typing is lost
-      return (...args: any) => {
-        if (lineMeasurementGeometry.isResetted && isMeasuring) {
-          isMeasuring = false;
-          return;
-        }
-        func(...args);
-      };
+    const mouseMove = (
+      _delta: Point2,
+      pos: Point2,
+      plane: OrthoView | null | undefined,
+      evt: MouseEvent,
+    ) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && isMeasuring) {
+        isMeasuring = false;
+      }
+      if (plane !== initialPlane || !isMeasuring) {
+        MoveHandlers.moveWhenAltIsPressed(_delta, pos, plane, evt);
+        return;
+      }
+      const state = Store.getState();
+      const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
+      lineMeasurementGeometry.setTopPoint(newPos);
+      Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
     };
-    const mouseMove = guardFromResettedTool(
-      (_delta: Point2, pos: Point2, plane: OrthoView | null | undefined, evt: MouseEvent) => {
-        if (plane !== initialPlane || !isMeasuring) {
-          return;
-        }
-        const state = Store.getState();
-        const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
-        lineMeasurementGeometry.setTopPoint(newPos);
-        Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
-      },
-    );
-    const rightClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
+    const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && isMeasuring) {
+        isMeasuring = false;
+        return;
+      }
       if (isMeasuring) {
         // Set the last point of the measurement and stop measuring.
         mouseMove({ x: 0, y: 0 }, pos, plane, event);
@@ -824,8 +827,13 @@ export class LineMeasurementTool {
         lineMeasurementGeometry.hide();
         Store.dispatch(hideMeasurementTooltipAction());
       }
-    });
-    const leftClick = guardFromResettedTool((pos: Point2, plane: OrthoView, event: MouseEvent) => {
+    };
+    const leftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && isMeasuring) {
+        isMeasuring = false;
+        return;
+      }
       const currentTime = Date.now();
       if (currentTime - lastLeftClickTime <= this.DOUBLE_CLICK_TIME_THRESHOLD) {
         // A double click should also terminate measuring.
@@ -844,7 +852,7 @@ export class LineMeasurementTool {
         lineMeasurementGeometry.addPoint(position);
         Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
       }
-    });
+    };
     return {
       mouseMove,
       rightClick,

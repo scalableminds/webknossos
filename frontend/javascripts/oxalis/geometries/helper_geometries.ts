@@ -321,10 +321,10 @@ export class LineMeasurementGeometry {
   vertexBuffer: ResizableBuffer<Float32Array>;
   currentOrthoView: OrthoView;
   visible: boolean;
-  isResetted: boolean;
+  wasReset: boolean;
 
   constructor() {
-    this.isResetted = false;
+    this.wasReset = false;
     this.currentOrthoView = OrthoViews.PLANE_XY;
     this.color = CONTOUR_COLOR_NORMAL;
     this.visible = false;
@@ -353,11 +353,11 @@ export class LineMeasurementGeometry {
     this.line.material.color = this.color;
     this.vertexBuffer.clear();
     this.finalizeMesh();
-    this.isResetted = true;
+    this.wasReset = true;
   }
 
   setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
-    this.isResetted = false;
+    this.wasReset = false;
     this.visible = true;
     this.currentOrthoView = initialOrthoView;
     this.vertexBuffer.push(pos);

@@ -48,12 +48,12 @@ function DistanceMeasurementTooltip(props: Props) {
   let valueInMetricUnit = "";
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]));
-    valueInMetricUnit = formatNumberToArea(lineMeasurementGeometry.getDistance(datasetScale));
+    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]));
+    valueInMetricUnit = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale));
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(areaMeasurementGeometry.getArea([1, 1, 1]));
-    valueInMetricUnit = formatNumberToLength(areaMeasurementGeometry.getArea(datasetScale));
+    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea([1, 1, 1]));
+    valueInMetricUnit = formatNumberToArea(areaMeasurementGeometry.getArea(datasetScale));
   }
   const currentPosition = getPosition(flycam);
   const [lastFlycamPosition, setLastFlycamPosition] = useState<Vector3>(currentPosition);

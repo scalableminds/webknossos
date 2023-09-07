@@ -3,17 +3,18 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.tools.{ByteUtils, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Box, Failure}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.util.Helpers.{OptionExtension, tryo}
 import org.apache.commons.io.IOUtils
 
-import java.util.zip.ZipEntry
+import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
@@ -49,20 +50,30 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
         }
       } else {
         // TODO: first, read additional axes metadata fom zarr.json
-        ZipIO.withUnziped(zipFile) {
-          case (filename, inputStream) =>
-            if (filename.endsWith("zarr.json")) ()
-            else {
-              parseZarrChunkPath(filename.toString).map { bucketPosition =>
-                val data = IOUtils.toByteArray(inputStream)
-                block(bucketPosition, data)
+        for {
+          firstHeaderFilePath <- ZipIO
+            .entries(new ZipFile(zipFile))
+            .find(entry => entry.getName == Zarr3ArrayHeader.ZARR_JSON)
+            .toBox
+          firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
+          firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
+          _ <- ZipIO.withUnziped(zipFile) {
+            case (filename, inputStream) =>
+              if (filename.endsWith(Zarr3ArrayHeader.ZARR_JSON)) ()
+              else {
+                parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
+                  val data = IOUtils.toByteArray(inputStream)
+                  block(bucketPosition, data)
+                }
               }
-            }
-        }
+          }
+        } yield ()
       }
     } yield ()
 
-  private def parseZarrChunkPath(path: String): Option[BucketPosition] = {
+  private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
+    val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("z", "y", "x"))
+    // TODO: this is as yet just copied from wkw
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
       case CubeRx(_, resolutionStr, z, y, x) =>

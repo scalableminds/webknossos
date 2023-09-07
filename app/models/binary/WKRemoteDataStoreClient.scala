@@ -2,6 +2,7 @@ package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
@@ -43,20 +44,15 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                    dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
-                   mag: Vec3Int): Fox[Array[Byte]] = {
+                   mag: Vec3Int,
+                   additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/data")
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/readData")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .addQueryString("mag" -> mag.toMagLiteral())
-      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
-      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
-      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
-      .addQueryString("width" -> targetMagBoundingBox.width.toString)
-      .addQueryString("height" -> targetMagBoundingBox.height.toString)
-      .addQueryString("depth" -> targetMagBoundingBox.depth.toString)
-      .getWithBytesResponse
+      .postJsonWithBytesResponse(
+        RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
   def findPositionWithData(organizationName: String, dataSet: Dataset, dataLayerName: String): Fox[JsObject] =

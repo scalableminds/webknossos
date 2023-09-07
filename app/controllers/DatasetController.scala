@@ -29,7 +29,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
-import com.scalableminds.util.tools.TristateOptionJsonHelper
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import models.folder.FolderService
 
 case class DatasetUpdateParameters(
@@ -48,7 +48,8 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 
 case class SegmentAnythingEmbeddingParameters(
     mag: Vec3Int,
-    boundingBox: BoundingBox
+    boundingBox: BoundingBox,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 )
 
 object SegmentAnythingEmbeddingParameters {
@@ -519,12 +520,13 @@ Expects:
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
-          _ <- bool2Fox(targetMagBbox.dimensions.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.dimensions}"
+          _ <- bool2Fox(targetMagBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.size}"
           data <- datastoreClient.getLayerData(organizationName,
                                                dataset,
                                                dataLayer.name,
                                                request.body.boundingBox,
-                                               request.body.mag) ?~> "segmentAnything.getData.failed"
+                                               request.body.mag,
+                                               request.body.additionalCoordinates) ?~> "segmentAnything.getData.failed"
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(

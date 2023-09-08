@@ -149,24 +149,22 @@ test("diffDiffableMaps should diff large DiffableMaps which are based on each ot
   t.deepEqual(sort(diff.onlyB), expectedDiff.onlyB);
 });
 test("diffDiffableMaps should diff large DiffableMaps which are not based on each other (independent)", (t) => {
-  const objects = [];
+  const objects: Object[] = [];
 
   for (let i = 0; i < 105; i++) {
     objects.push({});
   }
 
   // Load the first, uneven 100 objects into map1 and add a 111th key
-  const map1 = new DiffableMap<number, any>(
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{}[][]' is not assignable to par... Remove this comment to see the full error message
+  const map1 = new DiffableMap<number, Object | null>(
     objects
       .slice(0, 100)
-      .map((obj, index) => [index, obj])
-      // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
+      .map((obj, index): [number, Object] => [index, obj])
       .filter(([idx]) => idx % 2 === 1),
     10,
   ).set(110, {});
   // Load the first 105 objects into map2 and overwrite the 52th key
-  const map2 = new DiffableMap<number, any>(
+  const map2 = new DiffableMap<number, Object | null>(
     objects.slice(0, 105).map((obj, index) => [index, obj]),
     10,
   ).set(51, null);
@@ -179,4 +177,28 @@ test("diffDiffableMaps should diff large DiffableMaps which are not based on eac
   t.deepEqual(sort(diff.changed), expectedDiff.changed);
   t.deepEqual(sort(diff.onlyA), expectedDiff.onlyA);
   t.deepEqual(sort(diff.onlyB), expectedDiff.onlyB);
+});
+
+test.only("diffDiffableMaps should diff correctly even when same object is in different chunks", (t) => {
+  const dm = new DiffableMap<number, { i: number }>([], 2);
+
+  for (let i = 0; i < 100; i++) {
+    dm.mutableSet(i, { i });
+  }
+
+  const key = 50;
+  const obj50 = dm.get(key);
+  const dmWithout50 = dm.delete(key);
+
+  const dmWithReadded = dmWithout50.set(key, obj50);
+
+  const { changed, onlyA, onlyB } = diffDiffableMaps(dm, dmWithReadded);
+
+  console.log("changed", changed);
+  console.log("onlyA", onlyA);
+  console.log("onlyB", onlyB);
+
+  t.is(changed.length, 0);
+  t.is(onlyA.length, 0);
+  t.is(onlyB.length, 0);
 });

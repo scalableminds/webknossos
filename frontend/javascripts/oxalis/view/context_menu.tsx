@@ -1097,7 +1097,9 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
-  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(new Date());
+  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
+    new Date(),
+  );
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1150,7 +1152,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
     [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
-  ) as [string, string] | [];
+  );
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;

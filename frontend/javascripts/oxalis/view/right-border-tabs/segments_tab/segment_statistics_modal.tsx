@@ -1,20 +1,19 @@
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
-import { formatNumberToUnit, formatNumberToVolume } from "libs/format_utils";
+import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import { Unicode, Vector3 } from "oxalis/constants";
+import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
 import { TreeNode } from "./segments_view_helper";
-import { api } from "oxalis/singletons";
+import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
-
-const { ThinSpace } = Unicode;
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -47,13 +46,25 @@ const exportStatisticsToCSV = (
   if (segmentInformation.length === 0) {
     return;
   }
-  const segmentStatisticsAsString = segmentInformation.map(row =>
-    [row.segmentId, row.segmentName, row.groupId, row.groupName, row.volumeInVoxel, row.volumeInNm3, row.boundingBoxTopLeft, row.boundingBoxPosition]
-      .map(String)  // convert every value to String
-      .map(v => v.replaceAll('"', '""'))  // escape double quotes
-      .map(v => v.includes(",") || v.includes('"') ? `"${v}"` : v)  // quote it if necessary
-      .join(',')  // comma-separated
-  ).join('\r\n');  // rows starting on new lines
+  const segmentStatisticsAsString = segmentInformation
+    .map(
+      (row) =>
+        [
+          row.segmentId,
+          row.segmentName,
+          row.groupId,
+          row.groupName,
+          row.volumeInVoxel,
+          row.volumeInNm3,
+          row.boundingBoxTopLeft,
+          row.boundingBoxPosition,
+        ]
+          .map(String) // convert every value to String
+          .map((v) => v.replaceAll('"', '""')) // escape double quotes
+          .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+          .join(","), // comma-separated
+    )
+    .join("\r\n"); // rows starting on new lines
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
   const filename = `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {
@@ -73,7 +84,7 @@ export function SegmentStatisticsModal({
   groupTree,
 }: Props) {
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
-  const nmFactorToUnit = new Map([[1, "nm³"]]);
+  const scaleFactor = getBaseVoxel(Store.getState().dataset.dataSource.scale);
   const dataSource = useFetch(
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 10000)); //TODO delete; only for testing
@@ -99,6 +110,8 @@ export function SegmentStatisticsModal({
           // segments in request and their statistics in the response are in the same order
           const currentSegment = segments[i];
           const currentBoundingBox = boundingBoxes[i];
+          const currentSegmentSizeInVx = segmentSizes[i];
+          const volumeInNm3 = currentSegmentSizeInVx * scaleFactor;
           const segmentStatObject = {
             key: currentSegment.id,
             segmentId: currentSegment.id,
@@ -108,13 +121,11 @@ export function SegmentStatisticsModal({
             groupName: getGroupNameForId(
               currentSegment.groupId == null ? -1 : currentSegment.groupId,
             ),
-            volumeInVoxel: segmentSizes[i],
-            volumeInNm3: parseInt(
-              formatNumberToUnit(segmentSizes[i], nmFactorToUnit).split(ThinSpace)[0],
-            ),
-            formattedSize: formatNumberToVolume(segmentSizes[i]),
+            volumeInVoxel: currentSegmentSizeInVx,
+            volumeInNm3,
+            formattedSize: formatNumberToVolume(volumeInNm3),
             boundingBoxTopLeft: currentBoundingBox.topLeft,
-            boundingBoxTopLeftAsString: `(${currentBoundingBox.topLeft[0]}, ${currentBoundingBox.topLeft[1]}, ${currentBoundingBox.topLeft[2]}) `,
+            boundingBoxTopLeftAsString: `(${currentBoundingBox.topLeft.join(", ")}`,
             boundingBoxPosition: [
               currentBoundingBox.width,
               currentBoundingBox.height,

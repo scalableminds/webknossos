@@ -140,8 +140,8 @@ const nmFactorToUnit = new Map([
   [1e9, "m"],
   [1e12, "km"],
 ]);
-export function formatNumberToLength(lengthInNm: number): string {
-  return formatNumberToUnit(lengthInNm, nmFactorToUnit);
+export function formatNumberToLength(lengthInNm: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
 }
 
 const nmFactorToUnit2D = new Map([
@@ -153,8 +153,8 @@ const nmFactorToUnit2D = new Map([
   [1e24, "km²"],
 ]);
 
-export function formatNumberToArea(lengthInNm2: number): string {
-  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, 0);
+export function formatNumberToArea(lengthInNm2: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, decimalPrecision);
 }
 
 const nmFactorToUnit3D = new Map([
@@ -165,8 +165,8 @@ const nmFactorToUnit3D = new Map([
   [1e27, "m³"],
   [1e36, "km³"],
 ]);
-export function formatNumberToVolume(lengthInNm3: number): string {
-  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, 0);
+export function formatNumberToVolume(lengthInNm3: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, decimalPrecision);
 }
 
 const byteFactorToUnit = new Map([

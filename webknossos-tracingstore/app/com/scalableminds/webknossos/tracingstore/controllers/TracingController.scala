@@ -184,7 +184,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                 userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
-      _ <- bool2Fox(previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0)) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      _ <- bool2Fox(
+        previousActionGroupsToCommit
+          .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult

@@ -40,7 +40,7 @@ object Dependencies {
   private val redis = "net.debasishg" %% "redisclient" % "3.42"
   private val spire = "org.typelevel" %% "spire" % "0.17.0"
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
-  private val swagger = "io.swagger.core.v3" % "swagger-annotations" % "2.2.15"
+  private val swagger = "io.swagger.core.v3" % "swagger-core" % "2.2.15"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
   private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"

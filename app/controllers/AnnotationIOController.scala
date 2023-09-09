@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
+import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -383,7 +383,8 @@ Expects:
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneCached(annotation._user)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
+        nmlStream = nmlWriter.toNmlStream("temp",
+                                          fetchedAnnotationLayers,
                                           Some(annotation),
                                           dataSet.scale,
                                           None,
@@ -394,7 +395,7 @@ Expects:
                                           taskOpt)
         nmlTemporaryFile = temporaryFileCreator.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
-        _ <- NamedEnumeratorStream("", nmlStream).writeTo(temporaryFileStream)
+        _ <- nmlStream.writeTo(temporaryFileStream)
         _ = temporaryFileStream.close()
       } yield nmlTemporaryFile
 
@@ -415,6 +416,7 @@ Expects:
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
+          name,
           fetchedSkeletonLayers ::: fetchedVolumeLayers,
           Some(annotation),
           dataset.scale,
@@ -428,7 +430,7 @@ Expects:
         )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
-        _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream) ?~> "annotation.download.zipNml.failed"
+        _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> "annotation.download.zipNml.failed"
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>

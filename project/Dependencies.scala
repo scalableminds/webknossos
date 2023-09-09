@@ -5,7 +5,7 @@ object Dependencies {
   private val akkaVersion = "2.6.19"
   private val akkaHttpVersion = "10.2.6"
   private val log4jVersion = "2.17.0"
-  private val webknossosWrapVersion = "1.1.15"
+  private val webknossosWrapVersion = "1.1.16-SNAPSHOT"
   private val silhouetteVersion = "7.0.7"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
@@ -28,7 +28,7 @@ object Dependencies {
   private val playFramework = "com.typesafe.play" %% "play" % "2.8.16"
   private val playJson = "com.typesafe.play" %% "play-json" % "2.8.2"
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10"
-  private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
+  private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "1.0.1" // TODO remove? looks unused
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
   private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion

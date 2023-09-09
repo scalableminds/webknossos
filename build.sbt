@@ -5,9 +5,7 @@ ThisBuild / scalaVersion := "2.13.11"
 ThisBuild / scapegoatVersion := "2.1.2"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-Xmax-classfile-name",
-  "100",
-  "-target:jvm-1.8",
+  "-target:11",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",

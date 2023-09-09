@@ -33,7 +33,7 @@ object ZipIO extends LazyLogging {
 
       stream.putNextEntry(new ZipEntry(name))
 
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
+      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream())
 
       val result = Future.successful(IOUtils.copy(inputStream, stream))
 
@@ -117,7 +117,7 @@ object ZipIO extends LazyLogging {
       Future.successful(())
     } else {
       try {
-        val s = sources.next
+        val s = sources.next()
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
         case e: Exception =>

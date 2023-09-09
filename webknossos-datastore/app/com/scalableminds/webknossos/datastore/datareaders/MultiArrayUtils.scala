@@ -112,7 +112,7 @@ object MultiArrayUtils {
         targetIterator.setObjectNext(sourceIterator.getObjectNext)
 
   private trait ValueSetter {
-    def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)
+    def set(sourceIterator: IndexIterator, targetIterator: IndexIterator): Unit
   }
 
   def orderFlippedView(source: MultiArray): MultiArray = {

@@ -253,7 +253,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .asScala
         .toList
       Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    }.flatten ?~> "mesh.file.open.failed"
+    }.toFox.flatten ?~> "mesh.file.open.failed"
   }
 
   def listMeshChunksForSegmentV3(organizationName: String,

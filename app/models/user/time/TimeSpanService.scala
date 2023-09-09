@@ -50,7 +50,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -65,7 +65,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -80,7 +80,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }

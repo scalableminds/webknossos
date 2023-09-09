@@ -90,7 +90,7 @@ class DatasetArray(vaultPath: VaultPath,
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
+    val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,

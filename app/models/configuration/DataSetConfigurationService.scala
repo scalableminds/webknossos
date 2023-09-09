@@ -59,7 +59,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
       dataSetViewConfiguration = getDataSetViewConfigurationFromDefaultAndAdmin(dataSet)
 
       dataSetLayers <- dataSetService.allLayersFor(dataSet)
-      layerConfigurations = getAllLayerAdminViewConfigForDataSet(dataSetLayers).mapValues(Json.toJson(_))
+      layerConfigurations = getAllLayerAdminViewConfigForDataSet(dataSetLayers).view.mapValues(Json.toJson(_)).toMap
     } yield buildCompleteDataSetConfiguration(dataSetViewConfiguration, layerConfigurations)
 
   private def mergeLayerConfigurations(allLayerNames: List[String],

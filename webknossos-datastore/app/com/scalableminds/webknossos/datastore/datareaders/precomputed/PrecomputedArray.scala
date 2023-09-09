@@ -219,7 +219,8 @@ class PrecomputedArray(vaultPath: VaultPath,
       val startOffsetIndex = i + n
       chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
     }
-    (chunkIds, chunkStartOffsets, chunkSizes).zipped.map((a, b, c) => (a, b, c))
+
+    chunkIds.zip(chunkStartOffsets).zip(chunkSizes).map { case ((a, b), c) => (a, b, c) }
   }
 
   private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(

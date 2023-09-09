@@ -233,7 +233,7 @@ trait VolumeTracingDownsampling
   }
 
   private def mode[T](items: Seq[T]): T =
-    items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
+    items.groupBy(i => i).view.mapValues(_.size).maxBy(_._2)._1
 
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)

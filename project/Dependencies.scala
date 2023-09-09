@@ -28,7 +28,6 @@ object Dependencies {
   private val playFramework = "com.typesafe.play" %% "play" % "2.8.16"
   private val playJson = "com.typesafe.play" %% "play-json" % "2.8.2"
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10"
-  private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "1.0.1" // TODO remove? looks unused
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
   private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
@@ -120,7 +119,6 @@ object Dependencies {
   val webknossosDependencies: Seq[ModuleID] = Seq(
     akkaTest,
     commonsCodec,
-    scalaAsync,
     scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,

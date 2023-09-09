@@ -50,7 +50,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false): NamedFunctionStream =
     NamedFunctionStream(
-      name + ".nml",
+      name,
       os => {
         implicit val writer: IndentingXMLStreamWriter =
           new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
@@ -66,7 +66,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                          annotationOwner,
                                          annotationTask,
                                          skipVolumeData)
-          _ = os.close()
         } yield nml
       }
     )

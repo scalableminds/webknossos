@@ -68,9 +68,6 @@ object ZipIO extends LazyLogging {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] =
-    zip(sources.iterator, out)
-
   def zip(sources: Iterator[NamedStream], out: OutputStream, level: Int = -1)(
       implicit ec: ExecutionContext): Fox[Unit] = {
     val zip = startZip(out)

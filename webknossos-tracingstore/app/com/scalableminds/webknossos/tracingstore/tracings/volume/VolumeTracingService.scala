@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -32,7 +33,7 @@ import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
@@ -314,17 +315,13 @@ class VolumeTracingService @Inject()(
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
                                          tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
-    val before = System.currentTimeMillis()
+    val before = Instant.now
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
-      case _: scala.util.Success[Full[Unit]] =>
-        val after = System.currentTimeMillis()
-        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
-      case failure: scala.util.Failure[Box[Unit]] =>
-        logger.debug(
-          s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      // TODO: check that this works
+      case b: scala.util.Success[Box[Unit]] =>
+        logger.info(s"Zipping volume data for $tracingId took ${Instant.since(before)} ms. Result: ${b.get}")
+      case _ => ()
     }
     zipResult
   }

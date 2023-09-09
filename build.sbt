@@ -1,8 +1,8 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.12.15"
-ThisBuild / scapegoatVersion := "1.4.10"
+ThisBuild / scalaVersion := "2.13.11"
+ThisBuild / scapegoatVersion := "2.1.2"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
@@ -26,9 +26,7 @@ ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
-scapegoatIgnoredFiles := Seq(".*/Tables.scala",
-                             ".*/Routes.scala",
-                             ".*/.*mail.*template\\.scala")
+scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(

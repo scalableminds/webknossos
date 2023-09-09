@@ -35,8 +35,6 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
@@ -122,20 +120,6 @@ class VolumeTracingController @Inject()(
               resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
               _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
             } yield Ok(Json.toJson(tracingId))
-          }
-        }
-      }
-  }
-
-  def allData(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-          } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
-            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
       }

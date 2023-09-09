@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString

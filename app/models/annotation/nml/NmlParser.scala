@@ -262,8 +262,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
-    val additionalAxes = nodes.headOption.map(
+  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider): Box[Seq[AdditionalAxisProto]] = {
+    val additionalAxes: Option[collection.Seq[AdditionalAxisProto]] = nodes.headOption.map(
       _.child.flatMap(
         additionalAxisNode => {
           for {
@@ -281,7 +281,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     additionalAxes match {
       case Some(axes) =>
         if (axes.map(_.name).distinct.size == axes.size) {
-          Full(axes)
+          Full(axes.toSeq)
         } else {
           Failure(Messages("nml.additionalCoordinates.notUnique"))
         }

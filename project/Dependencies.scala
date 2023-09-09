@@ -59,9 +59,9 @@ object Dependencies {
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
 
   private val sql = Seq(
-    "com.typesafe.slick" %% "slick" % "3.3.3",
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
-    "com.typesafe.slick" %% "slick-codegen" % "3.3.3",
+    "com.typesafe.slick" %% "slick" % "3.4.1",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.4.1",
+    "com.typesafe.slick" %% "slick-codegen" % "3.4.1",
     "org.postgresql" % "postgresql" % "42.5.2"
   )
 

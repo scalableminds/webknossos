@@ -85,6 +85,7 @@ export function SegmentStatisticsModal({
 }: Props) {
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const scaleFactor = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+  console.log(segments);
   const dataSource = useFetch(
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 10000)); //TODO delete; only for testing
@@ -112,20 +113,19 @@ export function SegmentStatisticsModal({
           const currentBoundingBox = boundingBoxes[i];
           const currentSegmentSizeInVx = segmentSizes[i];
           const volumeInNm3 = currentSegmentSizeInVx * scaleFactor;
+          const currentGroupId = getGroupIdForSegment(currentSegment);
           const segmentStatObject = {
             key: currentSegment.id,
             segmentId: currentSegment.id,
             segmentName:
               currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
-            groupId: currentSegment.groupId == null ? -1 : currentSegment.groupId,
-            groupName: getGroupNameForId(
-              currentSegment.groupId == null ? -1 : currentSegment.groupId,
-            ),
+            groupId: currentGroupId,
+            groupName: getGroupNameForId(currentGroupId),
             volumeInVoxel: currentSegmentSizeInVx,
             volumeInNm3,
             formattedSize: formatNumberToVolume(volumeInNm3),
             boundingBoxTopLeft: currentBoundingBox.topLeft,
-            boundingBoxTopLeftAsString: `(${currentBoundingBox.topLeft.join(", ")}`,
+            boundingBoxTopLeftAsString: `(${currentBoundingBox.topLeft.join(", ")})`,
             boundingBoxPosition: [
               currentBoundingBox.width,
               currentBoundingBox.height,
@@ -160,7 +160,21 @@ export function SegmentStatisticsModal({
     },
   ];
 
-  const getGroupNameForId = (groupId: number) => {
+  const getGroupIdForSegment = (segment: Segment) => {
+    if (segment.groupId != null) return segment.groupId;
+    const rootGroup = groupTree.find((node) => node.type === "group" && node.id === -1);
+    if (
+      rootGroup?.hasOwnProperty("children") &&
+      rootGroup.children.find((node: TreeNode) => node.id === segment.id)
+    ) {
+      return -1;
+    } else {
+      return null;
+    }
+  };
+
+  const getGroupNameForId = (groupId: number | null) => {
+    if (groupId == null) return "";
     if (groupId === -1) return "root";
     const potentialGroupNode = groupTree.find(
       (node) => node.type === "group" && node.id === groupId,

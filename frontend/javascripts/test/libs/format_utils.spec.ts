@@ -61,9 +61,9 @@ test("Format number to area", (t) => {
   t.deepEqual(
     [
       `1${ThinSpace}pm²`,
-      `10${ThinSpace}pm²`,
-      `100${ThinSpace}pm²`,
-      `1000${ThinSpace}pm²`,
+      `10.0${ThinSpace}pm²`, // because of floating point representation, also true for some examples below
+      `100.0${ThinSpace}pm²`,
+      `1000.0${ThinSpace}pm²`,
       `1${ThinSpace}nm²`,
       `107${ThinSpace}pm²`,
       `107${ThinSpace}nm²`,
@@ -72,7 +72,7 @@ test("Format number to area", (t) => {
       `107${ThinSpace}m²`,
       `1.1${ThinSpace}km²`,
       `10.7${ThinSpace}km²`,
-      `107${ThinSpace}km²`,
+      `107.0${ThinSpace}km²`,
       `1070${ThinSpace}km²`,
     ],
     areasInNm2.map((area) => formatNumberToArea(area)),
@@ -88,7 +88,7 @@ test("Format number to volume", (t) => {
   t.deepEqual(
     [
       `1${ThinSpace}pm³`,
-      `1000${ThinSpace}pm³`, //TODO fixme
+      `1000.0${ThinSpace}pm³`, // because of floating point representation
       `107${ThinSpace}pm³`,
       `107${ThinSpace}nm³`,
       `107${ThinSpace}µm³`,

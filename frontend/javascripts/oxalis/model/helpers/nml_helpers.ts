@@ -340,16 +340,24 @@ function serializeNodes(nodes: NodeMap): Array<string> {
   });
 }
 
+export function additionalCoordinateToKeyValue(coord: AdditionalCoordinate) {
+  return [
+    // Export additional coordinates like this:
+    // additionalCoordinate-t="10"
+    // Don't capitalize coord.name, because it it's not reversible for
+    // names that are already capitalized.
+    `additionalCoordinate-${coord.name}`,
+    coord.value,
+  ];
+}
+
+export function parseAdditionalCoordinateKey(key: string): string {
+  return key.split("additionalCoordinate-")[1];
+}
+
 function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {
   return Object.fromEntries(
-    additionalCoordinates.map((coord) => [
-      // Export additional coordinates like this:
-      // additionalCoordinate-t="10"
-      // Don't capitalize coord.name, because it it's not reversible for
-      // names that are already capitalized.
-      `additionalCoordinate-${coord.name}`,
-      coord.value,
-    ]),
+    additionalCoordinates.map((coord) => additionalCoordinateToKeyValue(coord)),
   );
 }
 
@@ -740,7 +748,7 @@ export function parseNml(nmlString: string): Promise<{
               ] as Vector3,
               // Parse additional coordinates, like additionalCoordinate-t="10"
               additionalCoordinates: Object.keys(attr)
-                .map((key) => [key, key.split("additionalCoordinate-")[1]])
+                .map((key) => [key, parseAdditionalCoordinateKey(key)])
                 .filter(([_key, name]) => name != null)
                 .map(([key, name]) => ({
                   name,

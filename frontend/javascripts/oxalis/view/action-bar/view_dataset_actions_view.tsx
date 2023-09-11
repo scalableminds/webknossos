@@ -4,6 +4,7 @@ import { Dropdown, MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,
+  VideoCameraOutlined,
   CameraOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
@@ -18,7 +19,11 @@ import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
 import features from "features";
+import Toast from "libs/toast";
 import { getAISegmentationMenu } from "./tracing_actions_view";
+import {
+  startRenderAnimationJob,
+} from "admin/admin_rest_api";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -73,6 +78,23 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
+      {
+        key: "render-animation-button",
+        onClick: () => {
+          startRenderAnimationJob("sample_organization", "blender-render-h6", "color");
+          Toast.info(
+        <>
+          The Render Animation job has been started. See the{" "}
+          <a target="_blank" href="/jobs" rel="noopener noreferrer">
+            Processing Jobs
+          </a>{" "}
+          view under Administration for details on the progress of this job.
+        </>,
+      );
+        },
+        icon: <VideoCameraOutlined />,
+        label: "Render Animation",
+      },
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),

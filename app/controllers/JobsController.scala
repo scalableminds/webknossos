@@ -271,7 +271,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.applyMergerMode.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.findLargestSegmentId.notAllowed.organization" ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
@@ -287,6 +287,33 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
+  def runRenderAnimationJob(organizationName: String, dataSetName: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
+          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+            request.identity.loginInfo)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"
+          command = JobCommand.render_animation
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "layer_name" -> layerName,
+            "export_file_name" -> exportFileName,
+            "user_auth_token" -> userAuthToken.id
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
   def export(jobId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -295,7 +322,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
         userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
           request.identity.loginInfo)
-        uri = s"${dataStore.publicUrl}/data/exports/${jobId}/download"
+        uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
 

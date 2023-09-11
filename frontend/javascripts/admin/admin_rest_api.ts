@@ -1256,6 +1256,20 @@ export function startNeuronInferralJob(
   );
 }
 
+
+export function startRenderAnimationJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}?layerName=${layerName}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 function startSegmentationAnnotationDependentJob(
   jobURLPath: string,
   organizationName: string,

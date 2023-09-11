@@ -613,6 +613,7 @@ export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILU
 export enum APIJobType {
   "CONVERT_TO_WKW" = "convert_to_wkw",
   "EXPORT_TIFF" = "export_tiff",
+  "RENDER_ANIMATION" = "render_animation",
   "COMPUTE_MESH_FILE" = "compute_mesh_file",
   "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
   "INFER_NUCLEI" = "infer_nuclei",

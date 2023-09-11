@@ -11,6 +11,7 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   setPythonClientModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -81,7 +82,8 @@ export default function ViewDatasetActionsView(props: Props) {
       {
         key: "render-animation-button",
         onClick: () => {
-          startRenderAnimationJob("sample_organization", "blender-render-h6", "color");
+          const state = Store.getState();
+          startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, getColorLayers(state.dataset)[0].name);
           Toast.info(
         <>
           The Render Animation job has been started. See the{" "}

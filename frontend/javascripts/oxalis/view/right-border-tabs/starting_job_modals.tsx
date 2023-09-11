@@ -4,7 +4,6 @@ import { Modal, Select, Button, Form, Input, Slider } from "antd";
 import {
   startNucleiInferralJob,
   startNeuronInferralJob,
-  startRenderVideoJob,
   startMaterializingVolumeAnnotationJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";

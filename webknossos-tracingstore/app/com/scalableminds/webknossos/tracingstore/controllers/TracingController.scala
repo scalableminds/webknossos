@@ -199,34 +199,29 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     } yield commitResult
 
   private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup[T]],
-                                                   lastActionGroup: UpdateActionGroup[T]): Fox[UpdateActionGroup[T]] = {
-    val actionsToCommit = previousActionGroups :+ lastActionGroup
-    val concatenatedInfoFox: Fox[Option[String]] = if (actionsToCommit.length == 1) {
-      Fox.successful(lastActionGroup.info)
-    } else {
-      val infoStrings: List[String] = actionsToCommit.flatMap(_.info)
+                                                   lastActionGroup: UpdateActionGroup[T]): Fox[UpdateActionGroup[T]] =
+    if (previousActionGroups.isEmpty) Fox.successful(lastActionGroup)
+    else {
       for {
+        _ <- Fox.successful(())
+        allActionGroups = previousActionGroups :+ lastActionGroup
+        infoStrings = allActionGroups.flatMap(_.info)
         infoArrays <- Fox.serialCombined(infoStrings)(infoString =>
           JsonHelper.parseAndValidateJson[JsArray](infoString))
-        concatInfoArray = if (infoArrays.isEmpty) None else Some(infoArrays.reduce(_ ++ _))
-      } yield concatInfoArray.map(_.toString)
+        concatInfoArray: Option[JsArray] = if (infoArrays.isEmpty) None else Some(infoArrays.reduce(_ ++ _))
+      } yield
+        UpdateActionGroup[T](
+          version = lastActionGroup.version,
+          timestamp = lastActionGroup.timestamp,
+          authorId = lastActionGroup.authorId,
+          actions = allActionGroups.flatMap(_.actions),
+          stats = lastActionGroup.stats,
+          info = concatInfoArray.map(_.toString),
+          transactionId = f"${lastActionGroup.transactionId}-concatenated",
+          transactionGroupCount = 1,
+          transactionGroupIndex = 0,
+        )
     }
-
-    for {
-      infoOpt <- concatenatedInfoFox
-    } yield
-      UpdateActionGroup[T](
-        version = lastActionGroup.version,
-        timestamp = lastActionGroup.timestamp,
-        authorId = lastActionGroup.authorId,
-        actions = actionsToCommit.flatMap(_.actions),
-        stats = lastActionGroup.stats,
-        info = infoOpt,
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
-        transactionGroupCount = 1,
-        transactionGroupIndex = 0,
-      )
-  }
 
   // Perform version check and commit the passed updates
   private def commitUpdates(tracingId: String,

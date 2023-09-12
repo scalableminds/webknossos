@@ -128,8 +128,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
             val updateGroups = request.body
             if (updateGroups.forall(_.transactionGroupCount == 1)) {
-              logger.info(
-                s"Received ${updateGroups.length} groups (all single-group-transactions). Committing directly.")
               commitUpdates(tracingId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
             } else {
               updateGroups
@@ -191,36 +189,27 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       _ <- bool2Fox(
         previousActionGroupsToCommit
           .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
-      _ = logger.info(
-        s"Comitting ${previousActionGroupsToCommit.length} prev actions, and one final with version ${updateGroup.version}, merged into one")
-      concatenatedGroup <- concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
+      concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(tracingId, List(concatenatedGroup), userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
 
   private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup[T]],
-                                                   lastActionGroup: UpdateActionGroup[T]): Fox[UpdateActionGroup[T]] =
-    if (previousActionGroups.isEmpty) Fox.successful(lastActionGroup)
+                                                   lastActionGroup: UpdateActionGroup[T]): UpdateActionGroup[T] =
+    if (previousActionGroups.isEmpty) lastActionGroup
     else {
-      for {
-        _ <- Fox.successful(())
-        allActionGroups = previousActionGroups :+ lastActionGroup
-        infoStrings = allActionGroups.flatMap(_.info)
-        infoArrays <- Fox.serialCombined(infoStrings)(infoString =>
-          JsonHelper.parseAndValidateJson[JsArray](infoString))
-        concatInfoArray: Option[JsArray] = if (infoArrays.isEmpty) None else Some(infoArrays.reduce(_ ++ _))
-      } yield
-        UpdateActionGroup[T](
-          version = lastActionGroup.version,
-          timestamp = lastActionGroup.timestamp,
-          authorId = lastActionGroup.authorId,
-          actions = allActionGroups.flatMap(_.actions),
-          stats = lastActionGroup.stats,
-          info = concatInfoArray.map(_.toString),
-          transactionId = f"${lastActionGroup.transactionId}-concatenated",
-          transactionGroupCount = 1,
-          transactionGroupIndex = 0,
-        )
+      val allActionGroups = previousActionGroups :+ lastActionGroup
+      UpdateActionGroup[T](
+        version = lastActionGroup.version,
+        timestamp = lastActionGroup.timestamp,
+        authorId = lastActionGroup.authorId,
+        actions = allActionGroups.flatMap(_.actions),
+        stats = lastActionGroup.stats, // the latest stats do count
+        info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
+        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionGroupCount = 1,
+        transactionGroupIndex = 0,
+      )
     }
 
   // Perform version check and commit the passed updates

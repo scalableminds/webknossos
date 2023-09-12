@@ -390,13 +390,6 @@ class PlaneMaterialFactory {
   makeMaterial(index: number, options?: ShaderMaterialOptions): void {
     if (index === 0) {
       this.startListeningForUniforms();
-
-      if (this.materials.length === 0) {
-        console.log("materials are empty");
-      }
-      if (this.materials.length === 2) {
-        console.log("materials are already set");
-      }
     }
 
     const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms(index);
@@ -413,10 +406,6 @@ class PlaneMaterialFactory {
         fragmentShader,
       }),
     );
-
-    if (this.shaderId === 0) {
-      console.log("instantiating material for idx", index, ": ", material);
-    }
 
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
     material.extensions = {
@@ -1067,9 +1056,11 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
+      // todop: adapt
       resolutionsCount: this.getTotalResolutionCount(),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
+      // todop: filter to only contain the relevant layers
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [

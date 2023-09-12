@@ -127,8 +127,6 @@ class PlaneView {
 
           const planeViewXY: Plane = getSceneController().planes[OrthoViews.PLANE_XY];
 
-          // todopl: should this be allocated once?
-
           const renderTarget = this.getRenderTarget(width, height);
 
           if (window.singlePass) {

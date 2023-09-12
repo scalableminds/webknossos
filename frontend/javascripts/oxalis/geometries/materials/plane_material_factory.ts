@@ -963,8 +963,8 @@ class PlaneMaterialFactory {
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
     const allSanitizedOrderedColorLayerNames =
-      index === 0 ? state.datasetConfiguration.colorLayerOrder.map(sanitizeName) : [];
-    const colorLayerNames = index === 0 ? getSanitizedColorLayerNames() : [];
+      index === 0 ? state.datasetConfiguration.colorLayerOrder.map(sanitizeName).slice(0, 1) : [];
+    const colorLayerNames = index === 0 ? getSanitizedColorLayerNames().slice(0, 1) : [];
     const segmentationLayerNames =
       index === 1 ? Model.getSegmentationLayers().map((layer) => sanitizeName(layer.name)) : [];
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;

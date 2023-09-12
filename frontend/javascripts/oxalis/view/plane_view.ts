@@ -47,7 +47,7 @@ class PlaneView {
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
-  renderTarget: THREE.WebGLRenderTarget | undefined;
+  renderTargets: THREE.WebGLRenderTarget[] = [];
 
   constructor() {
     this.throttledPerformIsosurfaceHitTest = _.throttle(
@@ -105,7 +105,7 @@ class PlaneView {
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
-    if (forceRender || this.needsRerender) {
+    if (window.forceRender || forceRender || this.needsRerender) {
       const { renderer, scene } = SceneController;
       SceneController.update();
       const storeState = Store.getState();
@@ -127,7 +127,7 @@ class PlaneView {
 
           const planeViewXY: Plane = getSceneController().planes[OrthoViews.PLANE_XY];
 
-          const renderTarget = this.getRenderTarget(width, height);
+          const renderTargets = this.getRenderTargets(width, height);
 
           if (window.singlePass) {
             planeViewXY.setShaderPass(0, null);
@@ -135,17 +135,41 @@ class PlaneView {
             renderer.setRenderTarget(null);
             renderer.render(scene, this.cameras[plane]);
           } else {
-            planeViewXY.setShaderPass(0, null);
+            const passCount = window.passCount || 8;
+            let prevIdx = 0;
+            let curIdx = 0;
 
-            // Render the first pass to the render target.
-            renderer.setRenderTarget(renderTarget);
-            renderer.render(planeViewXY.plane, this.cameras[plane]);
+            for (let passIndex = 0; passIndex < passCount; passIndex++) {
+              planeViewXY.setShaderPass(0, null);
 
-            planeViewXY.setShaderPass(1, renderTarget.texture);
+              const curRenderTarget = renderTargets[prevIdx];
+              const prevRenderTarget = renderTargets[curIdx];
 
-            // Render to the default framebuffer
-            renderer.setRenderTarget(null);
-            renderer.render(scene, this.cameras[plane]);
+              if (passIndex === 0) {
+                // Render the first pass to the render target.
+                renderer.setRenderTarget(curRenderTarget);
+                // renderer.render(planeViewXY.plane, this.cameras[plane]);
+                renderer.render(scene, this.cameras[plane]);
+
+                prevIdx = 0;
+                curIdx = 1;
+              } else {
+                planeViewXY.setShaderPass(1, prevRenderTarget.texture);
+
+                if (passIndex + 1 === passCount) {
+                  // Last pass
+                  // Render to the default framebuffer
+                  renderer.setRenderTarget(null);
+                } else {
+                  renderer.setRenderTarget(curRenderTarget);
+                }
+                renderer.render(scene, this.cameras[plane]);
+
+                const tmp = prevIdx;
+                prevIdx = curIdx;
+                curIdx = tmp;
+              }
+            }
           }
         }
       }
@@ -153,15 +177,18 @@ class PlaneView {
       this.needsRerender = false;
     }
   }
-  getRenderTarget(width: number, height: number) {
+  getRenderTargets(width: number, height: number) {
     if (
-      this.renderTarget == undefined ||
-      this.renderTarget.width != width ||
-      this.renderTarget.height != height
+      this.renderTargets.length === 0 ||
+      this.renderTargets[0].width != width ||
+      this.renderTargets[0].height != height
     ) {
-      this.renderTarget = new THREE.WebGLRenderTarget(width, height);
+      this.renderTargets = [
+        new THREE.WebGLRenderTarget(width, height),
+        new THREE.WebGLRenderTarget(width, height),
+      ];
     }
-    return this.renderTarget;
+    return this.renderTargets;
   }
 
   performIsosurfaceHitTest(

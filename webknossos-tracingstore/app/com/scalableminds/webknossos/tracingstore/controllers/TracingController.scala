@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.tracingstore.{
 }
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.{Format, JsArray, Json}
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -152,8 +152,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                               userToken: Option[String]): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
-      _ = logger.info(
-        s"Received a group for v${updateGroup.version}, tid ${updateGroup.transactionId} tidx ${updateGroup.transactionGroupIndex} tcnt ${updateGroup.transactionGroupCount}")
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount == updateGroup.transactionGroupIndex + 1) {
           // Received the last group of this transaction

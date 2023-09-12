@@ -226,8 +226,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
-          val versionIncrement = if (updateGroup.transactionGroupIndex == 0) 1 else 0 // version increment happens at the start of each transaction
-          if (prevVersion + versionIncrement == updateGroup.version) {
+          if (prevVersion + 1 == updateGroup.version) {
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
               .flatMap(

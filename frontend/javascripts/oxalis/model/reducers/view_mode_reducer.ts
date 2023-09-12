@@ -62,6 +62,14 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
       return zoomReducer(newState, newState.flycam.zoomStep);
     }
 
+    case "SET_CANVAS_SIZE": {
+      return update(state, {
+        viewModeData: {
+          canvasSize: { $set: action.canvasSize },
+        },
+      });
+    }
+
     default:
       return state;
   }

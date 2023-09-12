@@ -15,6 +15,8 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
+import Plane from "oxalis/geometries/plane";
+import { setCanvasSize } from "oxalis/model/actions/view_mode_actions";
 
 const createDirLight = (
   position: Vector3,
@@ -44,6 +46,8 @@ class PlaneView {
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
+
+  renderTarget: THREE.WebGLRenderTarget | undefined;
 
   constructor() {
     this.throttledPerformIsosurfaceHitTest = _.throttle(
@@ -120,12 +124,46 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+
+          const planeViewXY: Plane = getSceneController().planes[OrthoViews.PLANE_XY];
+
+          // todopl: should this be allocated once?
+
+          const renderTarget = this.getRenderTarget(width, height);
+
+          if (window.singlePass) {
+            planeViewXY.setShaderPass(0, null);
+
+            renderer.setRenderTarget(null);
+            renderer.render(scene, this.cameras[plane]);
+          } else {
+            planeViewXY.setShaderPass(0, null);
+
+            // Render the first pass to the render target.
+            renderer.setRenderTarget(renderTarget);
+            renderer.render(planeViewXY.plane, this.cameras[plane]);
+
+            planeViewXY.setShaderPass(1, renderTarget.texture);
+
+            // Render to the default framebuffer
+            renderer.setRenderTarget(null);
+            renderer.render(scene, this.cameras[plane]);
+          }
         }
       }
 
       this.needsRerender = false;
     }
+  }
+  getRenderTarget(width: number, height: number) {
+    if (
+      this.renderTarget == undefined ||
+      this.renderTarget.width != width ||
+      this.renderTarget.height != height
+    ) {
+      this.renderTarget = new THREE.WebGLRenderTarget(width, height);
+    }
+    return this.renderTarget;
   }
 
   performIsosurfaceHitTest(
@@ -207,6 +245,8 @@ class PlaneView {
   resize = (): void => {
     const { width, height } = getGroundTruthLayoutRect();
     getSceneController().renderer.setSize(width, height);
+
+    Store.dispatch(setCanvasSize([width, height]));
     this.draw();
   };
 

@@ -105,6 +105,7 @@ class PlaneMaterialFactory {
   isOrthogonal: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
   material: THREE.ShaderMaterial;
+  materials: THREE.ShaderMaterial[] = [];
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
   shaderId: number;
@@ -125,7 +126,8 @@ class PlaneMaterialFactory {
 
   setup() {
     this.setupUniforms();
-    this.makeMaterial();
+    this.makeMaterial(0);
+    this.makeMaterial(1);
     this.attachTextures();
     return this;
   }
@@ -137,6 +139,7 @@ class PlaneMaterialFactory {
 
   setupUniforms(): void {
     this.uniforms = {
+      canvasSize: { value: new THREE.Vector3(100, 100) },
       sphericalCapRadius: {
         value: 140,
       },
@@ -221,6 +224,12 @@ class PlaneMaterialFactory {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       blendMode: { value: 1.0 },
+      previousPassTexture: {
+        value: null,
+      },
+      shaderPassIndex: {
+        value: 1024,
+      },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -378,40 +387,65 @@ class PlaneMaterialFactory {
     };
   }
 
-  makeMaterial(options?: ShaderMaterialOptions): void {
-    this.startListeningForUniforms();
-    const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms();
+  makeMaterial(index: number, options?: ShaderMaterialOptions): void {
+    if (index === 0) {
+      this.startListeningForUniforms();
+
+      if (this.materials.length === 0) {
+        console.log("materials are empty");
+      }
+      if (this.materials.length === 2) {
+        console.log("materials are already set");
+      }
+    }
+
+    const [fragmentShader, additionalUniforms] = this.getFragmentShaderWithUniforms(index);
     // The uniforms instance must not be changed (e.g., with
     // {...this.uniforms, ...additionalUniforms}), as this would result in
     // errors à la: Two textures of different types use the same sampler location.
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;
     }
-    this.material = new THREE.ShaderMaterial(
+    const material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
-        vertexShader: this.getVertexShader(),
+        vertexShader: this.getVertexShader(index),
         fragmentShader,
       }),
     );
+
+    if (this.shaderId === 0) {
+      console.log("instantiating material for idx", index, ": ", material);
+    }
+
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
-    this.material.extensions = {
+    material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader
       // derivatives: true,
     };
-    shaderEditor.addMaterial(this.shaderId, this.material);
+    if (index === 0) {
+      shaderEditor.addMaterial(this.shaderId, material);
+    } else {
+      shaderEditor.addMaterial(`${this.shaderId}${this.shaderId}`, material);
+    }
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-    this.material.setGlobalPosition = (x, y, z) => {
+    material.setGlobalPosition = (x, y, z) => {
       this.uniforms.globalPosition.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
-    this.material.setUseBilinearFiltering = (isEnabled) => {
+    material.setUseBilinearFiltering = (isEnabled) => {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
-    this.material.side = THREE.DoubleSide;
+    material.side = THREE.DoubleSide;
+
+    this.materials.push(material);
+
+    if (index === 0) {
+      this.material = material;
+    }
   }
 
   startListeningForUniforms() {
@@ -482,6 +516,16 @@ class PlaneMaterialFactory {
         (storeState) => getViewportExtents(storeState),
         (extents) => {
           this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.viewModeData.canvasSize,
+        (canvasSize) => {
+          this.uniforms.canvasSize.value = canvasSize;
         },
         true,
       ),
@@ -638,7 +682,7 @@ class PlaneMaterialFactory {
             }
           }
           if (updatedLayerVisibility) {
-            this.recomputeShaders();
+            this.recomputeAllShaders();
           }
           app.vent.emit("rerender");
         },
@@ -656,7 +700,7 @@ class PlaneMaterialFactory {
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
             oldLayerOrder = [...colorLayerOrder];
-            this.recomputeShaders();
+            this.recomputeAllShaders();
           }
           app.vent.emit("rerender");
         },
@@ -823,7 +867,7 @@ class PlaneMaterialFactory {
               value: hasTransform,
             };
           }
-          this.recomputeShaders();
+          this.recomputeAllShaders();
         },
         true,
       ),
@@ -875,20 +919,25 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
   }
 
-  getMaterial(): THREE.ShaderMaterial {
-    return this.material;
+  getMaterial(idx: number): THREE.ShaderMaterial {
+    return this.materials[idx];
   }
 
-  recomputeShaders = _.throttle(() => {
+  recomputeAllShaders = _.throttle(() => {
+    this.recomputeShader(0);
+    this.recomputeShader(1);
+  }, RECOMPILATION_THROTTLE_TIME);
+
+  recomputeShader = (index: number) => {
     if (this.material == null) {
       return;
     }
-    const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
+    const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms(index);
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;
     }
 
-    const newVertexShaderCode = this.getVertexShader();
+    const newVertexShaderCode = this.getVertexShader(index);
 
     // Comparing to this.material.fragmentShader does not work. The code seems
     // to be modified by a third party.
@@ -903,14 +952,16 @@ class PlaneMaterialFactory {
 
     this.oldFragmentShaderCode = newFragmentShaderCode;
     this.oldVertexShaderCode = newVertexShaderCode;
-    this.material.fragmentShader = newFragmentShaderCode;
-    this.material.vertexShader = newVertexShaderCode;
-    this.material.needsUpdate = true;
+    const material = this.materials[index];
+    material.fragmentShader = newFragmentShaderCode;
+    material.vertexShader = newVertexShaderCode;
+    material.needsUpdate = true;
     app.vent.emit("rerender");
-  }, RECOMPILATION_THROTTLE_TIME);
+  };
 
   getLayersToRender(
     maximumLayerCountToRender: number,
+    index: number,
   ): [Array<string>, Array<string>, Array<string>, number] {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
@@ -923,11 +974,10 @@ class PlaneMaterialFactory {
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
     const allSanitizedOrderedColorLayerNames =
-      state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
-    const colorLayerNames = getSanitizedColorLayerNames();
-    const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
-      sanitizeName(layer.name),
-    );
+      index === 0 ? state.datasetConfiguration.colorLayerOrder.map(sanitizeName) : [];
+    const colorLayerNames = index === 0 ? getSanitizedColorLayerNames() : [];
+    const segmentationLayerNames =
+      index === 1 ? Model.getSegmentationLayers().map((layer) => sanitizeName(layer.name)) : [];
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
     if (maximumLayerCountToRender <= 0) {
       return [[], [], [], globalLayerCount];
@@ -997,10 +1047,10 @@ class PlaneMaterialFactory {
     );
   };
 
-  getFragmentShaderWithUniforms(): [string, Uniforms] {
+  getFragmentShaderWithUniforms(index: number): [string, Uniforms] {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
-      this.getLayersToRender(maximumLayerCountToRender);
+      this.getLayersToRender(maximumLayerCountToRender, index);
 
     const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
 
@@ -1037,10 +1087,10 @@ class PlaneMaterialFactory {
     return flatResolutions.length;
   }
 
-  getVertexShader(): string {
+  getVertexShader(index: number): string {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
-      this.getLayersToRender(maximumLayerCountToRender);
+      this.getLayersToRender(maximumLayerCountToRender, index);
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();

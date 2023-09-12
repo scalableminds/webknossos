@@ -9,7 +9,7 @@ export default {
   },
 
   addMaterial(identifier, material) {
-    window.materials = window.materials || [];
+    window.materials = window.materials || {};
     window.materials[identifier] = material;
   },
 };

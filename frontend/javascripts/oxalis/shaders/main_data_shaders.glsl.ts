@@ -49,6 +49,7 @@ type Params = {
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
+uniform vec2 canvasSize;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
@@ -61,6 +62,9 @@ uniform highp uint LOOKUP_CUCKOO_ENTRY_CAPACITY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
+
+uniform highp int shaderPassIndex;
+uniform sampler2D previousPassTexture;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
   uniform sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
@@ -174,6 +178,8 @@ ${compileShader(
 
 
 void main() {
+  vec2 uv = gl_FragCoord.xy / canvasSize.xy;
+
   vec3 worldCoordUVW = getWorldCoordUVW();
 
   if (renderBucketIndices) {
@@ -295,6 +301,10 @@ void main() {
   vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
   gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
   gl_FragColor.a = 1.0;
+
+  if (shaderPassIndex == 1) {
+    gl_FragColor += texture2D(previousPassTexture, uv).rgba;
+  }
 
   <% } %>
 }

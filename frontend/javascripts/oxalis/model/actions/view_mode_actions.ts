@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import type { OrthoView, Rect, Viewport, ViewportRects } from "oxalis/constants";
+import type { OrthoView, Rect, Vector2, Viewport, ViewportRects } from "oxalis/constants";
 import constants from "oxalis/constants";
 type SetViewportAction = ReturnType<typeof setViewportAction>;
 type SetTDCameraAction = ReturnType<typeof setTDCameraAction>;
@@ -21,6 +21,7 @@ type MoveTDViewByVectorWithoutTimeTrackingAction = ReturnType<
 >;
 type SetInputCatcherRect = ReturnType<typeof setInputCatcherRect>;
 type SetInputCatcherRects = ReturnType<typeof setInputCatcherRects>;
+type SetCanvasSize = ReturnType<typeof setCanvasSize>;
 
 export const setViewportAction = (viewport: OrthoView) =>
   ({
@@ -96,6 +97,12 @@ export const setInputCatcherRects = (viewportRects: ViewportRects) =>
     viewportRects,
   } as const);
 
+export const setCanvasSize = (canvasSize: Vector2) =>
+  ({
+    type: "SET_CANVAS_SIZE",
+    canvasSize,
+  } as const);
+
 export type ViewModeAction =
   | SetViewportAction
   | SetTDCameraAction
@@ -105,7 +112,8 @@ export type ViewModeAction =
   | MoveTDViewByVectorAction
   | MoveTDViewByVectorWithoutTimeTrackingAction
   | SetInputCatcherRect
-  | SetInputCatcherRects;
+  | SetInputCatcherRects
+  | SetCanvasSize;
 
 export const ViewModeSaveRelevantActions = [
   "SET_TD_CAMERA",

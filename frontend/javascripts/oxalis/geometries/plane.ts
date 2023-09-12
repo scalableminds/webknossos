@@ -42,6 +42,8 @@ class Plane {
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
 
+  materials: THREE.ShaderMaterial[] = [];
+
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
@@ -56,6 +58,13 @@ class Plane {
     this.createMeshes();
   }
 
+  setShaderPass(idx: number, texture: THREE.Texture | null) {
+    const material = this.materials[idx];
+    this.plane.material = material;
+    material.uniforms.previousPassTexture.value = texture;
+    material.uniforms.shaderPassIndex.value = idx;
+  }
+
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
@@ -65,7 +74,13 @@ class Plane {
       true,
       OrthoViewValues.indexOf(this.planeID),
     );
-    const textureMaterial = this.materialFactory.setup().getMaterial();
+    this.materialFactory.setup();
+    const textureMaterial = this.materialFactory.getMaterial(0);
+    const textureMaterial2 = this.materialFactory.getMaterial(1);
+
+    this.materials.push(textureMaterial);
+    this.materials.push(textureMaterial2);
+
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = [];

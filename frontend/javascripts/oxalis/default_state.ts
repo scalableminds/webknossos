@@ -220,6 +220,7 @@ const defaultState: OxalisState = {
     arbitrary: {
       inputCatcherRect: defaultViewportRect,
     },
+    canvasSize: [0, 0],
   },
   activeUser: null,
   activeOrganization: null,

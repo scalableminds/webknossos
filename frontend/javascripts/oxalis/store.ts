@@ -493,6 +493,7 @@ type ArbitraryModeData = {
 export type ViewModeData = {
   readonly plane: PlaneModeData;
   readonly arbitrary: ArbitraryModeData;
+  readonly canvasSize: Vector2;
 };
 export type BorderOpenStatus = {
   left: boolean;

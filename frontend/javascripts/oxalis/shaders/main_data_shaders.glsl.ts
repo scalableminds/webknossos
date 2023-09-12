@@ -302,8 +302,8 @@ void main() {
   gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
   gl_FragColor.a = 1.0;
 
-  if (shaderPassIndex == 1) {
-    gl_FragColor += texture2D(previousPassTexture, uv).rgba;
+  if (shaderPassIndex >= 1) {
+    gl_FragColor += texture2D(previousPassTexture, uv).rgba / 2.;
   }
 
   <% } %>

@@ -68,11 +68,6 @@ const NodeBufferHelperType = {
 
 const EdgeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(capacity * 4 * 3), 3),
-    );
-
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
@@ -160,10 +155,10 @@ class Skeleton {
     const nodeGeometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     // const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
     const edgeMaterial = new MeshLineMaterial({
-      color: new THREE.Color(255, 255, 0),
-      resolution: new THREE.Vector2(512, 512),
-      sizeAttenuation: 0,
-      lineWidth: 10,
+      color: new THREE.Color(255, 0, 0),
+      resolution: new THREE.Vector2(528, 434),
+      sizeAttenuation: 1,
+      lineWidth: 0.01,
     });
     const edgeGeometry = new MeshLineGeometry() as BufferGeometryWithBufferAttributes;
 
@@ -465,9 +460,9 @@ class Skeleton {
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
-    // const edgeUniforms = this.edges.material.uniforms;
+    const edgeUniforms = this.edges.material.uniforms;
     // edgeUniforms.activeTreeId.value = activeTreeId;
-    // this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+    this.edges.material.lineWidth = state.userConfiguration.particleSize / 200;
     this.prevTracing = skeletonTracing;
   }
 
@@ -617,13 +612,13 @@ class Skeleton {
     const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
       // The changed node is the target node of the edge which is saved
       // after the source node in the buffer. Thus we need an offset.
-      const indexOffset = isIngoingEdge ? 6 : 0;
+      const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
-        const positionAttribute = buffer.geometry.attributes.position;
-        positionAttribute.set(position, index * 12 + indexOffset);
-        positionAttribute.set(position, index * 12 + indexOffset + 3);
-        return [positionAttribute];
+        const positionArray = buffer.geometry._points;
+        positionArray.set(position, index * 6 + indexOffset);
+        buffer.geometry.setPoints(positionArray);
+        return [];
       });
     };
 
@@ -666,14 +661,14 @@ class Skeleton {
   createEdge(treeId: number, source: Node, target: Node) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, ({ buffer, index }) => {
-      const { attributes } = buffer.geometry;
-      const positionAttribute = attributes.position;
+      const { attributes, _points: oldPositionArray } = buffer.geometry;
       const treeIdAttribute = attributes.treeId;
 
-      positionAttribute.set(source.position, index * 12);
-      positionAttribute.set(source.position, index * 12 + 3);
-      positionAttribute.set(target.position, index * 12 + 6);
-      positionAttribute.set(target.position, index * 12 + 9);
+      const positionArray = new Float32Array(Math.max(oldPositionArray.length, (index + 1) * 6));
+      positionArray.set(oldPositionArray, 0);
+      positionArray.set(source.position, index * 6);
+      positionArray.set(target.position, index * 6 + 3);
+      buffer.geometry.setPoints(positionArray);
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];
@@ -687,7 +682,7 @@ class Skeleton {
         }
       }
 
-      return [positionAttribute, treeIdAttribute, ...changedAttributes];
+      return [treeIdAttribute, ...changedAttributes];
     });
   }
 
@@ -698,9 +693,10 @@ class Skeleton {
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.position;
-      attribute.set([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], index * 12);
-      return [attribute];
+      const positionArray = buffer.geometry._points;
+      positionArray.set([0, 0, 0, 0, 0, 0], index * 6);
+      buffer.geometry.setPoints(positionArray);
+      return [];
     });
   }
 

@@ -67,6 +67,7 @@ import {
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
+import { Helmet } from "react-helmet";
 
 const { Content } = Layout;
 
@@ -217,6 +218,11 @@ class ReactRouter extends React.Component<Props> {
     const isAuthenticated = this.props.activeUser !== null;
     return (
       <Router history={browserHistory}>
+        <Helmet>
+          <meta property="og:title" content="It’s a WEBKNOSSOS!" />
+          <meta property="og:description" content="It lets you web your knossos" />
+          <meta property="og:image" content="http://localhost:9000/api/datasets/sample_organization/l4_sample/layers/color/thumbnail" />
+        </Helmet>
         <Layout>
           <DisableGenericDnd />
           <CheckTermsOfServices />

@@ -46,6 +46,7 @@ import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
+import { Helmet } from "react-helmet";
 
 const { Sider } = Layout;
 
@@ -330,6 +331,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
+        <Helmet>
+          <meta property="og:title" content={this.getTabTitle()} />
+          <meta property="og:description" content="It lets you web your knossos" />
+          <meta property="og:image" content={`${window.location.origin}/api/datasets/${this.props.organization}/${this.props.datasetName}/layers/color/thumbnail`} />
+        </Helmet>
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 

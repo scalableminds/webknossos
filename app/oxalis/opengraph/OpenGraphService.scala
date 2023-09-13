@@ -129,7 +129,8 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
                            organization: Organization): Option[String] =
     layerOpt match {
       case Some(layer) if dataset.isPublic =>
-        Some(s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail")
+        Some(
+          s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=1000&h=300")
       case _ => None
     }
 

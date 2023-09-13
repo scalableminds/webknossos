@@ -1,13 +1,13 @@
-@( conf: utils.WkConf, selectedTheme: String )
+@( conf: utils.WkConf, selectedTheme: String, openGraphTitle: Option[String], openGraphDescription: Option[String], openGraphImage: Option[String] )
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <title>@(conf.WebKnossos.tabTitle)</title>
-    <meta property="og:title" content="It’s a WEBKNOSSOS!" />
-    <meta property="og:description" content="It lets you web your knossos" />
-    <meta property="og:image" content="https://reacthelmet.webknossos.xyz/api/datasets/sample_organization/l4_sample/layers/color/thumbnail" />
+    @openGraphTitle.map { ogt =><meta property="og:title" content="@ogt" /> }
+    @openGraphDescription.map { ogd =><meta property="og:description" content="@ogd" /> }
+    @openGraphImage.map { ogi =><meta property="og:image" content="@ogi" /> }
     @if(conf.Features.isWkorgInstance){
     <meta
       name="description"

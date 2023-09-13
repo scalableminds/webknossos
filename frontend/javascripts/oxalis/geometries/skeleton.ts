@@ -13,6 +13,7 @@ import NodeShader, {
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 
 const MAX_CAPACITY = 1000;
 
@@ -69,7 +70,7 @@ const EdgeBufferHelperType = {
   setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.setAttribute(
       "position",
-      new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
+      new THREE.BufferAttribute(new Float32Array(capacity * 4 * 3), 3),
     );
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
@@ -84,7 +85,7 @@ const EdgeBufferHelperType = {
   },
 
   buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Object3D {
-    return new THREE.LineSegments(geometry, material);
+    return new THREE.Mesh(geometry, material);
   },
 
   supportsPicking: false,
@@ -156,7 +157,15 @@ class Skeleton {
       THREE.FloatType,
     );
     const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
-    const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
+    const nodeGeometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
+    // const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
+    const edgeMaterial = new MeshLineMaterial({
+      color: new THREE.Color(255, 255, 0),
+      resolution: new THREE.Vector2(512, 512),
+      sizeAttenuation: 0,
+      lineWidth: 10,
+    });
+    const edgeGeometry = new MeshLineGeometry() as BufferGeometryWithBufferAttributes;
 
     // delete actual GPU buffers in case there were any
     if (this.nodes != null) {
@@ -172,8 +181,18 @@ class Skeleton {
     }
 
     // create new buffers
-    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
-    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
+    this.nodes = this.initializeBufferCollection(
+      nodeCount,
+      nodeGeometry,
+      nodeMaterial,
+      NodeBufferHelperType,
+    );
+    this.edges = this.initializeBufferCollection(
+      edgeCount,
+      edgeGeometry,
+      edgeMaterial,
+      EdgeBufferHelperType,
+    );
 
     // fill buffers with data
     for (const tree of _.values(trees)) {
@@ -194,11 +213,13 @@ class Skeleton {
 
   initializeBufferCollection(
     initialCapacity: number,
+    geometry: BufferGeometryWithBufferAttributes,
     material: THREE.RawShaderMaterial,
     helper: BufferHelper,
   ): BufferCollection {
     const initialBuffer = this.initializeBuffer(
       Math.max(initialCapacity, MAX_CAPACITY),
+      geometry,
       material,
       helper,
     );
@@ -213,10 +234,10 @@ class Skeleton {
 
   initializeBuffer(
     capacity: number,
+    geometry: BufferGeometryWithBufferAttributes,
     material: THREE.RawShaderMaterial,
     helper: BufferHelper,
   ): Buffer {
-    const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     this.rootGroup.add(mesh);
@@ -244,7 +265,12 @@ class Skeleton {
     let currentBuffer = collection.buffers[0];
 
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
-      currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
+      currentBuffer = this.initializeBuffer(
+        MAX_CAPACITY,
+        currentBuffer.geometry,
+        collection.material,
+        collection.helper,
+      );
       collection.buffers.unshift(currentBuffer);
     }
 
@@ -439,9 +465,9 @@ class Skeleton {
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
-    const edgeUniforms = this.edges.material.uniforms;
-    edgeUniforms.activeTreeId.value = activeTreeId;
-    this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+    // const edgeUniforms = this.edges.material.uniforms;
+    // edgeUniforms.activeTreeId.value = activeTreeId;
+    // this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
 
@@ -591,11 +617,12 @@ class Skeleton {
     const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
       // The changed node is the target node of the edge which is saved
       // after the source node in the buffer. Thus we need an offset.
-      const indexOffset = isIngoingEdge ? 3 : 0;
+      const indexOffset = isIngoingEdge ? 6 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
         const positionAttribute = buffer.geometry.attributes.position;
-        positionAttribute.set(position, index * 6 + indexOffset);
+        positionAttribute.set(position, index * 12 + indexOffset);
+        positionAttribute.set(position, index * 12 + indexOffset + 3);
         return [positionAttribute];
       });
     };
@@ -643,8 +670,10 @@ class Skeleton {
       const positionAttribute = attributes.position;
       const treeIdAttribute = attributes.treeId;
 
-      positionAttribute.set(source.position, index * 6);
-      positionAttribute.set(target.position, index * 6 + 3);
+      positionAttribute.set(source.position, index * 12);
+      positionAttribute.set(source.position, index * 12 + 3);
+      positionAttribute.set(target.position, index * 12 + 6);
+      positionAttribute.set(target.position, index * 12 + 9);
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];
@@ -670,7 +699,7 @@ class Skeleton {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.position;
-      attribute.set([0, 0, 0, 0, 0, 0], index * 6);
+      attribute.set([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], index * 12);
       return [attribute];
     });
   }

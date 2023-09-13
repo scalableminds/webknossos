@@ -61,7 +61,6 @@ module.exports = function (env = {}) {
       main: "main.tsx",
       light: "style_light.ts",
       dark: "style_dark.ts",
-      serviceWorker: { import: "oxalis/workers/service-worker.ts", filename: "service-worker" },
     },
     mode: env.production ? "production" : "development",
     output: {

@@ -27,12 +27,34 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
-import "notifications";
+//import "notifications";
+import registerServiceWorker, {
+  ServiceWorkerNoSupportError,
+} from "service-worker-loader!./oxalis/workers/service-worker.ts";
 
 setModel(Model);
 setStore(UnthrottledStore);
 setupApi();
 startSagas(rootSaga);
+
+if ("serviceWorker" in navigator) {
+  // Register a service worker hosted at the root of the
+  // site using the default scope.
+  registerServiceWorker({ scope: "/assets/bundle/" })
+    .then((registration: any) => {
+      console.log("Success!");
+      console.log(registration);
+    })
+    .catch((err: Error) => {
+      if (err instanceof ServiceWorkerNoSupportError) {
+        console.log("ServiceWorker is not supported.");
+      } else {
+        console.log("Error!");
+      }
+    });
+} else {
+  console.error("Service workers are not supported.");
+}
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

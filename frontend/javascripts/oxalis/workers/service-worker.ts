@@ -1,4 +1,10 @@
-self.addEventListener("push", function (event) {
+declare const self: ServiceWorkerGlobalScope;
+export {};
+
+self.addEventListener("installation", function (event: PushEvent) {
+  self.skipWaiting();
+});
+self.addEventListener("push", function (event: PushEvent) {
   const options = {
     body: event.data.text(),
     icon: "/path-to-icon.png", // Replace with the path to your notification icon

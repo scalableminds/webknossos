@@ -3,7 +3,7 @@ package oxalis.opengraph
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataLayerLike}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO}

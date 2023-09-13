@@ -27,6 +27,7 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+import "notifications";
 
 setModel(Model);
 setStore(UnthrottledStore);

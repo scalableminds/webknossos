@@ -3,13 +3,14 @@ package oxalis.opengraph
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.Category
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataLayerLike}
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.{DataSetDAO, DataSetDataLayerDAO}
-import models.organization.OrganizationDAO
+import models.annotation.AnnotationDAO
+import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO}
+import models.organization.{Organization, OrganizationDAO}
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -31,6 +32,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
                                  dataSetDAO: DataSetDAO,
                                  organizationDAO: OrganizationDAO,
                                  dataSetDataLayerDAO: DataSetDataLayerDAO,
+                                 annotationDAO: AnnotationDAO,
                                  conf: WkConf)
     extends LazyLogging {
 
@@ -60,6 +62,8 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
 
   private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
 
+  private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
+
   private def isDatasetViewUri(uriPath: String): Boolean =
     uriPath match {
       case datasetRoute1Regex(_, _) => true
@@ -67,7 +71,11 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case _                        => false
     }
 
-  private def isAnnotationViewUri(uriPath: String): Boolean = false
+  private def isAnnotationViewUri(uriPath: String): Boolean =
+    uriPath match {
+      case annotationRouteRegex(_) => true
+      case _                       => false
+    }
 
   private def isWorkflowViewUri(uriPath: String): Boolean =
     uriPath match {
@@ -94,14 +102,36 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       OpenGraphTags(
         Some(s"${dataset.displayName.getOrElse(datasetName)} | WEBKNOSSOS"),
         Some(s"View this dataset of organization ${organization.displayName} in WEBKNOSSOS"),
-        layerOpt match {
-          case Some(layer) if dataset.isPublic =>
-            Some(s"${conf.Http.uri}/api/datasets/$organizationName/$datasetName/layers/${layer.name}/thumbnail")
-          case _ => None
-        }
+        thumbnailUri(dataset, layerOpt, organization)
       )
 
-  private def annotationOpenGraphTags(uriPath: String): Fox[OpenGraphTags] = ???
+  private def annotationOpenGraphTags(uriPath: String)(implicit ec: ExecutionContext): Fox[OpenGraphTags] =
+    uriPath match {
+      case annotationRouteRegex(annotationId) =>
+        for {
+          annotationIdValidated <- ObjectId.fromString(annotationId)
+          annotation <- annotationDAO.findOne(annotationIdValidated)(GlobalAccessContext)
+          dataset: DataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
+          layers <- dataSetDataLayerDAO.findAllForDataSet(dataset._id)
+          layerOpt = layers.find(_.category == Category.color)
+        } yield
+          OpenGraphTags(
+            Some(s"${annotation.nameOpt.orElse(dataset.displayName).getOrElse(dataset.name)} | WEBKNOSSOS"),
+            Some(s"Annotation on dataset ${dataset.displayName.getOrElse(dataset.name)} in WEBKNOSSOS"),
+            thumbnailUri(dataset, layerOpt, organization)
+          )
+      case _ => Fox.successful(OpenGraphTags.default)
+    }
+
+  private def thumbnailUri(dataset: DataSet,
+                           layerOpt: Option[DataLayerLike],
+                           organization: Organization): Option[String] =
+    layerOpt match {
+      case Some(layer) if dataset.isPublic =>
+        Some(s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail")
+      case _ => None
+    }
 
   private def workflowOpenGraphTags(uriPath: String): Fox[OpenGraphTags] =
     uriPath match {

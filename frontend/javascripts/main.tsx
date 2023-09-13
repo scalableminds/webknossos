@@ -28,9 +28,10 @@ import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
 //import "notifications";
+// @ts-ignore a
 import registerServiceWorker, {
   ServiceWorkerNoSupportError,
-} from "service-worker-loader!./oxalis/workers/service-worker.ts";
+} from "service-worker-loader!./oxalis/workers/service-worker";
 
 setModel(Model);
 setStore(UnthrottledStore);

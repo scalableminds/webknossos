@@ -23,6 +23,7 @@ import {
   ExclamationCircleOutlined,
   LeftOutlined,
   FieldTimeOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 
@@ -50,6 +51,7 @@ import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
+import { subscribeToWorkflow } from "./notification-service";
 
 const { Panel } = Collapse;
 const { Search } = Input;
@@ -624,6 +626,11 @@ export default function TaskListView({
           <Button onClick={() => onReload()}>
             <SyncOutlined spin={isLoading} /> Refresh
           </Button>
+          <Tooltip title="Subscribe to updates of this workflow">
+            <Button onClick={() => subscribeToWorkflow(report.workflow.hash)}>
+              <BellOutlined />
+            </Button>
+          </Tooltip>
           <Select
             value={runId ?? ""}
             onChange={(value) =>

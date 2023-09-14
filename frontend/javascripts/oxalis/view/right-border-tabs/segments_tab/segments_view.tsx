@@ -59,7 +59,10 @@ import {
   updateCurrentMeshFileAction,
   updateIsosurfaceVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+} from "oxalis/model/actions/flycam_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -112,6 +115,7 @@ import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 
 const { confirm } = Modal;
@@ -200,16 +204,31 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId || null));
   },
 
-  loadAdHocMesh(segmentId: number, seedPosition: Vector3) {
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition));
+  loadAdHocMesh(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) {
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
   },
 
-  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, meshFileName: string) {
-    dispatch(loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName));
+  loadPrecomputedMesh(
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) {
+    dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, seedAdditionalCoordinates, meshFileName),
+    );
   },
 
-  setActiveCell(segmentId: number, somePosition?: Vector3) {
-    dispatch(setActiveCellAction(segmentId, somePosition));
+  setActiveCell(
+    segmentId: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) {
+    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -218,6 +237,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
+  },
+
+  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
+    dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
   },
 
   updateSegments(
@@ -479,10 +502,22 @@ class SegmentsView extends React.Component<Props, State> {
         searchableTreeItemList.push(item);
       });
 
+      const newSegmentIds = new Set(segments.map((segment) => segment.id));
+      const newGroupIds = new Set(segmentGroups.map((group) => group.groupId));
+      const oldSelectedGroupId = prevState.selectedIds.group;
       updateStateObject = {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
+        selectedIds: {
+          // Ensure that the ids of previously selected segments are removed
+          // if these segments don't exist anymore.
+          segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
+          group:
+            oldSelectedGroupId != null && newGroupIds.has(oldSelectedGroupId)
+              ? oldSelectedGroupId
+              : null,
+        },
       };
     }
     if (prevState.prevProps?.isosurfaces !== isosurfaces) {
@@ -643,6 +678,9 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.props.setPosition(segment.somePosition);
+    if (segment.someAdditionalCoordinates) {
+      this.props.setAdditionalCoordinates(segment.someAdditionalCoordinates);
+    }
   };
 
   closeSegmentOrGroupDropdown = () => {
@@ -1275,7 +1313,7 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition);
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates);
     });
   };
 
@@ -1340,6 +1378,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.props.loadPrecomputedMesh(
         segment.id,
         segment.somePosition,
+        segment.someAdditionalCoordinates,
         this.props.currentMeshFile.meshFileName,
       );
     });
@@ -1624,6 +1663,7 @@ class SegmentsView extends React.Component<Props, State> {
                     loadPrecomputedMesh={this.props.loadPrecomputedMesh}
                     setActiveCell={this.props.setActiveCell}
                     setPosition={this.props.setPosition}
+                    setAdditionalCoordinates={this.props.setAdditionalCoordinates}
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}

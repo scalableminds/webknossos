@@ -7,6 +7,8 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -22,6 +24,7 @@ class DatasetArray(vaultPath: VaultPath,
                    header: DatasetHeader,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
+                   additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends LazyLogging {
 
@@ -37,6 +40,43 @@ class DatasetArray(vaultPath: VaultPath,
     }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
+    readBytes(shapeArray, offsetArray)
+  }
+
+  def readBytesWithAdditionalCoordinates(
+      shape: Vec3Int,
+      offset: Vec3Int,
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxesMap: Map[String, AdditionalAxis])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalAxesMap.size
+
+    /*
+      readAsFortranOrder only supports a shape/offset with XYZ at the end. This does not really make sense if we assume
+      that xyz and additional coordinates may have any index/axisorder. Since only ngff datasets are currently supported
+      for additional coordinates, and they follow the convention (t)(c) ... zyx, with additional coordinates before zyx,
+      this works for now.
+     */
+
+    val shapeArray: Array[Int] = Array.fill(dimensionCount)(1)
+    shapeArray(dimensionCount - 3) = shape.x
+    shapeArray(dimensionCount - 2) = shape.y
+    shapeArray(dimensionCount - 1) = shape.z
+
+    val offsetArray: Array[Int] = Array.fill(dimensionCount)(0)
+    offsetArray(dimensionCount - 3) = offset.x
+    offsetArray(dimensionCount - 2) = offset.y
+    offsetArray(dimensionCount - 1) = offset.z
+
+    channelIndex match {
+      case Some(c) => offsetArray(axisOrder.c.getOrElse(axisOrder.x - 1)) = c
+      case None    => ()
+    }
+
+    for (additionalCoordinate <- additionalCoordinates) {
+      val index = additionalAxesMap(additionalCoordinate.name).index
+      offsetArray(index) = additionalCoordinate.value
+      // Shape for additional coordinates will always be 1
+    }
     readBytes(shapeArray, offsetArray)
   }
 

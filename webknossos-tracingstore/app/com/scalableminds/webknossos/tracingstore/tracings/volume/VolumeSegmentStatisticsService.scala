@@ -139,7 +139,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         cubeSize = DataLayer.bucketLength,
         fourBit = Some(false),
         applyAgglomerate = None,
-        version = None
+        version = None,
+        additionalCoordinates = None
       )
     }.toList
     for {

@@ -161,12 +161,14 @@ function createExpectedOptions(fourBit: boolean = false) {
     data: [
       {
         position: [0, 0, 0],
+        additionalCoordinates: undefined,
         mag: [1, 1, 1],
         cubeSize: 32,
         fourBit,
       },
       {
         position: [64, 64, 64],
+        additionalCoordinates: undefined,
         mag: [2, 2, 2],
         cubeSize: 32,
         fourBit,
@@ -247,6 +249,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
         name: "updateBucket",
         value: {
           position: [0, 0, 0],
+          additionalCoordinates: undefined,
           mag: [1, 1, 1],
           cubeSize: 32,
           base64Data: byteArraysToLz4Base64([data])[0],
@@ -256,6 +259,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
         name: "updateBucket",
         value: {
           position: [64, 64, 64],
+          additionalCoordinates: undefined,
           mag: [2, 2, 2],
           cubeSize: 32,
           base64Data: byteArraysToLz4Base64([data])[0],

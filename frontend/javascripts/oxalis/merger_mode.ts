@@ -11,6 +11,7 @@ import messages from "messages";
 import { UnregisterHandler } from "oxalis/api/api_latest";
 import { Action } from "oxalis/model/actions/actions";
 import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
@@ -114,8 +115,13 @@ async function createNodeOverwrite(
     return;
   }
 
-  const { position } = action;
-  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  const { position, additionalCoordinates } = action;
+  const segmentId = await api.data.getDataValue(
+    segmentationLayerName,
+    position,
+    null,
+    additionalCoordinates,
+  );
 
   // If there is no segment id, the node was set outside of all segments.
   // Drop the node creation action in that case.
@@ -138,6 +144,7 @@ async function onCreateNode(
   nodeId: number,
   treeId: number,
   position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   updateMapping: boolean = true,
 ) {
   const { idMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
@@ -146,7 +153,12 @@ async function onCreateNode(
     return;
   }
 
-  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  const segmentId = await api.data.getDataValue(
+    segmentationLayerName,
+    position,
+    null,
+    additionalCoordinates,
+  );
 
   // It can still happen that there are createNode diffing actions for nodes which
   // are placed outside of a segment, for example when merging trees that were created
@@ -212,7 +224,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
     }
 
     if (segmentId != null && segmentId > 0) {
-      await onCreateNode(mergerModeState, id, treeId, position, false);
+      await onCreateNode(mergerModeState, id, treeId, position, node.additionalCoordinates, false);
     } else if (nodeSegmentMap[id] != null) {
       // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
       delete nodeSegmentMap[id];
@@ -229,7 +241,7 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
     switch (action.name) {
       case "createNode": {
         const { treeId, id: nodeId, position } = action.value;
-        onCreateNode(mergerModeState, nodeId, treeId, position);
+        onCreateNode(mergerModeState, nodeId, treeId, position, action.value.additionalCoordinates);
         break;
       }
 

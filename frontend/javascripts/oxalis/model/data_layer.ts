@@ -39,6 +39,7 @@ class DataLayer {
 
     this.cube = new DataCube(
       getLayerBoundingBox(dataset, this.name),
+      layerInfo.additionalAxes || [],
       getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       this.isSegmentation,

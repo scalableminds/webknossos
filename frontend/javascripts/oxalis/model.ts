@@ -166,12 +166,18 @@ export class OxalisModel {
     position: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
+    const { additionalCoordinates } = state.flycam;
+
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
     if (position == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
-    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(position, zoomStep);
+    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
+      position,
+      additionalCoordinates,
+      zoomStep,
+    );
     return renderedZoomStep;
   }
 
@@ -180,12 +186,14 @@ export class OxalisModel {
     position: Vector3,
   ): Promise<number> {
     const state = Store.getState();
+    const { additionalCoordinates } = state.flycam;
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
       position,
+      additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
@@ -216,9 +224,9 @@ export class OxalisModel {
       globalMousePosition,
     );
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
-    const getIdForPos = (pos, usableZoomStep) => {
-      const id = cube.getDataValue(pos, null, usableZoomStep);
+    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
+      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
         id: cube.mapId(id),
         unmappedId: id,

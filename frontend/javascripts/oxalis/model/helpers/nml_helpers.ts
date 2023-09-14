@@ -340,7 +340,7 @@ function serializeNodes(nodes: NodeMap): Array<string> {
   });
 }
 
-export function additionalCoordinateToKeyValue(coord: AdditionalCoordinate) {
+export function additionalCoordinateToKeyValue(coord: AdditionalCoordinate): [string, number] {
   return [
     // Export additional coordinates like this:
     // additionalCoordinate-t="10"

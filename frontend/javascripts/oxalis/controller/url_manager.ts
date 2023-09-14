@@ -180,7 +180,7 @@ class UrlManager {
     }
 
     const commaSeparatedValues = urlHash.split(",");
-    const [baseValues, keyValuePairs] = _.partition(
+    const [baseValues, keyValuePairStrings] = _.partition(
       commaSeparatedValues,
       (value) => !value.includes("="),
     );
@@ -214,6 +214,7 @@ class UrlManager {
     }
 
     const additionalCoordinates = [];
+    const keyValuePairs = keyValuePairStrings.map((keyValueStr) => keyValueStr.split("=", 2));
     for (const [key, value] of keyValuePairs) {
       const coordinateName = parseAdditionalCoordinateKey(key);
       if (coordinateName != null) {

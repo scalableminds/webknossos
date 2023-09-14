@@ -19,7 +19,7 @@ import {
   setNodeRadiusAction,
   setTreeNameAction,
   setActiveTreeAction,
-  setActiveGroupAction,
+  setActiveTreeGroupAction,
   setActiveTreeByNameAction,
   setTreeColorIndexAction,
   setTreeVisibilityAction,
@@ -34,6 +34,8 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import {
   callDeep,
+  createGroupToSegmentsMap,
+  MISSING_GROUP_ID,
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
@@ -52,7 +54,7 @@ import {
   getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   getTree,
   getFlatTreeGroups,
   getTreeGroupsMap,
@@ -94,6 +96,9 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
+  BatchableUpdateSegmentAction,
+  batchUpdateGroupsAndSegmentsAction,
+  removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
   updateSegmentAction,
@@ -148,6 +153,7 @@ import type {
   UserConfiguration,
   VolumeTracing,
   OxalisState,
+  SegmentGroup,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import type { ToastStyle } from "libs/toast";
@@ -162,6 +168,7 @@ import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -250,11 +257,18 @@ class TracingApi {
   /**
    * Returns the id of the current active group.
    */
-  getActiveGroupId(): number | null | undefined {
+  getActiveTreeGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveGroup(tracing)
+    return getActiveTreeGroup(tracing)
       .map((group) => group.groupId)
       .getOrElse(null);
+  }
+
+  /**
+   * Deprecated! Use getActiveTreeGroupId instead.
+   */
+  getActiveGroupId(): number | null | undefined {
+    return this.getActiveTreeGroupId();
   }
 
   /**
@@ -411,12 +425,19 @@ class TracingApi {
    * Makes the specified group active. Nodes cannot be added through the UI when a group is active.
    *
    * @example
-   * api.tracing.setActiveGroup(3);
+   * api.tracing.setActiveTreeGroup(3);
    */
-  setActiveGroup(groupId: number) {
+  setActiveTreeGroup(groupId: number) {
     const { tracing } = Store.getState();
     assertSkeleton(tracing);
-    Store.dispatch(setActiveGroupAction(groupId));
+    Store.dispatch(setActiveTreeGroupAction(groupId));
+  }
+
+  /**
+   * Deprecated! Use renameSkeletonGroup instead.
+   */
+  setActiveGroup(groupId: number) {
+    this.setActiveTreeGroup(groupId);
   }
 
   /**
@@ -535,6 +556,163 @@ class TracingApi {
     const { segmentGroups } = getVolumeTracingById(Store.getState().tracing, layerName);
     const newSegmentGroups = moveGroupsHelper(segmentGroups, groupId, targetGroupId);
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, layerName));
+  }
+
+  /**
+   * Renames the segment group referenced by the provided id.
+   *
+   * @example
+   * api.tracing.createSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   "Group name",    // optional
+   *   parentGroupId,   // optional
+   * );
+   */
+  createSegmentGroup(
+    volumeLayerName: string,
+    name: string | null = null,
+    parentGroupId: number = MISSING_GROUP_ID,
+  ) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segmentGroups } = volumeTracing;
+
+    const newSegmentGroups = _.cloneDeep(segmentGroups);
+    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
+    const newGroup = {
+      name: name || `Group ${newGroupId}`,
+      groupId: newGroupId,
+      children: [],
+    };
+
+    if (parentGroupId === MISSING_GROUP_ID) {
+      newSegmentGroups.push(newGroup);
+    } else {
+      callDeep(newSegmentGroups, parentGroupId, (item) => {
+        item.children.push(newGroup);
+      });
+    }
+
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
+  }
+
+  /**
+   * Renames the segment group referenced by the provided id.
+   *
+   * @example
+   * api.tracing.renameSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   3,
+   *   "New group name",
+   * );
+   */
+  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segmentGroups } = volumeTracing;
+
+    const newSegmentGroups = mapGroups(segmentGroups, (group) => {
+      if (group.groupId === groupId) {
+        return {
+          ...group,
+          name: newName,
+        };
+      } else {
+        return group;
+      }
+    });
+
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
+  }
+
+  /**
+   * Deletes the segment group referenced by the provided id. If deleteChildren is
+   * true, the deletion is recursive.
+   *
+   * @example
+   * api.tracing.deleteSegmentGroup(
+   *   volumeLayerName, // see getSegmentationLayerNames
+   *   3,
+   *   "New group name",
+   * );
+   */
+  deleteSegmentGroup(volumeLayerName: string, groupId: number, deleteChildren: boolean = false) {
+    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (volumeTracing == null) {
+      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
+    }
+    const { segments, segmentGroups } = volumeTracing;
+
+    if (segments == null || segmentGroups == null) {
+      return;
+    }
+
+    let newSegmentGroups = _.cloneDeep(segmentGroups);
+
+    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
+    let segmentIdsToDelete: number[] = [];
+
+    if (groupId === MISSING_GROUP_ID) {
+      // special case: delete Root group and all children (aka everything)
+      segmentIdsToDelete = Array.from(segments.values()).map((t) => t.id);
+      newSegmentGroups = [];
+    }
+
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
+    callDeep(newSegmentGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
+      const subsegments = groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : [];
+      // Remove group
+      parentsChildren.splice(index, 1);
+
+      if (!deleteChildren) {
+        // Move all subgroups to the parent group
+        parentsChildren.push(...item.children);
+
+        // Update all segments
+        for (const segment of subsegments.values()) {
+          updateSegmentActions.push(
+            updateSegmentAction(
+              segment.id,
+              { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
+              volumeLayerName,
+              // The parameter createsNewUndoState is not passed, since the action
+              // is added to a batch and batch updates always crate a new undo state.
+            ),
+          );
+        }
+
+        return;
+      }
+
+      // Finds all subsegments of the passed group recursively
+      const findChildrenRecursively = (group: SegmentGroup) => {
+        const currentSubsegments = groupToSegmentsMap[group.groupId] ?? [];
+        // Delete all segments of the current group
+        segmentIdsToDelete = segmentIdsToDelete.concat(
+          currentSubsegments.map((segment) => segment.id),
+        );
+        // Also delete the segments of all subgroups
+        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+      };
+
+      findChildrenRecursively(item);
+    });
+
+    // Update the store at once
+    const removeSegmentActions: BatchableUpdateSegmentAction[] = segmentIdsToDelete.map(
+      (segmentId) => removeSegmentAction(segmentId, volumeLayerName),
+    );
+    Store.dispatch(
+      batchUpdateGroupsAndSegmentsAction(
+        updateSegmentActions.concat(removeSegmentActions, [
+          setSegmentGroupsAction(newSegmentGroups, volumeLayerName),
+        ]),
+      ),
+    );
   }
 
   /**
@@ -1150,37 +1328,6 @@ class DataApi {
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map((layer) => layer.name);
-  }
-
-  /**
-   * Renames the segment group referenced by the provided id.
-   *
-   * @example
-   * api.data.renameSegmentGroup(
-   *   volumeLayerName, // see getSegmentationLayerNames
-   *   3,
-   *   "New group name",
-   * );
-   */
-  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
-    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
-    if (volumeTracing == null) {
-      throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
-    }
-    const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = mapGroups(segmentGroups, (group) => {
-      if (group.groupId === groupId) {
-        return {
-          ...group,
-          name: newName,
-        };
-      } else {
-        return group;
-      }
-    });
-
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
   }
 
   /**

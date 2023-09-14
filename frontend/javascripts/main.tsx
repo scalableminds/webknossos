@@ -32,6 +32,7 @@ import checkBrowserFeatures from "libs/browser_feature_check";
 import registerServiceWorker, {
   ServiceWorkerNoSupportError,
 } from "service-worker-loader!./oxalis/workers/service-worker";
+import "admin/voxelytics/notification-service";
 
 setModel(Model);
 setStore(UnthrottledStore);

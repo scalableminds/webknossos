@@ -2,6 +2,7 @@ import { getVoxelyticsWorkflow } from "admin/admin_rest_api";
 import { VoxelyticsRunState } from "types/api_flow_types";
 
 const subscribedWorkflows: string[] = [];
+const previousStateByWorkflowId: { [key: string]: boolean } = {};
 let runningInterval: ReturnType<typeof setInterval> | null = null;
 
 export function subscribeToWorkflow(workflowHash: string) {
@@ -22,7 +23,6 @@ export function subscribeToWorkflow(workflowHash: string) {
 }
 
 const pollWorkflowUpdates = async () => {
-  console.log("polling");
   const workflowsToRemove: string[] = [];
   await Promise.all(
     subscribedWorkflows.map(async (workflowHash: string) => {
@@ -30,12 +30,19 @@ const pollWorkflowUpdates = async () => {
       const isTaskStillPending = report.runs.some(
         (run) => run.state === VoxelyticsRunState.RUNNING,
       );
-      if (!isTaskStillPending) {
+      console.log("isTaskStillPending", isTaskStillPending);
+      if (
+        !isTaskStillPending &&
+        // Only notify if it's done and previously it wasn't done (or unknown)
+        (previousStateByWorkflowId[workflowHash] == null || previousStateByWorkflowId[workflowHash])
+      ) {
+        console.log("sending notification");
         new Notification("Voxelytics workflow finished", {
           body: `Voxelytics workflow ${report.workflow.name} has finished!`,
         });
       }
-      workflowsToRemove.push(workflowHash);
+      previousStateByWorkflowId[workflowHash] = isTaskStillPending;
+      // workflowsToRemove.push(workflowHash);
     }),
   );
   workflowsToRemove.forEach((workflowHash) => {
@@ -52,7 +59,7 @@ const pollWorkflowUpdates = async () => {
   }
 };
 
-const POLL_INTERVAL = 10 * 1000;
+const POLL_INTERVAL = 2 * 1000;
 
 function guardForNotificationsPermission(callback: () => void) {
   if (!("Notification" in window)) {

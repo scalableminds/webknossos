@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 declare const self: ServiceWorkerGlobalScope;
 export {};
 

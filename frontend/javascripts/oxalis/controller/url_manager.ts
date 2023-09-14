@@ -180,8 +180,9 @@ class UrlManager {
     }
 
     const commaSeparatedValues = urlHash.split(",");
-    const [baseValues, keyValuePairs] = _.partition(commaSeparatedValues, (value) =>
-      value.includes("="),
+    const [baseValues, keyValuePairs] = _.partition(
+      commaSeparatedValues,
+      (value) => !value.includes("="),
     );
     const stateArray = baseValues.map(Number);
     const validStateArray = stateArray.map((value) => (!isNaN(value) ? value : 0));

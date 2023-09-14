@@ -2384,6 +2384,10 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
+export function sendVoxelyticsSlack(): Promise<Array<VoxelyticsWorkflowListing>> {
+  return Request.receiveJSON("/api/voxelytics/send-notification");
+}
+
 export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }

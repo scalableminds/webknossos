@@ -1,5 +1,6 @@
 package controllers
 
+import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.time.Instant
@@ -10,10 +11,35 @@ import oxalis.security.WkEnv
 import play.api.libs.json._
 import play.api.mvc._
 import utils.{ObjectId, WkConf}
+// import nl.martijndwars.webpush._
+// import org.bouncycastle.jce.provider.BouncyCastleProvider
+
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+
+
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+
+
+// import java.nio.charset.StandardCharsets
+
+// import play.api.libs.json._
+// import play.jsonext.CaseClassFormats
+
+// final case class SendRequest(
+//   endpoint: String,
+//   publicKey: String,
+//   userAuth: String,
+//   payload: String,
+//   ttl: Int
+// ) {
+
+//   def toNotification: Notification =
+
+// }
 
 class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
@@ -165,10 +191,23 @@ class VoxelyticsController @Inject()(
           for {
             _ <- Fox.serialCombined(events.grouped(WORKFLOW_EVENT_INSERT_BATCH_SIZE).toList)(eventBatch =>
               firstEvent match {
-                case _: RunStateChangeEvent =>
+                case changeEvent: RunStateChangeEvent => {
+                  // should an event sent be here, too?
                   voxelyticsDAO.updateRunStates(runId, eventBatch.map(_.asInstanceOf[RunStateChangeEvent]))
+                }
 
-                case _: TaskStateChangeEvent =>
+                case changeEvent: TaskStateChangeEvent =>
+                  // todo:
+                  // - clean up
+                  // - what happens if this fails?
+                  // - dont trigger if a new task is started directly afterwards? e.g., by debouncing this.
+                  if (changeEvent.state == VoxelyticsRunState.COMPLETE ||
+                      changeEvent.state == VoxelyticsRunState.FAILED ||
+                      changeEvent.state == VoxelyticsRunState.CANCELLED ||
+                      changeEvent.state == VoxelyticsRunState.STALE
+                  )
+                    sendSlackImpl(changeEvent.taskName, changeEvent.state.toString)
+
                   val taskEvents = eventBatch.map(_.asInstanceOf[TaskStateChangeEvent])
                   val artifactEvents =
                     taskEvents.flatMap(ev => ev.artifacts.map(artifact => (ev.taskName, artifact._1, artifact._2)))
@@ -280,4 +319,70 @@ class VoxelyticsController @Inject()(
         } yield JsonOk(JsArray(logEntries))
       }
     }
+
+
+    def sendSlack(): Action[AnyContent] = Action.async { implicit request => {
+        for {
+          response <- sendSlackImpl("bla", "bla")
+        } yield JsonOk(Json.obj("success" -> 1))
+      }
+    }
+
+    def sendSlackImpl(taskName: String, stateStr: String) = {
+      implicit val system = ActorSystem()
+      val jsonBody = s"""{"text":"Your task $taskName is now $stateStr"}"""
+      val webhookUrl = "https://hooks.slack.com/services/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"
+
+      val entity = HttpEntity(ContentTypes.`application/json`, jsonBody)
+      val request = HttpRequest(
+        method = HttpMethods.POST,
+        uri = webhookUrl,
+        entity = entity
+      )
+      val responseFuture = Http().singleRequest(request)
+      responseFuture
+    }
+
+
+
+
+  // java.security.Security.addProvider(new BouncyCastleProvider())
+
+  // private[this] val privateKey =
+  //   Utils.loadPrivateKey("ANFu2lYRyNvpg+OvcYqF6N0O8gHir1JVkFbOhBdJsHeU")
+
+  // private[this] val publicKeyEncoded =
+  //   "BFQ92i5QxtMLdL+Q5ptO/IwRz3Ptdub+ASQ23FfeN1VkDi1qdVjkEKwRbGa7/WqKX0QhFkNtXgqwu3u1AsfPhdE="
+
+  // private[this] val publicKeyHexStrings =
+  //   java.util.Base64.getDecoder.decode(publicKeyEncoded).map(
+  //     "0x%02x" format _
+  //   ).mkString(",")
+
+  // private[this] val publicKey =
+  //   Utils.loadPublicKey(publicKeyEncoded)
+
+  // def send(): Action[AnyContent] =
+  //   sil.SecuredAction.async { implicit request =>
+  //     val notification = new Notification(
+  //       "endpoint",
+  //       Utils.loadPublicKey(publicKey),
+  //       Base64Encoder.decode("userAuth"),
+  //       "payload",
+  //       1000
+  //     )
+  //     val client = new PushService()
+  //     client.setPrivateKey(privateKey)
+  //     client.setPublicKey(publicKey)
+  //     val response = client.send(notification)
+  //     val status = response.getStatusLine.getStatusCode
+  //     val body = Source.fromInputStream(
+  //       response.getEntity.getContent
+  //     ).getLines().mkString("\n")
+  //     println("status = " + status)
+  //     println("body = " + body)
+  //     val s = new Status(status)
+  //     s(body)
+  // }
+
 }

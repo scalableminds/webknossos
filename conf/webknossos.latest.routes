@@ -294,3 +294,8 @@ GET           /voxelytics/workflows/:workflowHash/chunkStatistics               
 GET           /voxelytics/workflows/:workflowHash/artifactChecksums                             controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[String], taskName: String, artifactName: Option[String])
 POST          /voxelytics/logs                                                                  controllers.VoxelyticsController.appendLogs
 GET           /voxelytics/logs                                                                  controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Int])
+
+
+GET             /voxelytics/send-notification                                                   controllers.VoxelyticsController.sendSlack()
+# POST          /voxelytics/subscribe                                                           controllers.VoxelyticsController.subscribe()
+# POST          /voxelytics/send-notification                                                   controllers.VoxelyticsController.sendNotification()

@@ -9,13 +9,8 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-<<<<<<< HEAD
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-=======
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
->>>>>>> master
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._

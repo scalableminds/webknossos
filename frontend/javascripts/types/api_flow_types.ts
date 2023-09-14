@@ -177,6 +177,13 @@ export type APIDataset = APIDatasetBase & {
   readonly isActive: true;
 };
 
+export type MaintenanceInfo = {
+  startTime: number;
+  endTime: number;
+  id: string;
+  message: string;
+};
+
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
 export type APIDatasetCompactWithoutStatus = Pick<

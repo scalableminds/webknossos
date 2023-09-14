@@ -63,6 +63,7 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  MaintenanceInfo,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -2076,27 +2077,18 @@ export async function isInMaintenance(): Promise<boolean> {
     "/api/maintenances/listCurrentAndUpcoming",
   );
   const currentEpoch = Date.now();
-  const currentMaintenance = allMaintenances?.find(
-    (maintenance) => maintenance.startTime < currentEpoch && maintenance.endTime > currentEpoch,
+  const currentMaintenance = allMaintenances.find(
+    (maintenance) => maintenance.startTime < currentEpoch,
   );
   return currentMaintenance != null;
 }
-
-export type MaintenanceInfo = {
-  startTime: number;
-  endTime: number;
-  id: string;
-  message: string;
-};
 
 export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
   const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
     "/api/maintenances/listCurrentAndUpcoming",
   );
   const currentEpoch = Date.now();
-  return allMaintenances
-    ?.filter((maintenance) => maintenance.endTime > currentEpoch)
-    .sort((a, b) => a.startTime - b.startTime);
+  return allMaintenances.sort((a, b) => a.startTime - b.startTime);
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

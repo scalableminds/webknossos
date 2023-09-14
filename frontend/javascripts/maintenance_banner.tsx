@@ -1,30 +1,33 @@
 import {
-  MaintenanceInfo,
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
 import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
 import { useInterval } from "libs/react_helpers";
+import { navbarHeight } from "navbar";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
 import React, { useState } from "react";
+import { MaintenanceInfo } from "types/api_flow_types";
+
+const intervalToFetchMaintenancesInMs = 60000; 
 
 export function MaintenanceBanner() {
-  const { activeUser } = Store.getState();
-  const [currentAndUpcomingMaintenances, setcurrentAndUpcomingMaintenances] = useState<
+  const { activeUser, uiInformation } = Store.getState();
+  const topPaddingAbsoluteForNavbar = navbarHeight;
+  const bottomPaddingForMaybeStatusBar = uiInformation.isInAnnotationView ? 20 : 0;
+  const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
     Array<MaintenanceInfo>
   >([]);
-  const [position, setPosition] = useState<Object>({ top: 48 });
+  const [position, setPosition] = useState<Object>({ top: topPaddingAbsoluteForNavbar });
   const [isTop, setIsTop] = useState(true);
   useInterval(
     async () => {
-      if (activeUser == null) return;
-      setcurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
+      setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
     },
-    10000, //TODO find value for production
+    intervalToFetchMaintenancesInMs,
   );
-  if (activeUser == null) return <></>;
   const activeUsersLatestAcknowledgedMaintenance =
     activeUser?.novelUserExperienceInfos.latestAcknowledgedMaintenanceInfo;
 
@@ -37,11 +40,12 @@ export function MaintenanceBanner() {
   };
 
   const toggleTopOrBottomPosition = () => {
-    setPosition(isTop ? { top: 48 } : { bottom: 20 });
+    setPosition(isTop ? { top: topPaddingAbsoluteForNavbar } : { bottom: bottomPaddingForMaybeStatusBar });
     setIsTop(!isTop);
   };
 
   const getClosestUpcomingMaintenanceBanner = () => {
+    if (activeUser == null) return (<></>); // upcoming maintenances are only shown after login
     const currentTime = Date.now();
     const closestUpcomingMaintenance = currentAndUpcomingMaintenances
       ?.filter((maintenance) => maintenance.startTime > currentTime)

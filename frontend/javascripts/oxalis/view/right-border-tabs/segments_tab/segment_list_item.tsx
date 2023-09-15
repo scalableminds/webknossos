@@ -147,10 +147,11 @@ const getMakeSegmentActiveMenuItem = (
     someAdditionalCoordinates?: AdditionalCoordinate[],
   ) => void,
   activeCellId: number | null | undefined,
+  isEditingDisabled: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
-  const disabled = segment.id === activeCellId;
-  const title = disabled
+  const isActiveSegment = segment.id === activeCellId;
+  const title = isActiveSegment
     ? "This segment ID is already active."
     : "Make this the active segment ID.";
   return {
@@ -163,8 +164,12 @@ const getMakeSegmentActiveMenuItem = (
           segment.someAdditionalCoordinates || undefined,
         ),
       ),
-    disabled,
-    label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
+    disabled: isActiveSegment || isEditingDisabled,
+    label: (
+      <Tooltip title={title} trigger={isEditingDisabled ? "" : "hover"}>
+        Activate Segment ID
+      </Tooltip>
+    ),
   };
 };
 
@@ -417,7 +422,13 @@ function _SegmentListItem({
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       ),
-      getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
+      getMakeSegmentActiveMenuItem(
+        segment,
+        setActiveCell,
+        activeCellId,
+        isEditingDisabled,
+        andCloseContextMenu,
+      ),
       {
         key: "changeSegmentColor",
         /*
@@ -469,9 +480,8 @@ function _SegmentListItem({
       },
       {
         key: "removeSegmentFromList",
-        disabled: isEditingDisabled,
         onClick: () => {
-          if (isEditingDisabled || visibleSegmentationLayer == null) {
+          if (visibleSegmentationLayer == null) {
             return;
           }
           removeSegment(segment.id, visibleSegmentationLayer.name);

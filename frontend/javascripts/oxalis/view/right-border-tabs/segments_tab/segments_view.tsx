@@ -158,6 +158,9 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   const { segments, segmentGroups } = getVisibleSegments(state);
 
+  const isVisibleButUneditableSegmentationLayerActive =
+    visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     isosurfaces:
@@ -174,7 +177,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     segments,
     segmentGroups,
     visibleSegmentationLayer,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
+    allowUpdate: state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -1054,6 +1057,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
+    // TODO currently not working
     return {
       key: "computeAdHoc",
       icon: <i className="fas fa-dice-d20 fa-icon" />,

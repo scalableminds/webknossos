@@ -2085,9 +2085,7 @@ export async function isInMaintenance(): Promise<boolean> {
 }
 
 export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
-  return Request.receiveJSON(
-    "/api/maintenances/listCurrentAndUpcoming",
-  );
+  return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

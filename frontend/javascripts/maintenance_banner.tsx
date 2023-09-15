@@ -11,7 +11,7 @@ import { Store } from "oxalis/singletons";
 import React, { useState } from "react";
 import { MaintenanceInfo } from "types/api_flow_types";
 
-const intervalToFetchMaintenancesInMs = 60000; 
+const intervalToFetchMaintenancesInMs = 60000;
 
 export function MaintenanceBanner() {
   const { activeUser, uiInformation } = Store.getState();
@@ -22,12 +22,9 @@ export function MaintenanceBanner() {
   >([]);
   const [position, setPosition] = useState<Object>({ top: topPaddingAbsoluteForNavbar });
   const [isTop, setIsTop] = useState(true);
-  useInterval(
-    async () => {
-      setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
-    },
-    intervalToFetchMaintenancesInMs,
-  );
+  useInterval(async () => {
+    setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
+  }, intervalToFetchMaintenancesInMs);
   const activeUsersLatestAcknowledgedMaintenance =
     activeUser?.novelUserExperienceInfos.latestAcknowledgedMaintenanceInfo;
 
@@ -40,12 +37,14 @@ export function MaintenanceBanner() {
   };
 
   const toggleTopOrBottomPosition = () => {
-    setPosition(isTop ? { top: topPaddingAbsoluteForNavbar } : { bottom: bottomPaddingForMaybeStatusBar });
+    setPosition(
+      isTop ? { top: topPaddingAbsoluteForNavbar } : { bottom: bottomPaddingForMaybeStatusBar },
+    );
     setIsTop(!isTop);
   };
 
   const getClosestUpcomingMaintenanceBanner = () => {
-    if (activeUser == null) return (<></>); // upcoming maintenances are only shown after login
+    if (activeUser == null) return <></>; // upcoming maintenances are only shown after login
     const currentTime = Date.now();
     const closestUpcomingMaintenance = currentAndUpcomingMaintenances
       ?.filter((maintenance) => maintenance.startTime > currentTime)
@@ -99,8 +98,7 @@ export function MaintenanceBanner() {
     );
   };
 
-  if (currentAndUpcomingMaintenances.length === 0)
-    return <></>;
+  if (currentAndUpcomingMaintenances.length === 0) return <></>;
   const currentlyUnderMaintenanceBanner = getCurrentMaintenanceBanner();
   if (currentlyUnderMaintenanceBanner != null) {
     return currentlyUnderMaintenanceBanner;

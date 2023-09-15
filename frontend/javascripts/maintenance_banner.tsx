@@ -12,12 +12,11 @@ import React, { useState } from "react";
 import { MaintenanceInfo } from "types/api_flow_types";
 
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000;
-const statusBarHeight = 20;
 
 export function MaintenanceBanner() {
   const { activeUser, uiInformation } = Store.getState();
   const topPaddingForNavbar = navbarHeight;
-  const bottomPaddingForMaybeStatusBar = uiInformation.isInAnnotationView ? statusBarHeight : 0;
+  const statusBarHeight = 20;
   const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
     Array<MaintenanceInfo>
   >([]);
@@ -38,20 +37,17 @@ export function MaintenanceBanner() {
   };
 
   const toggleTopOrBottomPosition = () => {
-    setPosition(isTop ? { top: topPaddingForNavbar } : { bottom: bottomPaddingForMaybeStatusBar });
+    setPosition(isTop ? { top: topPaddingForNavbar } : { bottom: statusBarHeight });
     setIsTop(!isTop);
   };
 
   const getClosestUpcomingMaintenanceBanner = () => {
-    if (activeUser == null) return <></>; // upcoming maintenances are only shown after login
+    if (activeUser == null) return null; // upcoming maintenances are only shown after login
     const currentTime = Date.now();
     const closestUpcomingMaintenance = currentAndUpcomingMaintenances
       ?.filter((maintenance) => maintenance.startTime > currentTime)
       .sort((a, b) => a.startTime - b.startTime)[0];
-    //if (closestUpcomingMaintenance == null || activeUsersLatestAcknowledgedMaintenance === closestUpcomingMaintenance.id) return; //TODO use this after testing and remove next 3 lines
-    if (closestUpcomingMaintenance == null) return;
-    if (activeUsersLatestAcknowledgedMaintenance === closestUpcomingMaintenance.id)
-      return <Alert message="Latest maintenance already acknowledged" type="success" />;
+    if (closestUpcomingMaintenance == null || activeUsersLatestAcknowledgedMaintenance === closestUpcomingMaintenance.id) return null;
     const startDate = new Date(closestUpcomingMaintenance.startTime);
     const endDate = new Date(closestUpcomingMaintenance.endTime);
     const endDateFormat = startDate.getDate() === endDate.getDate() ? "HH:mm" : "YYYY-MM-DD HH:mm";
@@ -90,18 +86,20 @@ export function MaintenanceBanner() {
         type="warning"
         banner
         onMouseEnter={() => {
-          toggleTopOrBottomPosition();
+          if (uiInformation.isInAnnotationView) {
+            toggleTopOrBottomPosition();
+          }
         }}
-        style={position}
+        style={{ ...position, position: uiInformation.isInAnnotationView ? "absolute" : "sticky" }}
       />
     );
   };
 
-  if (currentAndUpcomingMaintenances.length === 0) return <></>;
+  if (currentAndUpcomingMaintenances.length === 0) return null;
   const currentlyUnderMaintenanceBanner = getCurrentMaintenanceBanner();
   if (currentlyUnderMaintenanceBanner != null) {
     return currentlyUnderMaintenanceBanner;
   }
   const upcomingMaintenanceBanners = getClosestUpcomingMaintenanceBanner();
-  return upcomingMaintenanceBanners == null ? <></> : upcomingMaintenanceBanners;
+  return upcomingMaintenanceBanners == null ? null : upcomingMaintenanceBanners;
 }

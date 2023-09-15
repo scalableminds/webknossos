@@ -38,9 +38,7 @@ export function MaintenanceBanner() {
   };
 
   const toggleTopOrBottomPosition = () => {
-    setPosition(
-      isTop ? { top: topPaddingForNavbar } : { bottom: bottomPaddingForMaybeStatusBar },
-    );
+    setPosition(isTop ? { top: topPaddingForNavbar } : { bottom: bottomPaddingForMaybeStatusBar });
     setIsTop(!isTop);
   };
 

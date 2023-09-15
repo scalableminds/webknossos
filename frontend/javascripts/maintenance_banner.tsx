@@ -47,7 +47,11 @@ export function MaintenanceBanner() {
     const closestUpcomingMaintenance = currentAndUpcomingMaintenances
       ?.filter((maintenance) => maintenance.startTime > currentTime)
       .sort((a, b) => a.startTime - b.startTime)[0];
-    if (closestUpcomingMaintenance == null || activeUsersLatestAcknowledgedMaintenance === closestUpcomingMaintenance.id) return null;
+    if (
+      closestUpcomingMaintenance == null ||
+      activeUsersLatestAcknowledgedMaintenance === closestUpcomingMaintenance.id
+    )
+      return null;
     const startDate = new Date(closestUpcomingMaintenance.startTime);
     const endDate = new Date(closestUpcomingMaintenance.endTime);
     const endDateFormat = startDate.getDate() === endDate.getDate() ? "HH:mm" : "YYYY-MM-DD HH:mm";

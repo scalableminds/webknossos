@@ -1413,7 +1413,7 @@ class SegmentsView extends React.Component<Props, State> {
   deleteGroup(groupId: number, deleteChildren: boolean = false): void {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer) {
-      api.tracing.deleteSegmentGroup(visibleSegmentationLayer.name, groupId, deleteChildren);
+      api.tracing.deleteSegmentGroup(groupId, deleteChildren, visibleSegmentationLayer.name);
     }
   }
 
@@ -1586,9 +1586,9 @@ class SegmentsView extends React.Component<Props, State> {
                         onChange={(name) => {
                           if (this.props.visibleSegmentationLayer != null) {
                             api.tracing.renameSegmentGroup(
-                              this.props.visibleSegmentationLayer.name,
                               id,
                               name,
+                              this.props.visibleSegmentationLayer.name,
                             );
                           }
                         }}
@@ -1704,7 +1704,7 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
 
-    api.tracing.createSegmentGroup(this.props.visibleSegmentationLayer.name, null, parentGroupId);
+    api.tracing.createSegmentGroup(null, parentGroupId, this.props.visibleSegmentationLayer.name);
   }
 
   doesGroupHaveAnyMeshes = (groupId: number | null): boolean => {

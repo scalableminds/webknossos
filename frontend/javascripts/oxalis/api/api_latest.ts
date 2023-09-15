@@ -62,6 +62,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
+  getActiveSegmentationTracing,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -556,9 +557,9 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    layerName: string,
     somePosition: Vector3,
     someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    layerName?: string,
   ) {
     Store.dispatch(
       clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
@@ -620,17 +621,23 @@ class TracingApi {
    *
    * @example
    * api.tracing.createSegmentGroup(
-   *   volumeLayerName, // see getSegmentationLayerNames
    *   "Group name",    // optional
-   *   parentGroupId,   // optional
+   *   parentGroupId,   // optional. use -1 for the root group
+   *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
   createSegmentGroup(
-    volumeLayerName: string,
     name: string | null = null,
     parentGroupId: number = MISSING_GROUP_ID,
+    volumeLayerName?: string,
   ) {
-    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+    if (parentGroupId == null) {
+      // Guard against explicitly passed null or undefined.
+      parentGroupId = MISSING_GROUP_ID;
+    }
+    const volumeTracing = volumeLayerName
+      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -652,7 +659,7 @@ class TracingApi {
       });
     }
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
   }
 
   /**
@@ -660,13 +667,15 @@ class TracingApi {
    *
    * @example
    * api.tracing.renameSegmentGroup(
-   *   volumeLayerName, // see getSegmentationLayerNames
    *   3,
    *   "New group name",
+   *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
-  renameSegmentGroup(volumeLayerName: string, groupId: number, newName: string) {
-    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+  renameSegmentGroup(groupId: number, newName: string, volumeLayerName?: string) {
+    const volumeTracing = volumeLayerName
+      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -683,7 +692,7 @@ class TracingApi {
       }
     });
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeLayerName));
+    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
   }
 
   /**
@@ -692,13 +701,15 @@ class TracingApi {
    *
    * @example
    * api.tracing.deleteSegmentGroup(
-   *   volumeLayerName, // see getSegmentationLayerNames
    *   3,
-   *   "New group name",
+   *   true,
+   *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
-  deleteSegmentGroup(volumeLayerName: string, groupId: number, deleteChildren: boolean = false) {
-    const volumeTracing = getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName);
+  deleteSegmentGroup(groupId: number, deleteChildren: boolean = false, volumeLayerName?: string) {
+    const volumeTracing = volumeLayerName
+      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -735,7 +746,7 @@ class TracingApi {
             updateSegmentAction(
               segment.id,
               { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
-              volumeLayerName,
+              volumeTracing.tracingId,
               // The parameter createsNewUndoState is not passed, since the action
               // is added to a batch and batch updates always crate a new undo state.
             ),
@@ -761,12 +772,12 @@ class TracingApi {
 
     // Update the store at once
     const removeSegmentActions: BatchableUpdateSegmentAction[] = segmentIdsToDelete.map(
-      (segmentId) => removeSegmentAction(segmentId, volumeLayerName),
+      (segmentId) => removeSegmentAction(segmentId, volumeTracing.tracingId),
     );
     Store.dispatch(
       batchUpdateGroupsAndSegmentsAction(
         updateSegmentActions.concat(removeSegmentActions, [
-          setSegmentGroupsAction(newSegmentGroups, volumeLayerName),
+          setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId),
         ]),
       ),
     );

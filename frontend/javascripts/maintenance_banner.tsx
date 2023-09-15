@@ -11,20 +11,21 @@ import { Store } from "oxalis/singletons";
 import React, { useState } from "react";
 import { MaintenanceInfo } from "types/api_flow_types";
 
-const intervalToFetchMaintenancesInMs = 60000;
+const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000;
+const statusBarHeight = 20;
 
 export function MaintenanceBanner() {
   const { activeUser, uiInformation } = Store.getState();
-  const topPaddingAbsoluteForNavbar = navbarHeight;
-  const bottomPaddingForMaybeStatusBar = uiInformation.isInAnnotationView ? 20 : 0;
+  const topPaddingForNavbar = navbarHeight;
+  const bottomPaddingForMaybeStatusBar = uiInformation.isInAnnotationView ? statusBarHeight : 0;
   const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
     Array<MaintenanceInfo>
   >([]);
-  const [position, setPosition] = useState<Object>({ top: topPaddingAbsoluteForNavbar });
+  const [position, setPosition] = useState<Object>({ top: topPaddingForNavbar });
   const [isTop, setIsTop] = useState(true);
   useInterval(async () => {
     setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
-  }, intervalToFetchMaintenancesInMs);
+  }, INTERVAL_TO_FETCH_MAINTENANCES_MS);
   const activeUsersLatestAcknowledgedMaintenance =
     activeUser?.novelUserExperienceInfos.latestAcknowledgedMaintenanceInfo;
 
@@ -38,7 +39,7 @@ export function MaintenanceBanner() {
 
   const toggleTopOrBottomPosition = () => {
     setPosition(
-      isTop ? { top: topPaddingAbsoluteForNavbar } : { bottom: bottomPaddingForMaybeStatusBar },
+      isTop ? { top: topPaddingForNavbar } : { bottom: bottomPaddingForMaybeStatusBar },
     );
     setIsTop(!isTop);
   };

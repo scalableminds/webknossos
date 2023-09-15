@@ -78,7 +78,7 @@ export function MaintenanceBanner() {
   const getCurrentMaintenanceBanner = () => {
     const currentTime = Date.now();
     const currentMaintenance = currentAndUpcomingMaintenances.find(
-      (maintenance) => maintenance.startTime < currentTime && maintenance.endTime > currentTime,
+      (maintenance) => maintenance.startTime < currentTime,
     );
     if (currentMaintenance == null) return;
     return (
@@ -99,7 +99,7 @@ export function MaintenanceBanner() {
     );
   };
 
-  if (currentAndUpcomingMaintenances?.length === 0 || currentAndUpcomingMaintenances == null)
+  if (currentAndUpcomingMaintenances.length === 0)
     return <></>;
   const currentlyUnderMaintenanceBanner = getCurrentMaintenanceBanner();
   if (currentlyUnderMaintenanceBanner != null) {

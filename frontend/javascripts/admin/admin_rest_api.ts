@@ -2084,11 +2084,9 @@ export async function isInMaintenance(): Promise<boolean> {
 }
 
 export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
-  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
+  return Request.receiveJSON(
     "/api/maintenances/listCurrentAndUpcoming",
   );
-  const currentEpoch = Date.now();
-  return allMaintenances.sort((a, b) => a.startTime - b.startTime);
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

@@ -98,6 +98,7 @@ import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
   BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
+  clickSegmentAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
@@ -154,6 +155,7 @@ import type {
   VolumeTracing,
   OxalisState,
   SegmentGroup,
+  Segment,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import type { ToastStyle } from "libs/toast";
@@ -542,20 +544,60 @@ class TracingApi {
     Store.dispatch(setTreeGroupsAction(newTreeGroups));
   }
 
-  // clickSegmentAction
-  // RemoveSegmentAction
-  // UpdateSegmentAction
+  /**
+   * Adds a segment to the segment list.
+   *
+   * @example
+   * api.tracing.registerSegment(
+   *   3,
+   *   "volume-layer-id"
+   *   [1, 2, 3],
+   * );
+   */
+  registerSegment(
+    segmentId: number,
+    layerName: string,
+    somePosition: Vector3,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+  ) {
+    Store.dispatch(
+      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
+    );
+  }
 
-  // updateSegment(segmentId: number, ) {
-  //   Store.dispatch(UpdateSegmentAction)
-  //   id: number;
-  //   name: string | null | undefined;
-  //   somePosition: Vector3 | undefined;
-  //   someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
-  //   creationTime: number | null | undefined;
-  //   color: Vector3 | null;
-  //   groupId: number | null | undefined;
-  // }
+  /**
+   * Updates a segment. The segment parameter can contain all properties of a Segment
+   * (except for the id) or less.
+   *
+   * @example
+   * api.tracing.updateSegment(
+   *   3,
+   *   {
+   *     name: "A name",
+   *     somePosition: [1, 2, 3],
+   *     someAdditionalCoordinates: [],
+   *     color: [1, 2, 3],
+   *     groupId: 1,
+   *   },
+   *   "volume-layer-id"
+   * );
+   */
+  updateSegment(segmentId: number, segment: Partial<Segment>, layerName: string) {
+    Store.dispatch(updateSegmentAction(segmentId, { ...segment, id: segmentId }, layerName));
+  }
+
+  /**
+   * Removes a segment from the segment list. This does *not* mutate the actual voxel data.
+   *
+   * @example
+   * api.tracing.removeSegment(
+   *   3,
+   *   "volume-layer-id"
+   * );
+   */
+  removeSegment(segmentId: number, layerName: string) {
+    Store.dispatch(removeSegmentAction(segmentId, layerName));
+  }
 
   /**
    * Moves one segment group to another one (or to the root node when providing null as the second parameter).

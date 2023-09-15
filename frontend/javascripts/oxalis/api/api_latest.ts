@@ -542,6 +542,21 @@ class TracingApi {
     Store.dispatch(setTreeGroupsAction(newTreeGroups));
   }
 
+  // clickSegmentAction
+  // RemoveSegmentAction
+  // UpdateSegmentAction
+
+  // updateSegment(segmentId: number, ) {
+  //   Store.dispatch(UpdateSegmentAction)
+  //   id: number;
+  //   name: string | null | undefined;
+  //   somePosition: Vector3 | undefined;
+  //   someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
+  //   creationTime: number | null | undefined;
+  //   color: Vector3 | null;
+  //   groupId: number | null | undefined;
+  // }
+
   /**
    * Moves one segment group to another one (or to the root node when providing null as the second parameter).
    *

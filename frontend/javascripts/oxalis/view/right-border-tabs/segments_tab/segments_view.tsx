@@ -92,7 +92,7 @@ import Store from "oxalis/store";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
-  TreeNode,
+  SegmentHierarchyNode,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
@@ -287,8 +287,8 @@ type State = {
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
   activeDropdownGroupId: number | null | undefined;
-  groupTree: TreeNode[];
-  searchableTreeItemList: TreeNode[];
+  groupTree: SegmentHierarchyNode[];
+  searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
   areSegmentsInGroupVisible: { [groupId: number]: boolean };
@@ -332,12 +332,12 @@ function renderEmptyMeshFileSelect() {
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToSegmentsMap: Record<number, Segment[]>,
-): TreeNode[] {
+): SegmentHierarchyNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return _.sortBy(groups, "groupId").map((group) => {
     const { groupId } = group;
     const segments = groupToSegmentsMap[groupId] || [];
-    const treeNode: TreeNode = {
+    const treeNode: SegmentHierarchyNode = {
       ...group,
       title: group.name,
       key: `group-${groupId}`,
@@ -345,7 +345,7 @@ function constructTreeData(
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
         _.sortBy(segments, "id").map(
-          (segment): TreeNode => ({
+          (segment): SegmentHierarchyNode => ({
             ...segment,
             title: segment.name || "",
             type: "segment",
@@ -489,8 +489,11 @@ class SegmentsView extends React.Component<Props, State> {
       // Traverse the tree hierarchy so that we get a list of segments and groups
       // that is in the same order as the rendered tree. That way, cycling through
       // the search results will not jump "randomly".
-      const searchableTreeItemList: TreeNode[] = [];
-      function visitAllItems(nodes: Array<TreeNode>, callback: (group: TreeNode) => void) {
+      const searchableTreeItemList: SegmentHierarchyNode[] = [];
+      function visitAllItems(
+        nodes: Array<SegmentHierarchyNode>,
+        callback: (group: SegmentHierarchyNode) => void,
+      ) {
         for (const node of nodes) {
           callback(node);
           if ("children" in node) {
@@ -498,7 +501,7 @@ class SegmentsView extends React.Component<Props, State> {
           }
         }
       }
-      visitAllItems(generatedGroupTree, (item: TreeNode) => {
+      visitAllItems(generatedGroupTree, (item: SegmentHierarchyNode) => {
         searchableTreeItemList.push(item);
       });
 
@@ -1549,7 +1552,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
-  handleSearchSelect = (selectedElement: TreeNode) => {
+  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
     if (this.tree?.current == null) {
       return;
     }
@@ -1578,9 +1581,8 @@ class SegmentsView extends React.Component<Props, State> {
       const tracingId = volumeTracing?.tracingId;
       if (tracingId == null) return <></>;
       const tracingStoreUrl = state.tracing.tracingStore.url;
-      return (
+      return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal
-          isOpen={this.state.activeStatisticsModalGroupId === groupId}
           onCancel={() => {
             this.setState({ activeStatisticsModalGroupId: null });
           }}
@@ -1591,7 +1593,7 @@ class SegmentsView extends React.Component<Props, State> {
           parentGroup={groupId}
           groupTree={this.state.searchableTreeItemList}
         />
-      );
+      ) : null;
     }
   };
 
@@ -1636,7 +1638,7 @@ class SegmentsView extends React.Component<Props, State> {
               };
             };
 
-            const titleRender = (treeItem: TreeNode) => {
+            const titleRender = (treeItem: SegmentHierarchyNode) => {
               if (treeItem.type === "segment") {
                 const segment = treeItem;
                 return (
@@ -1884,7 +1886,11 @@ class SegmentsView extends React.Component<Props, State> {
     return relevantSegments.some((segment) => isosurfacesOfLayer[segment.id] != null);
   };
 
-  onDrop = (dropInfo: { node: TreeNode | null; dragNode: TreeNode; dropToGap: boolean }) => {
+  onDrop = (dropInfo: {
+    node: SegmentHierarchyNode | null;
+    dragNode: SegmentHierarchyNode;
+    dropToGap: boolean;
+  }) => {
     const { node, dragNode } = dropInfo;
 
     // Node is the node onto which dragNode is dropped
@@ -1924,7 +1930,13 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  allowDrop = ({ dropNode, dropPosition }: { dropNode: TreeNode; dropPosition: number }) => {
+  allowDrop = ({
+    dropNode,
+    dropPosition,
+  }: {
+    dropNode: SegmentHierarchyNode;
+    dropPosition: number;
+  }) => {
     // Don't allow to drag a node inside of a segment, but only
     // next to it. If dropPosition is 0, the dragging action targets
     // the child of the hovered element (which should only be allowed

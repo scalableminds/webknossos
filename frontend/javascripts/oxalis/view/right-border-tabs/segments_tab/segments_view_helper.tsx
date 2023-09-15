@@ -11,20 +11,22 @@ import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 
 const { confirm } = Modal;
 
-export type TreeNode =
-  | (Segment & {
-      type: "segment";
-      key: string;
-      title: string;
-    })
-  | {
-      title: string;
-      type: "group";
-      name: string | null | undefined;
-      id: number;
-      key: string;
-      children: Array<TreeNode>;
-    };
+export type SegmentHierarchyGroup = {
+  title: string;
+  type: "group";
+  name: string | null | undefined;
+  id: number;
+  key: string;
+  children: Array<SegmentHierarchyNode>;
+};
+
+export type SegmentHierarchyLeaf = Segment & {
+  type: "segment";
+  key: string;
+  title: string;
+};
+
+export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
 
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return (

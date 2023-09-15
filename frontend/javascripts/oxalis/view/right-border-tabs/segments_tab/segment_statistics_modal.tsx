@@ -7,7 +7,7 @@ import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
-import { TreeNode } from "./segments_view_helper";
+import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
 import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -17,13 +17,12 @@ const SEGMENT_STATISTICS_CSV_HEADER =
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
-  isOpen: boolean;
   tracingId: string;
   tracingStoreUrl: string;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
   parentGroup: number;
-  groupTree: TreeNode[];
+  groupTree: SegmentHierarchyNode[];
 };
 
 type SegmentInfo = {
@@ -74,7 +73,6 @@ const exportStatisticsToCSV = (
 };
 
 export function SegmentStatisticsModal({
-  isOpen,
   onCancel,
   tracingId,
   tracingStoreUrl,
@@ -85,10 +83,8 @@ export function SegmentStatisticsModal({
 }: Props) {
   const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const scaleFactor = getBaseVoxel(Store.getState().dataset.dataSource.scale);
-  console.log(segments);
   const dataSource = useFetch(
     async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10000)); //TODO delete; only for testing
       await api.tracing.save();
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
@@ -140,7 +136,7 @@ export function SegmentStatisticsModal({
       return segmentStatisticsObjects;
     },
     [],
-    [isOpen],
+    [],
   );
   const columns = [
     { title: "Segment ID", dataIndex: "segmentId", key: "segmentId" },
@@ -162,11 +158,10 @@ export function SegmentStatisticsModal({
 
   const getGroupIdForSegment = (segment: Segment) => {
     if (segment.groupId != null) return segment.groupId;
-    const rootGroup = groupTree.find((node) => node.type === "group" && node.id === -1);
-    if (
-      rootGroup?.hasOwnProperty("children") &&
-      rootGroup.children.find((node: TreeNode) => node.id === segment.id)
-    ) {
+    const rootGroup = groupTree.find(
+      (node) => node.type === "group" && node.id === -1,
+    ) as SegmentHierarchyGroup | null;
+    if (rootGroup?.children.find((node: SegmentHierarchyNode) => node.id === segment.id)) {
       return -1;
     } else {
       return null;
@@ -184,8 +179,8 @@ export function SegmentStatisticsModal({
 
   return (
     <Modal
+      open
       title="Segment Statistics"
-      open={isOpen}
       onCancel={onCancel}
       style={{ marginRight: 10 }}
       width={700}

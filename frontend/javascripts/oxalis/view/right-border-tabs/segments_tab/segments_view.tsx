@@ -498,10 +498,22 @@ class SegmentsView extends React.Component<Props, State> {
         searchableTreeItemList.push(item);
       });
 
+      const newSegmentIds = new Set(segments.map((segment) => segment.id));
+      const newGroupIds = new Set(segmentGroups.map((group) => group.groupId));
+      const oldSelectedGroupId = prevState.selectedIds.group;
       updateStateObject = {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
+        selectedIds: {
+          // Ensure that the ids of previously selected segments are removed
+          // if these segments don't exist anymore.
+          segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
+          group:
+            oldSelectedGroupId != null && newGroupIds.has(oldSelectedGroupId)
+              ? oldSelectedGroupId
+              : null,
+        },
       };
     }
     if (prevState.prevProps?.isosurfaces !== isosurfaces) {

@@ -5,7 +5,7 @@ import scala.collection.immutable.NumericRange
 trait RangeSpecifier
 
 case class StartEnd(range: NumericRange[Long]) extends RangeSpecifier
-case class SuffixLength(length: Long) extends RangeSpecifier
+case class SuffixLength(length: Int) extends RangeSpecifier
 case class Complete() extends RangeSpecifier
 
 object RangeSpecifier {

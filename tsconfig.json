@@ -15,7 +15,7 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./frontend/javascripts",
     "lib": [
-      "ES2022",
+      "ES2021",
       "dom",
     ],
     "paths": {

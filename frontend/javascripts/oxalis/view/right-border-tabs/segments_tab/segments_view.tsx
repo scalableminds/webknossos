@@ -1540,8 +1540,8 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantGroupIds = getGroupByIdWithSubgroups(segmentGroups, groupId);
     const segmentIdsNested = relevantGroupIds
       .map((groupId) => (groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : null))
-      .filter((x) => x !== null);
-    return segmentIdsNested.filter((x) => x).flat() as Segment[];
+      .filter((x) => x != null);
+    return segmentIdsNested.flat() as Segment[];
   };
 
   onRenameStart = () => {
@@ -1579,7 +1579,7 @@ class SegmentsView extends React.Component<Props, State> {
       const state = Store.getState();
       const volumeTracing = getActiveSegmentationTracing(state);
       const tracingId = volumeTracing?.tracingId;
-      if (tracingId == null) return <></>;
+      if (tracingId == null) return null;
       const tracingStoreUrl = state.tracing.tracingStore.url;
       return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal
@@ -1880,7 +1880,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return false;
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
-    if (relevantSegments == null || relevantSegments?.length === 0) return false;
+    if (relevantSegments == null || relevantSegments.length === 0) return false;
     const isosurfacesOfLayer =
       Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces;
     return relevantSegments.some((segment) => isosurfacesOfLayer[segment.id] != null);

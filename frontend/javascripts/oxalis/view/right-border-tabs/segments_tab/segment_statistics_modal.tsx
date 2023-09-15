@@ -63,7 +63,7 @@ const exportStatisticsToCSV = (
           .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
           .join(","), // comma-separated
     )
-    .join("\r\n"); // rows starting on new lines
+    .join("\n"); // rows starting on new lines
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
   const filename = `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {

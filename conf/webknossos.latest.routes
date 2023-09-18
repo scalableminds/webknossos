@@ -7,9 +7,16 @@ GET           /health                                                           
 POST          /analytics/:eventType                                                             controllers.Application.trackAnalyticsEvent(eventType)
 POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert
-GET           /maintenance                                                                      controllers.MaintenanceController.info
-POST          /maintenance                                                                      controllers.MaintenanceController.initMaintenance
-DELETE        /maintenance                                                                      controllers.MaintenanceController.closeMaintenance
+
+# Maintenance
+GET           /maintenances/listCurrentAndUpcoming                                              controllers.MaintenanceController.listCurrentAndUpcoming
+GET           /maintenances/listAll                                                             controllers.MaintenanceController.listAll
+POST          /maintenances                                                                     controllers.MaintenanceController.create
+GET           /maintenances/:id                                                                 controllers.MaintenanceController.readOne(id)
+PUT           /maintenances/:id                                                                 controllers.MaintenanceController.update(id)
+DELETE        /maintenances/:id                                                                 controllers.MaintenanceController.delete(id)
+POST          /maintenances                                                                     controllers.MaintenanceController.create
+POST          /maintenances/adHoc                                                               controllers.MaintenanceController.createAdHocMaintenance
 
 # Authentication
 POST          /auth/register                                                                    controllers.AuthenticationController.register
@@ -276,7 +283,7 @@ GET           /publications/:id                                                 
 POST          /shortLinks                                                                       controllers.ShortLinkController.create
 GET           /shortLinks/byKey/:key                                                            controllers.ShortLinkController.getByKey(key: String)
 
-# Credentials
+# Remote Dataset Credentials
 POST          /credentials/httpBasicAuth                                                        controllers.CredentialController.createHttpBasicAuthCredential
 POST          /credentials/s3AccessKey                                                          controllers.CredentialController.createS3AccessKeyCredential
 POST          /credentials/googleServiceAccount                                                 controllers.CredentialController.createGoogleServiceAccountCredential

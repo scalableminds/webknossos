@@ -63,6 +63,7 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  MaintenanceInfo,
   AdditionalCoordinate,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -956,6 +957,38 @@ export function getNewestVersionForTracing(
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
+  );
+}
+
+export function getSegmentVolumes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
+export function getSegmentBoundingBoxes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
   );
 }
 
@@ -2073,10 +2106,18 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance", {
-    doNotInvestigate: true,
-  });
-  return info.isMaintenance;
+  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
+    "/api/maintenances/listCurrentAndUpcoming",
+  );
+  const currentEpoch = Date.now();
+  const currentMaintenance = allMaintenances.find(
+    (maintenance) => maintenance.startTime < currentEpoch,
+  );
+  return currentMaintenance != null;
+}
+
+export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
+  return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {

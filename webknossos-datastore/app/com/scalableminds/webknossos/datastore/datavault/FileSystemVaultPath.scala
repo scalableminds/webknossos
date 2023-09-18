@@ -11,7 +11,10 @@ class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
     extends VaultPath(uri = new URI(""), dataVault = dataVault) {
 
   override def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    dataVault.readBytesLocal(basePath, range)
+    dataVault.readBytesLocal(basePath, RangeSpecifier.fromRangeOpt(range))
+
+  override def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    dataVault.readBytesLocal(basePath, SuffixLength(byteCount))
 
   override def basename: String = basePath.getFileName.toString
 

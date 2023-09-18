@@ -5,7 +5,7 @@ object Dependencies {
   private val akkaVersion = "2.6.19"
   private val akkaHttpVersion = "10.2.6"
   private val log4jVersion = "2.17.0"
-  private val webknossosWrapVersion = "1.1.16-SNAPSHOT"
+  private val webknossosWrapVersion = "1.1.23"
   private val silhouetteVersion = "7.0.7"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion

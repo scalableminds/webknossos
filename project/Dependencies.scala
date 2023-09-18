@@ -46,7 +46,7 @@ object Dependencies {
   private val guava = "com.google.guava" % "guava" % "18.0"
   private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
-  private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
+  private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.14.2"
   private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
   private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
   private val googleCloudStorage = "com.google.cloud" % "google-cloud-storage" % "2.13.1"
@@ -58,7 +58,7 @@ object Dependencies {
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
 
   // For swagger annotations
-  private val swaggerCore = "io.swagger" % "swagger-core" % "1.5.24"
+  private val swaggerCore = "io.swagger" % "swagger-core" % "1.6.11"
   private val swaggerScala = "io.swagger" %% "swagger-scala-module" % "1.0.6"
   private val playRoutesCompiler = "com.typesafe.play" %% "routes-compiler" % "2.8.16"
 

@@ -41,8 +41,8 @@ type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
 type SetActiveTreeAction = ReturnType<typeof setActiveTreeAction>;
 type SetActiveTreeByNameAction = ReturnType<typeof setActiveTreeByNameAction>;
 type DeselectActiveTreeAction = ReturnType<typeof deselectActiveTreeAction>;
-type SetActiveGroupAction = ReturnType<typeof setActiveGroupAction>;
-type DeselectActiveGroupAction = ReturnType<typeof deselectActiveGroupAction>;
+type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
+type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
@@ -77,8 +77,8 @@ export type SkeletonTracingAction =
   | DeleteEdgeAction
   | SetActiveNodeAction
   | CenterActiveNodeAction
-  | SetActiveGroupAction
-  | DeselectActiveGroupAction
+  | SetActiveTreeGroupAction
+  | DeselectActiveTreeGroupAction
   | SetNodeRadiusAction
   | SetNodePositionAction
   | CreateBranchPointAction
@@ -370,15 +370,15 @@ export const deselectActiveTreeAction = () =>
     type: "DESELECT_ACTIVE_TREE",
   } as const);
 
-export const setActiveGroupAction = (groupId: number) =>
+export const setActiveTreeGroupAction = (groupId: number) =>
   ({
-    type: "SET_ACTIVE_GROUP",
+    type: "SET_TREE_ACTIVE_GROUP",
     groupId,
   } as const);
 
-export const deselectActiveGroupAction = () =>
+export const deselectActiveTreeGroupAction = () =>
   ({
-    type: "DESELECT_ACTIVE_GROUP",
+    type: "DESELECT_ACTIVE_TREE_GROUP",
   } as const);
 
 export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>

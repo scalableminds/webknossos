@@ -67,7 +67,7 @@ class DSRemoteWebKnossosClient @Inject()(
       .put(dataSource)
 
   def reportUpload(dataSourceId: DataSourceId,
-                   dataSetSizeBytes: Long,
+                   datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
@@ -77,7 +77,7 @@ class DSRemoteWebKnossosClient @Inject()(
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
-        .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
+        .addQueryString("dataSetSizeBytes" -> datasetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()
     } yield ()

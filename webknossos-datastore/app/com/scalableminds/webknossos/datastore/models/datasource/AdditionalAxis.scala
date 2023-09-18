@@ -76,7 +76,7 @@ object AdditionalAxis {
     if (sameAdditionalAxes) {
       Full(merged)
     } else {
-      Failure("dataSet.additionalCoordinates.different")
+      Failure("dataset.additionalCoordinates.different")
     }
   }
 }

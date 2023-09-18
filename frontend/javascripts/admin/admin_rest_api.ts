@@ -960,6 +960,38 @@ export function getNewestVersionForTracing(
   );
 }
 
+export function getSegmentVolumes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
+export function getSegmentBoundingBoxes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
 export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,

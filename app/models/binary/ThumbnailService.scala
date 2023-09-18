@@ -7,10 +7,10 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import com.typesafe.scalalogging.LazyLogging
-import models.configuration.DataSetConfigurationService
+import models.configuration.DatasetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
@@ -22,10 +22,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class ThumbnailService @Inject()(dataSetService: DataSetService,
+class ThumbnailService @Inject()(datasetService: DatasetService,
                                  thumbnailCachingService: ThumbnailCachingService,
-                                 dataSetConfigurationService: DataSetConfigurationService,
-                                 dataSetDAO: DataSetDAO,
+                                 datasetConfigurationService: DatasetConfigurationService,
+                                 datasetDAO: DatasetDAO,
                                  thumbnailDAO: ThumbnailDAO)
     extends LazyLogging
     with MimeTypes {
@@ -45,7 +45,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
@@ -60,20 +60,20 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     } yield image
   }
 
-  def getThumbnail(organizationName: String,
-                   datasetName: String,
-                   layerName: String,
-                   width: Int,
-                   height: Int,
-                   mappingName: Option[String])(implicit ec: ExecutionContext,
-                                                ctx: DBAccessContext,
-                                                mp: MessagesProvider): Fox[Array[Byte]] =
+  private def getThumbnail(organizationName: String,
+                           datasetName: String,
+                           layerName: String,
+                           width: Int,
+                           height: Int,
+                           mappingName: Option[String])(implicit ec: ExecutionContext,
+                                                        ctx: DBAccessContext,
+                                                        mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
-      dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
-      viewConfiguration <- dataSetConfigurationService.getDataSetViewConfigurationForDataset(List.empty,
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
                                                                                              datasetName,
                                                                                              organizationName)(ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt) = selectParameters(viewConfiguration,
@@ -82,7 +82,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
                                                                                      layer,
                                                                                      width,
                                                                                      height)
-      client <- dataSetService.clientFor(dataset)
+      client <- datasetService.clientFor(dataset)
       image <- client.getDataLayerThumbnail(organizationName,
                                             dataset,
                                             layerName,
@@ -103,7 +103,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     } yield image
 
   private def selectParameters(
-      viewConfiguration: DataSetViewConfiguration,
+      viewConfiguration: DatasetViewConfiguration,
       usableDataSource: GenericDataSource[DataLayerLike],
       layerName: String,
       layer: DataLayerLike,
@@ -129,7 +129,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
     (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt, colorSettingsOpt)
   }
 
-  private def readIntensityRange(viewConfiguration: DataSetViewConfiguration,
+  private def readIntensityRange(viewConfiguration: DatasetViewConfiguration,
                                  layerName: String): Option[(Double, Double)] =
     for {
       layersJsValue <- viewConfiguration.get("layers")
@@ -138,7 +138,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
       max <- (intensityRangeJsArray \ 1).asOpt[Double]
     } yield (min, max)
 
-  private def readColor(viewConfiguration: DataSetViewConfiguration,
+  private def readColor(viewConfiguration: DatasetViewConfiguration,
                         layerName: String): Option[ThumbnailColorSettings] =
     for {
       layersJsValue <- viewConfiguration.get("layers")
@@ -156,7 +156,7 @@ class ThumbnailService @Inject()(dataSetService: DataSetService,
 
 case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
-class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.
@@ -186,7 +186,7 @@ class ThumbnailCachingService @Inject()(dataSetDAO: DataSetDAO, thumbnailDAO: Th
 
   def removeFromCache(organizationName: String, datasetName: String): Fox[Unit] =
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
       _ <- removeFromCache(dataset._id)
     } yield ()
 

@@ -22,6 +22,7 @@ export type MergeTreeUpdateAction = ReturnType<typeof mergeTree>;
 export type CreateNodeUpdateAction = ReturnType<typeof createNode>;
 export type UpdateNodeUpdateAction = ReturnType<typeof updateNode>;
 export type UpdateTreeVisibilityUpdateAction = ReturnType<typeof updateTreeVisibility>;
+export type UpdateTreeEdgesVisibilityUpdateAction = ReturnType<typeof updateTreeEdgesVisibility>;
 export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTreeGroupVisibility>;
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
@@ -64,6 +65,7 @@ export type UpdateAction =
   | DeleteSegmentUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateSegmentGroupsUpdateAction
@@ -115,6 +117,7 @@ export function createTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -140,6 +143,7 @@ export function updateTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -150,6 +154,16 @@ export function updateTreeVisibility(tree: Tree) {
     value: {
       treeId,
       isVisible,
+    },
+  } as const;
+}
+export function updateTreeEdgesVisibility(tree: Tree) {
+  const { treeId, edgesAreVisible } = tree;
+  return {
+    name: "updateTreeEdgesVisibility",
+    value: {
+      treeId,
+      edgesAreVisible,
     },
   } as const;
 }

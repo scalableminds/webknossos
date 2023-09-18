@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
+  SegmentStatisticsParameters,
   UpdateMappingNameAction,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
@@ -428,16 +429,31 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long): Action[AnyContent] =
-    Action.async { implicit request =>
+  def getSegmentVolume(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          segmentVolume <- volumeSegmentStatisticsService.getSegmentVolume(tracingId,
-                                                                           segmentId,
-                                                                           magParsed,
-                                                                           urlOrHeaderToken(token, request))
-        } yield Ok(Json.toJson(segmentVolume))
+          segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentVolume(tracingId,
+                                                            segmentId,
+                                                            request.body.mag,
+                                                            urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentVolumes))
+      }
+    }
+
+  def getSegmentBoundingBox(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
+                                                                 segmentId,
+                                                                 request.body.mag,
+                                                                 urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
     }
 

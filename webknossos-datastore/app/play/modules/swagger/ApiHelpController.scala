@@ -122,6 +122,13 @@ trait SwaggerBaseApiController {
 
     val specs = swaggerPlugin.apiListingCache.listing(host)
 
+    val paths = specs.getPaths.asScala
+
+    specs.setPaths(paths.map { keyValuePair =>
+      val keySansApi = if (keyValuePair._1.startsWith("/api")) keyValuePair._1.drop(4) else keyValuePair._1
+      keySansApi.replaceAll("//", "/") -> keyValuePair._2
+    }.asJava)
+
     swaggerPlugin.swaggerSpecFilter match {
       case Some(filter) => f.filter(specs, filter, queryParams, cookies, headers)
       case None         => specs

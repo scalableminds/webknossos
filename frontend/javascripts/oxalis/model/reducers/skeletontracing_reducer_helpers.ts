@@ -30,7 +30,7 @@ import {
   getActiveNodeFromTree,
   getTree,
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   findTreeByNodeId,
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -493,7 +493,7 @@ export function createTree(
 
     if (addToActiveGroup) {
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+      const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));

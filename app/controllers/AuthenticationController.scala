@@ -31,6 +31,8 @@ import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Resul
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -459,7 +461,8 @@ class AuthenticationController @Inject()(
       case Some(user) =>
         // logged in
         // Check if the request we received was signed using our private sso-key
-        if (shaHex(ssoKey, sso) == sig) {
+        if (MessageDigest.isEqual(shaHex(ssoKey, sso).getBytes(StandardCharsets.UTF_8),
+                                  sig.getBytes(StandardCharsets.UTF_8))) {
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
           for {

@@ -544,8 +544,8 @@ object SkeletonUpdateAction {
 
   implicit object skeletonUpdateActionFormat extends Format[UpdateAction[SkeletonTracing]] {
     override def reads(json: JsValue): JsResult[UpdateAction.SkeletonUpdateAction] = {
-      val jsonValue = (json \ "value").as[JsObject]
-      (json \ "name").as[String] match {
+      val jsonValue = json("value").as[JsObject]
+      json("name").as[String] match {
         case "createTree"                      => deserialize[CreateTreeSkeletonAction](jsonValue)
         case "deleteTree"                      => deserialize[DeleteTreeSkeletonAction](jsonValue)
         case "updateTree"                      => deserialize[UpdateTreeSkeletonAction](jsonValue)

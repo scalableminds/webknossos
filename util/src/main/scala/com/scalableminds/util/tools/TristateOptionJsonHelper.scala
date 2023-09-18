@@ -23,7 +23,7 @@ trait TristateOptionJsonHelper {
       jsPath.asSingleJson(json) match {
         case JsDefined(JsNull) => JsSuccess(defaultValue)
         case JsDefined(value)  => r.reads(value).repath(jsPath).map(Some(_))
-        case JsUndefined()     => JsSuccess(None)
+        case _                 => JsSuccess(None)
       }
     }
 

@@ -18,9 +18,9 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 case class ListMeshChunksRequest(
     meshFile: String,

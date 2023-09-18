@@ -21,9 +21,9 @@ class ChunkReader(header: DatasetHeader) {
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) =>
-          tryo(chunkTyper.wrapAndType(chunkBytes, chunkShape)).toFox ?~> "chunk.wrapAndType.failed"
+          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          tryo(chunkTyper.createFromFillValue(chunkShape)).toFox ?~> "chunk.createFromFillValue.failed"
+          chunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }

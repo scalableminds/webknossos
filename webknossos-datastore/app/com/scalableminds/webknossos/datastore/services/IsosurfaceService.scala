@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
@@ -17,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import net.liftweb.common.{Box, Failure, Full}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -104,7 +103,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
           Fox.successful(data)
       }
 
-    def applyAgglomerate(data: Array[Byte]): Array[Byte] =
+    def applyAgglomerate(data: Array[Byte]): Box[Array[Byte]] =
       request.mapping match {
         case Some(_) =>
           request.mappingType match {
@@ -119,12 +118,12 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                   request.subsamplingStrides
                 )
                 agglomerateService.applyAgglomerate(dataRequest)(data)
-              }.getOrElse(data)
+              }.getOrElse(Full(data))
             case _ =>
-              data
+              Full(data)
           }
         case _ =>
-          data
+          Full(data)
       }
 
     def convertData(data: Array[Byte]): Array[T] = {
@@ -194,7 +193,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData = applyAgglomerate(data)
+      agglomerateMappedData <- applyAgglomerate(data).toFox
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)

@@ -42,7 +42,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       .toSet
   }
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Array[Byte] = {
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 

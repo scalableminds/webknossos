@@ -55,8 +55,8 @@ const exportStatisticsToCSV = (
           row.groupName,
           row.volumeInVoxel,
           row.volumeInNm3,
-          row.boundingBoxTopLeft,
-          row.boundingBoxPosition,
+          ...row.boundingBoxTopLeft,
+          ...row.boundingBoxPosition,
         ]
           .map(String) // convert every value to String
           .map((v) => v.replaceAll('"', '""')) // escape double quotes
@@ -65,7 +65,10 @@ const exportStatisticsToCSV = (
     )
     .join("\n"); // rows starting on new lines
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
-  const filename = `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
+  const filename =
+    groupIdToExport === -1
+      ? `segmentStatistics_tracing-${tracingId}.csv`
+      : `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {
     type: "text/plain;charset=utf-8",
   });
@@ -182,7 +185,6 @@ export function SegmentStatisticsModal({
       open
       title="Segment Statistics"
       onCancel={onCancel}
-      style={{ marginRight: 10 }}
       width={700}
       onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
       okText="Export to CSV"

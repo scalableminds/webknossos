@@ -59,6 +59,7 @@ object Dependencies {
   private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
+  private val bcrypt = "at.favre.lib" % "bcrypt" % "0.10.2"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -81,7 +82,8 @@ object Dependencies {
     reactiveBson,
     scalapbRuntime,
     scalaLogging,
-    akkaCaching
+    akkaCaching,
+    bcrypt
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(

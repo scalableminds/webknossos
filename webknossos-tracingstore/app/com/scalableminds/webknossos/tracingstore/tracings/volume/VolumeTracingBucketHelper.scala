@@ -331,7 +331,7 @@ class VersionedBucketIterator(prefix: String,
       nextBucket.isDefined
     }
 
-  override def next: (BucketPosition, Array[Byte], Long) = {
+  override def next(): (BucketPosition, Array[Byte], Long) = {
     val nextRes = nextBucket match {
       case Some(bucket) => bucket
       case None         => getNextNonRevertedBucket.get
@@ -356,7 +356,7 @@ class BucketIterator(prefix: String,
   private val versionedBucketIterator =
     new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
 
-  override def next: (BucketPosition, Array[Byte]) = {
+  override def next(): (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next()
     (tuple._1, tuple._2)
   }

@@ -519,7 +519,8 @@ class EditableMappingService @Inject()(
         subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
-        mappingType = None
+        mappingType = None,
+        findNeighbors = request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

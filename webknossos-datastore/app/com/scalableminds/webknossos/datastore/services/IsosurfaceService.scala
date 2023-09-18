@@ -24,16 +24,15 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
-case class IsosurfaceRequest(
-    dataSource: Option[DataSource],
-    dataLayer: SegmentationLayer,
-    cuboid: Cuboid,
-    segmentId: Long,
-    subsamplingStrides: Vec3Int,
-    scale: Vec3Double,
-    mapping: Option[String] = None,
-    mappingType: Option[String] = None
-)
+case class IsosurfaceRequest(dataSource: Option[DataSource],
+                             dataLayer: SegmentationLayer,
+                             cuboid: Cuboid,
+                             segmentId: Long,
+                             subsamplingStrides: Vec3Int,
+                             scale: Vec3Double,
+                             mapping: Option[String] = None,
+                             mappingType: Option[String] = None,
+                             findNeighbors: Boolean = true)
 
 case class DataTypeFunctors[T, B](
     getTypedBufferFn: ByteBuffer => B,
@@ -199,7 +198,10 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
-      neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
+      neighbors = if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) } else {
+        List()
+      }
+
     } yield {
       for {
         x <- 0 until dataDimensions.x by 32

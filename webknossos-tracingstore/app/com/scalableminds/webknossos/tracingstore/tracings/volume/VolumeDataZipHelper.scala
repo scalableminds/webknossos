@@ -5,8 +5,13 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{BoxImplicits, ByteUtils, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  IntCompressionSetting,
+  StringCompressionSetting
+}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.wrap.WKWFile
@@ -50,7 +55,6 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
             }
         })
       } else {
-        // TODO: first, read additional axes metadata fom zarr.json
         for {
           firstHeaderFilePath <- option2Box(
             ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.ZARR_JSON)))
@@ -61,7 +65,9 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
               if (filename.endsWith(Zarr3ArrayHeader.ZARR_JSON)) ()
               else {
                 parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
-                  val data = IOUtils.toByteArray(inputStream)
+                  logger.info(s"Storing at bucket position ${bucketPosition}")
+                  val dataCompressed = IOUtils.toByteArray(inputStream)
+                  val data = compressor.decompress(dataCompressed)
                   block(bucketPosition, data)
                 }
               }
@@ -72,18 +78,29 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
 
   private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
     val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("z", "y", "x"))
-    val dimensionCount = dimensionNames.length
-    logger.info(f"parsing zarr chunk path: $path with $dimensionCount dimensions")
-    // TODO: this is as yet just copied from wkw
-    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
+    val additionalAxesNames: Seq[String] = dimensionNames.toSeq.dropRight(3)
+    val CubeRx = s"(|.*/)(\\d+-\\d+-\\d+)/c/(.+)".r
+
     path match {
-      case CubeRx(_, resolutionStr, z, y, x) =>
-        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true).map { mag =>
-          BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
-                         y.toInt * mag.y * DataLayer.bucketLength,
-                         z.toInt * mag.z * DataLayer.bucketLength,
-                         mag,
-                         None)
+      case CubeRx(_, magStr, dimsStr) =>
+        val dims: Seq[String] = dimsStr.split("/").toSeq
+        val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(dims.dropRight(3)).map {
+          case (name, coordinateValue) => AdditionalCoordinate(name, coordinateValue.toInt)
+        }
+
+        val bucketX = dims.last
+        val bucketY = dims(dims.length - 2)
+        val bucketZ = dims(dims.length - 3)
+
+        // assume z,y,x,additionalAxes
+        Vec3Int.fromMagLiteral(magStr).map { mag =>
+          BucketPosition(
+            bucketX.toInt * mag.x * DataLayer.bucketLength,
+            bucketY.toInt * mag.y * DataLayer.bucketLength,
+            bucketZ.toInt * mag.z * DataLayer.bucketLength,
+            mag,
+            if (additionalCoordinates.isEmpty) None else Some(additionalCoordinates)
+          )
         }
       case _ =>
         None
@@ -120,4 +137,14 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     IOUtils.copy(inputStream, out)
     tempFile
   }
+
+  private lazy val compressor =
+    new BloscCompressor(
+      Map(
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
+        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
+      ))
 }

@@ -282,6 +282,8 @@ class VolumeTracingService @Inject()(
       val savedResolutions = new mutable.HashSet[Vec3Int]()
       val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
 
+      logger.info("Initialize with data!")
+
       val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
         if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
           Fox.successful(())
@@ -673,7 +675,9 @@ class VolumeTracingService @Inject()(
 
       val resolutionSet = resolutionSetFromZipfile(zipFile)
       val resolutionsDoMatch =
-        resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions).map(vec3IntFromProto).toSet
+        resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions)
+          .map(vec3IntFromProto)
+          .toSet
 
       if (!resolutionsDoMatch)
         Fox.failure("annotation.volume.resolutionsDoNotMatch")

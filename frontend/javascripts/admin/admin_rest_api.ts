@@ -1016,7 +1016,7 @@ export async function downloadAnnotation(
   const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
   const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?volumeDataZipFormat=wkw`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?volumeDataZipFormat=zarr3`;
   await downloadWithFilename(downloadUrl);
 }
 

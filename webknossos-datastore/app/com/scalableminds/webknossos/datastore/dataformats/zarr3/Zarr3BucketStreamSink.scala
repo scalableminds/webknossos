@@ -63,7 +63,7 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
     bucketStream.map {
       case (bucket, data) =>
         val filePath = zarrChunkFilePath(bucket)
-        logger.info(s"adding bucket in zip at file path $filePath")
+        logger.info(s"adding bucket $bucket in zip at file path $filePath")
         NamedFunctionStream(
           filePath,
           os => Future.successful(os.write(compressor.compress(data)))

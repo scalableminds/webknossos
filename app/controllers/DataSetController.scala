@@ -78,12 +78,12 @@ class DataSetController @Inject()(userService: UserService,
     extends Controller {
 
   private val dataSetPublicReads =
-    ((__ \ 'description).readNullable[String] and
-      (__ \ 'displayName).readNullable[String] and
-      (__ \ 'sortingKey).readNullable[Instant] and
-      (__ \ 'isPublic).read[Boolean] and
-      (__ \ 'tags).read[List[String]] and
-      (__ \ 'folderId).readNullable[ObjectId]).tupled
+    ((__ \ "description").readNullable[String] and
+      (__ \ "displayName").readNullable[String] and
+      (__ \ "sortingKey").readNullable[Instant] and
+      (__ \ "isPublic").read[Boolean] and
+      (__ \ "tags").read[List[String]] and
+      (__ \ "folderId").readNullable[ObjectId]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =

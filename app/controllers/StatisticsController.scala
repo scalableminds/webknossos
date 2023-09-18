@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
@@ -21,7 +21,7 @@ import scala.concurrent.duration.Duration
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      userDAO: UserDAO,
                                      userService: UserService,
-                                     dataSetDAO: DataSetDAO,
+                                     datasetDAO: DatasetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
@@ -53,7 +53,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                                            end.map(Instant(_)),
                                                            organizationId)
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
-            numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
+            numberOfDatasets <- datasetDAO.countAllForOrganization(organizationId)
             numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
             numberOfAssignments <- taskDAO.countAllPendingInstancesForOrganization(organizationId)
           } yield {

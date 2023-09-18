@@ -53,7 +53,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {
-      normalizedName <- Box(normalizeStrong(name)) ?~ f"Axis name '$name' would be empty if sanitized"
+      normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
       _ <- Option(bounds.length == 2).collect { case true => () }
     } yield AdditionalAxis(normalizedName, bounds, index)
 }

@@ -146,6 +146,15 @@ label.ant-checkbox-wrapper {
 .ant-alert {
   font-family: @font-family;
 }
+.ant-alert-message {
+  margin-left: 5px;
+}
+
+.ant-alert-banner {
+  position: absolute;
+  z-index: 1000;
+  width: 100%;
+}
 .ant-card {
   font-family: @font-family;
 }
@@ -262,4 +271,17 @@ label.ant-checkbox-wrapper {
     border-color: #585867;
     color: #f1f1f1 !important;
   }
+}
+
+.ant-dropdown-menu-item-icon.fa-icon {
+  margin-right: 5px;
+}
+
+.ant-dropdown-menu-item-icon > svg {
+  width: 15px;
+}
+
+.ant-message,
+.ant-message * {
+  pointer-events: none;
 }

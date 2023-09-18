@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(108);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(109);
 COMMIT TRANSACTION;
 
 
@@ -420,7 +420,7 @@ CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'Rese
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
   _id CHAR(24) PRIMARY KEY,
-  value Text NOT NULL,
+  value TEXT NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   lastUsedDateTime TIMESTAMPTZ NOT NULL,
@@ -431,11 +431,15 @@ CREATE TABLE webknossos.tokens(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.maintenance(
-  maintenanceExpirationTime TIMESTAMPTZ NOT NULL
+CREATE TABLE webknossos.maintenances(
+  _id CHAR(24) PRIMARY KEY,
+  _user CHAR(24) NOT NULL,
+  startTime TIMESTAMPTZ NOT NULL,
+  endTime TIMESTAMPTZ NOT NULL,
+  message TEXT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
-INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
-
 
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY,
@@ -654,6 +658,7 @@ CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
+CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

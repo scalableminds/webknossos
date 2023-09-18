@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
@@ -39,8 +39,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     annotationDAO: AnnotationDAO,
                                     userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
-                                    dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+                                    datasetDAO: DatasetDAO,
+                                    datasetService: DatasetService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -74,7 +74,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
+      dataSet <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
@@ -234,8 +234,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
-        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+        dataSet <- datasetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
+        dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)
     } else Fox.successful(volume)
 
@@ -387,8 +387,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+          "dataset.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
@@ -454,7 +454,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     if (allOnSameDatasetIter(requestedTasks, firstDatasetName))
       Fox.successful(firstDatasetName)
     else
-      Fox.failure(Messages("task.notOnSameDataSet"))
+      Fox.failure(Messages("task.notOnSameDataset"))
   }
 
   private def mergeTracingIds(list: List[(Box[TaskParameters], Box[Option[String]])],
@@ -486,7 +486,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet, requestingUser: User)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: Dataset, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {

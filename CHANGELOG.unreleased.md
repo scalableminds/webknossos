@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Dataset thumbnails for grayscale layers can now be colored using the value in the view configuration. [#7255](https://github.com/scalableminds/webknossos/pull/7255)
 - OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
 - Volume and bounding box information is shown in segments' context menus as well as in a separate modal in the segments tab. There is also an option to export the statistics. [#7249](https://github.com/scalableminds/webknossos/pull/7249)
+- A banner underneath the navigation bar informs about current and upcoming maintenances of WEBKNOSSOS. [#7284](https://github.com/scalableminds/webknossos/pull/7284)
 - The AI-based quick select tool can now also be used for ND datasets. [#7287](https://github.com/scalableminds/webknossos/pull/7287)
 
 ### Changed

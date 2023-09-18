@@ -57,16 +57,16 @@ object SegmentAnythingEmbeddingParameters {
 }
 
 @Api
-class DataSetController @Inject()(userService: UserService,
+class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
-                                  dataSetService: DataSetService,
+                                  datasetService: DatasetService,
                                   dataStoreDAO: DataStoreDAO,
-                                  dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
+                                  datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
-                                  dataSetDAO: DataSetDAO,
+                                  datasetDAO: DatasetDAO,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
@@ -77,7 +77,7 @@ class DataSetController @Inject()(userService: UserService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  private val dataSetPublicReads =
+  private val datasetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
       (__ \ 'sortingKey).readNullable[Instant] and
@@ -101,7 +101,7 @@ class DataSetController @Inject()(userService: UserService,
                 mappingName: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        _ <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
+        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getThumbnailWithCache(organizationName, dataSetName, dataLayerName, w, h, mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
@@ -142,13 +142,13 @@ class DataSetController @Inject()(userService: UserService,
         dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
                                                                         request.identity,
                                                                         reportMutable)
-        _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "explore.zeroLayers"
+        _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
-          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "explore.autoAdd.getFolder.failed"
+          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- exploreRemoteLayerService.addRemoteDatasource(dataSource,
                                                            request.body.datasetName,
                                                            request.identity,
-                                                           folderIdOpt) ?~> "explore.autoAdd.failed"
+                                                           folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
     }
 
@@ -192,7 +192,7 @@ class DataSetController @Inject()(userService: UserService,
         Fox.runOptional(organizationName)(orgaName => organizationDAO.findIdByName(orgaName)(GlobalAccessContext))
       js <- if (compact.getOrElse(false)) {
         for {
-          datasetInfos <- dataSetDAO.findAllCompactWithSearch(
+          datasetInfos <- datasetDAO.findAllCompactWithSearch(
             isActive,
             isUnreported,
             organizationIdOpt,
@@ -206,37 +206,37 @@ class DataSetController @Inject()(userService: UserService,
         } yield Json.toJson(datasetInfos)
       } else {
         for {
-          dataSets <- dataSetDAO.findAllWithSearch(isActive,
+          datasets <- datasetDAO.findAllWithSearch(isActive,
                                                    isUnreported,
                                                    organizationIdOpt,
                                                    folderIdValidated,
                                                    uploaderIdValidated,
                                                    searchQuery,
                                                    recursive.getOrElse(false),
-                                                   limit) ?~> "dataSet.list.failed"
-          js <- listGrouped(dataSets, request.identity) ?~> "dataSet.list.failed"
+                                                   limit) ?~> "dataset.list.failed"
+          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed"
         } yield Json.toJson(js)
       }
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
     } yield addRemoteOriginHeaders(Ok(js))
   }
 
-  private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
+  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[JsObject]] =
     for {
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService.teamManagerMembershipsFor(user._id))
       groupedByOrga = datasets.groupBy(_._organization).toList
-      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[DataSet]) =>
+      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[Dataset]) =>
         for {
           organization <- organizationDAO.findOne(byOrgaTuple._1)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
-          result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[DataSet]) =>
+          result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {
               dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext)
               resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
-                dataSetService.publicWrites(
+                datasetService.publicWrites(
                   d,
                   requestingUser,
                   Some(organization),
@@ -254,9 +254,9 @@ class DataSetController @Inject()(userService: UserService,
     implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        allowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true) ?~> "allowedTeams.notFound"
+        allowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> "allowedTeams.notFound"
         usersByTeams <- userDAO.findAllByTeams(allowedTeams)
         adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
         usersFiltered = (usersByTeams ++ adminsAndDatasetManagers).distinct.filter(!_.isUnlisted)
@@ -281,16 +281,16 @@ class DataSetController @Inject()(userService: UserService,
           organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             organizationName)
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> notFoundMessage(
+          dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
-            dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+            datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
-          dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
-          js <- dataSetService.publicWrites(dataSet, request.identity, Some(organization), Some(dataStore))
+          dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
+          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
           _ = request.identity.map { user =>
-            analyticsService.track(OpenDatasetEvent(user, dataSet))
-            if (dataSet.isPublic) {
+            analyticsService.track(OpenDatasetEvent(user, dataset))
+            if (dataset.isPublic) {
               mailchimpClient.tagUser(user, MailchimpTag.HasViewedPublishedDataset)
             }
             userDAO.updateLastActivity(user._id)
@@ -306,15 +306,15 @@ class DataSetController @Inject()(userService: UserService,
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
-        usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
-        datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
-        _ <- dataSetService
-          .clientFor(dataSet)(GlobalAccessContext)
-          .flatMap(_.findPositionWithData(organizationName, dataSet, datalayer.name).flatMap(posWithData =>
-            bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
+        dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+        datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
+        _ <- datasetService
+          .clientFor(dataset)(GlobalAccessContext)
+          .flatMap(_.findPositionWithData(organizationName, dataset, datalayer.name).flatMap(posWithData =>
+            bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
       } yield Ok("Ok")
     }
 
@@ -346,13 +346,13 @@ Expects:
                     @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- dataSetDAO.updatePartial(dataSet._id, request.body)
-        updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetDAO.updatePartial(dataset._id, request.body)
+        updated <- datasetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-        js <- dataSetService.publicWrites(updated, Some(request.identity))
+        js <- datasetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
     }
 
@@ -382,22 +382,22 @@ Expects:
                        example = "sample_organization") organizationName: String,
              @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
-      withJsonBodyUsing(dataSetPublicReads) {
+      withJsonBodyUsing(datasetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
           for {
-            dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+            dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
               dataSetName) ~> NOT_FOUND
-            _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-            _ <- dataSetDAO.updateFields(dataSet._id,
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- datasetDAO.updateFields(dataset._id,
                                          description,
                                          displayName,
-                                         sortingKey.getOrElse(dataSet.created),
+                                         sortingKey.getOrElse(dataset.created),
                                          isPublic,
-                                         folderId.getOrElse(dataSet._folder))
-            _ <- dataSetDAO.updateTags(dataSet._id, tags)
-            updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+                                         folderId.getOrElse(dataset._folder))
+            _ <- datasetDAO.updateTags(dataset._id, tags)
+            updated <- datasetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-            js <- dataSetService.publicWrites(updated, Some(request.identity))
+            js <- datasetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
       }
     }
@@ -424,16 +424,16 @@ Expects:
                   @ApiParam(value = "The name of the dataset") dataSetName: String): Action[List[ObjectId]] =
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = false) ?~> "allowedTeams.notFound"
+        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- teamDAO.updateAllowedTeamsForDataset(dataSet._id, newTeams)
+        _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, newTeams)
       } yield Ok(Json.toJson(newTeams))
     }
 
@@ -451,7 +451,7 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        token <- dataSetService.getSharingToken(dataSetName, organization._id)
+        token <- datasetService.getSharingToken(dataSetName, organization._id)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
 
@@ -461,13 +461,13 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organization._id, None)
+        _ <- datasetDAO.updateSharingTokenByName(dataSetName, organization._id, None)
       } yield Ok
   }
 
   @ApiOperation(hidden = true, value = "")
   def create(typ: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
+    Future.successful(JsonBadRequest(Messages("dataset.type.invalid", typ)))
   }
 
   @ApiOperation(value = "Check whether a new dataset name is valid", nickname = "newDatasetNameIsValid")
@@ -481,16 +481,16 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- dataSetService.assertValidDataSetName(dataSetName)
-        _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
+        _ <- datasetService.assertValidDatasetName(dataSetName)
+        _ <- datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken"
       } yield Ok
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getOrganizationForDataSet(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
+  def getOrganizationForDataset(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
-        organizationId <- dataSetDAO.getOrganizationForDataSet(dataSetName)
+        organizationId <- datasetDAO.getOrganizationForDataset(dataSetName)
         organization <- organizationDAO.findOne(organizationId)
       } yield Ok(Json.obj("organizationName" -> organization.name))
   }
@@ -498,8 +498,8 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   private def notFoundMessage(dataSetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =
     ctx.data match {
-      case Some(_: User) => Messages("dataSet.notFound", dataSetName)
-      case _             => Messages("dataSet.notFoundConsiderLogin", dataSetName)
+      case Some(_: User) => Messages("dataset.notFound", dataSetName)
+      case _             => Messages("dataset.notFoundConsiderLogin", dataSetName)
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -513,12 +513,12 @@ Expects:
         for {
           _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
           _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
-          dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+          dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
-          dataSource <- dataSetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-          usableDataSource <- dataSource.toUsable ?~> "dataSet.notImported"
-          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataSet.noLayers"
-          datastoreClient <- dataSetService.clientFor(dataset)(GlobalAccessContext)
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+          usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
+          datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
           _ <- bool2Fox(targetMagBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.size}"
           data <- datastoreClient.getLayerData(organizationName,

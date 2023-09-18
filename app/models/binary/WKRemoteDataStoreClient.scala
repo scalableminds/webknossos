@@ -15,7 +15,7 @@ import utils.ObjectId
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
   def getDataLayerThumbnail(organizationName: String,
-                            dataSet: DataSet,
+                            dataset: Dataset,
                             dataLayerName: String,
                             mag1BoundingBox: BoundingBox,
                             mag: Vec3Int,
@@ -23,8 +23,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             intensityRangeOpt: Option[(Double, Double)],
                             colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
-    logger.debug(s"Thumbnail called for: $organizationName/${dataSet.name}, Layer: $dataLayerName")
-    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
+    logger.debug(s"Thumbnail called for: $organizationName/${dataset.name}, Layer: $dataLayerName")
+    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
@@ -41,7 +41,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def getLayerData(organizationName: String,
-                   dataset: DataSet,
+                   dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int,
@@ -55,7 +55,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
-  def findPositionWithData(organizationName: String, dataSet: DataSet, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(organizationName: String, dataSet: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)

@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.binary.{DataSetDAO, DataStoreDAO}
+import models.binary.{DatasetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
@@ -25,7 +25,7 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 
 case class Job(
     _id: ObjectId,
@@ -267,7 +267,7 @@ class JobService @Inject()(wkConf: WkConf,
                            workerDAO: WorkerDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
-                           dataSetDAO: DataSetDAO,
+                           datasetDAO: DatasetDAO,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
@@ -384,8 +384,8 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
         organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
-        _ <- dataSetDAO.deleteDataset(dataset._id)
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
 
@@ -439,7 +439,7 @@ class JobService @Inject()(wkConf: WkConf,
       parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.export.tiff.invalidMag"
       boundingBoxInMag = parsedBoundingBox / parsedMag
       _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
-      _ <- bool2Fox(boundingBoxInMag.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+      _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
     } yield ()
 
 }

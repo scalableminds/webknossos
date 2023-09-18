@@ -28,7 +28,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
   protected def parseJsonFromPath[T: Reads](path: VaultPath): Fox[T] =
     for {
       fileBytes <- path.readBytes().toFox
-      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataSet.explore.failed.readFile"
+      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox ?~> "dataset.explore.failed.readFile"
       parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
     } yield parsed
 

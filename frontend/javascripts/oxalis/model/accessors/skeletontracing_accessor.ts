@@ -81,7 +81,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
 
   return Maybe.Nothing();
 }
-export function getActiveGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
+export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
   const { activeGroupId } = skeletonTracing;
 
   if (activeGroupId != null) {

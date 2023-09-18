@@ -25,6 +25,7 @@ import type {
   RevertToVersionUpdateAction,
   UpdateNodeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
   CreateEdgeUpdateAction,
   DeleteEdgeUpdateAction,
@@ -131,6 +132,10 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
   updateTreeVisibility: (action: UpdateTreeVisibilityUpdateAction): Description => ({
     description: `Updated the visibility of the tree with id ${action.value.treeId}.`,
     icon: <EyeOutlined />,
+  }),
+  updateTreeEdgesVisibility: (action: UpdateTreeEdgesVisibilityUpdateAction): Description => ({
+    description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
+    icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
     description: `Updated the visibility of the group with id ${

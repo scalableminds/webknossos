@@ -177,6 +177,13 @@ export type APIDataset = APIDatasetBase & {
   readonly isActive: true;
 };
 
+export type MaintenanceInfo = {
+  startTime: number;
+  endTime: number;
+  id: string;
+  message: string;
+};
+
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
 export type APIDatasetCompactWithoutStatus = Pick<
@@ -248,6 +255,7 @@ export type NovelUserExperienceInfoType = {
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
+  latestAcknowledgedMaintenanceInfo?: string;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -691,6 +699,7 @@ export type ServerSkeletonTracingTree = {
   groupId?: number | null | undefined;
   isVisible?: boolean;
   type?: TreeType;
+  edgesAreVisible?: boolean;
 };
 type ServerSegment = {
   segmentId: number;

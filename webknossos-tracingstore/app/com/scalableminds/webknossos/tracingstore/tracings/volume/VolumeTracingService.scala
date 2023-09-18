@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
@@ -104,6 +104,8 @@ class VolumeTracingService @Inject()(
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
+      // warning, may be called multiple times with the same version number (due to transaction management).
+      // frontend ensures that each bucket is only updated once per transaction
       segmentIndexBuffer <- Fox.successful(
         new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, updateGroup.version))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
@@ -707,9 +709,10 @@ class VolumeTracingService @Inject()(
             List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
-            None,
-            None,
-            None)
+            "dummyTransactionId",
+            1,
+            0
+          )
           _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }

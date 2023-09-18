@@ -63,6 +63,8 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  MaintenanceInfo,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -955,6 +957,38 @@ export function getNewestVersionForTracing(
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
+  );
+}
+
+export function getSegmentVolumes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
+export function getSegmentBoundingBoxes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
   );
 }
 
@@ -2072,10 +2106,18 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance", {
-    doNotInvestigate: true,
-  });
-  return info.isMaintenance;
+  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
+    "/api/maintenances/listCurrentAndUpcoming",
+  );
+  const currentEpoch = Date.now();
+  const currentMaintenance = allMaintenances.find(
+    (maintenance) => maintenance.startTime < currentEpoch,
+  );
+  return currentMaintenance != null;
+}
+
+export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
+  return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {
@@ -2348,6 +2390,7 @@ export async function getSamEmbedding(
   layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
+  additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
   const params = new URLSearchParams();
@@ -2359,7 +2402,7 @@ export async function getSamEmbedding(
   const buffer = await Request.sendJSONReceiveArraybuffer(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
       showErrorToast: false,
     },
   );

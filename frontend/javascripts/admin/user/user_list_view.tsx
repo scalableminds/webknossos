@@ -83,7 +83,7 @@ class UserListView extends React.PureComponent<Props, State> {
     isExperienceModalOpen: false,
     isTeamRoleModalOpen: false,
     isInviteModalOpen: false,
-    activationFilter: ["activated", "verified", "unverified"],
+    activationFilter: ["activated"],
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,

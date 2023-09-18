@@ -49,7 +49,7 @@ case class User(
 
   val name: String = firstName + " " + lastName
 
-  val abreviatedName: String =
+  val abbreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
   def isAdminOf(_organization: ObjectId): Boolean =

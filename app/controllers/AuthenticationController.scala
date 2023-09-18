@@ -171,6 +171,7 @@ class AuthenticationController @Inject()(
                       .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                     _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+                    _ = logger.info(f"User ${user._id} authenticated.")
                   } yield result
                 case None =>
                   Future.successful(BadRequest(Messages("error.noUser")))
@@ -448,8 +449,12 @@ class AuthenticationController @Inject()(
 
   def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
-      case Some(authenticator) => combinedAuthenticatorService.discard(authenticator, Ok)
-      case _                   => Future.successful(Ok)
+      case Some(authenticator) =>
+        for {
+          authenticatorResult <- combinedAuthenticatorService.discard(authenticator, Ok)
+          _ = logger.info(f"User ${request.identity.map(_._id).getOrElse("id unknown")} logged out.")
+        } yield authenticatorResult
+      case _ => Future.successful(Ok)
     }
   }
 
@@ -469,12 +474,13 @@ class AuthenticationController @Inject()(
             nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
             returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
             userEmail <- userService.emailFor(user)
+            _ = logger.info(f"User ${user._id} logged in via SSO.")
           } yield {
             val returnPayload =
               s"nonce=$nonce&" +
                 s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
                 s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
-                s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
+                s"username=${URLEncoder.encode(user.abbreviatedName, "UTF-8")}&" +
                 s"name=${URLEncoder.encode(user.name, "UTF-8")}"
             val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
             val returnSignature = shaHex(ssoKey, encodedReturnPayload)
@@ -502,6 +508,7 @@ class AuthenticationController @Inject()(
           value: Cookie <- combinedAuthenticatorService.init(authenticator)
           result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
           _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+          _ = logger.info(f"User ${user._id} logged in.")
           _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
         } yield result
       case None =>

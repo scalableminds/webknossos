@@ -137,7 +137,6 @@ type StateProps = {
   mappingInfo: ActiveMappingInfo;
   flycam: Flycam;
   hasVolumeTracing: boolean;
-  hoveredSegmentId: number | null | undefined;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
@@ -153,6 +152,7 @@ type StateProps = {
   resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
 };
 
+const EMPTY_OBJECT = {};
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
@@ -168,14 +168,13 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
-        : {},
+        : EMPTY_OBJECT,
     dataset: state.dataset,
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
-    hoveredSegmentId: state.temporaryConfiguration.hoveredSegmentId,
     segments,
     segmentGroups,
     visibleSegmentationLayer,
@@ -1654,7 +1653,6 @@ class SegmentsView extends React.Component<Props, State> {
                     isosurface={this.props.isosurfaces[segment.id]}
                     isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
-                    isHoveredSegmentId={this.props.hoveredSegmentId === segment.id}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}
                     allowUpdate={this.props.allowUpdate}

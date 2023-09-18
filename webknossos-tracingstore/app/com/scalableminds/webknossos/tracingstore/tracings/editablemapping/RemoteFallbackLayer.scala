@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
 
@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 case class RemoteFallbackLayer(organizationName: String,
                                dataSetName: String,
                                layerName: String,
-                               elementClass: ElementClass)
+                               elementClass: ElementClassProto)
 
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient

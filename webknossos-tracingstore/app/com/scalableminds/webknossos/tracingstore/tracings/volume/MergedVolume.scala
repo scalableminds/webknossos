@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import net.liftweb.common.Box
@@ -25,7 +25,7 @@ object MergedVolumeStats {
     MergedVolumeStats(0L, None, List.empty, createdSegmentIndex)
 }
 
-class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0)
+class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
     extends DataConverter
     with ByteUtils
     with VolumeDataZipHelper

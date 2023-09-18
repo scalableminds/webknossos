@@ -10,4 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [108-additional-coordinates](conf/evolutions/108-additional-coordinates.sql)
-
+- [109-scheduled-maintenances.sql](conf/evolutions/109-scheduled-maintenances.sql)

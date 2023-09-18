@@ -18,12 +18,12 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import models.binary.DataSet
+import models.binary.Dataset
 import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext)
+class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, rpc: RPC)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   def baseInfo = s" Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"

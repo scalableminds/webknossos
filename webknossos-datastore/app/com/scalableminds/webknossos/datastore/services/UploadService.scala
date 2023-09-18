@@ -194,7 +194,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
       _ = logger.info(s"Finishing dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
-      _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataSet.import.fileAccessDenied"
+      _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
@@ -252,7 +252,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
       fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
-      fileCountString <- fileCountStringOpt ?~> "dataSet.upload.noFiles"
+      fileCountString <- fileCountStringOpt ?~> "dataset.upload.noFiles"
       fileCount <- tryo(fileCountString.toLong).toFox
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- bool2Fox(fileCount == fileNames.size)

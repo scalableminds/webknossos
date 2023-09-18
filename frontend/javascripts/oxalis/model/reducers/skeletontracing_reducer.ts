@@ -956,6 +956,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_EDGES_ARE_VISIBLE": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        edgesAreVisible: {
+                          $set: action.edgesAreVisible,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
         case "CREATE_COMMENT": {
           const { commentText, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)

@@ -80,7 +80,9 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
     for (const tree of Utils.values(trees)) {
-      treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
+      treeColors = treeColors.concat(
+        skeleton.getTreeRGBA(tree.color, tree.isVisible, tree.edgesAreVisible),
+      );
 
       for (const node of Array.from(tree.nodes.values())) {
         nodePositions = nodePositions.concat(node.position);
@@ -194,7 +196,9 @@ test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
       await Utils.sleep(50);
       t.deepEqual(
         skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
-        new Float32Array(skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible)),
+        new Float32Array(
+          skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible, activeTree.edgesAreVisible),
+        ),
       );
     }
 

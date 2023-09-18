@@ -104,6 +104,8 @@ class VolumeTracingService @Inject()(
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
+      // warning, may be called multiple times with the same version number (due to transaction management).
+      // frontend ensures that each bucket is only updated once per transaction
       segmentIndexBuffer <- Fox.successful(
         new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, updateGroup.version))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
@@ -708,9 +710,10 @@ class VolumeTracingService @Inject()(
             List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
-            None,
-            None,
-            None)
+            "dummyTransactionId",
+            1,
+            0
+          )
           _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }

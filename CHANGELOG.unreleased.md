@@ -15,12 +15,21 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added disabled drag handles to volume and skeleton layers for visual consistency. These layer cannot be dragged or reordered. [#7295](https://github.com/scalableminds/webknossos/pull/7295)
 - Dataset thumbnails for grayscale layers can now be colored using the value in the view configuration. [#7255](https://github.com/scalableminds/webknossos/pull/7255)
 - OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
+- The AI-based quick select tool can now also be used for ND datasets. [#7287](https://github.com/scalableminds/webknossos/pull/7287)
 
 ### Changed
 - On datasets with segment indices, ad-hoc meshing can now create non-connected meshes. [#7244](https://github.com/scalableminds/webknossos/pull/7244)
+- Annotating volume data uses a transaction-based mechanism now. As a result, WK is more robust against partial saves (i.e., due to a crashing tab). [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
+- Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
 
 ### Fixed
+- Fixed that the deletion of a selected segment would crash the segments tab. [#7316](https://github.com/scalableminds/webknossos/pull/7316)
+- Fixed reading sharded Zarr 3 data from the local file system. [#7321](https://github.com/scalableminds/webknossos/pull/7321)
+- Fixed no-bucket data zipfile when downloading volume annotations. [#7323](https://github.com/scalableminds/webknossos/pull/7323)
+- Fixed too tight assertions when saving annotations, leading to failed save requests. [#7326](https://github.com/scalableminds/webknossos/pull/7326)
+- Fixed a bug when saving large amounts of skeleton annotation data at once. [#7329](https://github.com/scalableminds/webknossos/pull/7329)
 
 ### Removed
 

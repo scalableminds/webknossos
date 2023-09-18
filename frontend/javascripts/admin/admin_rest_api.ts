@@ -63,6 +63,7 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -2367,6 +2368,7 @@ export async function getSamEmbedding(
   layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
+  additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
   const params = new URLSearchParams();
@@ -2378,7 +2380,7 @@ export async function getSamEmbedding(
   const buffer = await Request.sendJSONReceiveArraybuffer(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
       showErrorToast: false,
     },
   );

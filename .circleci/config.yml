@@ -316,7 +316,7 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - build_test_deploy:
+      - wkorg_nightly: # build_test_deploy: # <-- revert
           context:
             - DockerHub
           filters:

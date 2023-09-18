@@ -39,7 +39,7 @@ object Dependencies {
   private val redis = "net.debasishg" %% "redisclient" % "3.42"
   private val spire = "org.typelevel" %% "spire" % "0.17.0"
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
-  private val swagger = "io.swagger" %% "swagger-play2" % "2.0.1-SNAPSHOT"
+  // private val swagger = "io.swagger" %% "swagger-play2" % "2.0.1-SNAPSHOT"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
   private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
@@ -56,6 +56,11 @@ object Dependencies {
   private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
+
+  // For swagger annotations
+  private val swaggerCore = "io.swagger" % "swagger-core" % "1.5.24"
+  private val swaggerScala = "io.swagger" %% "swagger-scala-module" % "1.0.6"
+  private val playRoutesCompiler = "com.typesafe.play" %% "routes-compiler" % "2.8.16"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.4.1",
@@ -91,7 +96,9 @@ object Dependencies {
     filters,
     ws,
     guice,
-    swagger,
+    swaggerCore,
+    swaggerScala,
+    playRoutesCompiler,
     spire,
     akkaHttp,
     redis,

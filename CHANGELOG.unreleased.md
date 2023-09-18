@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
+- When importing datasets with additional axes (more than 3 dimensions), the axis names are now sanitized and checked for duplicates. [#7308](https://github.com/scalableminds/webknossos/pull/7308)
 
 ### Fixed
 - Fixed that the deletion of a selected segment would crash the segments tab. [#7316](https://github.com/scalableminds/webknossos/pull/7316)

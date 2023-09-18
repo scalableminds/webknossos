@@ -16,12 +16,12 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store, { PlaneRects, SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { ViewMode, Vector3, Vector4 } from "oxalis/constants";
+import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import DiffableMap from "libs/diffable_map";
 import { CuckooTable } from "./cuckoo_table";
@@ -30,6 +30,7 @@ import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
@@ -53,6 +54,7 @@ function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): Array<{
   priority: number;
   bucket: DataBucket;
@@ -70,14 +72,14 @@ function consumeBucketsFromArrayBuffer(
       break;
     }
 
-    const bucketAddress = [
+    const bucketAddress: BucketAddress = [
       uint32Array[currentBufferIndex],
       uint32Array[currentBufferIndex + 1],
       uint32Array[currentBufferIndex + 2],
       uint32Array[currentBufferIndex + 3],
+      additionalCoordinates ?? [],
     ];
     const priority = uint32Array[currentBufferIndex + 4];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
@@ -123,6 +125,7 @@ export default class LayerRenderingManager {
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
+  additionalCoordinates: AdditionalCoordinate[] | null = null;
 
   cuckooTable: CuckooTable | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -194,7 +197,10 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
-    const layerMatrix = invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix);
+    const layerMatrix = invertAndTranspose(
+      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
+        .affineMatrix,
+    );
 
     const matrix = M4x4.scale1(
       state.flycam.zoomStep,
@@ -204,7 +210,8 @@ export default class LayerRenderingManager {
     const { viewMode } = state.temporaryConfiguration;
     const { sphericalCapRadius } = state.userConfiguration;
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
-    const rects = getViewportRects(Store.getState());
+    const rects = getViewportRects(state);
+    const additionalCoordinates = state.flycam.additionalCoordinates;
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -212,6 +219,7 @@ export default class LayerRenderingManager {
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
+      !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -221,6 +229,7 @@ export default class LayerRenderingManager {
       this.lastRects = rects;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
+      this.additionalCoordinates = additionalCoordinates;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
@@ -246,6 +255,7 @@ export default class LayerRenderingManager {
             buffer,
             this.cube,
             this.textureBucketManager.maximumCapacity,
+            this.additionalCoordinates,
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
@@ -257,6 +267,7 @@ export default class LayerRenderingManager {
               bucket: bucket.zoomedAddress,
               priority,
             }));
+
           this.pullQueue.addAll(missingBuckets);
           this.pullQueue.pull();
         },

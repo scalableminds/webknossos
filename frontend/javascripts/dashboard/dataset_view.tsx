@@ -259,7 +259,8 @@ function DatasetView(props: Props) {
   );
 
   const datasets = context.datasets;
-  const subfolders = context.getActiveSubfolders();
+  // Don't show subfolders when the search is active
+  const subfolders = searchQuery == null ? context.getActiveSubfolders() : [];
   const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty =

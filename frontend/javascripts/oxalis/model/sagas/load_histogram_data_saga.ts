@@ -62,11 +62,15 @@ function* loadHistogramForLayer(layerName: string): Saga<void> {
     // If they do not exist the tracing / dataset has never been opened and thus the histogram data is used as a default range delimiter.
     newIntensityRange = [
       Math.max(
-        currentLayerConfig.intensityRange[0],
+        currentLayerConfig.intensityRange != null
+          ? currentLayerConfig.intensityRange[0]
+          : minimumInHistogramData,
         currentLayerConfig.min != null ? currentLayerConfig.min : minimumInHistogramData,
       ),
       Math.min(
-        currentLayerConfig.intensityRange[1],
+        currentLayerConfig.intensityRange != null
+          ? currentLayerConfig.intensityRange[1]
+          : maximumInHistogramData,
         currentLayerConfig.max != null ? currentLayerConfig.max : maximumInHistogramData,
       ),
     ];

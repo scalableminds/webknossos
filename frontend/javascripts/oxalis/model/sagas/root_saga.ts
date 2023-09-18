@@ -1,5 +1,5 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { all, call, cancel, fork, take } from "typed-redux-saga";
+import { all, call, cancel, fork, take, takeEvery } from "typed-redux-saga";
 import { alert } from "libs/window";
 import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
@@ -18,6 +18,8 @@ import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
 import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
+import { warnIfEmailIsUnverified } from "./user_saga";
+import { EscalateErrorAction } from "../actions/actions";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
@@ -30,6 +32,15 @@ export default function* rootSaga(): Saga<void> {
 }
 export function hasRootSagaCrashed() {
   return rootSagaCrashed;
+}
+
+function* listenToErrorEscalation() {
+  // Make the saga deliberately crash when this action has been
+  // dispatched. This should be used if an error was thrown in a
+  // critical place, which should stop further saga saving.
+  yield* takeEvery("ESCALATE_ERROR", (action: EscalateErrorAction) => {
+    throw action.error;
+  });
 }
 
 function* restartableSaga(): Saga<void> {
@@ -53,6 +64,8 @@ function* restartableSaga(): Saga<void> {
       call(UndoSaga),
       ...VolumetracingSagas.map((saga) => call(saga)),
       call(watchZ1Downsampling),
+      call(warnIfEmailIsUnverified),
+      call(listenToErrorEscalation),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

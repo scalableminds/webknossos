@@ -47,6 +47,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   useLegacyBindings: "Classic Controls",
   blendMode: "Blend Mode",
   renderWatermark: "Logo in Screenshots",
+  antialiasRendering: "Antialiasing",
+  colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -75,8 +77,11 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   zoom: "Zoom in or out in the data viewports",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
   blendMode:
-    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers.",
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
+  antialiasRendering: "Antialias rendering (can impact performance)",
+  colorLayerOrder:
+    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
@@ -171,6 +176,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
+  "tracing.segment_id_out_of_bounds": _.template(
+    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
+  ),
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
@@ -234,8 +242,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
     "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file":
+  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
+    "Checking for agglomerate files...",
+  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":
     "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":

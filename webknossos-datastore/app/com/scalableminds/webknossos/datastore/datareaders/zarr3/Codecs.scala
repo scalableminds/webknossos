@@ -1,17 +1,22 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
   CompressionSetting,
   GzipCompressor,
   IntCompressionSetting,
-  StringCompressionSetting
+  StringCompressionSetting,
+  ZstdCompressor
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import play.api.libs.json.{Format, JsResult, JsValue, Json, OFormat}
+import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json.{Format, JsObject, JsResult, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
+
+import java.util.zip.CRC32C
 
 trait Codec
 
@@ -34,7 +39,7 @@ trait BytesToBytesCodec extends Codec {
   def decode(bytes: Array[Byte]): Array[Byte]
 }
 
-class EndianCodec(val endian: String) extends ArrayToBytesCodec {
+class EndianCodec(val endian: Option[String]) extends ArrayToBytesCodec {
 
   /*
   https://zarr-specs.readthedocs.io/en/latest/v3/codecs/endian/v1.0.html
@@ -103,7 +108,49 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
-class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfiguration]) extends ArrayToBytesCodec {
+class ZstdCodec(level: Int, checksum: Boolean) extends BytesToBytesCodec {
+
+  // https://github.com/zarr-developers/zarr-specs/pull/256
+
+  lazy val compressor = new ZstdCompressor(level, checksum)
+
+  override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
+
+  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
+
+}
+
+class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
+
+  // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/v1.0.html
+
+  private def crc32ByteLength = 4
+
+  private class CRC32CChecksumInvalidException extends Exception
+
+  override def encode(bytes: Array[Byte]): Array[Byte] = {
+    val crc = new CRC32C()
+    crc.update(bytes)
+    bytes ++ longToBytes(crc.getValue).take(crc32ByteLength)
+  }
+
+  override def decode(bytes: Array[Byte]): Array[Byte] = {
+    val crcPart = bytes.takeRight(crc32ByteLength)
+    val dataPart = bytes.dropRight(crc32ByteLength)
+    val crc = new CRC32C()
+    crc.update(dataPart)
+    val valid = longToBytes(crc.getValue).take(crc32ByteLength).sameElements(crcPart)
+    if (!valid) {
+      throw new CRC32CChecksumInvalidException
+    }
+    dataPart
+  }
+}
+
+class ShardingCodec(val chunk_shape: Array[Int],
+                    val codecs: Seq[CodecConfiguration],
+                    val index_codecs: Seq[CodecConfiguration])
+    extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
   // encode, decode not implemented as sharding is done in Zarr3Array
@@ -114,11 +161,12 @@ class ShardingCodec(val chunk_shape: Array[Int], val codecs: Seq[CodecConfigurat
 
 sealed trait CodecConfiguration
 
-final case class EndianCodecConfiguration(endian: String) extends CodecConfiguration
+final case class EndianCodecConfiguration(endian: Option[String]) extends CodecConfiguration
 
 object EndianCodecConfiguration {
   implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]
-  val name = "endian"
+  val legacyName = "endian"
+  val name = "bytes"
 }
 final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration // Should also support other parameters
 
@@ -145,6 +193,24 @@ object GzipCodecConfiguration {
   val name = "gzip"
 }
 
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration
+object ZstdCodecConfiguration {
+  implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
+  val name = "zstd"
+}
+
+case object Crc32CCodecConfiguration extends CodecConfiguration {
+  val name = "crc32c"
+
+  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
+    override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
+  }
+
+  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
+    override def writes(o: Crc32CCodecConfiguration.type): JsValue = JsObject(Seq())
+  }
+}
+
 object CodecConfiguration extends JsonImplicits {
   implicit object CodecSpecificationFormat extends Format[CodecConfiguration] {
     override def reads(json: JsValue): JsResult[CodecConfiguration] =
@@ -160,7 +226,9 @@ object CodecSpecification {
   implicit val jsonFormat: OFormat[CodecSpecification] = Json.format[CodecSpecification]
 }
 
-final case class ShardingCodecConfiguration(chunk_shape: Array[Int], codecs: Seq[CodecConfiguration])
+final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
+                                            codecs: Seq[CodecConfiguration],
+                                            index_codecs: Seq[CodecConfiguration])
     extends CodecConfiguration
 
 object ShardingCodecConfiguration {

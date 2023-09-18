@@ -3,6 +3,7 @@ import { ContourModeEnum } from "oxalis/constants";
 import type {
   EditableMapping,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   VolumeTracing,
@@ -14,11 +15,13 @@ import type {
   RemoveSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
   getRequestedOrVisibleSegmentationLayer,
+  getSegmentationLayerForTracing,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -43,7 +46,10 @@ import {
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "oxalis/model/actions/settings_actions";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getMaximumSegmentIdForLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -173,6 +179,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
+      someAdditionalCoordinates: [],
       ...oldSegment,
       ...segment,
       somePosition,
@@ -201,8 +208,9 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
           somePosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
+          someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-        },
+        } as Segment,
       ]),
     ),
     segmentGroups: tracing.segmentGroups || [],
@@ -218,6 +226,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
+    additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
   return volumeTracing;
 }
@@ -242,9 +251,17 @@ function VolumeTracingReducer(
       });
 
       if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0) {
-        // If a largest segment id is known, but the active cell is 0, we can automatically
-        // create a new segment ID for the user.
-        return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+        // If a largest segment id is known but the active cell is 0,
+        // and does not overflow the segmentation layers maximum possible segment id,
+        // we can automatically create a new segment ID for the user.
+        const segmentationLayer = getSegmentationLayerForTracing(newState, volumeTracing);
+        const newSegmentId = volumeTracing.largestSegmentId + 1;
+        if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
+          // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
+          return setActiveCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+        } else {
+          return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
+        }
       }
 
       return newState;
@@ -308,7 +325,7 @@ function VolumeTracingReducer(
     }
 
     case "CREATE_CELL": {
-      return createCellReducer(state, volumeTracing, action.largestSegmentId);
+      return createCellReducer(state, volumeTracing, action.newSegmentId);
     }
 
     case "UPDATE_DIRECTION": {

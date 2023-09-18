@@ -34,6 +34,7 @@ import {
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
   getSegmentColorAsHSLA,
+  hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -69,10 +70,10 @@ import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
-import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -150,16 +151,16 @@ const handleSetTool = (event: RadioChangeEvent) => {
 };
 
 const handleCreateCell = () => {
-  const volumeLayer = getActiveSegmentationTracing(Store.getState());
+  const volumeTracing = getActiveSegmentationTracing(Store.getState());
 
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  if (volumeTracing == null || volumeTracing.tracingId == null) {
     return;
   }
 
-  if (volumeLayer.largestSegmentId != null) {
-    Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
+  if (volumeTracing.largestSegmentId != null) {
+    Store.dispatch(createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId));
   } else {
-    showToastWarningForLargestSegmentIdMissing(volumeLayer);
+    showToastWarningForLargestSegmentIdMissing(volumeTracing);
   }
 };
 
@@ -189,9 +190,10 @@ function RadioButtonWithTooltip({
   style: React.CSSProperties;
   value: string;
   onClick?: Function;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <Tooltip title={disabled ? disabledTitle : title}>
+    <Tooltip title={disabled ? disabledTitle : title} onOpenChange={props.onOpenChange}>
       <Radio.Button
         disabled={disabled}
         {...props}
@@ -205,6 +207,31 @@ function RadioButtonWithTooltip({
         }}
       />
     </Tooltip>
+  );
+}
+
+function ToolRadioButton({
+  name,
+  description,
+  disabledExplanation,
+  ...props
+}: {
+  name: string;
+  description: string;
+  disabledExplanation?: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+  style: React.CSSProperties;
+  value: string;
+  onClick?: Function;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  return (
+    <RadioButtonWithTooltip
+      title={`${name} – ${description}`}
+      disabledTitle={`${name} – ${disabledExplanation}`}
+      {...props}
+    />
   );
 }
 
@@ -779,7 +806,22 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
+const TOOL_NAMES = {
+  MOVE: "Move",
+  SKELETON: "Skeleton",
+  BRUSH: "Brush",
+  ERASE_BRUSH: "Erase (via Brush)",
+  TRACE: "Trace",
+  ERASE_TRACE: "Erase",
+  FILL_CELL: "Fill Tool",
+  PICK_CELL: "Segment Picker",
+  QUICK_SELECT: "Quick Select Tool",
+  BOUNDING_BOX: "Bounding Box Tool",
+  PROOFREAD: "Proofreading Tool",
+};
+
 export default function ToolbarView() {
+  const dispatch = useDispatch();
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
@@ -851,11 +893,10 @@ export default function ToolbarView() {
       ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
       : null;
   const previousSkeletonToolHint = usePrevious(skeletonToolHint);
-  const moveToolDescription =
-    "Move – Use left-click to move around and right-click to open a contextmenu.";
+
   const skeletonToolDescription = useLegacyBindings
-    ? "Skeleton – Use left-click to move around and right-click to create new skeleton nodes"
-    : "Skeleton – Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
+    ? "Use left-click to move around and right-click to create new skeleton nodes"
+    : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
@@ -864,9 +905,10 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        <RadioButtonWithTooltip
-          title={moveToolDescription}
-          disabledTitle=""
+        <ToolRadioButton
+          name={TOOL_NAMES.MOVE}
+          description="Use left-click to move around and right-click to open a contextmenu."
+          disabledExplanation=""
           disabled={false}
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.MOVE}
@@ -877,12 +919,13 @@ export default function ToolbarView() {
             }}
             className="fas fa-arrows-alt"
           />
-        </RadioButtonWithTooltip>
+        </ToolRadioButton>
 
         {hasSkeleton ? (
-          <RadioButtonWithTooltip
-            title={skeletonToolDescription}
-            disabledTitle=""
+          <ToolRadioButton
+            name={TOOL_NAMES.SKELETON}
+            description={skeletonToolDescription}
+            disabledExplanation=""
             disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.SKELETON}
@@ -904,14 +947,17 @@ export default function ToolbarView() {
                 className="fas fa-project-diagram"
               />
             </Tooltip>
-          </RadioButtonWithTooltip>
+          </ToolRadioButton>
         ) : null}
 
         {hasVolume && isVolumeModificationAllowed ? (
           <React.Fragment>
-            <RadioButtonWithTooltip
-              title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
+            <ToolRadioButton
+              name={TOOL_NAMES.BRUSH}
+              description={
+                "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+              }
+              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
               style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.BRUSH}
@@ -923,11 +969,14 @@ export default function ToolbarView() {
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.BRUSH ? multiSliceAnnotationInfoIcon : null}
-            </RadioButtonWithTooltip>
+            </ToolRadioButton>
 
-            <RadioButtonWithTooltip
-              title="Erase (via Brush) – Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
+            <ToolRadioButton
+              name={TOOL_NAMES.ERASE_BRUSH}
+              description="Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
+              disabledExplanation={
+                disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation
+              }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
               style={{
                 ...NARROW_BUTTON_STYLE,
@@ -948,11 +997,12 @@ export default function ToolbarView() {
               {adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH
                 ? multiSliceAnnotationInfoIcon
                 : null}
-            </RadioButtonWithTooltip>
+            </ToolRadioButton>
 
-            <RadioButtonWithTooltip
-              title="Trace – Draw outlines around the voxels you would like to label."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
+            <ToolRadioButton
+              name={TOOL_NAMES.TRACE}
+              description="Draw outlines around the voxels you would like to label."
+              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
               style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.TRACE}
@@ -965,11 +1015,14 @@ export default function ToolbarView() {
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.TRACE ? multiSliceAnnotationInfoIcon : null}
-            </RadioButtonWithTooltip>
+            </ToolRadioButton>
 
-            <RadioButtonWithTooltip
-              title="Erase – Draw outlines around the voxel you would like to erase."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
+            <ToolRadioButton
+              name={TOOL_NAMES.ERASE_TRACE}
+              description="Draw outlines around the voxel you would like to erase."
+              disabledExplanation={
+                disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation
+              }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
               style={{
                 ...NARROW_BUTTON_STYLE,
@@ -990,11 +1043,12 @@ export default function ToolbarView() {
               {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE
                 ? multiSliceAnnotationInfoIcon
                 : null}
-            </RadioButtonWithTooltip>
+            </ToolRadioButton>
 
-            <RadioButtonWithTooltip
-              title="Fill Tool – Flood-fill the clicked region."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
+            <ToolRadioButton
+              name={TOOL_NAMES.FILL_CELL}
+              description="Flood-fill the clicked region."
+              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
               style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.FILL_CELL}
@@ -1009,10 +1063,11 @@ export default function ToolbarView() {
               {adaptedActiveTool === AnnotationToolEnum.FILL_CELL
                 ? multiSliceAnnotationInfoIcon
                 : null}
-            </RadioButtonWithTooltip>
-            <RadioButtonWithTooltip
-              title="Segment Picker – Click on a voxel to make its segment id the active segment id."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
+            </ToolRadioButton>
+            <ToolRadioButton
+              name={TOOL_NAMES.PICK_CELL}
+              description="Click on a voxel to make its segment id the active segment id."
+              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
               style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.PICK_CELL}
@@ -1023,12 +1078,13 @@ export default function ToolbarView() {
                   opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
                 }}
               />
-            </RadioButtonWithTooltip>
+            </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <RadioButtonWithTooltip
-          title="Quick Select Tool - Draw a rectangle around a segment to automatically detect it"
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
+        <ToolRadioButton
+          name={TOOL_NAMES.QUICK_SELECT}
+          description="Draw a rectangle around a segment to automatically detect it"
+          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.QUICK_SELECT}
@@ -1043,10 +1099,11 @@ export default function ToolbarView() {
               opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
             }}
           />
-        </RadioButtonWithTooltip>
-        <RadioButtonWithTooltip
-          title="Bounding Box Tool - Create, resize and modify bounding boxes."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+        </ToolRadioButton>
+        <ToolRadioButton
+          name={TOOL_NAMES.BOUNDING_BOX}
+          description="Create, resize and modify bounding boxes."
+          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.BOUNDING_BOX}
@@ -1059,15 +1116,27 @@ export default function ToolbarView() {
               ...imgStyleForSpaceyIcons,
             }}
           />
-        </RadioButtonWithTooltip>
+        </ToolRadioButton>
 
-        {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (
-          <RadioButtonWithTooltip
-            title="Proofreading Tool - Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
-            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
+        {hasSkeleton && hasVolume ? (
+          <ToolRadioButton
+            name={TOOL_NAMES.PROOFREAD}
+            description="Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            disabledExplanation={
+              isAgglomerateMappingEnabled.reason ||
+              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+            }
+            disabled={
+              !isAgglomerateMappingEnabled.value ||
+              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
+            }
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.PROOFREAD}
+            onOpenChange={(open: boolean) => {
+              if (open) {
+                dispatch(ensureLayerMappingsAreLoadedAction());
+              }
+            }}
           >
             <i
               className="fas fa-clipboard-check"
@@ -1075,7 +1144,7 @@ export default function ToolbarView() {
                 opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
               }}
             />
-          </RadioButtonWithTooltip>
+          </ToolRadioButton>
         ) : null}
       </Radio.Group>
 

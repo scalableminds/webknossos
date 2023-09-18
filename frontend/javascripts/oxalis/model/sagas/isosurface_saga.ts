@@ -5,7 +5,7 @@ import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
 
 import Store from "oxalis/store";
 import {
@@ -24,7 +24,6 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import {
-  ImportIsosurfaceFromStlAction,
   UpdateIsosurfaceVisibilityAction,
   RemoveIsosurfaceAction,
   RefreshIsosurfaceAction,
@@ -38,10 +37,11 @@ import {
   addPrecomputedIsosurfaceAction,
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
+  TriggerIsosurfacesDownloadAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { actionChannel, takeEvery, call, take, race, put } from "typed-redux-saga";
+import { actionChannel, takeEvery, call, take, race, put, all } from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeIsosurface,
@@ -50,8 +50,6 @@ import {
   meshV3,
   getMeshfilesForDatasetLayer,
 } from "admin/admin_rest_api";
-import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
@@ -69,10 +67,12 @@ import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
 import messages from "messages";
-import processTaskWithPool from "libs/task_pool";
+import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import Zip from "libs/zipjs_wrapper";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -93,6 +93,8 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
+// Maps from layerName and segmentId to a ThreeDMap that stores for each chunk
+// (at x, y, z) position whether the mesh chunk was loaded.
 const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   // @ts-ignore
@@ -102,7 +104,7 @@ function marchingCubeSizeInMag1(): Vector3 {
     : [128, 128, 128];
 }
 const modifiedCells: Set<number> = new Set();
-export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
+export function isIsosurfaceSTL(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
   const isIsosurface = stlIsosurfaceConstants.isosurfaceMarker.every(
     (marker, index) => dataView.getUint8(index) === marker,
@@ -176,6 +178,7 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
   yield* call(
     loadAdHocIsosurface,
     action.seedPosition,
+    action.seedAdditionalCoordinates,
     action.segmentId,
     false,
     action.layerName,
@@ -185,6 +188,7 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
 
 function* loadAdHocIsosurface(
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   segmentId: number,
   removeExistingIsosurface: boolean = false,
   layerName?: string | null | undefined,
@@ -197,12 +201,20 @@ function* loadAdHocIsosurface(
     return;
   }
 
+  if (_.size(layer.cube.additionalAxes) > 0) {
+    // Also see https://github.com/scalableminds/webknossos/issues/7229
+    Toast.warning(
+      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
+    );
+  }
+
   const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
 
   yield* call(
     loadIsosurfaceForSegmentId,
     segmentId,
     seedPosition,
+    seedAdditionalCoordinates,
     isosurfaceExtraInfo,
     removeExistingIsosurface,
     layer,
@@ -251,6 +263,7 @@ function* getInfoForIsosurfaceLoading(
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   removeExistingIsosurface: boolean,
   layer: DataLayer,
@@ -271,6 +284,7 @@ function* loadIsosurfaceForSegmentId(
       layer,
       segmentId,
       seedPosition,
+      seedAdditionalCoordinates,
       zoomStep,
       isosurfaceExtraInfo,
       resolutionInfo,
@@ -289,6 +303,7 @@ function* loadIsosurfaceWithNeighbors(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
   zoomStep: number,
   isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   resolutionInfo: ResolutionInfo,
@@ -298,7 +313,16 @@ function* loadIsosurfaceWithNeighbors(
   const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
-  yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
+  yield* put(
+    addAdHocIsosurfaceAction(
+      layer.name,
+      segmentId,
+      position,
+      additionalCoordinates,
+      mappingName,
+      mappingType,
+    ),
+  );
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
   while (positionsToRequest.length > 0) {
@@ -473,6 +497,7 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
       loadPrecomputedMeshAction(
         isosurfaceInfo.segmentId,
         isosurfaceInfo.seedPosition,
+        isosurfaceInfo.seedAdditionalCoordinates,
         isosurfaceInfo.meshFileName,
         layerName,
       ),
@@ -511,13 +536,24 @@ function* _refreshIsosurfaceWithMap(
   // The isosurface should only be removed once after re-fetching the isosurface first position.
   let shouldBeRemoved = true;
 
+  // Meshing for N-D segmentations is not yet supported.
+  // See https://github.com/scalableminds/webknossos/issues/7229
+  const seedAdditionalCoordinates = undefined;
   for (const [, position] of isosurfacePositions) {
     // Reload the isosurface at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the isosurface is reloaded.
-    yield* call(loadAdHocIsosurface, position, segmentId, shouldBeRemoved, layerName, {
-      mappingName,
-      mappingType,
-    });
+    yield* call(
+      loadAdHocIsosurface,
+      position,
+      seedAdditionalCoordinates,
+      segmentId,
+      shouldBeRemoved,
+      layerName,
+      {
+        mappingName,
+        mappingType,
+      },
+    );
     shouldBeRemoved = false;
   }
 
@@ -584,7 +620,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, meshFileName, layerName } = action;
+  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -600,6 +636,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       loadPrecomputedMeshForSegmentId,
       segmentId,
       seedPosition,
+      seedAdditionalCoordinates,
       meshFileName,
       layer,
     ),
@@ -618,11 +655,20 @@ type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefine
 function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
-  yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
+  yield* put(
+    addPrecomputedIsosurfaceAction(
+      layerName,
+      id,
+      seedPosition,
+      seedAdditionalCoordinates,
+      meshFileName,
+    ),
+  );
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
 
@@ -946,14 +992,7 @@ function* downloadIsosurfaceCellById(
   }
 
   try {
-    const stlDataViews = exportToStl(geometry);
-    // Encode isosurface and cell id property
-    const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
-    isosurfaceMarker.forEach((marker, index) => {
-      stlDataViews[0].setUint8(index, marker);
-    });
-    stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
-    const blob = new Blob(stlDataViews);
+    const blob = getSTLBlob(geometry, segmentId);
     yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
@@ -962,31 +1001,55 @@ function* downloadIsosurfaceCellById(
   }
 }
 
-function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
-  yield* call(downloadIsosurfaceCellById, action.cellName, action.segmentId, action.layerName);
+function* downloadIsosurfaceCellsAsZIP(
+  segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
+): Saga<void> {
+  const { segmentMeshController } = getSceneController();
+  const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
+  try {
+    const addFileToZipWriterPromises = segments.map((element) => {
+      const geometry = segmentMeshController.getIsosurfaceGeometryInBestLOD(
+        element.segmentId,
+        element.layerName,
+      );
+
+      if (geometry == null) {
+        const errorMessage = messages["tracing.not_isosurface_available_to_download"];
+        Toast.error(errorMessage, {
+          sticky: false,
+        });
+        return;
+      }
+      const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
+      return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
+    });
+    yield all(addFileToZipWriterPromises);
+    const result = yield* call([zipWriter, zipWriter.close]);
+    yield* call(saveAs, result as Blob, "mesh-export.zip");
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error);
+    console.error(exception);
+    Toast.error("Could not export meshes as STL files. See console for details");
+  }
 }
 
-function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
-  const { layerName, buffer } = action;
-  const dataView = new DataView(buffer);
-  const segmentId = dataView.getUint32(stlIsosurfaceConstants.segmentIdIndex, true);
-  const geometry = yield* call(parseStlBuffer, buffer);
-  getSceneController().segmentMeshController.addIsosurfaceFromGeometry(
-    geometry,
-    segmentId,
-    null,
-    null,
-    NO_LOD_MESH_INDEX,
-    layerName,
-  );
-  yield* put(setImportingMeshStateAction(false));
-  // TODO: Ideally, persist the seed position in the STL file. As a workaround,
-  // we simply use the current position as a seed position.
-  const seedPosition = yield* select((state) => getFlooredPosition(state.flycam));
-  // TODO: This code is not used currently and it will not be possible to share these
-  // isosurfaces via link.
-  // The mesh file the isosurface was computed from is not known.
-  yield* put(addPrecomputedIsosurfaceAction(layerName, segmentId, seedPosition, "unknown"));
+const getSTLBlob = (geometry: THREE.Group, segmentId: number): Blob => {
+  const stlDataViews = exportToStl(geometry);
+  // Encode isosurface and cell id property
+  const { isosurfaceMarker, segmentIdIndex } = stlIsosurfaceConstants;
+  isosurfaceMarker.forEach((marker, index) => {
+    stlDataViews[0].setUint8(index, marker);
+  });
+  stlDataViews[0].setUint32(segmentIdIndex, segmentId, true);
+  return new Blob(stlDataViews);
+};
+
+function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
+  yield* call(downloadIsosurfaceCellById, action.segmentName, action.segmentId, action.layerName);
+}
+
+function* downloadIsosurfaceCells(action: TriggerIsosurfacesDownloadAction): Saga<void> {
+  yield* call(downloadIsosurfaceCellsAsZIP, action.segmentsArray);
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
@@ -1035,7 +1098,7 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
-  yield* takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
+  yield* takeEvery("TRIGGER_ISOSURFACES_DOWNLOAD", downloadIsosurfaceCells);
   yield* takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);
   yield* takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);

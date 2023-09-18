@@ -24,13 +24,13 @@ import type {
   APIMapping,
   APIMaybeUnimportedDataset,
   APIMeshFile,
-  APIOpenTasksReport,
+  APIAvailableTasksReport,
   APIOrganization,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
   APIProjectUpdater,
-  APIProjectWithAssignments,
+  APIProjectWithStatus,
   APIPublication,
   APIResolutionRestrictions,
   APIScript,
@@ -63,6 +63,7 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -334,7 +335,7 @@ export function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
-function transformProject<T extends APIProject | APIProjectWithAssignments>(response: T): T {
+function transformProject<T extends APIProject | APIProjectWithStatus>(response: T): T {
   return Object.assign({}, response, {
     expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
   });
@@ -345,14 +346,14 @@ export async function getProjects(): Promise<Array<APIProject>> {
   assertResponseLimit(responses);
   return responses.map(transformProject);
 }
-export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectWithAssignments>> {
-  const responses = await Request.receiveJSON("/api/projects/assignments");
+export async function getProjectsWithStatus(): Promise<Array<APIProjectWithStatus>> {
+  const responses = await Request.receiveJSON("/api/projects/withStatus");
   assertResponseLimit(responses);
   return responses.map(transformProject);
 }
 export async function getProjectsForTaskType(
   taskTypeId: string,
-): Promise<Array<APIProjectWithAssignments>> {
+): Promise<Array<APIProjectWithStatus>> {
   const responses = await Request.receiveJSON(`/api/taskTypes/${taskTypeId}/projects`);
   assertResponseLimit(responses);
   return responses.map(transformProject);
@@ -364,7 +365,7 @@ export async function getProject(projectId: string): Promise<APIProject> {
 export async function increaseProjectTaskInstances(
   projectId: string,
   delta: number = 1,
-): Promise<APIProjectWithAssignments> {
+): Promise<APIProjectWithStatus> {
   const project = await Request.receiveJSON(
     `/api/projects/${projectId}/incrementEachTasksInstances?delta=${delta}`,
     {
@@ -1522,16 +1523,26 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
-  credentials?: { username: string; pass: string },
+  credentials?: { username: string; pass: string } | null,
+  preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
-    data: credentials
-      ? remoteUris.map((uri) => ({
-          remoteUri: uri.trim(),
+    data: remoteUris.map((uri) => {
+      const extendedUri = {
+        remoteUri: uri.trim(),
+        preferredVoxelSize,
+      };
+
+      if (credentials) {
+        return {
+          ...extendedUri,
           credentialIdentifier: credentials.username,
           credentialSecret: credentials.pass,
-        }))
-      : remoteUris.map((uri) => ({ remoteUri: uri.trim() })),
+        };
+      }
+
+      return extendedUri;
+    }),
   });
   if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
@@ -1544,16 +1555,23 @@ export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,
+  folderId: string | null,
 ): Promise<void> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (folderId) {
+      params.append("folderId", folderId);
+    }
+
+    return Request.sendJSONReceiveJSON(
+      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?${params}`,
       {
         method: "PUT",
         data: datasource,
       },
-    ),
-  );
+    );
+  });
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
@@ -1879,17 +1897,19 @@ export async function getProjectProgressReport(
   teamId: string,
   showErrorToast: boolean = true,
 ): Promise<Array<APIProjectProgressReport>> {
-  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
+  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/projectProgressReport`, {
     showErrorToast,
   });
   assertResponseLimit(progressData);
   return progressData;
 }
 
-export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReport>> {
-  const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
-  assertResponseLimit(openTasksData);
-  return openTasksData;
+export async function getAvailableTasksReport(
+  teamId: string,
+): Promise<Array<APIAvailableTasksReport>> {
+  const availableTasksData = await Request.receiveJSON(`/api/teams/${teamId}/availableTasksReport`);
+  assertResponseLimit(availableTasksData);
+  return availableTasksData;
 }
 
 // ### Organizations
@@ -2123,7 +2143,7 @@ export function computeIsosurface(
         },
       },
     );
-    const neighbors = Utils.parseAsMaybe(headers.neighbors).getOrElse([]);
+    const neighbors = Utils.parseMaybe(headers.neighbors) || [];
     return {
       buffer,
       neighbors,
@@ -2329,6 +2349,7 @@ export async function getSamEmbedding(
   layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
+  additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
   const params = new URLSearchParams();
@@ -2340,7 +2361,7 @@ export async function getSamEmbedding(
   const buffer = await Request.sendJSONReceiveArraybuffer(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
       showErrorToast: false,
     },
   );
@@ -2453,4 +2474,17 @@ export function sendHelpEmail(message: string) {
 
 export function requestSingleSignOnLogin() {
   return Request.receiveJSON("/api/auth/oidc/login");
+}
+
+export function verifyEmail(key: string) {
+  return Request.receiveJSON(`/api/verifyEmail/${key}`, {
+    method: "POST",
+    showErrorToast: false,
+  });
+}
+
+export function requestVerificationMail() {
+  return Request.receiveJSON("/api/verifyEmail", {
+    method: "POST",
+  });
 }

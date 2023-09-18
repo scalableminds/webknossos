@@ -1,5 +1,7 @@
 // Integration tests for skeleton.js
 import "test/mocks/lz4";
+// Ensure singletons are set up
+import "test/helpers/apiHelpers";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";
@@ -44,7 +46,7 @@ test.before((t) => {
       Store.dispatch(createTreeAction());
     }
 
-    Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));
+    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, resolution));
   }
 
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
@@ -128,7 +130,7 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
 });
 test.serial("Skeleton should increase its buffers once the max capacity is reached", async (t) => {
   const skeleton = skeletonCreator();
-  Store.dispatch(createNodeAction([2001, 2001, 2001], [0.5, 0.5, 0.5], 0, 0));
+  Store.dispatch(createNodeAction([2001, 2001, 2001], null, [0.5, 0.5, 0.5], 0, 0));
   await Utils.sleep(100);
   t.is(skeleton.nodes.buffers.length, 2);
   t.is(skeleton.edges.buffers.length, 2);

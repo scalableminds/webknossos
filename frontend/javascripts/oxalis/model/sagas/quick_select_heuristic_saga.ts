@@ -43,12 +43,13 @@ import {
 } from "oxalis/store";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
-import { APIDataLayer } from "types/api_flow_types";
+import { APIDataLayer, APIDataset } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
 import {
+  getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
   getLayerBoundingBox,
   getResolutionInfo,
@@ -124,10 +125,13 @@ export function* prepareQuickSelect(
     getSegmentationLayerForTracing(state, volumeTracing),
   );
   const dataset = yield* select((state) => state.dataset);
+  const nativelyRenderedLayerName = yield* select(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   if (
     !_.isEqual(
-      getTransformsForLayer(dataset, colorLayer),
-      getTransformsForLayer(dataset, volumeLayer),
+      getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerName),
+      getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerName),
     )
   ) {
     Toast.warning(
@@ -182,6 +186,8 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const { startPosition, endPosition, quickSelectGeometry } = action;
 
   const layerBBox = yield* select((state) => getLayerBoundingBox(state.dataset, colorLayer.name));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+
   const boundingBoxMag1 = new BoundingBox({
     min: V3.floor(V3.min(startPosition, endPosition)),
     max: V3.floor(
@@ -206,6 +212,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     colorLayer.name,
     boundingBoxMag1,
     labeledZoomStep,
+    additionalCoordinates,
   );
   const size = boundingBoxTarget.getSize();
   const stride = [1, size[0], size[0] * size[1]];
@@ -217,7 +224,8 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
-  const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration);
+  const dataset = yield* select((state) => state.dataset);
+  const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration, dataset);
   const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
@@ -455,6 +463,7 @@ function normalizeToUint8(
   colorLayer: APIDataLayer,
   inputDataRaw: TypedArrayWithoutBigInt,
   layerConfiguration: DatasetLayerConfiguration,
+  dataset: APIDataset,
 ): Uint8Array {
   if (colorLayer.elementClass === "uint8") {
     // Leave uint8 data as is
@@ -473,7 +482,8 @@ function normalizeToUint8(
   // Convert non uint8 data by scaling the values to uint8 (using the histogram settings)
   const inputData = new Uint8Array(inputDataRaw.length);
   const { intensityRange } = layerConfiguration;
-  const [min, max] = intensityRange;
+  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, colorLayer.name);
+  const [min, max] = intensityRange || defaultIntensityRange;
   // Scale the color value according to the histogram settings.
   const is_max_and_min_equal = Number(max === min);
 

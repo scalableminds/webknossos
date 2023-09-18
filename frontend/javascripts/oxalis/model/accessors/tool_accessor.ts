@@ -1,13 +1,18 @@
 import memoizeOne from "memoize-one";
-import type { AnnotationTool } from "oxalis/constants";
+import { AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import {
+  AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableResolutionForSegmentationTracing,
+  hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getTransformsPerLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import { APIOrganization, APIUser } from "types/api_flow_types";
 import {
@@ -16,10 +21,8 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 
-const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
-
-const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) =>
-  isVolumeAnnotationDisallowedForZoom(tool, state);
+const zoomInToUseToolMessage =
+  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
@@ -27,6 +30,7 @@ const getExplanationForDisabledVolume = (
   isSegmentationTracingVisibleForMag: boolean,
   isZoomInvalidForTracing: boolean,
   isEditableMappingActive: boolean,
+  isSegmentationTracingTransformed: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
@@ -48,6 +52,10 @@ const getExplanationForDisabledVolume = (
     return "Volume annotation is disabled while an editable mapping is active.";
   }
 
+  if (isSegmentationTracingTransformed) {
+    return "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations.";
+  }
+
   return "Volume annotation is currently disabled.";
 };
 
@@ -67,7 +75,6 @@ export function isTraceTool(activeTool: AnnotationTool): boolean {
 }
 const disabledSkeletonExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
-const disabledAgglomerateMappingsExplanation = "This dataset does not have agglomerate mappings.";
 
 function _getDisabledInfoWhenVolumeIsDisabled(
   genericDisabledExplanation: string,
@@ -110,7 +117,7 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
-  hasAgglomerateMappings: boolean,
+  agglomerateState: AgglomerateState,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
   activeUser: APIUser | null | undefined,
@@ -162,16 +169,25 @@ function _getDisabledInfoFromArgs(
       explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.PROOFREAD]: {
-      isDisabled: !hasSkeleton || !hasAgglomerateMappings || !isProofReadingToolAllowed,
-      explanation: isProofReadingToolAllowed
-        ? !hasSkeleton
-          ? disabledSkeletonExplanation
-          : disabledAgglomerateMappingsExplanation
-        : getFeatureNotAvailableInPlanMessage(
-            PricingPlanEnum.Power,
-            activeOrganization,
-            activeUser,
-          ),
+      isDisabled: !hasSkeleton || !agglomerateState.value || !isProofReadingToolAllowed,
+      explanation:
+        // The explanations are prioritized according to effort the user has to put into
+        // activating proofreading.
+        // 1) If no agglomerate mapping is available (or activated), the user should know
+        //    about this requirement and be able to set it up (this can be the most difficult
+        //    step).
+        // 2) If a mapping is available, the pricing plan is potentially warned upon.
+        // 3) In the end, a potentially missing skeleton is warned upon (quite rare, because
+        //    most annotations have a skeleton).
+        agglomerateState.value
+          ? isProofReadingToolAllowed
+            ? disabledSkeletonExplanation
+            : getFeatureNotAvailableInPlanMessage(
+                PricingPlanEnum.Power,
+                activeOrganization,
+                activeUser,
+              )
+          : agglomerateState.reason,
     },
   };
 }
@@ -197,6 +213,11 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const isSegmentationTracingVisibleForMag = labeledResolution != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const isSegmentationTracingTransformed =
+    segmentationTracingLayer != null &&
+    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
+      segmentationTracingLayer.tracingId
+    ] !== IdentityTransform;
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
@@ -209,6 +230,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isSegmentationTracingVisibleForMag,
     isZoomInvalidForTracing,
     isEditableMappingActive,
+    isSegmentationTracingTransformed,
   );
 
   const isVolumeDisabled =
@@ -217,7 +239,8 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     // isSegmentationTracingVisibleForMag is false if isZoomInvalidForTracing is true which is why
     // this condition doesn't need to be checked here
     !isSegmentationTracingVisibleForMag ||
-    isInMergerMode;
+    isInMergerMode ||
+    isSegmentationTracingTransformed;
 
   if (isVolumeDisabled || isEditableMappingActive) {
     // All segmentation-related tools are disabled.
@@ -228,17 +251,14 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     );
   }
 
-  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
-  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
-  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
-  const hasAgglomerateMappings = (visibleSegmentationLayer.agglomerates?.length ?? 0) > 0;
+  const agglomerateState = hasAgglomerateMapping(state);
 
   return getDisabledInfoFromArgs(
     hasSkeleton,
-    isZoomStepTooHighForBrushing,
-    isZoomStepTooHighForTracing,
-    isZoomStepTooHighForFilling,
-    hasAgglomerateMappings,
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.BRUSH, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.FILL_CELL, state),
+    agglomerateState,
     genericDisabledExplanation,
     state.activeOrganization,
     state.activeUser,

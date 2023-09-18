@@ -1,4 +1,5 @@
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -11,6 +12,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 0,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -48,11 +50,13 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 0,
     y: 0,
     z: 0,
   },
+  additionalAxes: [],
   zoomLevel: 2,
   version: 0,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
@@ -94,7 +98,7 @@ export const annotation: APIAnnotation = {
     },
     created: 1529066010230,
     status: {
-      open: 0,
+      pending: 0,
       active: 1,
       finished: 0,
     },

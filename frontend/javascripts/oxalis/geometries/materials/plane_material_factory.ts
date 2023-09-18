@@ -31,6 +31,7 @@ import {
   getTransformsForLayer,
   getResolutionInfoByLayer,
   getResolutionInfo,
+  getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -226,6 +227,9 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
 
@@ -241,14 +245,18 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_unrenderable`] = {
         value: 0,
       };
-      const dataset = Store.getState().dataset;
       const layer = getLayerByName(dataset, dataLayer.name);
 
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(getTransformsForLayer(dataset, layer).affineMatrix),
+        value: invertAndTranspose(
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+        ),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(getTransformsForLayer(dataset, layer).affineMatrix, Identity4x4),
+        value: !_.isEqual(
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+          Identity4x4,
+        ),
       };
     }
 
@@ -431,8 +439,9 @@ class PlaneMaterialFactory {
           // isn't relevant which is why it can default to [1, 1, 1].
 
           let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
-            const layer = getLayerByName(Store.getState().dataset, layerName);
+            const layer = getLayerByName(state.dataset, layerName);
             const resolutionInfo = getResolutionInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
@@ -443,7 +452,11 @@ class PlaneMaterialFactory {
                 : null;
 
             const hasTransform = !_.isEqual(
-              getTransformsForLayer(Store.getState().dataset, layer).affineMatrix,
+              getTransformsForLayer(
+                state.dataset,
+                layer,
+                state.datasetConfiguration.nativelyRenderedLayerName,
+              ).affineMatrix,
               Identity4x4,
             );
             if (!hasTransform && suitableMag) {
@@ -633,6 +646,23 @@ class PlaneMaterialFactory {
       ),
     );
 
+    let oldLayerOrder: Array<string> = [];
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) => state.datasetConfiguration.colorLayerOrder,
+        (colorLayerOrder) => {
+          let changedLayerOrder =
+            colorLayerOrder.length !== oldLayerOrder.length ||
+            colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
+          if (changedLayerOrder) {
+            oldLayerOrder = [...colorLayerOrder];
+            this.recomputeShaders();
+          }
+          app.vent.emit("rerender");
+        },
+        false,
+      ),
+    );
     if (Model.hasSegmentationLayer()) {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
@@ -763,27 +793,37 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.dataLayers,
-        (layers) => {
+        (storeState) =>
+          getTransformsPerLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (transformsPerLayer) => {
           this.scaledTpsInvPerLayer = {};
+          const state = Store.getState();
+          const layers = state.dataset.dataSource.dataLayers;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
-            const transforms = getTransformsForLayer(Store.getState().dataset, layer);
+            const transforms = transformsPerLayer[layer.name];
             const { affineMatrix } = transforms;
             const scaledTpsInv =
               transforms.type === "thin_plate_spline" ? transforms.scaledTpsInv : null;
 
             if (scaledTpsInv) {
               this.scaledTpsInvPerLayer[name] = scaledTpsInv;
+            } else {
+              delete this.scaledTpsInvPerLayer[name];
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
+            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
           }
+          this.recomputeShaders();
         },
         true,
       ),
@@ -819,8 +859,10 @@ class PlaneMaterialFactory {
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     if (!isSegmentationLayer) {
       const divisor = elementClass === "float" ? 1 : 255;
-      this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-      this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      if (intensityRange) {
+        this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+        this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 
       if (settings.color != null) {
@@ -838,6 +880,9 @@ class PlaneMaterialFactory {
   }
 
   recomputeShaders = _.throttle(() => {
+    if (this.material == null) {
+      return;
+    }
     const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;
@@ -864,7 +909,9 @@ class PlaneMaterialFactory {
     app.vent.emit("rerender");
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>, number] {
+  getLayersToRender(
+    maximumLayerCountToRender: number,
+  ): [Array<string>, Array<string>, Array<string>, number] {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
@@ -874,21 +921,28 @@ class PlaneMaterialFactory {
     // The first array contains the color layer names and the second the segmentation layer names.
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
+    const state = Store.getState();
+    const allSanitizedOrderedColorLayerNames =
+      state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
       sanitizeName(layer.name),
     );
     const globalLayerCount = colorLayerNames.length + segmentationLayerNames.length;
     if (maximumLayerCountToRender <= 0) {
-      return [[], [], globalLayerCount];
+      return [[], [], [], globalLayerCount];
     }
 
     if (maximumLayerCountToRender >= globalLayerCount) {
       // We can simply render all available layers.
-      return [colorLayerNames, segmentationLayerNames, globalLayerCount];
+      return [
+        colorLayerNames,
+        segmentationLayerNames,
+        allSanitizedOrderedColorLayerNames,
+        globalLayerCount,
+      ];
     }
 
-    const state = Store.getState();
     const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
       ({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }),
     );
@@ -917,8 +971,14 @@ class PlaneMaterialFactory {
       names,
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
+    const colorNameSet = new Set(sanitizedColorLayerNames);
 
-    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames, globalLayerCount];
+    return [
+      sanitizedColorLayerNames,
+      sanitizedSegmentationLayerNames,
+      allSanitizedOrderedColorLayerNames.filter((name) => colorNameSet.has(name)),
+      globalLayerCount,
+    ];
   }
 
   onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
@@ -939,7 +999,7 @@ class PlaneMaterialFactory {
 
   getFragmentShaderWithUniforms(): [string, Uniforms] {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
+    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const availableLayerNames = colorLayerNames.concat(segmentationLayerNames);
@@ -953,6 +1013,7 @@ class PlaneMaterialFactory {
     const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({
       globalLayerCount,
+      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
@@ -978,7 +1039,7 @@ class PlaneMaterialFactory {
 
   getVertexShader(): string {
     const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
-    const [colorLayerNames, segmentationLayerNames, globalLayerCount] =
+    const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
@@ -987,6 +1048,7 @@ class PlaneMaterialFactory {
 
     return getMainVertexShader({
       globalLayerCount,
+      orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,

@@ -51,9 +51,9 @@ class TemporalBucketManager {
     return loadedPromise;
   }
 
-  async getAllLoadedPromise(): Promise<void> {
+  getAllLoadedPromise = async () => {
     await Promise.all(this.loadedPromises);
-  }
+  };
 }
 
 export default TemporalBucketManager;

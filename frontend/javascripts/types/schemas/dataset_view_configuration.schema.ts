@@ -11,13 +11,14 @@ export function getDefaultLayerViewConfiguration(
     color: [255, 255, 255],
     alpha: 100,
     gammaCorrectionValue: 1,
-    intensityRange: [0, 255],
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
+
+export const defaultIntensityRange = [0, 255];
 
 // Note that these values will only be used as a default,
 // if the property is marked as required in the corresponding JSON schema.
@@ -72,6 +73,8 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   segmentationPatternOpacity: 40,
   layers: {},
   blendMode: BLEND_MODES.Additive,
+  colorLayerOrder: [],
+  nativelyRenderedLayerName: null,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -126,6 +129,12 @@ export const datasetViewConfiguration = {
   layers: {
     type: "object",
   },
+  colorLayerOrder: {
+    type: "array",
+    items: {
+      type: "string",
+    },
+  },
 };
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",
@@ -146,6 +155,7 @@ export default {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "layers",
+        "colorLayerOrder",
       ],
     },
     "types::OptionalLayerViewConfiguration": {
@@ -160,7 +170,6 @@ export default {
       required: [
         "color",
         "alpha",
-        "intensityRange",
         "gammaCorrectionValue",
         "isDisabled",
         "isInverted",

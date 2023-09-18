@@ -24,6 +24,8 @@ import type {
   ServerEditableMapping,
   APIOrganization,
   APIUserCompact,
+  AdditionalCoordinate,
+  AdditionalAxis,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -82,6 +84,7 @@ export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
@@ -199,6 +202,7 @@ type TracingBase = {
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
+  readonly additionalAxes: AdditionalAxis[];
 };
 export type NavigationList = {
   readonly list: Array<number>;
@@ -219,6 +223,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -227,7 +232,7 @@ export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
   centroid: Vector3; // centroid of the label action
-  plane: OrthoViewWithoutTD; // plane that labeled
+  plane: OrthoViewWithoutTD; // plane that was labeled
 };
 
 export type VolumeTracing = TracingBase & {
@@ -277,7 +282,7 @@ export type DatasetLayerConfiguration = {
   readonly brightness?: number;
   readonly contrast?: number;
   readonly alpha: number;
-  readonly intensityRange: Vector2;
+  readonly intensityRange?: Vector2;
   readonly min?: number;
   readonly max?: number;
   readonly isDisabled: boolean;
@@ -297,6 +302,7 @@ export type DatasetConfiguration = {
   readonly fourBit: boolean;
   readonly interpolation: boolean;
   readonly layers: Record<string, DatasetLayerConfiguration>;
+  readonly colorLayerOrder: Array<string>;
   readonly position?: Vector3;
   readonly zoom?: number;
   readonly rotation?: Vector3;
@@ -304,6 +310,11 @@ export type DatasetConfiguration = {
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
   readonly blendMode: BLEND_MODES;
+  // If nativelyRenderedLayerName is not-null, the layer with
+  // that name (or id) should be rendered without any transforms.
+  // This means, that all other layers should be transformed so that
+  // they still correlated with each other.
+  readonly nativelyRenderedLayerName: string | null;
 };
 export type PartialDatasetConfiguration = Partial<
   DatasetConfiguration & {
@@ -358,6 +369,7 @@ export type UserConfiguration = {
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
+  readonly antialiasRendering: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -438,6 +450,7 @@ export type SaveState = {
 export type Flycam = {
   readonly zoomStep: number;
   readonly currentMatrix: Matrix4x4;
+  readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
 };
@@ -515,6 +528,7 @@ type UiInformation = {
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };

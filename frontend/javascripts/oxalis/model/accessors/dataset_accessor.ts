@@ -1,6 +1,7 @@
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -26,8 +27,13 @@ import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { M4x4, Matrix4x4, V3 } from "libs/mjs";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
-import estimateAffine from "libs/estimate_affine";
-import TPS3D from "libs/thin_plate_spline";
+import MultiKeyMap from "libs/multi_key_map";
+import {
+  chainTransforms,
+  createThinPlateSplineTransform,
+  invertTransform,
+  Transform,
+} from "../helpers/transformation_helpers";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -193,7 +199,7 @@ export function getByteCount(dataset: APIDataset, layerName: string): number {
 export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
   return getLayerByName(dataset, layerName).elementClass;
 }
-export function getDefaultIntensityRangeOfLayer(
+export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
 ): [number, number] {
@@ -341,6 +347,11 @@ export function determineAllowedModes(settings?: Settings): {
     allowedModes,
   };
 }
+
+export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
+  return getDefaultValueRangeOfLayer(dataset, layerName)[1];
+}
+
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":
@@ -610,6 +621,38 @@ function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
 
 export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
 
+function _getUnifiedAdditionalAxes(
+  mutableDataset: APIDataset,
+): Record<string, Omit<AdditionalAxis, "index">> {
+  /*
+   * Merge additional coordinates from all layers.
+   */
+  const unifiedAdditionalAxes: Record<string, Omit<AdditionalAxis, "index">> = {};
+  for (const layer of mutableDataset.dataSource.dataLayers) {
+    const { additionalAxes } = layer;
+
+    for (const additionalCoordinate of additionalAxes || []) {
+      const { name, bounds } = additionalCoordinate;
+      if (additionalCoordinate.name in unifiedAdditionalAxes) {
+        const existingBounds = unifiedAdditionalAxes[name].bounds;
+        unifiedAdditionalAxes[name].bounds = [
+          Math.min(bounds[0], existingBounds[0]),
+          Math.max(bounds[1], existingBounds[1]),
+        ];
+      } else {
+        unifiedAdditionalAxes[name] = {
+          name,
+          bounds,
+        };
+      }
+    }
+  }
+
+  return unifiedAdditionalAxes;
+}
+
+export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalAxes);
+
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.
   // This avoids that the empty dummy dataset is rendered with a 2D layout
@@ -626,7 +669,8 @@ const dummyMapping = {
   mappingStatus: MappingStatusEnum.DISABLED,
   mappingSize: 0,
   mappingType: "JSON",
-};
+} as const;
+
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
@@ -637,7 +681,6 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ mappingName: null; mapping: null; mappingK... Remove this comment to see the full error message
   return dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
@@ -648,13 +691,14 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-type Transform =
-  | { type: "affine"; affineMatrix: Matrix4x4 }
-  | { type: "thin_plate_spline"; affineMatrix: Matrix4x4; scaledTpsInv: TPS3D };
-
-function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer): Transform | null {
+// Returns the transforms (if they exist) for a layer as
+// they are defined in the dataset properties.
+function _getOriginalTransformsForLayerOrNull(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+): Transform | null {
   let coordinateTransformations = layer.coordinateTransformations;
-  if (!coordinateTransformations) {
+  if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
   if (coordinateTransformations.length > 1) {
@@ -671,16 +715,8 @@ function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer):
     return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
   } else if (type === "thin_plate_spline") {
     let { source, target } = transformation.correspondences;
-    const affineMatrix = estimateAffine(source, target).to1DArray() as any as Matrix4x4;
 
-    source = source.map((point) => V3.scale3(point, dataset.dataSource.scale));
-    target = target.map((point) => V3.scale3(point, dataset.dataSource.scale));
-
-    return {
-      type,
-      affineMatrix,
-      scaledTpsInv: new TPS3D(target, source),
-    };
+    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
   }
 
   console.error(
@@ -689,29 +725,84 @@ function _getTransformsForLayerOrNull(dataset: APIDataset, layer: APIDataLayer):
   return null;
 }
 
-function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
-  let cachedA: A | null = null;
-  let cacheForA: Map<B, T> = new Map();
-  return (a: A, b: B): T => {
-    if (a !== cachedA) {
-      cachedA = a;
-      cacheForA = new Map();
-    }
-    if (!cacheForA.has(b)) {
-      cacheForA.set(b, fn(a, b));
-    }
-    const res = cacheForA.get(b);
+function _getTransformsForLayerOrNull(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform | null {
+  const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
+
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. Just use the transforms
+    // as they are in the dataset.
+    return layerTransforms;
+  }
+
+  if (nativelyRenderedLayerName === layer.name) {
+    // This layer should be rendered without any transforms.
+    return null;
+  }
+
+  // Apply the inverse of the layer that should be rendered natively
+  // to the current layers transforms
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms. Leave the layer
+    // transforms untouched.
+    return layerTransforms;
+  }
+
+  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
+  return chainTransforms(layerTransforms, inverseNativeTransforms);
+}
+
+function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
+  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
+  return (a: A, b: B, c: C): T => {
+    let res = map.get([a, b, c]);
     if (res === undefined) {
-      throw new Error("Error in caching logic.");
+      res = fn(a, b, c);
+      map.set([a, b, c], res);
     }
     return res;
   };
 }
 
-export const getTransformsForLayerOrNull = memoizeWithTwoKeys(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(dataset: APIDataset, layer: APIDataLayer): Transform {
-  return getTransformsForLayerOrNull(dataset, layer) || IdentityTransform;
+export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
 }
+
+function _getTransformsPerLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Record<string, Transform> {
+  const transformsPerLayer: Record<string, Transform> = {};
+  const layers = dataset.dataSource.dataLayers;
+  for (const layer of layers) {
+    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+    transformsPerLayer[layer.name] = transforms;
+  }
+
+  return transformsPerLayer;
+}
+
+export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
+
+export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
+  const layers = dataset.dataSource.dataLayers;
+  return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
+});
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];

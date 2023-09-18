@@ -29,12 +29,14 @@ type NumberSliderSettingProps = {
   min: number;
   step: number;
   disabled: boolean;
+  spans: Vector3;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
     min: 1,
     step: 1,
     disabled: false,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   };
 
   _onChange = (_value: number | null) => {
@@ -54,10 +56,10 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={this.props.spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
+        <Col span={this.props.spans[1]}>
           <Slider
             min={min}
             max={max}
@@ -67,7 +69,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             disabled={disabled}
           />
         </Col>
-        <Col span={SETTING_VALUE_SPAN}>
+        <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
             bordered={false}
@@ -199,6 +201,7 @@ export type SwitchSettingProps = {
   loading: boolean;
   labelSpan?: number | null;
   postSwitchIcon: React.ReactNode | null | undefined;
+  disabledReason?: string | null;
 };
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
@@ -228,13 +231,15 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 alignItems: "center",
               }}
             >
-              <Switch
-                onChange={onChange}
-                checked={value}
-                defaultChecked={value}
-                disabled={disabled}
-                loading={loading}
-              />
+              <Tooltip title={this.props.disabledReason}>
+                <Switch
+                  onChange={onChange}
+                  checked={value}
+                  defaultChecked={value}
+                  disabled={disabled}
+                  loading={loading}
+                />
+              </Tooltip>
               {postSwitchIcon}
             </div>
           </Tooltip>
@@ -636,6 +641,8 @@ type DropdownSettingProps = {
   label: React.ReactNode | string;
   value: number | string;
   options: Array<Record<string, any>>;
+  disabled?: boolean;
+  disabledReason?: string | null;
 };
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
@@ -646,16 +653,19 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Select
-            onChange={onChange}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            value={value.toString()}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            defaultValue={value.toString()}
-            size="small"
-            dropdownMatchSelectWidth={false}
-            options={this.props.options}
-          />
+          <Tooltip title={this.props.disabledReason}>
+            <Select
+              onChange={onChange}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              value={value.toString()}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              defaultValue={value.toString()}
+              size="small"
+              dropdownMatchSelectWidth={false}
+              options={this.props.options}
+              disabled={this.props.disabled}
+            />
+          </Tooltip>
         </Col>
       </Row>
     );

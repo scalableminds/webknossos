@@ -19,6 +19,8 @@ import type {
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
+export type AdditionalCoordinate = { name: string; value: number };
+
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
@@ -39,22 +41,35 @@ export type APIMapping = {
   readonly colors?: Array<number>;
   readonly hideUnmappedIds?: boolean;
 };
+export type AdditionalAxis = {
+  bounds: [number, number];
+  index: number;
+  name: string;
+};
+
+export type ServerAdditionalAxis = {
+  bounds: { x: number; y: number };
+  index: number;
+  name: string;
+};
+
+export type CoordinateTransformation =
+  | {
+      type: "affine";
+      matrix: [Vector4, Vector4, Vector4, Vector4];
+    }
+  | {
+      type: "thin_plate_spline";
+      correspondences: { source: Vector3[]; target: Vector3[] };
+    };
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
-  readonly coordinateTransformations?: Array<
-    | {
-        type: "affine";
-        matrix: [Vector4, Vector4, Vector4, Vector4];
-      }
-    | {
-        type: "thin_plate_spline";
-        correspondences: { source: Vector3[]; target: Vector3[] };
-      }
-  >;
+  readonly additionalAxes: Array<AdditionalAxis> | null;
+  readonly coordinateTransformations?: CoordinateTransformation[] | null;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -247,6 +262,7 @@ export type APIUser = APIUserBase & {
   readonly organization: string;
   readonly novelUserExperienceInfos: NovelUserExperienceInfoType;
   readonly selectedTheme: APIUserTheme;
+  readonly isEmailVerified: boolean;
 };
 export type APITimeInterval = {
   paymentInterval: {
@@ -320,7 +336,7 @@ export type APITaskType = {
   readonly tracingType: TracingType;
 };
 export type TaskStatus = {
-  readonly open: number;
+  readonly pending: number;
   readonly active: number;
   readonly finished: number;
 };
@@ -361,8 +377,8 @@ export type APIProjectUpdater = APIProjectTypeBase & {
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;
 };
-export type APIProjectWithAssignments = APIProject & {
-  readonly numberOfOpenAssignments: number;
+export type APIProjectWithStatus = APIProject & {
+  readonly pendingInstances: number;
   readonly tracingTime: number;
 };
 export type APITask = {
@@ -504,17 +520,17 @@ export type APIProjectProgressReport = {
   readonly paused: boolean;
   readonly totalTasks: number;
   readonly totalInstances: number;
-  readonly openInstances: number;
+  readonly pendingInstances: number;
   readonly activeInstances: number;
   readonly finishedInstances: number;
   readonly priority: number;
   readonly billedMilliseconds: number;
 };
-export type APIOpenTasksReport = {
+export type APIAvailableTasksReport = {
   readonly id: string;
   readonly user: string;
-  readonly totalAssignments: number;
-  readonly assignmentsByProjects: Record<string, number>;
+  readonly totalAvailableTasks: number;
+  readonly availableTasksByProjects: Record<string, number>;
 };
 export type APIOrganization = {
   readonly id: string;
@@ -631,6 +647,7 @@ export type APIUpdateActionBatch = {
 export type ServerNode = {
   id: number;
   position: Point3;
+  additionalCoordinates: AdditionalCoordinate[];
   rotation: Point3;
   bitDepth: number;
   viewport: number;
@@ -679,6 +696,7 @@ type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
@@ -689,10 +707,12 @@ export type ServerTracingBase = {
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
   editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
   version: number;
   zoomLevel: number;
+  additionalAxes: ServerAdditionalAxis[];
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the

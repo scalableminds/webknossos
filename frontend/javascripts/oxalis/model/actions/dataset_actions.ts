@@ -1,10 +1,16 @@
-import { Matrix4x4 } from "mjs";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, CoordinateTransformation } from "types/api_flow_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
-type SetLayerTransforms = ReturnType<typeof setLayerTransforms>;
+type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
+export type EnsureLayerMappingsAreLoadedAction = ReturnType<
+  typeof ensureLayerMappingsAreLoadedAction
+>;
 
-export type DatasetAction = SetDatasetAction | SetLayerMappingsAction | SetLayerTransforms;
+export type DatasetAction =
+  | SetDatasetAction
+  | SetLayerMappingsAction
+  | SetLayerTransformsAction
+  | EnsureLayerMappingsAreLoadedAction;
 
 export const setDatasetAction = (dataset: APIDataset) =>
   ({
@@ -24,9 +30,18 @@ export const setLayerMappingsAction = (
     agglomerateNames,
   } as const);
 
-export const setLayerTransforms = (layerName: string, transformMatrix: Matrix4x4) =>
+export const setLayerTransformsAction = (
+  layerName: string,
+  coordinateTransformations: CoordinateTransformation[] | null,
+) =>
   ({
     type: "SET_LAYER_TRANSFORMS",
     layerName,
-    transformMatrix,
+    coordinateTransformations,
+  } as const);
+
+export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>
+  ({
+    type: "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
+    layerName,
   } as const);

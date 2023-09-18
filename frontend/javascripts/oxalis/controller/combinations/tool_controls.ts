@@ -134,7 +134,15 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
-      pinch: (delta: number) => MoveHandlers.zoom(delta, true),
+      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          handleAgglomerateSkeletonAtClick(pos);
+        }
+      },
+      pinch: (delta: number, center: Point2) => {
+        MoveHandlers.setMousePosition(center);
+        MoveHandlers.zoom(delta, true);
+      },
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
         MoveHandlers.setMousePosition(null);
@@ -297,11 +305,6 @@ export class SkeletonTool {
           event,
           showNodeContextMenuAt,
         );
-      },
-      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
-        }
       },
     };
   }
@@ -799,14 +802,17 @@ export class ProofreadTool {
       return;
     }
 
-    const globalPosition = calculateGlobalPos(Store.getState(), pos);
+    const state = Store.getState();
+    const globalPosition = calculateGlobalPos(state, pos);
 
     if (event.shiftKey) {
       Store.dispatch(proofreadMerge(globalPosition));
     } else if (event.ctrlKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {
-      Store.dispatch(proofreadAtPosition(globalPosition));
+      Store.dispatch(
+        proofreadAtPosition(globalPosition, state.flycam.additionalCoordinates || undefined),
+      );
       VolumeHandlers.handlePickCell(pos);
     }
   }

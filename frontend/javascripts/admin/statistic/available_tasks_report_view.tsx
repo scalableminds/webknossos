@@ -1,20 +1,25 @@
 import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
 import * as React from "react";
-import type { APIOpenTasksReport } from "types/api_flow_types";
-import { getOpenTasksReport } from "admin/admin_rest_api";
+import type { APIAvailableTasksReport } from "types/api_flow_types";
+import { getAvailableTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TeamSelectionForm from "./team_selection_form";
 import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { Column } = Table;
-const typeHint: APIOpenTasksReport[] = [];
+const typeHint: APIAvailableTasksReport[] = [];
 type State = {
-  data: Array<APIOpenTasksReport>;
+  data: Array<APIAvailableTasksReport>;
   isLoading: boolean;
 };
 
-class OpenTasksReportView extends React.PureComponent<{}, State> {
+/*
+ * Note that the phrasing “available” tasks is chosen here over “pending” to
+ * emphasize that tasks are still available for individual users.
+ * From the project viewpoint they are tasks with pending instances.
+ */
+class AvailableTasksReportView extends React.PureComponent<{}, State> {
   state: State = {
     data: [],
     isLoading: false,
@@ -30,7 +35,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
         this.setState({
           isLoading: true,
         });
-        const progressData = await getOpenTasksReport(teamId);
+        const progressData = await getAvailableTasksReport(teamId);
         this.setState({
           data: progressData,
         });
@@ -94,30 +99,30 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             />
             <Column
               title="# Available Tasks"
-              dataIndex="totalAssignments"
+              dataIndex="totalAvailableTasks"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy(typeHint, (task) => task.totalAssignments)}
+              sorter={Utils.compareBy(typeHint, (task) => task.totalAvailableTasks)}
               width={150}
             />
             <Column
               title="Available Tasks by Project"
               key="content"
-              render={(_text, item: APIOpenTasksReport) =>
-                Object.keys(item.assignmentsByProjects).map((key) => {
+              render={(_text, item: APIAvailableTasksReport) =>
+                Object.keys(item.availableTasksByProjects).map((key) => {
                   const [projectName, experience] = key.split("/");
                   return (
                     <div key={key}>
                       <Tooltip
                         title={
                           <span>
-                            There are potentially {item.assignmentsByProjects[key]} tasks from the
-                            project <i>{projectName}</i> available for automatic assignment for this
-                            user because they match the configured assignment criteria; especially
-                            the required experience level <i>{experience}</i>.
+                            There are potentially {item.availableTasksByProjects[key]} tasks from
+                            the project <i>{projectName}</i> available for automatic assignment for
+                            this user because they match the configured assignment criteria;
+                            especially the required experience level <i>{experience}</i>.
                           </span>
                         }
                       >
-                        {projectName}: {item.assignmentsByProjects[key]}
+                        {projectName}: {item.availableTasksByProjects[key]}
                       </Tooltip>
                       <Tag style={{ marginLeft: 6 }}>{experience}</Tag>
                     </div>
@@ -132,4 +137,4 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
   }
 }
 
-export default OpenTasksReportView;
+export default AvailableTasksReportView;

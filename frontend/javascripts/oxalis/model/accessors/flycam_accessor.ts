@@ -37,6 +37,7 @@ import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configu
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { SmallerOrHigherInfo } from "../helpers/resolution_info";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -199,6 +200,20 @@ export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
 });
 
+export function getMoveOffset(state: OxalisState, timeFactor: number) {
+  return (
+    (state.userConfiguration.moveValue * timeFactor) /
+    getBaseVoxel(state.dataset.dataSource.scale) /
+    constants.FPS
+  );
+}
+
+export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
+  const { moveValue3d } = state.userConfiguration;
+  const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
+  return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
+}
+
 function getMaximumZoomForAllResolutionsFromStore(
   state: OxalisState,
   layerName: string,
@@ -206,7 +221,13 @@ function getMaximumZoomForAllResolutionsFromStore(
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(getTransformsForLayer(state.dataset, layer).affineMatrix);
+  const layerMatrix = invertAndTranspose(
+    getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ).affineMatrix,
+  );
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {

@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
+  AdditionalAxis,
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
@@ -241,7 +242,6 @@ class DataSetDAO @Inject()(sqlClient: SqlClient,
                 (
                   (u.isAdmin AND u._organization = d._organization) OR
                   u.isDatasetManager OR
-                  d._uploader = u._id OR
                   d._id IN (              -- team manager of team that has access to the dataset
                     SELECT _dataSet
                     FROM webknossos.dataSet_allowedTeams dt
@@ -603,13 +603,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
         }
       }
     }
-    for {
-      _ <- run(
-        DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
-    } yield ()
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
 }
@@ -617,7 +611,8 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 class DataSetDataLayerDAO @Inject()(
     sqlClient: SqlClient,
     dataSetResolutionsDAO: DataSetResolutionsDAO,
-    datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO)(implicit ec: ExecutionContext)
+    datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
+    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
@@ -635,6 +630,8 @@ class DataSetDataLayerDAO @Inject()(
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(dataSetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
+      additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDataSetAndDataLayerName(dataSetId, row.name)
+      additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
     } yield {
       category match {
         case Category.segmentation =>
@@ -650,7 +647,8 @@ class DataSetDataLayerDAO @Inject()(
               mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
-              coordinateTransformationsOpt
+              coordinateTransformationsOpt,
+              additionalAxesOpt
             ))
         case Category.color =>
           Fox.successful(
@@ -662,7 +660,8 @@ class DataSetDataLayerDAO @Inject()(
               elementClass,
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
-              coordinateTransformationsOpt
+              coordinateTransformationsOpt,
+              additionalAxesOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -723,6 +722,7 @@ class DataSetDataLayerDAO @Inject()(
       _ <- dataSetResolutionsDAO.updateResolutions(dataSetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(dataSetId,
                                                                                source.toUsable.map(_.dataLayers))
+      _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(dataSetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 
@@ -813,13 +813,38 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
         }
       }
     }
-    for {
-      _ <- run(
-        DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
-    } yield ()
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+}
 
+class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+
+  private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
+    AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
+
+  def findAllForDataSetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
+    for {
+      rows <- run(q"""SELECT *
+           FROM webknossos.dataSet_layer_additionalAxes
+           WHERE _dataSet = $dataSetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
+      additionalAxes = rows.map(parseRow)
+    } yield additionalAxes
+
+  def updateAdditionalAxes(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    val clearQuery =
+      q"DELETE FROM webknossos.dataSet_layer_additionalAxes WHERE _dataSet = $dataSetId".asUpdate
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      layer.additionalAxes.getOrElse(List.empty).map { additionalAxis =>
+        {
+          q"""INSERT INTO webknossos.dataSet_layer_additionalAxes(_dataSet, layerName, name, lowerBound, upperBound, index)
+              values(
+              $dataSetId, ${layer.name}, ${additionalAxis.name}, ${additionalAxis.lowerBound}, ${additionalAxis.upperBound}, ${additionalAxis.index})
+              """.asUpdate
+        }
+
+      }
+    }
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
+  }
 }

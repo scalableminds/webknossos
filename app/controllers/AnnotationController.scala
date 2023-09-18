@@ -8,6 +8,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
@@ -39,7 +40,8 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: Option[String])
+                                     name: Option[String],
+                                     additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]
@@ -354,6 +356,20 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- downsample(annotation.typ.toString, id, tracingId)(request)
       } yield result
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def addSegmentIndex(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotation <- provider.provideAnnotation(id, request.identity)
+      _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.addSegmentIndex.explorationalsOnly"
+      annotationLayer <- annotation.annotationLayers
+        .find(_.tracingId == tracingId)
+        .toFox ?~> "annotation.addSegmentIndex.layerNotFound"
+      _ <- annotationService.addSegmentIndex(annotation, annotationLayer) ?~> "annotation.addSegmentIndex.failed"
+      updated <- provider.provideAnnotation(id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield JsonOk(json)
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(

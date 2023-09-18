@@ -30,6 +30,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -48,7 +49,12 @@ function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vect
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void,
   andCloseContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
@@ -72,7 +78,12 @@ const getLoadPrecomputedMeshMenuItem = (
           return;
         }
         andCloseContextMenu(
-          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+          loadPrecomputedMesh(
+            segment.id,
+            segment.somePosition,
+            segment.someAdditionalCoordinates,
+            currentMeshFile?.meshFileName,
+          ),
         );
       },
       mappingName,
@@ -97,7 +108,11 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment: Segment,
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
+  loadAdHocMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -115,7 +130,9 @@ const getComputeMeshAdHocMenuItem = (
         return;
       }
 
-      andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+      andCloseContextMenu(
+        loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+      );
     },
     disabled,
     label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
@@ -124,7 +141,11 @@ const getComputeMeshAdHocMenuItem = (
 
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void,
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
@@ -134,7 +155,14 @@ const getMakeSegmentActiveMenuItem = (
     : "Make this the active segment ID.";
   return {
     key: "setActiveCell",
-    onClick: () => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition)),
+    onClick: () =>
+      andCloseContextMenu(
+        setActiveCell(
+          segment.id,
+          segment.somePosition,
+          segment.someAdditionalCoordinates || undefined,
+        ),
+      ),
     disabled,
     label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
   };
@@ -147,10 +175,10 @@ type Props = {
   mappingInfo: ActiveMappingInfo;
   isHoveredSegmentId: boolean;
   centeredSegmentId: number | null | undefined;
-  selectedSegmentId: number | null | undefined;
+  selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
-  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
+  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
   updateSegment: (
@@ -162,14 +190,29 @@ type Props = {
   removeSegment: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  loadAdHocMesh: (arg0: number, arg1: Vector3) => void;
-  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void;
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void;
+  loadAdHocMesh: (
+    segmentId: number,
+    somePosition: Vector3,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  ) => void;
+  loadPrecomputedMesh: (
+    segmentId: number,
+    seedPosition: Vector3,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    meshFileName: string,
+  ) => void;
+  setActiveCell: (
+    arg0: number,
+    somePosition?: Vector3,
+    someAdditionalCoordinates?: AdditionalCoordinate[],
+  ) => void;
   isosurface: IsosurfaceInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
+  multiSelectMenu: MenuProps;
 };
 
 function _MeshInfoItem(props: {
@@ -177,9 +220,10 @@ function _MeshInfoItem(props: {
   isSelectedInList: boolean;
   isHovered: boolean;
   isosurface: IsosurfaceInformation | null | undefined;
-  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
+  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
+  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
   const dispatch = useDispatch();
 
@@ -197,7 +241,7 @@ function _MeshInfoItem(props: {
           style={{ marginLeft: 8 }}
           onContextMenu={(evt) => {
             evt.preventDefault();
-            props.handleSegmentDropdownMenuVisibility(segment.id, true);
+            props.handleSegmentDropdownMenuVisibility(true, segment.id);
           }}
         >
           No mesh loaded. Use right-click to add one.
@@ -208,7 +252,8 @@ function _MeshInfoItem(props: {
     return null;
   }
 
-  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+  const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } =
+    isosurface;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">
@@ -285,6 +330,9 @@ function _MeshInfoItem(props: {
             className={className}
             onClick={() => {
               props.setPosition(seedPosition);
+              if (seedAdditionalCoordinates) {
+                props.setAdditionalCoordinates(seedAdditionalCoordinates);
+              }
             }}
             style={{ marginLeft: 8 }}
           >
@@ -315,7 +363,7 @@ function _SegmentListItem({
   mappingInfo,
   isHoveredSegmentId,
   centeredSegmentId,
-  selectedSegmentId,
+  selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
   handleSegmentDropdownMenuVisibility,
@@ -329,10 +377,12 @@ function _SegmentListItem({
   setActiveCell,
   isosurface,
   setPosition,
+  setAdditionalCoordinates,
   loadPrecomputedMesh,
   currentMeshFile,
   onRenameStart,
   onRenameEnd,
+  multiSelectMenu,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -349,7 +399,7 @@ function _SegmentListItem({
     return null;
   }
 
-  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
+  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(false, 0);
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -454,10 +504,7 @@ function _SegmentListItem({
       style={{
         padding: "2px 5px",
       }}
-      className={classnames("segment-list-item", {
-        "is-selected-cell": segment.id === selectedSegmentId,
-        "is-hovered-cell": isHoveredSegmentId,
-      })}
+      className="segment-list-item"
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}
@@ -466,7 +513,11 @@ function _SegmentListItem({
       }}
     >
       <Dropdown
-        menu={createSegmentContextMenu()} // The overlay is generated lazily. By default, this would make the overlay
+        menu={
+          (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
+            ? multiSelectMenu
+            : createSegmentContextMenu()
+        } // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.
@@ -476,7 +527,7 @@ function _SegmentListItem({
         autoDestroy
         placement="bottom"
         open={activeDropdownSegmentId === segment.id}
-        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
+        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(isVisible, segment.id)}
         trigger={["contextMenu"]}
       >
         <div style={{ display: "inline-flex", alignItems: "center" }}>
@@ -504,7 +555,7 @@ function _SegmentListItem({
           />
           <Tooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+              onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
             />
           </Tooltip>
           {/* Show Default Segment Name if another one is already defined*/}
@@ -539,12 +590,15 @@ function _SegmentListItem({
       >
         <MeshInfoItem
           segment={segment}
-          isSelectedInList={segment.id === selectedSegmentId}
+          isSelectedInList={
+            selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+          }
           isHovered={isHoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
           visibleSegmentationLayer={visibleSegmentationLayer}
           setPosition={setPosition}
+          setAdditionalCoordinates={setAdditionalCoordinates}
         />
       </div>
     </List.Item>

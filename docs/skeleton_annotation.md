@@ -12,7 +12,8 @@ This article outlines commonly used features and operations for viewing, editing
 
 ![An example of a complex WEBKNOSSOS skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
 
-![youtube-video](https://www.youtube.com/embed/jsz0tc3tuKI?start=115)
+
+![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=306)
 
 ### Annotation Modes
 

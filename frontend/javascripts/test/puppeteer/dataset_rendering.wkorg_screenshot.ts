@@ -9,6 +9,7 @@ import {
   withRetry,
   checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
+import { PartialDatasetConfiguration } from "oxalis/store";
 
 checkBrowserstackCredentials();
 
@@ -24,6 +25,25 @@ setupBeforeEachAndAfterEach();
 const demoDatasetName = "l4dense_motta_et_al_demo";
 const owningOrganization = "scalable_minds";
 
+const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
+  l4dense_motta_et_al_demo: {
+    layers: {
+      color: {
+        alpha: 100,
+        intensityRange: [80, 180],
+        min: 0,
+        max: 255,
+      },
+      predictions: {
+        alpha: 0,
+      },
+      segmentation: {
+        alpha: 20,
+      },
+    },
+  },
+};
+
 test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) => {
   await withRetry(
     3,
@@ -36,6 +56,8 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         await getNewPage(t.context.browser),
         URL,
         datasetId,
+        null,
+        datasetConfigOverrides[demoDatasetName],
       );
       const changedPixels = await compareScreenshot(
         screenshot,

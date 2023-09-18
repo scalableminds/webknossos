@@ -106,8 +106,14 @@ export async function screenshotDatasetView(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride?: string | null | undefined,
+  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
   const url = `${baseUrl}/datasets/${datasetId.owningOrganization}/${datasetId.name}`;
+  const options = getDefaultRequestOptions(baseUrl);
+
+  if (optionalDatasetConfigOverride != null) {
+    await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
+  }
 
   await openDatasetView(page, url, optionalViewOverride);
   return screenshotTracingView(page);

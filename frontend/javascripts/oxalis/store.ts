@@ -316,11 +316,10 @@ export type DatasetConfiguration = {
   // they still correlated with each other.
   readonly nativelyRenderedLayerName: string | null;
 };
-export type PartialDatasetConfiguration = Partial<
-  DatasetConfiguration & {
-    readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
-  }
->;
+
+export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {
+  readonly layers?: Record<string, Partial<DatasetLayerConfiguration>>;
+};
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;

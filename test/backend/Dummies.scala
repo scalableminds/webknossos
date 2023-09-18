@@ -2,7 +2,7 @@ package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
 
 object Dummies {
@@ -98,7 +98,7 @@ object Dummies {
     "dummy_dataset",
     Vec3IntProto(1, 1, 1),
     Vec3DoubleProto(1.0, 1.0, 1.0),
-    ElementClass.uint16,
+    ElementClassProto.uint16,
     None,
     Some(5L),
     0,

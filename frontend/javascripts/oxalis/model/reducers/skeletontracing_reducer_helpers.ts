@@ -360,6 +360,7 @@ function splitTreeByNodes(
             isVisible: true,
             groupId: activeTree.groupId,
             type: activeTree.type,
+            edgesAreVisible: true,
           };
         } else {
           const immutableNewTree = createTree(
@@ -482,6 +483,7 @@ export function createTree(
   addToActiveGroup: boolean = true,
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
+  edgesAreVisible: boolean = true,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -510,6 +512,7 @@ export function createTree(
       isVisible: true,
       groupId,
       type,
+      edgesAreVisible,
     };
     return Maybe.Just(tree);
   });
@@ -845,6 +848,7 @@ export function createMutableTreeMapFromTreeArray(
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       }),
     ),
     "treeId",

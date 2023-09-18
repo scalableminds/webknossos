@@ -4,17 +4,22 @@ import {
 } from "admin/admin_rest_api";
 import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
-import { useInterval } from "libs/react_helpers";
+import { useFetch, useInterval } from "libs/react_helpers";
+import { sleep } from "libs/utils";
 import { navbarHeight } from "navbar";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
+import { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { MaintenanceInfo } from "types/api_flow_types";
 
+const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000;
 
 export function MaintenanceBanner() {
-  const { activeUser, uiInformation } = Store.getState();
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const { isInAnnotationView } = useSelector((state: OxalisState) => state.uiInformation);
   const topPaddingForNavbar = navbarHeight;
   const statusBarHeight = 20;
   const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
@@ -22,6 +27,18 @@ export function MaintenanceBanner() {
   >([]);
   const [position, setPosition] = useState<Object>({ top: topPaddingForNavbar });
   const [isTop, setIsTop] = useState(true);
+
+  // Do an initial fetch of the maintenance status so that users are notified
+  // quickly in case of ongoing maintenances.
+  useFetch(
+    async () => {
+      await sleep(INITIAL_DELAY);
+      setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
+    },
+    null,
+    [],
+  );
+  // Also poll regularly.
   useInterval(async () => {
     setCurrentAndUpcomingMaintenances(await listCurrentAndUpcomingMaintenances());
   }, INTERVAL_TO_FETCH_MAINTENANCES_MS);
@@ -90,11 +107,11 @@ export function MaintenanceBanner() {
         type="warning"
         banner
         onMouseEnter={() => {
-          if (uiInformation.isInAnnotationView) {
+          if (isInAnnotationView) {
             toggleTopOrBottomPosition();
           }
         }}
-        style={{ ...position, position: uiInformation.isInAnnotationView ? "absolute" : "sticky" }}
+        style={{ ...position, position: isInAnnotationView ? "absolute" : "sticky" }}
       />
     );
   };

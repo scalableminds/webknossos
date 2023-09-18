@@ -10,10 +10,10 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.team._
 import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.{PasswordHasher, TokenDAO}
@@ -31,12 +31,12 @@ class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             multiUserDAO: MultiUserDAO,
                             userExperiencesDAO: UserExperiencesDAO,
-                            userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
-                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
+                            userDataSetConfigurationDAO: UserDatasetConfigurationDAO,
+                            userDataSetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
-                            dataSetDAO: DataSetDAO,
+                            datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
                             emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
@@ -241,29 +241,29 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDataSetViewConfiguration(
       user: User,
-      dataSetName: String,
+      datasetName: String,
       organizationName: String,
-      dataSetConfiguration: DataSetViewConfiguration,
+      datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
-        "dataSet.notFound",
-        dataSetName)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext) ?~> Messages(
+        "dataset.notFound",
+        datasetName)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
           config.asOpt[LayerViewConfiguration] match {
             case Some(viewConfiguration) =>
               userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
-                                                                                                   dataSet._id,
+                                                                                                   dataset._id,
                                                                                                    name,
                                                                                                    viewConfiguration)
             case None => Fox.successful(())
           }
       }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
-                                                                                   dataSet._id,
-                                                                                   dataSetConfiguration)
+                                                                                   dataset._id,
+                                                                                   datasetConfiguration)
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =

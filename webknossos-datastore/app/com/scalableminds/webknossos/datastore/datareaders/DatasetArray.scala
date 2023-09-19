@@ -40,7 +40,12 @@ class DatasetArray(vaultPath: VaultPath,
     }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
-    readBytes(shapeArray, offsetArray)
+    val (shapeArray2, offsetArray2) = axisOrder match {
+      case AxisOrder3D(x, y, z, c, t) => (shapeArray, offsetArray)
+      case AxisOrder2D(x, y, c)       => (shapeArray.drop(1) :+ 1, offsetArray.drop(1) :+ 0)
+    }
+
+    readBytes(shapeArray2, offsetArray2)
   }
 
   def readBytesWithAdditionalCoordinates(
@@ -90,7 +95,7 @@ class DatasetArray(vaultPath: VaultPath,
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
+    val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _).padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,

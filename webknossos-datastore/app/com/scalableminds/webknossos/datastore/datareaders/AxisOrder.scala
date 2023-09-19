@@ -97,13 +97,15 @@ object AxisOrder3D {
 }
 
 case class AxisOrder2D(override val x: Int, override val y: Int, override val c: Option[Int] = None) extends AxisOrder {
-  override def permutation(rank: Int): Array[Int] =
+  override def permutation(rank: Int): Array[Int] = {
+    if (rank == 3) return Array(2, 1, 0);
     c match {
       case Some(channel) =>
         ((0 until (rank - 3)).toList :+ channel :+ x :+ y).toArray
       case None =>
         ((0 until (rank - 2)).toList :+ x :+ y).toArray
     }
+  }
 
   override def z: Int = -1
 }

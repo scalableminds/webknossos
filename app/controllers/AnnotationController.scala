@@ -8,13 +8,14 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService}
+import models.binary.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
@@ -39,7 +40,8 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: Option[String])
+                                     name: Option[String],
+                                     additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]
@@ -52,8 +54,8 @@ class AnnotationController @Inject()(
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
-    dataSetDAO: DataSetDAO,
-    dataSetService: DataSetService,
+    datasetDAO: DatasetDAO,
+    datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
     userService: UserService,
@@ -265,8 +267,8 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
@@ -290,8 +292,8 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
+          "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
@@ -590,10 +592,10 @@ class AnnotationController @Inject()(
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
-      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataset.notImported", dataSet.name)
       dataSource <- if (annotation._task.isDefined)
-        dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+        datasetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>

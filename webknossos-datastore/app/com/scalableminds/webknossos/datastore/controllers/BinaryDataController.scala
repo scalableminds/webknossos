@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.JPEGWriter
+import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -22,9 +22,8 @@ import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.{AnyContent, _}
 import scala.concurrent.duration.DurationInt
-
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
@@ -122,6 +121,24 @@ class BinaryDataController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
+  def requestRawCuboidPost(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String
+  ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> NOT_FOUND
+        (data, indices) <- requestData(dataSource, dataLayer, request.body)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+    }
+  }
+
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
@@ -168,7 +185,9 @@ class BinaryDataController @Inject()(
                     mag: String,
                     mappingName: Option[String],
                     intensityMin: Option[Double],
-                    intensityMax: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    intensityMax: Option[Double],
+                    color: Option[String],
+                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       for {
@@ -186,6 +205,7 @@ class BinaryDataController @Inject()(
         )
         (data, _) <- requestData(dataSource, dataLayer, request)
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
+        layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
           dataLayer.elementClass,
           useHalfBytes = false,
@@ -194,7 +214,9 @@ class BinaryDataController @Inject()(
           imagesPerRow = 1,
           blackAndWhite = false,
           intensityRange = intensityRange,
-          isSegmentation = dataLayer.category == Category.segmentation
+          isSegmentation = dataLayer.category == Category.segmentation,
+          color = layerColor,
+          invertColor = invertColor
         )
         dataWithFallback = if (data.length == 0)
           new Array[Byte](width * height * dataLayer.bytesPerElement)
@@ -252,7 +274,8 @@ class BinaryDataController @Inject()(
             request.body.subsamplingStrides,
             request.body.scale,
             request.body.mapping,
-            request.body.mappingType
+            request.body.mappingType,
+            request.body.findNeighbors
           )
           // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.

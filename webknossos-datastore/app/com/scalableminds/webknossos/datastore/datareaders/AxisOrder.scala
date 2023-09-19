@@ -8,6 +8,7 @@ sealed abstract class AxisOrder() {
   def z: Int
 
   def c: Option[Int]
+
   def permutation(rank: Int): Array[Int] =
     c match {
       case Some(channel) =>

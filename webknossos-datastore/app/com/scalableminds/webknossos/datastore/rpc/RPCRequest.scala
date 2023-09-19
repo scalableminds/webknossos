@@ -54,6 +54,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
+  def silentIf(condition: Boolean): RPCRequest = {
+    if (condition) {
+      verbose = false
+    }
+    this
+  }
+
   def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
     valueOptional match {
       case Some(value: String) => request = request.addQueryStringParameters((key, value))
@@ -105,6 +112,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def postWithJsonResponse[T: Reads]: Fox[T] = {
     request = request.withMethod("POST")
     parseJsonResponse(performRequest)
+  }
+
+  def postJsonWithBytesResponse[T: Writes](body: T = Json.obj()): Fox[Array[Byte]] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    extractBytesResponse(performRequest)
   }
 
   def post[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {

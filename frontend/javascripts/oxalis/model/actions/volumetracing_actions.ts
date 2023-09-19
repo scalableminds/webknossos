@@ -1,5 +1,5 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
+import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
@@ -7,6 +7,7 @@ import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -170,18 +171,30 @@ export const finishEditingAction = () =>
     type: "FINISH_EDITING",
   } as const);
 
-export const setActiveCellAction = (segmentId: number, somePosition?: Vector3) =>
+export const setActiveCellAction = (
+  segmentId: number,
+  somePosition?: Vector3,
+  someAdditionalCoordinates?: AdditionalCoordinate[],
+) =>
   ({
     type: "SET_ACTIVE_CELL",
     segmentId,
     somePosition,
+    someAdditionalCoordinates,
   } as const);
 
-export const clickSegmentAction = (segmentId: number, somePosition: Vector3) =>
+export const clickSegmentAction = (
+  segmentId: number,
+  somePosition: Vector3,
+  someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  layerName?: string,
+) =>
   ({
     type: "CLICK_SEGMENT",
     segmentId,
     somePosition,
+    someAdditionalCoordinates,
+    layerName,
   } as const);
 
 export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
@@ -271,7 +284,7 @@ export const setContourTracingModeAction = (mode: ContourMode) =>
   } as const);
 
 export const addBucketToUndoAction = (
-  zoomedBucketAddress: Vector4,
+  zoomedBucketAddress: BucketAddress,
   bucketData: BucketDataArray,
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(arg0: BucketDataArray) => void>,

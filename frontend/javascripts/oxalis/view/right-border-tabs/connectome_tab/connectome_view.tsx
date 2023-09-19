@@ -154,6 +154,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   isVisible: true,
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
+  edgesAreVisible: true,
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
@@ -166,6 +167,9 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   timestamp: Date.now(),
   bitDepth: 8,
   interpolation: false,
+  // Don't assume any additionalCoordinates here, because no 4D connectomes are
+  // known yet. Also see https://github.com/scalableminds/webknossos/issues/7229.
+  additionalCoordinates: null,
 });
 
 function* mapAndFilterTreeData<R>(

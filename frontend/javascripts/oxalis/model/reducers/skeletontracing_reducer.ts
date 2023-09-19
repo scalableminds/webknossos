@@ -4,6 +4,7 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
@@ -106,6 +107,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           activeIndex: -1,
         },
         showSkeletons: true,
+        additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
       };
       return update(state, {
         tracing: {
@@ -265,7 +267,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "SET_ACTIVE_GROUP": {
+        case "SET_TREE_ACTIVE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -283,7 +285,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "DESELECT_ACTIVE_GROUP": {
+        case "DESELECT_ACTIVE_TREE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -552,7 +554,15 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
-          const { position, rotation, viewport, resolution, treeId, timestamp } = action;
+          const {
+            position,
+            rotation,
+            viewport,
+            resolution,
+            treeId,
+            timestamp,
+            additionalCoordinates,
+          } = action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -560,6 +570,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 skeletonTracing,
                 tree,
                 position,
+                additionalCoordinates,
                 rotation,
                 viewport,
                 resolution,
@@ -935,6 +946,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                       [tree.treeId]: {
                         name: {
                           $set: newName,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "SET_EDGES_ARE_VISIBLE": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        edgesAreVisible: {
+                          $set: action.edgesAreVisible,
                         },
                       },
                     },

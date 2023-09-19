@@ -9,6 +9,7 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -21,6 +22,7 @@ export type MergeTreeUpdateAction = ReturnType<typeof mergeTree>;
 export type CreateNodeUpdateAction = ReturnType<typeof createNode>;
 export type UpdateNodeUpdateAction = ReturnType<typeof updateNode>;
 export type UpdateTreeVisibilityUpdateAction = ReturnType<typeof updateTreeVisibility>;
+export type UpdateTreeEdgesVisibilityUpdateAction = ReturnType<typeof updateTreeEdgesVisibility>;
 export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTreeGroupVisibility>;
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
@@ -63,6 +65,7 @@ export type UpdateAction =
   | DeleteSegmentUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateSegmentGroupsUpdateAction
@@ -114,6 +117,7 @@ export function createTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -139,6 +143,7 @@ export function updateTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -149,6 +154,16 @@ export function updateTreeVisibility(tree: Tree) {
     value: {
       treeId,
       isVisible,
+    },
+  } as const;
+}
+export function updateTreeEdgesVisibility(tree: Tree) {
+  const { treeId, edgesAreVisible } = tree;
+  return {
+    name: "updateTreeEdgesVisibility",
+    value: {
+      treeId,
+      edgesAreVisible,
     },
   } as const;
 }
@@ -219,7 +234,8 @@ export function updateSkeletonTracing(
   tracing: {
     activeNodeId: number | null | undefined;
   },
-  position: Vector3,
+  editPosition: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
 ) {
@@ -227,7 +243,8 @@ export function updateSkeletonTracing(
     name: "updateTracing",
     value: {
       activeNode: tracing.activeNodeId,
-      editPosition: position,
+      editPosition,
+      editPositionAdditionalCoordinates,
       editRotation: rotation,
       zoomLevel,
     },
@@ -250,6 +267,7 @@ export function moveTreeComponent(
 export function updateVolumeTracing(
   tracing: VolumeTracing,
   position: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
 ) {
@@ -258,6 +276,7 @@ export function updateVolumeTracing(
     value: {
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
+      editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
       zoomLevel,
@@ -295,6 +314,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -305,6 +325,7 @@ export function updateSegmentVolumeAction(
     value: {
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,

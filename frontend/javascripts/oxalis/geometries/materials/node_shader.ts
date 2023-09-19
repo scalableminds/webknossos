@@ -4,8 +4,9 @@ import type { Uniforms } from "oxalis/geometries/materials/plane_material_factor
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import Store from "oxalis/store";
+import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
 export const NodeTypes = {
   INVALID: 0.0,
@@ -17,24 +18,23 @@ export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
 class NodeShader {
   material: THREE.RawShaderMaterial;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
-  uniforms: Uniforms;
+  uniforms: Uniforms = {};
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
     this.material = new THREE.RawShaderMaterial({
-      // @ts-expect-error ts-migrate(2565) FIXME: Property 'uniforms' is used before being assigned.
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
       transparent: true,
       glslVersion: THREE.GLSL3,
     });
-    shaderEditor.addMaterial("nodeFragment", this.material);
+    shaderEditor.addMaterial("node", this.material);
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
     const state = Store.getState();
+    const { additionalCoordinates } = state.flycam;
     this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor
@@ -77,6 +77,13 @@ class NodeShader {
         value: 0,
       },
     };
+
+    _.each(additionalCoordinates, (_val, idx) => {
+      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+        value: 0,
+      };
+    });
+
     listenToStoreProperty(
       (_state) => _state.userConfiguration.highlightCommentedNodes,
       (highlightCommentedNodes) => {
@@ -90,6 +97,15 @@ class NodeShader {
       },
       true,
     );
+    listenToStoreProperty(
+      (storeState) => storeState.flycam.additionalCoordinates,
+      (additionalCoordinates) => {
+        _.each(additionalCoordinates, (coord, idx) => {
+          this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
+        });
+      },
+      true,
+    );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -97,7 +113,9 @@ class NodeShader {
   }
 
   getVertexShader(): string {
-    return `
+    const { additionalCoordinates } = Store.getState().flycam;
+
+    return _.template(`
 precision highp float;
 precision highp int;
 
@@ -117,10 +135,20 @@ uniform int isTouch; // bool that is used during picking and indicates whether t
 uniform float highlightCommentedNodes;
 uniform float viewMode;
 
+<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+  uniform float currentAdditionalCoord_<%= idx %>;
+<% }) %>
+
 uniform sampler2D treeColors;
 
 in float radius;
 in vec3 position;
+
+<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+  in float additionalCoord_<%= idx %>;
+<% }) %>
+
+
 in float type;
 in float isCommented;
 // Since attributes are only supported in vertex shader, we pass the attribute into a
@@ -157,13 +185,22 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
+    <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+        return;
+      }
+    <% }) %>
+
+
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
       treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
     ));
 
     color = texture(treeColors, treeIdToTextureCoordinate).rgb;
-    bool isVisible = texture(treeColors, treeIdToTextureCoordinate).a == 1.0;
+    float alpha = texture(treeColors, treeIdToTextureCoordinate).a;
+    // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
+    bool isVisible = alpha == 1.0 || alpha == 0.5 ;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
@@ -226,7 +263,7 @@ void main() {
       gl_PointSize *= 2.0;
     }
 
-}`;
+}`)({ additionalCoordinates });
   }
 
   getFragmentShader(): string {

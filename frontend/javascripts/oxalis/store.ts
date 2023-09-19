@@ -24,6 +24,8 @@ import type {
   ServerEditableMapping,
   APIOrganization,
   APIUserCompact,
+  AdditionalCoordinate,
+  AdditionalAxis,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -82,6 +84,7 @@ export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
@@ -138,6 +141,7 @@ export type MutableTree = {
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
+  edgesAreVisible: boolean;
 };
 export type Tree = {
   readonly treeId: number;
@@ -151,6 +155,7 @@ export type Tree = {
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
+  readonly edgesAreVisible: boolean;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
@@ -199,6 +204,7 @@ type TracingBase = {
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
+  readonly additionalAxes: AdditionalAxis[];
 };
 export type NavigationList = {
   readonly list: Array<number>;
@@ -219,6 +225,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -246,6 +253,7 @@ export type VolumeTracing = TracingBase & {
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly mappingIsEditable?: boolean;
+  readonly hasSegmentIndex: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -445,6 +453,7 @@ export type SaveState = {
 export type Flycam = {
   readonly zoomStep: number;
   readonly currentMatrix: Matrix4x4;
+  readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
 };
@@ -522,6 +531,7 @@ type UiInformation = {
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };

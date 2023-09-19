@@ -199,7 +199,8 @@ class VolumeTracingZarrStreamingController @Inject()(
               cubeSize = cubeSize,
               fourBit = Some(false),
               applyAgglomerate = None,
-              version = None
+              version = None,
+              additionalCoordinates = None
             )
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
               editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
@@ -234,7 +235,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           cubeSize = cubeSize,
           fourBit = Some(false),
           applyAgglomerate = tracing.mappingName,
-          version = None
+          version = None,
+          additionalCoordinates = None
         )
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
                                                                                       List(request),

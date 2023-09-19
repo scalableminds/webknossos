@@ -265,7 +265,7 @@ export function getAISegmentationMenu(
   const AISegmentationMenu = {
     key: "ai-segmentation-menu",
     icon: <SettingOutlined />,
-    label: "AI Segementation",
+    label: "AI Segmentation",
     children: [
       {
         key: "ai-nuclei-segmentation",

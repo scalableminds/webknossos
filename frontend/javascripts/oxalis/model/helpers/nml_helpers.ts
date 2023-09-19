@@ -29,6 +29,7 @@ import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constan
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -88,9 +89,17 @@ function serializeTag(
   properties: Record<string, (string | number | boolean) | null | undefined>,
   closed: boolean = true,
 ): string {
-  return `<${name} ${Object.keys(properties)
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
-    .map((key) => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
+  const maybeSpace = Object.keys(properties).length > 0 ? " " : "";
+  return `<${name}${maybeSpace}${Object.keys(properties)
+    .map((key) => {
+      let valueStr = "";
+      const value = properties[key];
+      if (value != null) {
+        valueStr = escape(value.toString());
+      }
+
+      return `${key}="${valueStr}"`;
+    })
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
@@ -216,6 +225,9 @@ function serializeParameters(
   skeletonTracing: SkeletonTracing,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
+  const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
+  const { additionalAxes } = skeletonTracing;
+
   const editRotation = getRotation(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
@@ -246,6 +258,7 @@ function serializeParameters(
           x: editPosition[0],
           y: editPosition[1],
           z: editPosition[2],
+          ...additionalCoordinatesToObject(editPositionAdditionalCoordinates || []),
         }),
         serializeTag("editRotation", {
           xRot: editRotation[0],
@@ -257,6 +270,21 @@ function serializeParameters(
         }),
         ...userBBoxes.map((userBB) => serializeUserBoundingBox(userBB, "userBoundingBox")),
         serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
+
+        ...(additionalAxes.length > 0
+          ? serializeTagWithChildren(
+              "additionalCoordinates",
+              {},
+              additionalAxes.map((coord) =>
+                serializeTag("additionalCoordinate", {
+                  name: coord.name,
+                  index: coord.index,
+                  min: coord.bounds[0],
+                  max: coord.bounds[1],
+                }),
+              ),
+            )
+          : []),
       ]),
     ),
     "</parameters>",
@@ -291,12 +319,15 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
     const position = node.position.map(Math.floor);
+    const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
+
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
       x: Math.trunc(position[0]),
       y: Math.trunc(position[1]),
       z: Math.trunc(position[2]),
+      ...maybeProperties,
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
@@ -307,6 +338,19 @@ function serializeNodes(nodes: NodeMap): Array<string> {
       time: node.timestamp,
     });
   });
+}
+
+function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {
+  return Object.fromEntries(
+    additionalCoordinates.map((coord) => [
+      // Export additional coordinates like this:
+      // additionalCoordinate-t="10"
+      // Don't capitalize coord.name, because it it's not reversible for
+      // names that are already capitalized.
+      `additionalCoordinate-${coord.name}`,
+      coord.value,
+    ]),
+  );
 }
 
 function serializeEdges(edges: EdgeCollection): Array<string> {
@@ -549,6 +593,7 @@ function splitTreeIntoComponents(
       isVisible: tree.isVisible,
       groupId: newGroupId,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     };
     newTrees.push(newTree);
   }
@@ -677,6 +722,7 @@ export function parseNml(nmlString: string): Promise<{
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -694,6 +740,14 @@ export function parseNml(nmlString: string): Promise<{
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
+              // Parse additional coordinates, like additionalCoordinate-t="10"
+              additionalCoordinates: Object.keys(attr)
+                .map((key) => [key, key.split("additionalCoordinate-")[1]])
+                .filter(([_key, name]) => name != null)
+                .map(([key, name]) => ({
+                  name,
+                  value: _parseFloat(attr, key, 0),
+                })) as AdditionalCoordinate[],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),

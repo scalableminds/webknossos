@@ -1,5 +1,7 @@
 // Integration tests for skeleton.js
 import "test/mocks/lz4";
+// Ensure singletons are set up
+import "test/helpers/apiHelpers";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";
@@ -44,7 +46,7 @@ test.before((t) => {
       Store.dispatch(createTreeAction());
     }
 
-    Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));
+    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, resolution));
   }
 
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
@@ -78,7 +80,9 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
     for (const tree of Utils.values(trees)) {
-      treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
+      treeColors = treeColors.concat(
+        skeleton.getTreeRGBA(tree.color, tree.isVisible, tree.edgesAreVisible),
+      );
 
       for (const node of Array.from(tree.nodes.values())) {
         nodePositions = nodePositions.concat(node.position);
@@ -128,7 +132,7 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
 });
 test.serial("Skeleton should increase its buffers once the max capacity is reached", async (t) => {
   const skeleton = skeletonCreator();
-  Store.dispatch(createNodeAction([2001, 2001, 2001], [0.5, 0.5, 0.5], 0, 0));
+  Store.dispatch(createNodeAction([2001, 2001, 2001], null, [0.5, 0.5, 0.5], 0, 0));
   await Utils.sleep(100);
   t.is(skeleton.nodes.buffers.length, 2);
   t.is(skeleton.edges.buffers.length, 2);
@@ -192,7 +196,9 @@ test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
       await Utils.sleep(50);
       t.deepEqual(
         skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
-        new Float32Array(skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible)),
+        new Float32Array(
+          skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible, activeTree.edgesAreVisible),
+        ),
       );
     }
 

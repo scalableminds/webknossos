@@ -1,8 +1,14 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
+import com.scalableminds.webknossos.datastore.geometry.{
+  BoundingBoxProto,
+  ColorProto,
+  Vec2IntProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 trait ProtoGeometryImplicits {
@@ -38,5 +44,7 @@ trait ProtoGeometryImplicits {
 
   implicit def colorOptToProto(cOpt: Option[com.scalableminds.util.image.Color]): Option[ColorProto] =
     cOpt.map(colorToProto)
+
+  implicit def arrayFromVec2IntProto(p: Vec2IntProto): Array[Int] = Array(p.x, p.y)
 
 }

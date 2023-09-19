@@ -802,14 +802,17 @@ export class ProofreadTool {
       return;
     }
 
-    const globalPosition = calculateGlobalPos(Store.getState(), pos);
+    const state = Store.getState();
+    const globalPosition = calculateGlobalPos(state, pos);
 
     if (event.shiftKey) {
       Store.dispatch(proofreadMerge(globalPosition));
     } else if (event.ctrlKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {
-      Store.dispatch(proofreadAtPosition(globalPosition));
+      Store.dispatch(
+        proofreadAtPosition(globalPosition, state.flycam.additionalCoordinates || undefined),
+      );
       VolumeHandlers.handlePickCell(pos);
     }
   }

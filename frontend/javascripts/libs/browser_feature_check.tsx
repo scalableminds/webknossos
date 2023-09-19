@@ -8,6 +8,7 @@ export default function checkBrowserFeatures() {
     new AbortController();
     Object.fromEntries([]);
     new BigUint64Array(1);
+    "hello".replaceAll("l", "k");
   } catch (exception) {
     console.error(
       "This browser lacks support for some modern features. Exception caught during test of features:",

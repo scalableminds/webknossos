@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
@@ -18,7 +19,8 @@ case class CreateTreeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    `type`: Option[TreeType] = None)
+                                    `type`: Option[TreeType] = None,
+                                    edgesAreVisible: Option[Boolean])
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -33,7 +35,8 @@ case class CreateTreeSkeletonAction(id: Int,
       timestamp,
       groupId,
       isVisible,
-      `type`.map(TreeType.toProto)
+      `type`.map(TreeType.toProto),
+      edgesAreVisible
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -211,7 +214,8 @@ case class CreateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -226,7 +230,8 @@ case class CreateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -253,7 +258,8 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -269,7 +275,8 @@ case class UpdateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      createdTimestamp = timestamp,
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) =
@@ -331,15 +338,19 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
-                                       info: Option[String] = None)
+                                       info: Option[String] = None,
+                                       editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
-    tracing.copy(editPosition = editPosition,
-                 editRotation = editRotation,
-                 zoomLevel = zoomLevel,
-                 userBoundingBox = userBoundingBox,
-                 activeNodeId = activeNode)
+    tracing.copy(
+      editPosition = editPosition,
+      editRotation = editRotation,
+      zoomLevel = zoomLevel,
+      userBoundingBox = userBoundingBox,
+      activeNodeId = activeNode,
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
+    )
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
@@ -412,6 +423,27 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
           .map(group => updateTreeGroups(GroupUtils.getAllChildrenTreeGroups(group)))
           .getOrElse(tracing)
     }
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
+  override def isViewOnlyChange: Boolean = true
+}
+
+case class UpdateTreeEdgesVisibility(treeId: Int,
+                                     edgesAreVisible: Boolean,
+                                     actionTimestamp: Option[Long] = None,
+                                     actionAuthorId: Option[String] = None,
+                                     info: Option[String] = None)
+    extends UpdateAction.SkeletonUpdateAction
+    with SkeletonUpdateActionHelper {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
+    def treeTransform(tree: Tree) = tree.copy(edgesAreVisible = Some(edgesAreVisible))
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
@@ -523,6 +555,9 @@ object UpdateTreeVisibility {
 object UpdateTreeGroupVisibility {
   implicit val jsonFormat: OFormat[UpdateTreeGroupVisibility] = Json.format[UpdateTreeGroupVisibility]
 }
+object UpdateTreeEdgesVisibility {
+  implicit val jsonFormat: OFormat[UpdateTreeEdgesVisibility] = Json.format[UpdateTreeEdgesVisibility]
+}
 object UpdateUserBoundingBoxes {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxes] = Json.format[UpdateUserBoundingBoxes]
 }
@@ -552,6 +587,7 @@ object SkeletonUpdateAction {
         case "revertToVersion"                 => deserialize[RevertToVersionAction](jsonValue)
         case "updateTreeVisibility"            => deserialize[UpdateTreeVisibility](jsonValue)
         case "updateTreeGroupVisibility"       => deserialize[UpdateTreeGroupVisibility](jsonValue)
+        case "updateTreeEdgesVisibility"       => deserialize[UpdateTreeEdgesVisibility](jsonValue)
         case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxes](jsonValue)
         case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibility](jsonValue)
         case "updateTdCamera"                  => deserialize[UpdateTdCamera](jsonValue)
@@ -598,6 +634,8 @@ object SkeletonUpdateAction {
         Json.obj("name" -> "updateTreeVisibility", "value" -> Json.toJson(s)(UpdateTreeVisibility.jsonFormat))
       case s: UpdateTreeGroupVisibility =>
         Json.obj("name" -> "updateTreeGroupVisibility", "value" -> Json.toJson(s)(UpdateTreeGroupVisibility.jsonFormat))
+      case s: UpdateTreeEdgesVisibility =>
+        Json.obj("name" -> "updateTreeEdgesVisibility", "value" -> Json.toJson(s)(UpdateTreeEdgesVisibility.jsonFormat))
       case s: UpdateUserBoundingBoxes =>
         Json.obj("name" -> "updateUserBoundingBoxes", "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
       case s: UpdateUserBoundingBoxVisibility =>

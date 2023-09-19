@@ -11,10 +11,11 @@ message Segment {
 	  optional int64 creationTime = 4;
     optional ColorProto color = 5;
     optional int32 groupId = 6;
+    repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
 }
 
 message VolumeTracing {
-    enum ElementClass {
+    enum ElementClassProto {
         uint8 = 1;
         uint16 = 2;
         uint24 = 3;
@@ -28,7 +29,7 @@ message VolumeTracing {
     required string dataSetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     required Vec3IntProto editPosition = 5;
     required Vec3DoubleProto editRotation = 6;
-    required ElementClass elementClass = 7;
+    required ElementClassProto elementClass = 7;
     optional string fallbackLayer = 8;
     optional int64 largestSegmentId = 9;
     required int64 version = 10;
@@ -42,6 +43,8 @@ message VolumeTracing {
     optional bool mappingIsEditable = 18;
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
+    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
+    repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }
 
 message SegmentGroup {

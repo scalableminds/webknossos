@@ -19,6 +19,8 @@ import type {
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
+export type AdditionalCoordinate = { name: string; value: number };
+
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
@@ -39,6 +41,18 @@ export type APIMapping = {
   readonly colors?: Array<number>;
   readonly hideUnmappedIds?: boolean;
 };
+export type AdditionalAxis = {
+  bounds: [number, number];
+  index: number;
+  name: string;
+};
+
+export type ServerAdditionalAxis = {
+  bounds: { x: number; y: number };
+  index: number;
+  name: string;
+};
+
 export type CoordinateTransformation =
   | {
       type: "affine";
@@ -54,6 +68,7 @@ type APIDataLayerBase = {
   readonly resolutions: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
+  readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
 };
 type APIColorLayer = APIDataLayerBase & {
@@ -162,6 +177,13 @@ export type APIDataset = APIDatasetBase & {
   readonly isActive: true;
 };
 
+export type MaintenanceInfo = {
+  startTime: number;
+  endTime: number;
+  id: string;
+  message: string;
+};
+
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
 export type APIDatasetCompactWithoutStatus = Pick<
@@ -233,6 +255,7 @@ export type NovelUserExperienceInfoType = {
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
+  latestAcknowledgedMaintenanceInfo?: string;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -632,6 +655,7 @@ export type APIUpdateActionBatch = {
 export type ServerNode = {
   id: number;
   position: Point3;
+  additionalCoordinates: AdditionalCoordinate[];
   rotation: Point3;
   bitDepth: number;
   viewport: number;
@@ -675,11 +699,13 @@ export type ServerSkeletonTracingTree = {
   groupId?: number | null | undefined;
   isVisible?: boolean;
   type?: TreeType;
+  edgesAreVisible?: boolean;
 };
 type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
   anchorPosition: Point3 | null | undefined;
+  additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
@@ -690,10 +716,12 @@ export type ServerTracingBase = {
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
   editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
   version: number;
   zoomLevel: number;
+  additionalAxes: ServerAdditionalAxis[];
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the

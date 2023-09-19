@@ -31,7 +31,8 @@ class ZarrArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerEx
                               credentialId)
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
         ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
-      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
+      } else
+        ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator), additionalAxes = None)
     } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
 }

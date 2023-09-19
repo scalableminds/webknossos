@@ -30,7 +30,7 @@ import {
   getActiveNodeFromTree,
   getTree,
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   findTreeByNodeId,
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -41,6 +41,8 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 
@@ -115,6 +117,7 @@ export function createNode(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
   positionFloat: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -137,6 +140,7 @@ export function createNode(
   // Create the new node
   const node: Node = {
     position,
+    additionalCoordinates,
     radius,
     rotation,
     viewport,
@@ -356,6 +360,7 @@ function splitTreeByNodes(
             isVisible: true,
             groupId: activeTree.groupId,
             type: activeTree.type,
+            edgesAreVisible: true,
           };
         } else {
           const immutableNewTree = createTree(
@@ -478,6 +483,7 @@ export function createTree(
   addToActiveGroup: boolean = true,
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
+  edgesAreVisible: boolean = true,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -487,7 +493,7 @@ export function createTree(
 
     if (addToActiveGroup) {
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+      const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
@@ -506,6 +512,7 @@ export function createTree(
       isVisible: true,
       groupId,
       type,
+      edgesAreVisible,
     };
     return Maybe.Just(tree);
   });
@@ -801,6 +808,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
+    additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
@@ -840,6 +848,7 @@ export function createMutableTreeMapFromTreeArray(
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       }),
     ),
     "treeId",

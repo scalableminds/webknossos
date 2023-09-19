@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -123,7 +123,7 @@ trait VolumeTracingDownsampling
     val data: List[VersionedKeyValuePair[Array[Byte]]] =
       tracingDataStore.volumeData.getMultipleKeys(None, Some(tracingId))
     data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
-      val bucketPositionOpt = parseBucketKey(keyValuePair.key).map(_._2)
+      val bucketPositionOpt = parseBucketKey(keyValuePair.key, dataLayer.additionalAxes).map(_._2)
       bucketPositionOpt.foreach { bucketPosition =>
         if (bucketPosition.mag == sourceMag) {
           bucketDataMap(bucketPosition) = decompressIfNeeded(keyValuePair.value,
@@ -170,7 +170,8 @@ trait VolumeTracingDownsampling
         (bucketPosition.voxelMag1X / requiredMag.x / 32) * requiredMag.x * 32,
         (bucketPosition.voxelMag1Y / requiredMag.y / 32) * requiredMag.y * 32,
         (bucketPosition.voxelMag1Z / requiredMag.z / 32) * requiredMag.z * 32,
-        requiredMag
+        requiredMag,
+        bucketPosition.additionalCoordinates
       )
     }.toSet
 
@@ -186,7 +187,8 @@ trait VolumeTracingDownsampling
         bucketPosition.voxelMag1X + x * bucketPosition.bucketLength * previousMag.x,
         bucketPosition.voxelMag1Y + y * bucketPosition.bucketLength * previousMag.y,
         bucketPosition.voxelMag1Z + z * bucketPosition.bucketLength * previousMag.z,
-        previousMag
+        previousMag,
+        bucketPosition.additionalCoordinates
       )
     }
 

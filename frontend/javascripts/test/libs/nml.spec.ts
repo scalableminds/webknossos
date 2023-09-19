@@ -32,6 +32,7 @@ const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
   position: [id, id, id],
+  additionalCoordinates: [],
   radius: id,
   resolution: 10,
   rotation: [id, id, id],
@@ -91,6 +92,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
       groupId: 3,
       type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
     },
     "2": {
       treeId: 2,
@@ -117,6 +119,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
       groupId: 2,
       type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
     },
   },
   treeGroups: [
@@ -161,6 +164,7 @@ const initialSkeletonTracing: SkeletonTracing = {
     activeIndex: -1,
   },
   showSkeletons: true,
+  additionalAxes: [],
 };
 
 const initialState: OxalisState = _.extend({}, defaultState, {
@@ -291,6 +295,40 @@ test("NML serializing and parsing should yield the same state even when using mu
   t.deepEqual(skeletonTracing.trees, trees);
   t.deepEqual(skeletonTracing.treeGroups, treeGroups);
 });
+test("NML serializing and parsing should yield the same state even when additional coordinates exist", async (t) => {
+  const existingNodeMap = initialState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+  );
+  const { trees, treeGroups } = await parseNml(serializedNml);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  t.deepEqual(skeletonTracing.trees, trees);
+  t.deepEqual(skeletonTracing.treeGroups, treeGroups);
+});
 test("NML Serializer should only serialize visible trees", async (t) => {
   const state = update(initialState, {
     tracing: {
@@ -353,6 +391,50 @@ test("NML serializer should produce correct NMLs", (t) => {
   );
   t.snapshot(serializedNml, {
     id: "nml",
+  });
+});
+test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
+  let adaptedState = update(initialState, {
+    tracing: {
+      skeleton: {
+        additionalAxes: {
+          $set: [{ name: "t", bounds: [0, 100], index: 0 }],
+        },
+      },
+    },
+  });
+
+  const existingNodeMap = adaptedState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  adaptedState = update(adaptedState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const serializedNml = serializeToNml(
+    adaptedState,
+    adaptedState.tracing,
+    enforceSkeletonTracing(adaptedState.tracing),
+    BUILD_INFO,
+  );
+  t.snapshot(serializedNml, {
+    id: "nml-with-additional-coordinates",
   });
 });
 test("NML serializer should escape special characters and multilines", (t) => {

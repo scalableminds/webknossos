@@ -9,10 +9,10 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -104,6 +104,8 @@ class VolumeTracingService @Inject()(
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
+      // warning, may be called multiple times with the same version number (due to transaction management).
+      // frontend ensures that each bucket is only updated once per transaction
       segmentIndexBuffer <- Fox.successful(
         new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, updateGroup.version))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
@@ -122,7 +124,9 @@ class VolumeTracingService @Inject()(
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
                     largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel
+                    zoomLevel = a.zoomLevel,
+                    editPositionAdditionalCoordinates =
+                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
@@ -152,7 +156,11 @@ class VolumeTracingService @Inject()(
                            userToken: Option[String]): Fox[VolumeTracing] =
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
-      bucketPosition = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
+      bucketPosition = BucketPosition(action.position.x,
+                                      action.position.y,
+                                      action.position.z,
+                                      action.mag,
+                                      action.additionalCoordinates)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
@@ -420,7 +428,8 @@ class VolumeTracingService @Inject()(
       volumeTracingService = this,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
-      userToken = userToken
+      userToken = userToken,
+      additionalAxes = Some(AdditionalAxis.fromProto(tracing.additionalAxes))
     )
 
   def updateActionLog(tracingId: String,
@@ -483,7 +492,8 @@ class VolumeTracingService @Inject()(
         request.subsamplingStrides,
         request.scale,
         None,
-        None
+        None,
+        request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
@@ -504,16 +514,21 @@ class VolumeTracingService @Inject()(
 
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
-            newEditableMappingIdOpt: Option[String]): VolumeTracing = {
-    def mergeTwoWithStats(tracingAWithIndex: (VolumeTracing, Int),
-                          tracingBWithIndex: (VolumeTracing, Int)): (VolumeTracing, Int) =
-      (mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats),
-       tracingAWithIndex._2)
+            newEditableMappingIdOpt: Option[String]): Box[VolumeTracing] = {
+    def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
+                          tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
+      for {
+        tracingAWithIndex <- tracingAWithIndex
+        tracingBWithIndex <- tracingBWithIndex
+        merged <- mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats)
+      } yield (merged, tracingAWithIndex._2)
 
-    tracings.zipWithIndex
-      .reduceLeft(mergeTwoWithStats)
-      ._1
-      .copy(
+    for {
+      tracingsWithIndex <- Full(tracings.zipWithIndex.map(Full(_)))
+      tracingAndIndex <- tracingsWithIndex.reduceLeft(mergeTwoWithStats)
+      tracing <- tracingAndIndex._1
+    } yield
+      tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
         mappingName = newEditableMappingIdOpt,
@@ -524,7 +539,7 @@ class VolumeTracingService @Inject()(
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
                        indexB: Int,
-                       mergedVolumeStats: MergedVolumeStats): VolumeTracing = {
+                       mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
@@ -533,8 +548,10 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBox,
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
-    val tracingBSegments =
-      if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+    for {
+      mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
+        Seq(tracingA, tracingB).map(t => Some(AdditionalAxis.fromProto(t.additionalAxes))))
+      tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
       else {
         val labelMap = mergedVolumeStats.labelMaps(indexB)
         tracingB.segments.map { segment =>
@@ -543,18 +560,20 @@ class VolumeTracingService @Inject()(
           )
         }
       }
-    tracingA.copy(
-      largestSegmentId = largestSegmentId,
-      boundingBox = mergedBoundingBox.getOrElse(
-        com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
-          com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
-          0,
-          0,
-          0)), // should never be empty for volumes
-      userBoundingBoxes = userBoundingBoxes,
-      segments = tracingA.segments.toList ::: tracingBSegments.toList,
-      segmentGroups = mergedGroups
-    )
+    } yield
+      tracingA.copy(
+        largestSegmentId = largestSegmentId,
+        boundingBox = mergedBoundingBox.getOrElse(
+          com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
+            com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
+            0,
+            0,
+            0)), // should never be empty for volumes
+        userBoundingBoxes = userBoundingBoxes,
+        segments = tracingA.segments.toList ::: tracingBSegments.toList,
+        segmentGroups = mergedGroups,
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+      )
   }
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
@@ -623,9 +642,11 @@ class VolumeTracingService @Inject()(
       }
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
+        mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
+          Some(AdditionalAxis.fromProto(t.additionalAxes)))))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache)
+            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache, mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
           } yield ()
@@ -689,9 +710,10 @@ class VolumeTracingService @Inject()(
             List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
-            None,
-            None,
-            None)
+            "dummyTransactionId",
+            1,
+            0
+          )
           _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }

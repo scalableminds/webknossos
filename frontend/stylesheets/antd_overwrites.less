@@ -146,6 +146,15 @@ label.ant-checkbox-wrapper {
 .ant-alert {
   font-family: @font-family;
 }
+.ant-alert-message {
+  margin-left: 5px;
+}
+
+.ant-alert-banner {
+  position: absolute;
+  z-index: 1000;
+  width: 100%;
+}
 .ant-card {
   font-family: @font-family;
 }
@@ -155,7 +164,6 @@ label.ant-checkbox-wrapper {
 }
 
 .collapsed-nav-header .ant-menu:not(.right-navbar) {
-  
   .ant-menu-item,
   .ant-menu-submenu-title,
   li.ant-menu-submenu {
@@ -253,4 +261,27 @@ label.ant-checkbox-wrapper {
 .ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
 .ant-list-empty-text {
   color: fade(@text-color, 50%);
+}
+
+.action-bar {
+  // UI for additional coordinates should always be in dark mode
+  // since it is located in the navbar's action bar.
+  .ant-input-group-addon {
+    background-color: rgb(58, 61, 72);
+    border-color: #585867;
+    color: #f1f1f1 !important;
+  }
+}
+
+.ant-dropdown-menu-item-icon.fa-icon {
+  margin-right: 5px;
+}
+
+.ant-dropdown-menu-item-icon > svg {
+  width: 15px;
+}
+
+.ant-message,
+.ant-message * {
+  pointer-events: none;
 }

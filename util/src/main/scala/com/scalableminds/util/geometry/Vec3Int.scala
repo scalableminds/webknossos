@@ -8,6 +8,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def scale(s: Int): Vec3Int =
     Vec3Int(x * s, y * s, z * s)
 
+  def +(that: Vec3Int): Vec3Int =
+    Vec3Int(x + that.x, y + that.y, z + that.z)
+
   def *(that: Vec3Int): Vec3Int =
     Vec3Int(x * that.x, y * that.y, z * that.z)
 
@@ -34,6 +37,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def toUriLiteral: String = s"$x,$y,$z"
 
   def toList: List[Int] = List(x, y, z)
+
+  def toArray: Array[Int] = toList.toArray
 
   def toVec3Float: Vec3Float = Vec3Float(x.toFloat, y.toFloat, z.toFloat)
 

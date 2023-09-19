@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, AxisOrder3D, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
 
@@ -14,6 +15,7 @@ import java.nio.ByteBuffer
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
@@ -32,13 +34,16 @@ object PrecomputedArray extends LazyLogging {
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
       _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
     } yield
-      new PrecomputedArray(magPath,
-                           dataSourceId,
-                           layerName,
-                           scaleHeader,
-                           axisOrderOpt.getOrElse(AxisOrder3D.asZyxFromRank(scaleHeader.rank)),
-                           channelIndex,
-                           sharedChunkContentsCache)
+      new PrecomputedArray(
+        magPath,
+        dataSourceId,
+        layerName,
+        scaleHeader,
+        axisOrderOpt.getOrElse(AxisOrder3D.asZyxFromRank(scaleHeader.rank)),
+        channelIndex,
+        None,
+        sharedChunkContentsCache
+      )
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
@@ -47,8 +52,16 @@ class PrecomputedArray(vaultPath: VaultPath,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext)
-    extends DatasetArray(vaultPath, dataSourceId, layerName, header, axisOrder, channelIndex, sharedChunkContentsCache)
+                       additionalAxes: Option[Seq[AdditionalAxis]],
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         additionalAxes,
+                         sharedChunkContentsCache)
     with FoxImplicits
     with LazyLogging {
 
@@ -165,7 +178,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
-  private def parseMinishardIndex(input: Array[Byte]): Seq[(Long, Long, Long)] = {
+  private def parseMinishardIndex(input: Array[Byte]): Box[Seq[(Long, Long, Long)]] = tryo {
     val bytes = decodeMinishardIndex(input)
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
@@ -222,15 +235,14 @@ class PrecomputedArray(vaultPath: VaultPath,
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-      minishardIndex <- tryo(parseMinishardIndex(indexRaw))
+      minishardIndex <- parseMinishardIndex(indexRaw)
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)]): Fox[NumericRange.Exclusive[Long]] =
+  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)])(
+      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
-      chunkSpecification <- minishardIndex
-        .find(_._1 == chunkId)
-        .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
+      chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)

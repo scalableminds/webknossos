@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -124,6 +124,52 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[UsersRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def buildSelectionPredicates(isEditableOpt: Option[Boolean],
+                               isTeamManagerOrAdminOpt: Option[Boolean],
+                               isAdminOpt: Option[Boolean],
+                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      editablePredicate = isEditableOpt match {
+        case Some(isEditable) =>
+          val usersInTeamsManagedByRequestingUser =
+            q"(SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id}  AND isTeamManager)))"
+          if (isEditable) {
+            q"(_id IN $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization})"
+          } else {
+            q"(_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND _organization = ${requestingUser._organization}))"
+          }
+        case None => q"${true}"
+      }
+      isTeamManagerOrAdminPredicate = isTeamManagerOrAdminOpt match {
+        case Some(isTeamManagerOrAdmin) =>
+          val teamManagers = q"(SELECT _user FROM webknossos.user_team_roles WHERE isTeamManager)"
+          if (isTeamManagerOrAdmin) {
+            q"_id IN $teamManagers OR isAdmin"
+          } else {
+            q"_id NOT IN $teamManagers AND NOT isAdmin"
+          }
+        case None => q"${true}"
+      }
+      adminPredicate = isAdminOpt.map(isAdmin => q"isAdmin = $isAdmin").getOrElse(q"${true}")
+    } yield q"""
+        ($editablePredicate) AND
+        ($isTeamManagerOrAdminPredicate) AND
+        ($adminPredicate) AND
+        $accessQuery
+       """
+
+  def findAllWithFilters(isEditable: Option[Boolean],
+                         isTeamManagerOrAdmin: Option[Boolean],
+                         isAdmin: Option[Boolean],
+                         requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+
+      selectionPredicates <- buildSelectionPredicates(isEditable, isTeamManagerOrAdmin, isAdmin, requestingUser)
+      r <- run(q"select $columns from $existingCollectionName where $selectionPredicates".as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -380,23 +426,23 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DataSetViewConfiguration] =
+  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DatasetViewConfiguration] =
     for {
       rows <- run(q"""select viewConfiguration
                       from webknossos.user_dataSetConfigurations
                       where _dataSet = $dataSetId
                       and _user = $userId""".as[String])
       parsed = rows.map(Json.parse)
-      result <- parsed.headOption.map(_.validate[DataSetViewConfiguration].getOrElse(Map.empty)).toFox
+      result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
       userId: ObjectId,
       dataSetId: ObjectId,
-      configuration: DataSetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+      configuration: DatasetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = q"""delete from webknossos.user_dataSetConfigurations
@@ -411,7 +457,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
     } yield ()
 }
 
-class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],

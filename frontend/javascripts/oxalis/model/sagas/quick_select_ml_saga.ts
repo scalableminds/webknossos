@@ -13,7 +13,7 @@ import ndarray from "ndarray";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
 import { map3 } from "libs/utils";
-import { APIDataset } from "types/api_flow_types";
+import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
@@ -40,6 +40,7 @@ function getEmbedding(
   userBoxMag1: BoundingBox,
   mag: Vector3,
   activeViewport: OrthoView,
+  additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): CacheEntry {
   if (userBoxMag1.getVolume() === 0) {
@@ -86,6 +87,7 @@ function getEmbedding(
       layerName,
       mag,
       embeddingBoxMag1,
+      additionalCoordinates,
       intensityRange,
     );
 
@@ -210,6 +212,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   }).alignWithMag(labeledResolution, "floor");
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
@@ -225,6 +228,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
       alignedUserBoxMag1,
       labeledResolution,
       activeViewport,
+      additionalCoordinates || [],
       colorLayer.elementClass === "uint8" ? null : intensityRange,
     );
     // Also prefetch session (will block). After the first time, it's basically
@@ -241,6 +245,15 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  if (additionalCoordinates && additionalCoordinates.length > 0) {
+    Toast.warning(
+      `Quick select with AI might produce unexpected results for ${
+        3 + additionalCoordinates.length
+      }D datasets.`,
+    );
+  }
+
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
     return;
@@ -285,6 +298,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     alignedUserBoxMag1,
     labeledResolution,
     activeViewport,
+    additionalCoordinates || [],
     colorLayer.elementClass === "uint8" ? null : intensityRange,
   );
   let embedding;

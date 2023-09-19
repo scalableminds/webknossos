@@ -340,19 +340,31 @@ function serializeNodes(nodes: NodeMap): Array<string> {
   });
 }
 
-export function additionalCoordinateToKeyValue(coord: AdditionalCoordinate): [string, number] {
+function getAdditionalCoordinateLabel(useConciseStyle: boolean) {
+  return useConciseStyle ? "pos" : "additionalCoordinate";
+}
+
+export function additionalCoordinateToKeyValue(
+  coord: AdditionalCoordinate,
+  useConciseStyle: boolean = false,
+): [string, number] {
+  const label = getAdditionalCoordinateLabel(useConciseStyle);
   return [
     // Export additional coordinates like this:
     // additionalCoordinate-t="10"
     // Don't capitalize coord.name, because it it's not reversible for
     // names that are already capitalized.
-    `additionalCoordinate-${coord.name}`,
+    `${label}-${coord.name}`,
     coord.value,
   ];
 }
 
-export function parseAdditionalCoordinateKey(key: string): string {
-  return key.split("additionalCoordinate-")[1];
+export function parseAdditionalCoordinateKey(
+  key: string,
+  expectConciseStyle: boolean = false,
+): string {
+  const label = getAdditionalCoordinateLabel(expectConciseStyle);
+  return key.split(`${label}-`)[1];
 }
 
 function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {

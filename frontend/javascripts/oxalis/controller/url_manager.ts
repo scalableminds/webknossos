@@ -216,7 +216,7 @@ class UrlManager {
     const additionalCoordinates = [];
     const keyValuePairs = keyValuePairStrings.map((keyValueStr) => keyValueStr.split("=", 2));
     for (const [key, value] of keyValuePairs) {
-      const coordinateName = parseAdditionalCoordinateKey(key);
+      const coordinateName = parseAdditionalCoordinateKey(key, true);
       if (coordinateName != null) {
         additionalCoordinates.push({
           name: coordinateName,
@@ -336,7 +336,7 @@ class UrlManager {
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
     const keyValuePairs = (state.flycam.additionalCoordinates || []).map((coord) =>
-      additionalCoordinateToKeyValue(coord),
+      additionalCoordinateToKeyValue(coord, true),
     );
 
     return [

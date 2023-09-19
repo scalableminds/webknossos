@@ -141,6 +141,7 @@ export type MutableTree = {
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
+  edgesAreVisible: boolean;
 };
 export type Tree = {
   readonly treeId: number;
@@ -154,6 +155,7 @@ export type Tree = {
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
+  readonly edgesAreVisible: boolean;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
@@ -251,6 +253,7 @@ export type VolumeTracing = TracingBase & {
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly mappingIsEditable?: boolean;
+  readonly hasSegmentIndex: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

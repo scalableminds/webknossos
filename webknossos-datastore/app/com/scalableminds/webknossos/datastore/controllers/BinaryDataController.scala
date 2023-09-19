@@ -22,8 +22,7 @@ import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc._
-
+import play.api.mvc.{AnyContent, _}
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
@@ -118,6 +117,24 @@ class BinaryDataController @Inject()(
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def requestRawCuboidPost(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String
+  ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> NOT_FOUND
+        (data, indices) <- requestData(dataSource, dataLayer, request.body)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -257,7 +274,8 @@ class BinaryDataController @Inject()(
             request.body.subsamplingStrides,
             request.body.scale,
             request.body.mapping,
-            request.body.mappingType
+            request.body.mappingType,
+            request.body.findNeighbors
           )
           // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.

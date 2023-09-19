@@ -125,17 +125,15 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       dataset <- Fox.option2Fox(multiscale.datasets.headOption)
       zarrHeader <- getZarrHeader(dataset, remotePath)
       shape = zarrHeader.shape
-    } yield {
-      multiscale.axes.zipWithIndex.flatMap(axisAndIndex =>
-        if (!defaultAxes.contains(axisAndIndex._1.name)) {
-          Some(
-            AdditionalAxis(name = axisAndIndex._1.name,
-                           bounds = Array(0, shape(axisAndIndex._2) - 1),
-                           index = axisAndIndex._2))
-        } else {
-          None
-      })
-    }
+      axes <- Fox.combined(
+        multiscale.axes
+          .filter(axis => !defaultAxes.contains(axis.name))
+          .zipWithIndex
+          .map(axisAndIndex =>
+            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2) - 1)).toFox))
+      duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
+      _ <- Fox.bool2Fox(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
+    } yield axes
   }
 
   private case class ChannelAttributes(color: Option[Color], name: Option[String])

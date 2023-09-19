@@ -267,7 +267,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "SET_ACTIVE_GROUP": {
+        case "SET_TREE_ACTIVE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -285,7 +285,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "DESELECT_ACTIVE_GROUP": {
+        case "DESELECT_ACTIVE_TREE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -946,6 +946,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                       [tree.treeId]: {
                         name: {
                           $set: newName,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "SET_EDGES_ARE_VISIBLE": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        edgesAreVisible: {
+                          $set: action.edgesAreVisible,
                         },
                       },
                     },

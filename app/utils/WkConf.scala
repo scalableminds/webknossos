@@ -248,6 +248,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object SegmentAnything {
     val uri: String = get[String]("segmentAnything.uri")
+    val user: String = get[String]("segmentAnything.user")
+    val password: String = get[String]("segmentAnything.password")
   }
 
   val children =

@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
 
@@ -426,23 +426,23 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DataSetViewConfiguration] =
+  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DatasetViewConfiguration] =
     for {
       rows <- run(q"""select viewConfiguration
                       from webknossos.user_dataSetConfigurations
                       where _dataSet = $dataSetId
                       and _user = $userId""".as[String])
       parsed = rows.map(Json.parse)
-      result <- parsed.headOption.map(_.validate[DataSetViewConfiguration].getOrElse(Map.empty)).toFox
+      result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
       userId: ObjectId,
       dataSetId: ObjectId,
-      configuration: DataSetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+      configuration: DatasetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = q"""delete from webknossos.user_dataSetConfigurations
@@ -457,7 +457,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
     } yield ()
 }
 
-class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],

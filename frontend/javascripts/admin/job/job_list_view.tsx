@@ -143,14 +143,17 @@ class JobListView extends React.PureComponent<Props, State> {
           {job.boundingBox})
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationName && job.datasetName) {
-
-      const layerLabel = job.annotationLayerName || job.layerName;
+    } else if (
+      job.type === APIJobType.RENDER_ANIMATION &&
+      job.organizationName &&
+      job.datasetName
+    ) {
       return (
         <span>
-          Animation rendering for layer {job.layerName} of dataset <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-        {job.datasetName}
-      </Link>
+          Animation rendering for layer {job.layerName} of dataset{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>
         </span>
       );
     } else if (
@@ -380,6 +383,7 @@ class JobListView extends React.PureComponent<Props, State> {
               key="createdAt"
               render={(job) => <FormattedDate timestamp={job.createdAt} />}
               sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+              defaultSortOrder="descend"
             />
             <Column
               title="State"

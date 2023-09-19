@@ -1256,7 +1256,6 @@ export function startNeuronInferralJob(
   );
 }
 
-
 export function startRenderAnimationJob(
   organizationName: string,
   datasetName: string,

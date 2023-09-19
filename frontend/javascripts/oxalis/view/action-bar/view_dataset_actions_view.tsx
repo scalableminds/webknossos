@@ -22,9 +22,7 @@ import DownloadModalView from "./download_modal_view";
 import features from "features";
 import Toast from "libs/toast";
 import { getAISegmentationMenu } from "./tracing_actions_view";
-import {
-  startRenderAnimationJob,
-} from "admin/admin_rest_api";
+import { startRenderAnimationJob } from "admin/admin_rest_api";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -83,16 +81,20 @@ export default function ViewDatasetActionsView(props: Props) {
         key: "render-animation-button",
         onClick: () => {
           const state = Store.getState();
-          startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, getColorLayers(state.dataset)[0].name);
+          startRenderAnimationJob(
+            state.dataset.owningOrganization,
+            state.dataset.name,
+            getColorLayers(state.dataset)[0].name,
+          );
           Toast.info(
-        <>
-          The Render Animation job has been started. See the{" "}
-          <a target="_blank" href="/jobs" rel="noopener noreferrer">
-            Processing Jobs
-          </a>{" "}
-          view under Administration for details on the progress of this job.
-        </>,
-      );
+            <>
+              The Render Animation job has been started. See the{" "}
+              <a target="_blank" href="/jobs" rel="noopener noreferrer">
+                Processing Jobs
+              </a>{" "}
+              view under Administration for details on the progress of this job.
+            </>,
+          );
         },
         icon: <VideoCameraOutlined />,
         label: "Render Animation",

@@ -492,7 +492,8 @@ class VolumeTracingService @Inject()(
         request.subsamplingStrides,
         request.scale,
         None,
-        None
+        None,
+        request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

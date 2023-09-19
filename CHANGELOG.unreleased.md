@@ -25,7 +25,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
 - Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
-- Removed deprecated X-xss-protection header, now Content Security Policy is used. [#7335](https://github.com/scalableminds/webknossos/pull/7335)
 
 ### Fixed
 - Fixed that the deletion of a selected segment would crash the segments tab. [#7316](https://github.com/scalableminds/webknossos/pull/7316)

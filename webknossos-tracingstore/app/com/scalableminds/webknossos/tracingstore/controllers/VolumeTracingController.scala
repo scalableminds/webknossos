@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -250,17 +250,17 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def requestIsosurface(token: Option[String], tracingId: String): Action[WebKnossosIsosurfaceRequest] =
-    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+  def requestAdHocMesh(token: Option[String], tracingId: String): Action[WebKnossosAdHocMeshRequest] =
+    Action.async(validateJson[WebKnossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
-            editableMappingService.createIsosurface(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
-          else tracingService.createIsosurface(tracingId, request.body, urlOrHeaderToken(token, request))
+            editableMappingService.createAdHocMesh(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
+          else tracingService.createAdHocMesh(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

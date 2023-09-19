@@ -23,15 +23,15 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
-case class IsosurfaceRequest(dataSource: Option[DataSource],
-                             dataLayer: SegmentationLayer,
-                             cuboid: Cuboid,
-                             segmentId: Long,
-                             subsamplingStrides: Vec3Int,
-                             scale: Vec3Double,
-                             mapping: Option[String] = None,
-                             mappingType: Option[String] = None,
-                             findNeighbors: Boolean = true)
+case class AdHocMeshRequest(dataSource: Option[DataSource],
+                            dataLayer: SegmentationLayer,
+                            cuboid: Cuboid,
+                            segmentId: Long,
+                            subsamplingStrides: Vec3Int,
+                            scale: Vec3Double,
+                            mapping: Option[String] = None,
+                            mappingType: Option[String] = None,
+                            findNeighbors: Boolean = true)
 
 case class DataTypeFunctors[T, B](
     getTypedBufferFn: ByteBuffer => B,
@@ -39,53 +39,53 @@ case class DataTypeFunctors[T, B](
     fromLong: Long => T
 )
 
-class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuration) extends Actor {
+class AdHocMeshingActor(val service: AdHocMeshingService, val timeout: FiniteDuration) extends Actor {
 
   def receive: Receive = {
-    case request: IsosurfaceRequest =>
-      sender() ! Await.result(service.requestIsosurface(request).futureBox, timeout)
+    case request: AdHocMeshRequest =>
+      sender() ! Await.result(service.requestAdHocMesh(request).futureBox, timeout)
     case _ =>
-      sender ! Failure("Unexpected message sent to IsosurfaceActor.")
+      sender ! Failure("Unexpected message sent to AdHocMeshingActor.")
   }
 }
 
-class IsosurfaceService(binaryDataService: BinaryDataService,
-                        mappingService: MappingService,
-                        actorSystem: ActorSystem,
-                        isosurfaceTimeout: FiniteDuration,
-                        isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
+class AdHocMeshingService(binaryDataService: BinaryDataService,
+                          mappingService: MappingService,
+                          actorSystem: ActorSystem,
+                          adHocMeshingTimeout: FiniteDuration,
+                          adHocMeshingActorPoolSize: Int)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
-  implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
+  implicit val timeout: Timeout = Timeout(adHocMeshingTimeout)
 
   private val actor: ActorRef = actorSystem.actorOf(
-    RoundRobinPool(isosurfaceActorPoolSize).props(Props(new IsosurfaceActor(this, timeout.duration))))
+    RoundRobinPool(adHocMeshingActorPoolSize).props(Props(new AdHocMeshingActor(this, timeout.duration))))
 
-  def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
     actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
       case e: Exception => Failure(e.getMessage)
     }
 
-  def requestIsosurface(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMesh(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
     request.dataLayer.elementClass match {
       case ElementClass.uint8 =>
-        generateIsosurfaceImpl[Byte, ByteBuffer](request,
-                                                 DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+        generateAdHocMeshImpl[Byte, ByteBuffer](request,
+                                                DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 =>
-        generateIsosurfaceImpl[Short, ShortBuffer](
+        generateAdHocMeshImpl[Short, ShortBuffer](
           request,
           DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
       case ElementClass.uint32 =>
-        generateIsosurfaceImpl[Int, IntBuffer](request,
-                                               DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+        generateAdHocMeshImpl[Int, IntBuffer](request,
+                                              DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
       case ElementClass.uint64 =>
-        generateIsosurfaceImpl[Long, LongBuffer](request,
-                                                 DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+        generateAdHocMeshImpl[Long, LongBuffer](request,
+                                                DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
     }
 
-  private def generateIsosurfaceImpl[T: ClassTag, B <: Buffer](
-      request: IsosurfaceRequest,
+  private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
+      request: AdHocMeshRequest,
       dataTypeFunctors: DataTypeFunctors[T, B]): Fox[(Array[Float], List[Int])] = {
 
     def applyMapping(data: Array[T]): Fox[Array[T]] =

@@ -5,6 +5,8 @@ See `MIGRATIONS.released.md` for the migrations which are part of official relea
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+The "datastore/isosurface" configuration key was renamed to "datastore/adHocMesh".
+
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...HEAD)
 

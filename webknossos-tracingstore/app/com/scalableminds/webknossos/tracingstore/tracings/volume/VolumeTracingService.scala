@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -39,7 +39,7 @@ import scala.concurrent.duration._
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
-    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
     implicit val ec: ExecutionContext,
@@ -80,8 +80,8 @@ class VolumeTracingService @Inject()(
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
 
-  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
-  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
+  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
+  val adHocMeshingService: AdHocMeshingService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -475,16 +475,16 @@ class VolumeTracingService @Inject()(
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
-  def createIsosurface(tracingId: String,
-                       request: WebKnossosIsosurfaceRequest,
-                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
+  def createAdHocMesh(tracingId: String,
+                      request: WebKnossosAdHocMeshRequest,
+                      userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       segmentationLayer = volumeTracingLayer(tracingId,
                                              tracing,
                                              includeFallbackDataIfAvailable = true,
                                              userToken = userToken)
-      isosurfaceRequest = IsosurfaceRequest(
+      adHocMeshRequest = AdHocMeshRequest(
         None,
         segmentationLayer,
         request.cuboid(segmentationLayer),
@@ -495,7 +495,7 @@ class VolumeTracingService @Inject()(
         None,
         request.findNeighbors
       )
-      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def findData(tracingId: String): Fox[Option[Vec3Int]] =

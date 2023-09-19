@@ -9,6 +9,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import javax.inject.Inject
 
 class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
+
   def getEmbedding(imageData: Array[Byte],
                    elementClass: ElementClass.Value,
                    intensityMin: Option[Float],
@@ -23,6 +24,8 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
     rpc(s"${conf.SegmentAnything.uri}/predictions/sam_vit_l")
       .addQueryString("elementClass" -> elementClass.toString)
+      .withBasicAuthOpt(if (conf.SegmentAnything.user.isEmpty) None else Some(conf.SegmentAnything.user),
+                        Some(conf.SegmentAnything.password))
       .postBytesWithBytesResponse(imageWithMetadata)
   }
 

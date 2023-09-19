@@ -49,7 +49,7 @@ trait VolumeBucketCompression extends LazyLogging {
       } catch {
         case e: Exception =>
           logger.error(
-            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize)")
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize): $e")
           throw e
       }
     }
@@ -81,7 +81,6 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
       case _ =>
         s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
-
   }
 
   protected def buildKeyPrefix(dataLayerName: String): String =
@@ -90,8 +89,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
   protected def parseBucketKey(key: String,
                                additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
     additionalAxes match {
-      case Some(value) => parseBucketKeyWithAdditionalAxes(key, value)
-      case None        => parseBucketKeyXYZ(key)
+      case Some(value) if value.nonEmpty => parseBucketKeyWithAdditionalAxes(key, value)
+      case _                             => parseBucketKeyXYZ(key)
     }
 
   private def parseBucketKeyXYZ(key: String) = {

@@ -56,6 +56,7 @@ object Dependencies {
   private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
+  private val bcrypt = "at.favre.lib" % "bcrypt" % "0.10.2"
 
   // For swagger annotations
   private val swaggerCore = "io.swagger" % "swagger-core" % "1.6.11"
@@ -82,7 +83,8 @@ object Dependencies {
     reactiveBson,
     scalapbRuntime,
     scalaLogging,
-    akkaCaching
+    akkaCaching,
+    bcrypt
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(

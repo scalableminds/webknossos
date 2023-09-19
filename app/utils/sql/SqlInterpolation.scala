@@ -89,7 +89,7 @@ object SqlToken {
 
   def empty: SqlToken = raw("")
 
-  def identifier(id: String): SqlToken = raw(id.split('.').map(i => f"\"$i\"").mkString("."))
+  def identifier(id: String): SqlToken = raw(id.split('.').map(i => f""""$i"""").mkString("."))
 }
 
 trait SqlValue {

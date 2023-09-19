@@ -1,8 +1,8 @@
-import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
+import { CopyOutlined, PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
 import { connect } from "react-redux";
-import React, { createContext, MouseEvent, useContext } from "react";
+import React, { createContext, MouseEvent, useContext, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -52,7 +52,7 @@ import {
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
@@ -69,6 +69,7 @@ import {
 import {
   getVisibleSegmentationLayer,
   getMappingInfo,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -101,6 +102,9 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { useFetch } from "libs/react_helpers";
+import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -1084,6 +1088,9 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
+  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
+    new Date(),
+  );
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1097,6 +1104,46 @@ function ContextMenuInner(propsWithInputRef: Props) {
     globalPosition,
     maybeViewport,
   } = props;
+
+  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+  const { visibleSegmentationLayer, volumeTracing } = props;
+  const hasNoFallbackLayer =
+    visibleSegmentationLayer != null &&
+    "fallbackLayer" in visibleSegmentationLayer &&
+    visibleSegmentationLayer.fallbackLayer == null;
+  const [segmentVolume, boundingBoxInfo] = useFetch(
+    async () => {
+      if (contextMenuPosition == null || volumeTracing == null || !hasNoFallbackLayer) {
+        return [];
+      } else {
+        const tracingId = volumeTracing.tracingId;
+        const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+        const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const [segmentSize] = await getSegmentVolumes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getLowestResolution(),
+          [segmentIdAtPosition],
+        );
+        const [boundingBox] = await getSegmentBoundingBoxes(
+          tracingStoreUrl,
+          tracingId,
+          mag.getLowestResolution(),
+          [segmentIdAtPosition],
+        );
+        const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
+        const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
+        return [
+          formatNumberToVolume(segmentSize),
+          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+        ];
+      }
+    },
+    ["loading", "loading"],
+    // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
+    // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
+    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
+  );
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
@@ -1138,7 +1185,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     nodeContextMenuNode != null
       ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
       : "";
-  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const infoRows = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
@@ -1170,6 +1216,53 @@ function ContextMenuInner(propsWithInputRef: Props) {
         <>
           <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
+        </>,
+      ),
+    );
+  }
+
+  const handleRefreshSegmentVolume = async () => {
+    await api.tracing.save();
+    setLastTimeSegmentInfoShouldBeFetched(new Date());
+  };
+
+  const refreshButton = (
+    <Tooltip title="Update this statistic">
+      <AsyncIconButton
+        onClick={handleRefreshSegmentVolume}
+        type="primary"
+        icon={<ReloadOutlined />}
+        style={{ marginLeft: 4 }}
+      />
+    </Tooltip>
+  );
+
+  if (hasNoFallbackLayer) {
+    infoRows.push(
+      getInfoMenuItem(
+        "volumeInfo",
+        <>
+          <i className="fas fa-expand-alt segment-context-icon" />
+          Volume: {segmentVolume}
+          {copyIconWithTooltip(segmentVolume as string, "Copy volume")}
+          {refreshButton}
+        </>,
+      ),
+    );
+  }
+
+  if (hasNoFallbackLayer) {
+    infoRows.push(
+      getInfoMenuItem(
+        "boundingBoxPositionInfo",
+        <>
+          <i className="fas fa-dice-d6 segment-context-icon" />
+          <>Bounding Box: </>
+          <div style={{ marginLeft: 22, marginTop: -5 }}>
+            {boundingBoxInfo}
+            {copyIconWithTooltip(boundingBoxInfo as string, "Copy BBox top left point and extent")}
+            {refreshButton}
+          </div>
         </>,
       ),
     );

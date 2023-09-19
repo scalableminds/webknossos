@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
@@ -462,26 +462,26 @@ class EditableMappingService @Inject()(
 
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],
-              elementClass: ElementClass): Fox[Array[Byte]] = {
+              elementClass: ElementClassProto): Fox[Array[Byte]] = {
     val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toPositiveLong))
     for {
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
   }
 
-  private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[Long]] =
+  private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray.map(_.toPositiveLong)
 
-  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[UnsignedInteger]] =
+  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[UnsignedInteger]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray
 
-  private def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
+  private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
@@ -519,7 +519,8 @@ class EditableMappingService @Inject()(
         subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
-        mappingType = None
+        mappingType = None,
+        findNeighbors = request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

@@ -1,19 +1,18 @@
 /**
- * Copyright 2017 SmartBear Software, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+  * Copyright 2017 SmartBear Software, Inc.
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at
+  *
+  * http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
 package play.modules.swagger
 
 import java.io.File
@@ -50,7 +49,7 @@ class SwaggerPluginImpl @Inject()(environment: Environment, configuration: Confi
 
   lazy val routes = new RouteWrapper({
     val routesFile = configuration.get[Option[String]]("play.http.router") match {
-      case None => "routes"
+      case None        => "routes"
       case Some(value) => SwaggerPluginHelper.playRoutesClassNameToFileName(value)
     }
 
@@ -68,7 +67,8 @@ class SwaggerPluginImpl @Inject()(environment: Environment, configuration: Confi
   lazy val swaggerSpecFilter: Option[SwaggerSpecFilter] = config.filterClass match {
     case Some(e) if e.nonEmpty =>
       try {
-        val filter = environment.classLoader.loadClass(e).getDeclaredConstructor().newInstance().asInstanceOf[SwaggerSpecFilter]
+        val filter =
+          environment.classLoader.loadClass(e).getDeclaredConstructor().newInstance().asInstanceOf[SwaggerSpecFilter]
         logger.debug("Setting swagger.filter to %s".format(e))
         Some(filter)
       } catch {
@@ -99,30 +99,39 @@ object SwaggerPluginHelper {
   def parseRoutes(routesFile: String, prefix: String, env: Environment): List[PlayRoute] = {
     logger.debug(s"Processing route file '$routesFile' with prefix '$prefix'")
 
-    val parsedRoutes = env.resourceAsStream(routesFile).map { stream =>
-      val routesContent = Source.fromInputStream(stream).mkString
-      RoutesFileParser.parseContent(routesContent, new File(routesFile))
-    }.getOrElse(Right(List.empty)) // ignore routes files that don't exist
+    val parsedRoutes = env
+      .resourceAsStream(routesFile)
+      .map { stream =>
+        val routesContent = Source.fromInputStream(stream).mkString
+        RoutesFileParser.parseContent(routesContent, new File(routesFile))
+      }
+      .getOrElse(Right(List.empty)) // ignore routes files that don't exist
 
-    val routes = parsedRoutes.getOrElse(throw new NoSuchElementException("Parsed routes not found!")).collect {
-      case route: PlayRoute =>
-        logger.debug(s"Adding route '$route'")
-        (prefix, route.path.parts) match {
-          case ("", _) => Seq(route)
-          case (_, Seq()) => Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
-          case (_, Seq(StaticPart(""))) => Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
-          case (_, Seq(StaticPart("/"))) => Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
-          case (_, _) => Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: StaticPart("/") +: route.path.parts)))
-        }
-      case include: PlayInclude =>
-        logger.debug(s"Processing route include $include")
-        val newPrefix = if (prefix == "") {
-          include.prefix
-        } else {
-          s"$prefix/${include.prefix}"
-        }
-        parseRoutes(playRoutesClassNameToFileName(include.router), newPrefix, env)
-    }.flatten
+    val routes = parsedRoutes
+      .getOrElse(throw new NoSuchElementException("Parsed routes not found!"))
+      .collect {
+        case route: PlayRoute =>
+          logger.debug(s"Adding route '$route'")
+          (prefix, route.path.parts) match {
+            case ("", _)    => Seq(route)
+            case (_, Seq()) => Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
+            case (_, Seq(StaticPart(""))) =>
+              Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
+            case (_, Seq(StaticPart("/"))) =>
+              Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: route.path.parts)))
+            case (_, _) =>
+              Seq(route.copy(path = route.path.copy(parts = StaticPart(prefix) +: StaticPart("/") +: route.path.parts)))
+          }
+        case include: PlayInclude =>
+          logger.debug(s"Processing route include $include")
+          val newPrefix = if (prefix == "") {
+            include.prefix
+          } else {
+            s"$prefix/${include.prefix}"
+          }
+          parseRoutes(playRoutesClassNameToFileName(include.router), newPrefix, env)
+      }
+      .flatten
     logger.debug(s"Finished processing route file '$routesFile'")
     routes
   }

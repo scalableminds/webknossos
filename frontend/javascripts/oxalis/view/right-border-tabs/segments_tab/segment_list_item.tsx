@@ -173,7 +173,6 @@ type Props = {
   mapId: (arg0: number) => number;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  isHoveredSegmentId: boolean;
   centeredSegmentId: number | null | undefined;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
@@ -361,7 +360,6 @@ function _SegmentListItem({
   mapId,
   isJSONMappingEnabled,
   mappingInfo,
-  isHoveredSegmentId,
   centeredSegmentId,
   selectedSegmentIds,
   activeCellId,
@@ -391,6 +389,9 @@ function _SegmentListItem({
   const segmentColorHSLA = useSelector(
     (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
+  );
+  const isHoveredSegmentId = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
 
   const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);

@@ -82,7 +82,7 @@ class PrecomputedArray(vaultPath: VaultPath,
   private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
     AlfuCache()
 
-  private val minishardIndexCache: AlfuCache[(VaultPath, Int), Seq[(Long, Long, Long)]] =
+  private val minishardIndexCache: AlfuCache[(VaultPath, Int), Array[(Long, Long, Long)]] =
     AlfuCache()
 
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
@@ -177,7 +177,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
-  private def parseMinishardIndex(input: Array[Byte]): Seq[(Long, Long, Long)] = {
+  private def parseMinishardIndex(input: Array[Byte]): Array[(Long, Long, Long)] = {
     val bytes = decodeMinishardIndex(input)
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
@@ -220,15 +220,15 @@ class PrecomputedArray(vaultPath: VaultPath,
       chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
     }
 
-    chunkIds.zip(chunkStartOffsets).zip(chunkSizes).map { case ((a, b), c) => (a, b, c) }
+    chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
   private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(
-      implicit ec: ExecutionContext): Fox[Seq[(Long, Long, Long)]] =
+      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
   private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      implicit ec: ExecutionContext): Fox[Seq[(Long, Long, Long)]] = {
+      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
       index <- getShardIndex(vaultPath)
@@ -239,7 +239,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)])(
+  private def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
       implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
       chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"

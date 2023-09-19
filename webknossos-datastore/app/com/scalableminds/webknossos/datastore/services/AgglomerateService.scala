@@ -18,6 +18,7 @@ import org.apache.commons.io.FilenameUtils
 import java.nio._
 import java.nio.file.{Files, Paths}
 import javax.inject.Inject
+import scala.collection.compat.immutable.ArraySeq
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
@@ -197,8 +198,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         Tree(
           treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
           createdTimestamp = System.currentTimeMillis(),
-          nodes = nodes,
-          edges = skeletonEdges,
+          nodes = ArraySeq.unsafeWrapArray(nodes),
+          edges = ArraySeq.unsafeWrapArray(skeletonEdges),
           name = s"agglomerate $agglomerateId ($mappingName)",
           `type` = Some(TreeTypeProto.AGGLOMERATE)
         ))
@@ -307,10 +308,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(
-        segments = segmentIds,
-        edges = edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt))),
-        positions = positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
-        affinities = affinities
+        segments = ArraySeq.unsafeWrapArray(segmentIds),
+        edges = ArraySeq.unsafeWrapArray(
+          edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))),
+        positions =
+          ArraySeq.unsafeWrapArray(positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt))),
+        affinities = ArraySeq.unsafeWrapArray(affinities)
       )
     }
 

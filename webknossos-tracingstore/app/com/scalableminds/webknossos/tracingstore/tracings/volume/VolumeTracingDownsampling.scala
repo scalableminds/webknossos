@@ -82,9 +82,7 @@ trait VolumeTracingDownsampling
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
-      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]() {
-        override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
-      }
+      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => Array[Byte](0))
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
       updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
@@ -116,7 +114,7 @@ trait VolumeTracingDownsampling
     } yield sourceMag :: magsToCreate
   }
 
-  private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
+  private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.Map[BucketPosition, Array[Byte]],
                                               tracingId: String,
                                               dataLayer: VolumeTracingLayer,
                                               sourceMag: Vec3Int): Unit = {
@@ -137,7 +135,7 @@ trait VolumeTracingDownsampling
   private def downsampleMagFromMag(previousMag: Vec3Int,
                                    requiredMag: Vec3Int,
                                    originalBucketPositions: List[BucketPosition],
-                                   bucketDataMapMutable: mutable.HashMap[BucketPosition, Array[Byte]],
+                                   bucketDataMapMutable: mutable.Map[BucketPosition, Array[Byte]],
                                    updatedBucketsMutable: mutable.ListBuffer[BucketPosition],
                                    bucketVolume: Int,
                                    elementClass: ElementClass.Value,

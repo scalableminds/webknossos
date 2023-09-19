@@ -47,7 +47,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
       nextKeyValuePair.isDefined
     }
 
-  override def next: VersionedKeyValuePair[Array[Byte]] = {
+  override def next(): VersionedKeyValuePair[Array[Byte]] = {
     val nextRes = nextKeyValuePair match {
       case Some(value) => value
       case None        => getNextKeyValuePair.get

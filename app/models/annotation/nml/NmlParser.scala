@@ -519,17 +519,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   }
 
   private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
-    val regex = "additionalCoordinate-(\\w)".r("name")
+    val regex = "^additionalCoordinate-(\\w)".r
     node.attributes.flatMap {
-      case attribute: Attribute => {
-        if (attribute.key.startsWith("additionalCoordinate")) {
-          Some(
-            new AdditionalCoordinateProto(regex.findAllIn(attribute.key).group("name"),
-                                          attribute.value.toString().toInt))
-        } else {
-          None
+      case attribute: Attribute =>
+        attribute.key match {
+          case regex(axisName) =>
+            Some(new AdditionalCoordinateProto(axisName, attribute.value.toString().toInt))
+          case _ => None
         }
-      }
       case _ => None
     }.toSeq
   }

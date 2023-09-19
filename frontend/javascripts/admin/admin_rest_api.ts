@@ -2167,7 +2167,7 @@ export function computeIsosurface(
     params.append("token", token);
 
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/isosurface?${params}`,
+      `${requestUrl}/adHocMesh?${params}`,
       {
         data: {
           // The back-end needs a small padding at the border of the

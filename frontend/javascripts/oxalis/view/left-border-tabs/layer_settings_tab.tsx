@@ -455,7 +455,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     volumeTracing: VolumeTracing | null | undefined,
   ) => {
     // Re-Calculation of a segment index or with a fallback layer is not possible.
-    console.log(volumeTracing);
     if (
       volumeTracing == null ||
       volumeTracing.fallbackLayer != null ||
@@ -620,9 +619,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
-      isVolumeTracing && !isDisabled
+      isVolumeTracing
         ? {
-            label: this.getAddSegmentIndexButton(layerName, maybeVolumeTracing),
+            label: this.getAddSegmentIndexButton(readableName, maybeVolumeTracing),
             key: "addSegmentIndexButton",
           }
         : null,

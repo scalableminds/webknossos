@@ -24,15 +24,14 @@ export default function AddSegmentIndexModal({
   return (
     <Modal
       title="Add segment index to this layer"
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(() => void) | null' is not assignable to ty... Remove this comment to see the full error message
-      onCancel={isCalculatingSegmentIndex ? null : hideAddSegmentIndexModal}
+      onCancel={isCalculatingSegmentIndex ? undefined : hideAddSegmentIndexModal}
       footer={null}
       width={800}
       maskClosable={false}
       open
     >
       <p>
-        This will calculate the segment index for the volume annotation layer {volumeLayerName}.
+        This will calculate the segment index for the volume annotation layer "{volumeLayerName}".
         This will take a while and editing will be disabled during this time. Once finished the
         annotation reloads.
       </p>

@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.binary.DataSet
+import models.binary.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
@@ -51,7 +51,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
         Forbidden(Messages("tracingStore.notFound"))
       } // Default error
 
-  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
+  def clientFor(dataSet: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
     } yield new WKRemoteTracingStoreClient(tracingStore, dataSet, rpc)

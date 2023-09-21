@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.binary.{DatasetDAO, DatasetService, DataStoreService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
@@ -38,8 +38,8 @@ object RpcTokenHolder {
 }
 
 @Api
-class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+class UserTokenController @Inject()(datasetDAO: DatasetDAO,
+                                    datasetService: DatasetService,
                                     annotationDAO: AnnotationDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
@@ -117,7 +117,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
+        dataSourceBox <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -126,9 +126,9 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
-        isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
+        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
 
     def tryAdministrate: Fox[UserAccessAnswer] =
@@ -147,7 +147,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
           GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
@@ -166,7 +166,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
-    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
+    // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
@@ -199,7 +199,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
     if (mode != AccessMode.read)
-      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access mode for job exports: $mode")))
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

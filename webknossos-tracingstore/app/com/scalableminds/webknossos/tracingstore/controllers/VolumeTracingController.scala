@@ -7,7 +7,9 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
@@ -20,6 +22,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
+  SegmentStatisticsParameters,
   UpdateMappingNameAction,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
@@ -428,16 +431,53 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long): Action[AnyContent] =
+  def getSegmentVolume(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentVolume(tracingId,
+                                                            segmentId,
+                                                            request.body.mag,
+                                                            urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentVolumes))
+      }
+    }
+
+  def getSegmentBoundingBox(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
+                                                                 segmentId,
+                                                                 request.body.mag,
+                                                                 urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentBoundingBoxes))
+      }
+    }
+
+  def getSegmentIndex(token: Option[String],
+                      tracingId: String,
+                      segmentId: Long,
+                      mag: String,
+                      cubeSize: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          segmentVolume <- volumeSegmentStatisticsService.getSegmentVolume(tracingId,
-                                                                           segmentId,
-                                                                           magParsed,
-                                                                           urlOrHeaderToken(token, request))
-        } yield Ok(Json.toJson(segmentVolume))
+          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed)
+          bucketPositionsForCubeSize = bucketPositionsRaw.values
+            .map(vec3IntFromProto)
+            .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
+            .map(_ / cubeSizeParsed)
+            .distinct // divide by requested cube size to map them to larger buckets, select unique
+            .map(_ * cubeSizeParsed) // return positions, not indices
+        } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }
 

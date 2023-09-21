@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
+import net.liftweb.util.Helpers.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream
@@ -22,9 +24,9 @@ abstract class ChunkTyper {
   val header: DatasetHeader
 
   def ma2DataType: MADataType
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray]
 
-  def createFromFillValue(chunkShape: Array[Int]): MultiArray =
+  def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
     MultiArrayUtils.createFilledArray(ma2DataType, chunkShape, header.fillValueNumber)
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
@@ -36,68 +38,68 @@ abstract class ChunkTyper {
 class ByteChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.BYTE
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), bytes)
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), bytes))
 }
 
 class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.DOUBLE
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    Using.Manager { use =>
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(Using.Manager { use =>
       val typedStorage = new Array[Double](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
-    }.get
+    }.get)
 }
 
 class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper with LazyLogging {
 
   val ma2DataType: MADataType = MADataType.SHORT
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    Using.Manager { use =>
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(Using.Manager { use =>
       val typedStorage = new Array[Short](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
-    }.get
+    }.get)
 }
 
 class IntChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.INT
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    Using.Manager { use =>
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(Using.Manager { use =>
       val typedStorage = new Array[Int](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
-    }.get
+    }.get)
 }
 
 class LongChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.LONG
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    Using.Manager { use =>
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(Using.Manager { use =>
       val typedStorage = new Array[Long](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
-    }.get
+    }.get)
 
 }
 
@@ -105,13 +107,13 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.FLOAT
 
-  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): MultiArray =
-    Using.Manager { use =>
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(Using.Manager { use =>
       val typedStorage = new Array[Float](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
-    }.get
+    }.get)
 }

@@ -784,12 +784,32 @@ export class QuickSelectTool {
   static onToolDeselected() {}
 }
 
+function getDoubleClickGuard() {
+  const DOUBLE_CLICK_TIME_THRESHOLD = 600;
+  let lastLeftClickTime = 0;
+  let lastClickPosition: Point2 = { x: -100, y: -100 };
+  const doubleClickGuard = (pos: Point2, onDoubleClick: () => void) => {
+    const currentTime = Date.now();
+    if (
+      currentTime - lastLeftClickTime <= DOUBLE_CLICK_TIME_THRESHOLD &&
+      Math.abs(pos.x - lastClickPosition.x) + Math.abs(pos.y - lastClickPosition.y) < 6
+    ) {
+      // A double click should also terminate measuring.
+      onDoubleClick();
+      return true;
+    }
+    lastLeftClickTime = currentTime;
+    lastClickPosition = pos;
+    return false;
+  };
+  return doubleClickGuard;
+}
+
 export class LineMeasurementTool {
-  static DOUBLE_CLICK_TIME_THRESHOLD = 600;
-  static getPlaneMouseControls(_planeId: OrthoView): any {
+  static getPlaneMouseControls(): any {
     let initialPlane: OrthoView = OrthoViews.PLANE_XY;
     let isMeasuring = false;
-    let lastLeftClickTime = 0;
+    const doubleClickGuard = getDoubleClickGuard();
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
     const mouseMove = (
@@ -834,13 +854,13 @@ export class LineMeasurementTool {
         isMeasuring = false;
         return;
       }
-      const currentTime = Date.now();
-      if (currentTime - lastLeftClickTime <= this.DOUBLE_CLICK_TIME_THRESHOLD) {
-        // A double click should also terminate measuring.
-        rightClick(pos, plane, event);
+      if (
+        doubleClickGuard(pos, () => {
+          rightClick(pos, plane, event);
+        })
+      ) {
         return;
       }
-      lastLeftClickTime = currentTime;
       // Set a new measurement point.
       const state = Store.getState();
       const position = V3.floor(calculateGlobalPos(state, pos, plane));
@@ -887,6 +907,11 @@ export class AreaMeasurementTool {
     let isMeasuring = false;
     const SceneController = getSceneController();
     const { areaMeasurementGeometry } = SceneController;
+    const doubleClickGuard = getDoubleClickGuard();
+    const onRightClick = () => {
+      areaMeasurementGeometry.reset();
+      Store.dispatch(hideMeasurementTooltipAction());
+    };
     return {
       leftDownMove: (
         _delta: Point2,
@@ -921,9 +946,9 @@ export class AreaMeasurementTool {
         areaMeasurementGeometry.connectToStartPoint();
         Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
       },
-      rightClick: () => {
-        areaMeasurementGeometry.reset();
-        Store.dispatch(hideMeasurementTooltipAction());
+      rightClick: onRightClick,
+      leftClick: (pos: Point2) => {
+        doubleClickGuard(pos, onRightClick);
       },
     };
   }

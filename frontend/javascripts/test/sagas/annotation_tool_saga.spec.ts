@@ -19,10 +19,12 @@ mockRequire("oxalis/controller/scene_controller_provider", () => ({
   lineMeasurementGeometry: {
     hide: _.noop,
     reset: _.noop,
+    resetAndHide: _.noop,
   },
   areaMeasurementGeometry: {
     hide: _.noop,
     reset: _.noop,
+    resetAndHide: _.noop,
   },
 }));
 const {

@@ -108,7 +108,6 @@ export class ContourGeometry {
     mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
     this.connectingLine.geometry.attributes.position.needsUpdate = true;
-    // this.connectingLine.geometry.setDrawRange(0, 2);
     this.connectingLine.geometry.computeBoundingSphere();
   }
 
@@ -138,6 +137,10 @@ export class ContourGeometry {
   hide() {
     this.line.visible = false;
     this.connectingLine.visible = false;
+  }
+  resetAndHide() {
+    this.reset();
+    this.hide();
   }
   show() {
     this.line.visible = true;
@@ -315,6 +318,7 @@ export class QuickSelectGeometry {
   }
 }
 
+// This class is used to display connected line segments and is used by the LineMeasurementTool.
 export class LineMeasurementGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
@@ -357,29 +361,37 @@ export class LineMeasurementGeometry {
   }
 
   setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
+    this.vertexBuffer.clear();
     this.wasReset = false;
     this.visible = true;
     this.currentOrthoView = initialOrthoView;
     this.vertexBuffer.push(pos);
-    // Adding an additional point that will be modified by setTopPoint.
+    // Adding an additional point that will be modified by updateLatestPointPosition.
     this.vertexBuffer.push(pos);
     this.finalizeMesh();
   }
 
-  setTopPoint(pos: Vector3) {
+  // This method updates the latest point of the connected line segments.
+  // The main purpose of this method to let the latest point follow the mouse pointer.
+  updateLatestPointPosition(pos: Vector3) {
     const pointCount = this.vertexBuffer.getLength();
     this.vertexBuffer.set(pos, pointCount - 1);
     this.finalizeMesh();
   }
 
   addPoint(pos: Vector3) {
-    this.setTopPoint(pos);
+    this.updateLatestPointPosition(pos);
     this.vertexBuffer.push(pos);
     this.finalizeMesh();
   }
 
   hide() {
     this.visible = false;
+  }
+
+  resetAndHide() {
+    this.reset();
+    this.hide();
   }
 
   finalizeMesh() {

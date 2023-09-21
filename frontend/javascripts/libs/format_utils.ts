@@ -140,8 +140,8 @@ const nmFactorToUnit = new Map([
   [1e9, "m"],
   [1e12, "km"],
 ]);
-export function formatNumberToLength(lengthInNm: number, roundTo: number = 2): string {
-  return formatNumberToUnit(lengthInNm, nmFactorToUnit, false, roundTo);
+export function formatNumberToLength(lengthInNm: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
 }
 
 const nmFactorToUnit2D = new Map([

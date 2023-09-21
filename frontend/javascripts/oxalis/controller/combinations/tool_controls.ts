@@ -828,7 +828,7 @@ export class LineMeasurementTool {
       }
       const state = Store.getState();
       const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
-      lineMeasurementGeometry.setTopPoint(newPos);
+      lineMeasurementGeometry.updateLatestPointPosition(newPos);
       Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
     };
     const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -843,8 +843,7 @@ export class LineMeasurementTool {
         isMeasuring = false;
       } else {
         // If the tool already stopped measuring, reset the tool.
-        lineMeasurementGeometry.reset();
-        lineMeasurementGeometry.hide();
+        lineMeasurementGeometry.resetAndHide();
         Store.dispatch(hideMeasurementTooltipAction());
       }
     };
@@ -889,7 +888,7 @@ export class LineMeasurementTool {
   ): ActionDescriptor {
     return {
       leftClick: "Left Click to measure distance",
-      rightClick: "Finish Measurement and reset",
+      rightClick: "Finish Measurement",
     };
   }
 
@@ -968,8 +967,7 @@ export class AreaMeasurementTool {
 
   static onToolDeselected() {
     const { areaMeasurementGeometry } = getSceneController();
-    areaMeasurementGeometry.reset();
-    areaMeasurementGeometry.hide();
+    areaMeasurementGeometry.resetAndHide();
     Store.dispatch(hideMeasurementTooltipAction());
   }
 }

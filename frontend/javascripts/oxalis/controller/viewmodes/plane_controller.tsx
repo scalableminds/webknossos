@@ -336,7 +336,7 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.showContextMenuAt,
     );
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
-    const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls(planeId);
+    const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
 
     const allControlKeys = _.union(

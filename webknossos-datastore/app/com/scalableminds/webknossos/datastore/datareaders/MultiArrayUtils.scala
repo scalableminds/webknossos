@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import net.liftweb.common.Box
+import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
@@ -25,18 +27,21 @@ object MultiArrayUtils {
     MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): MultiArray = {
+  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): Box[MultiArray] = {
     val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
-    if (fill != null)
-      if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fill.doubleValue)
-      else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fill.floatValue)
-      else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fill.longValue)
-      else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fill.intValue)
-      else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fill.shortValue)
-      else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fill.byteValue)
-      else throw new IllegalStateException
-    array
+    tryo {
+      if (fill != null) {
+        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fill.doubleValue)
+        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fill.floatValue)
+        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fill.longValue)
+        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fill.intValue)
+        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fill.shortValue)
+        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fill.byteValue)
+        else throw new IllegalStateException
+      }
+      array
+    }
   }
 
   /**
@@ -112,7 +117,7 @@ object MultiArrayUtils {
         targetIterator.setObjectNext(sourceIterator.getObjectNext)
 
   private trait ValueSetter {
-    def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)
+    def set(sourceIterator: IndexIterator, targetIterator: IndexIterator): Unit
   }
 
   def orderFlippedView(source: MultiArray): MultiArray = {

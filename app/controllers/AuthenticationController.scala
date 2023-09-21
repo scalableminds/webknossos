@@ -12,7 +12,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import models.voxelytics.VoxelyticsDAO
@@ -31,6 +31,8 @@ import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Resul
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,7 +50,7 @@ class AuthenticationController @Inject()(
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
-    dataSetDAO: DataSetDAO,
+    datasetDAO: DatasetDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
@@ -169,6 +171,7 @@ class AuthenticationController @Inject()(
                       .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                     _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+                    _ = logger.info(f"User ${user._id} authenticated.")
                   } yield result
                 case None =>
                   Future.successful(BadRequest(Messages("error.noUser")))
@@ -249,7 +252,7 @@ class AuthenticationController @Inject()(
       case (Some(organizationName), Some(dataSetName), None, None) =>
         for {
           organization <- organizationDAO.findOneByName(organizationName)
-          _ <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
+          _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
         } yield organization
       case (None, None, Some(annotationId), None) =>
         for {
@@ -304,7 +307,7 @@ class AuthenticationController @Inject()(
   private def canAccessDataset(ctx: DBAccessContext, organizationName: String, dataSetName: String): Fox[Boolean] = {
     val foundFox = for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      _ <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
+      _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
     } yield ()
     foundFox.futureBox.map(_.isDefined)
   }
@@ -446,8 +449,12 @@ class AuthenticationController @Inject()(
 
   def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
-      case Some(authenticator) => combinedAuthenticatorService.discard(authenticator, Ok)
-      case _                   => Future.successful(Ok)
+      case Some(authenticator) =>
+        for {
+          authenticatorResult <- combinedAuthenticatorService.discard(authenticator, Ok)
+          _ = logger.info(f"User ${request.identity.map(_._id).getOrElse("id unknown")} logged out.")
+        } yield authenticatorResult
+      case _ => Future.successful(Ok)
     }
   }
 
@@ -459,19 +466,21 @@ class AuthenticationController @Inject()(
       case Some(user) =>
         // logged in
         // Check if the request we received was signed using our private sso-key
-        if (shaHex(ssoKey, sso) == sig) {
+        if (MessageDigest.isEqual(shaHex(ssoKey, sso).getBytes(StandardCharsets.UTF_8),
+                                  sig.getBytes(StandardCharsets.UTF_8))) {
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
           for {
             nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
             returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
             userEmail <- userService.emailFor(user)
+            _ = logger.info(f"User ${user._id} logged in via SSO.")
           } yield {
             val returnPayload =
               s"nonce=$nonce&" +
                 s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
                 s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
-                s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
+                s"username=${URLEncoder.encode(user.abbreviatedName, "UTF-8")}&" +
                 s"name=${URLEncoder.encode(user.name, "UTF-8")}"
             val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
             val returnSignature = shaHex(ssoKey, encodedReturnPayload)
@@ -499,6 +508,7 @@ class AuthenticationController @Inject()(
           value: Cookie <- combinedAuthenticatorService.init(authenticator)
           result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
           _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+          _ = logger.info(f"User ${user._id} logged in.")
           _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
         } yield result
       case None =>

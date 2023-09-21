@@ -184,10 +184,31 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                 userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
-      _ <- bool2Fox(previousActionGroupsToCommit.exists(_.transactionGroupIndex == 0)) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
-      commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
+      _ <- bool2Fox(
+        previousActionGroupsToCommit
+          .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
+      commitResult <- commitUpdates(tracingId, List(concatenatedGroup), userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
+
+  private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup[T]],
+                                                   lastActionGroup: UpdateActionGroup[T]): UpdateActionGroup[T] =
+    if (previousActionGroups.isEmpty) lastActionGroup
+    else {
+      val allActionGroups = previousActionGroups :+ lastActionGroup
+      UpdateActionGroup[T](
+        version = lastActionGroup.version,
+        timestamp = lastActionGroup.timestamp,
+        authorId = lastActionGroup.authorId,
+        actions = allActionGroups.flatMap(_.actions),
+        stats = lastActionGroup.stats, // the latest stats do count
+        info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
+        transactionId = f"${lastActionGroup.transactionId}-concatenated",
+        transactionGroupCount = 1,
+        transactionGroupIndex = 0,
+      )
+    }
 
   // Perform version check and commit the passed updates
   private def commitUpdates(tracingId: String,
@@ -205,8 +226,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
-          val versionIncrement = if (updateGroup.transactionGroupIndex == 0) 1 else 0 // version increment happens at the start of each transaction
-          if (prevVersion + versionIncrement == updateGroup.version) {
+          if (prevVersion + 1 == updateGroup.version) {
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
               .flatMap(

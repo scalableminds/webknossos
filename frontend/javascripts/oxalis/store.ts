@@ -141,6 +141,7 @@ export type MutableTree = {
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
+  edgesAreVisible: boolean;
 };
 export type Tree = {
   readonly treeId: number;
@@ -154,6 +155,7 @@ export type Tree = {
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
+  readonly edgesAreVisible: boolean;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
@@ -317,11 +319,10 @@ export type DatasetConfiguration = {
   // they still correlated with each other.
   readonly nativelyRenderedLayerName: string | null;
 };
-export type PartialDatasetConfiguration = Partial<
-  DatasetConfiguration & {
-    readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
-  }
->;
+
+export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {
+  readonly layers?: Record<string, Partial<DatasetLayerConfiguration>>;
+};
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;

@@ -187,12 +187,14 @@ export const clickSegmentAction = (
   segmentId: number,
   somePosition: Vector3,
   someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  layerName?: string,
 ) =>
   ({
     type: "CLICK_SEGMENT",
     segmentId,
     somePosition,
     someAdditionalCoordinates,
+    layerName,
   } as const);
 
 export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>

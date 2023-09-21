@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.Vec3Double
-import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 package object inbox {
@@ -18,7 +18,7 @@ package object inbox {
 
     def statusOpt: Option[String]
 
-    def defaultViewConfiguration: Option[DataSetViewConfiguration]
+    def defaultViewConfiguration: Option[DatasetViewConfiguration]
   }
 
   object GenericInboxDataSource {
@@ -46,7 +46,7 @@ package object inbox {
 
     val statusOpt: Option[String] = Some(status)
 
-    val defaultViewConfiguration: Option[DataSetViewConfiguration] = None
+    val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
   }
 
   object UnusableDataSource {

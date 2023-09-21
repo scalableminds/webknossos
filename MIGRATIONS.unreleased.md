@@ -6,8 +6,6 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...HEAD)
 
 ### Postgres Evolutions:
-- [108-additional-coordinates](conf/evolutions/108-additional-coordinates.sql)
-- [109-scheduled-maintenances.sql](conf/evolutions/109-scheduled-maintenances.sql)

@@ -54,7 +54,7 @@ import { V3 } from "libs/mjs";
 import {
   hideMeasurementTooltipAction,
   setQuickSelectStateAction,
-  showMeasurementTooltipAction,
+  setLastMeasuredPositionAction,
 } from "oxalis/model/actions/ui_actions";
 
 export type ActionDescriptor = {
@@ -829,7 +829,7 @@ export class LineMeasurementTool {
       const state = Store.getState();
       const newPos = V3.floor(calculateGlobalPos(state, pos, initialPlane));
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
-      Store.dispatch(showMeasurementTooltipAction([evt.clientX, evt.clientY]));
+      Store.dispatch(setLastMeasuredPositionAction(newPos));
     };
     const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       // In case the tool was reset by the user, abort measuring.
@@ -869,8 +869,8 @@ export class LineMeasurementTool {
         isMeasuring = true;
       } else {
         lineMeasurementGeometry.addPoint(position);
-        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
       }
+      Store.dispatch(setLastMeasuredPositionAction(position));
     };
     return {
       mouseMove,
@@ -912,12 +912,7 @@ export class AreaMeasurementTool {
       Store.dispatch(hideMeasurementTooltipAction());
     };
     return {
-      leftDownMove: (
-        _delta: Point2,
-        pos: Point2,
-        id: string | null | undefined,
-        event: MouseEvent,
-      ) => {
+      leftDownMove: (_delta: Point2, pos: Point2, id: string | null | undefined) => {
         if (id == null) {
           return;
         }
@@ -934,16 +929,15 @@ export class AreaMeasurementTool {
         const state = Store.getState();
         const position = V3.floor(calculateGlobalPos(state, pos, initialPlane));
         areaMeasurementGeometry.addEdgePoint(position);
-        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
+        Store.dispatch(setLastMeasuredPositionAction(position));
       },
-      leftMouseUp: (event: MouseEvent) => {
+      leftMouseUp: () => {
         if (!isMeasuring) {
           return;
         }
         // Stop drawing area and close the drawn area if still measuring.
         isMeasuring = false;
         areaMeasurementGeometry.connectToStartPoint();
-        Store.dispatch(showMeasurementTooltipAction([event.clientX, event.clientY]));
       },
       rightClick: onRightClick,
       leftClick: (pos: Point2) => {

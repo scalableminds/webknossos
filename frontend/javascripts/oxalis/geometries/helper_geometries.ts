@@ -323,13 +323,13 @@ export class LineMeasurementGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
-  currentOrthoView: OrthoView;
+  viewport: OrthoView;
   visible: boolean;
   wasReset: boolean;
 
   constructor() {
     this.wasReset = false;
-    this.currentOrthoView = OrthoViews.PLANE_XY;
+    this.viewport = OrthoViews.PLANE_XY;
     this.color = CONTOUR_COLOR_NORMAL;
     this.visible = false;
 
@@ -364,7 +364,7 @@ export class LineMeasurementGeometry {
     this.vertexBuffer.clear();
     this.wasReset = false;
     this.visible = true;
-    this.currentOrthoView = initialOrthoView;
+    this.viewport = initialOrthoView;
     this.vertexBuffer.push(pos);
     // Adding an additional point that will be modified by updateLatestPointPosition.
     this.vertexBuffer.push(pos);
@@ -429,7 +429,7 @@ export class LineMeasurementGeometry {
   }
 
   updateForCam(orthoView: OrthoView) {
-    if (orthoView === this.currentOrthoView && this.visible) {
+    if (orthoView === this.viewport && this.visible) {
       this.line.visible = true;
     } else {
       this.line.visible = false;

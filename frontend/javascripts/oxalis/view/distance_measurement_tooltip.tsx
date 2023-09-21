@@ -1,8 +1,8 @@
 import { useDispatch, useSelector } from "react-redux";
 import _ from "lodash";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum, MeasurementTools, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -15,6 +15,12 @@ import {
   formatNumberToArea,
 } from "libs/format_utils";
 import { Tooltip } from "antd";
+import {
+  calculateMaybePlaneScreenPos,
+  getInputCatcherRect,
+} from "oxalis/model/accessors/view_mode_accessor";
+import { clamp } from "libs/utils";
+import dimensions from "oxalis/model/dimensions";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -35,13 +41,31 @@ function DistanceEntry({ distance }: { distance: string }) {
 }
 
 export default function DistanceMeasurementTooltip() {
-  const position = useSelector(
-    (state: OxalisState) => state.uiInformation.measurementTooltipPosition,
-  );
+  const position = useSelector((state: OxalisState) => state.uiInformation.lastMeasuredPosition);
   const flycam = useSelector((state: OxalisState) => state.flycam);
+  const state = useSelector((state: OxalisState) => state);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const datasetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
+  const currentPosition = getPosition(flycam);
+  const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
+  const activeGeometry =
+    activeTool === AnnotationToolEnum.LINE_MEASUREMENT
+      ? lineMeasurementGeometry
+      : areaMeasurementGeometry;
+  const orthoView = activeGeometry.viewport;
+  // When the flycam is moved into the third dimension, the tooltip should be hidden.
+  const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+  useEffect(() => {
+    if (position != null && currentPosition[thirdDim] !== position[thirdDim]) {
+      dispatch(hideMeasurementTooltipAction());
+      activeGeometry.resetAndHide();
+    }
+  }, [currentPosition]);
+  if (position == null || !MeasurementTools.includes(activeTool)) {
+    return null;
+  }
   let valueInVx = "";
   let valueInMetricUnit = "";
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
@@ -53,35 +77,35 @@ export default function DistanceMeasurementTooltip() {
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea([1, 1, 1]), 1);
     valueInMetricUnit = formatNumberToArea(areaMeasurementGeometry.getArea(datasetScale), 1);
   }
-  const currentPosition = getPosition(flycam);
-  const [lastFlycamPosition, setLastFlycamPosition] = useState<Vector3>(currentPosition);
-  useEffect(() => {
-    if (!_.isEqual(lastFlycamPosition, currentPosition)) {
-      // If the position of the flycam has changed, we hide the tooltip and terminate the measurement.
-      setLastFlycamPosition(currentPosition);
-      dispatch(hideMeasurementTooltipAction());
-      const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
-      lineMeasurementGeometry.hide();
-      areaMeasurementGeometry.hide();
-      lineMeasurementGeometry.reset();
-      areaMeasurementGeometry.reset();
-    }
-  }, [currentPosition]);
-  if (position == null || !MeasurementTools.includes(activeTool)) {
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = getInputCatcherRect(state, orthoView);
+  const tooltipPosition = calculateMaybePlaneScreenPos(state, position, orthoView);
+  if (tooltipPosition == null) {
     return null;
   }
+
+  const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
+  const left = clamp(
+    viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
+    tooltipPosition.x + ADDITIONAL_OFFSET,
+    viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
+  );
+  const top = clamp(
+    viewportTop + ADDITIONAL_OFFSET,
+    tooltipPosition.y - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+  );
   return (
     <div
-      className="node-context-menu"
+      ref={tooltipRef}
+      className="node-context-menu measurement-tooltip"
       style={{
-        position: "absolute",
-        left: position[0] + ADDITIONAL_OFFSET,
-        top: position[1] - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-        width: "fit-content",
-        pointerEvents: "all",
-        borderRadius: 6,
-        padding: "2px 4px",
-        fontSize: 14,
+        left,
+        top,
       }}
     >
       <DistanceEntry distance={valueInMetricUnit} />

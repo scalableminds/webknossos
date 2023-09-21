@@ -134,13 +134,13 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "HIDE_MEASUREMENT_TOOLTIP": {
       return updateKey(state, "uiInformation", {
-        measurementTooltipPosition: null,
+        lastMeasuredPosition: null,
       });
     }
 
-    case "SHOW_MEASUREMENT_TOOLTIP": {
+    case "SET_LAST_MEASURED_POSITION": {
       return updateKey(state, "uiInformation", {
-        measurementTooltipPosition: action.position,
+        lastMeasuredPosition: action.position,
       });
     }
 

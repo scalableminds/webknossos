@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.10.1](https://github.com/scalableminds/webknossos/releases/tag/23.10.1) - 2023-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...23.10.1)
+
+### Fixed
+- Fixed that auto-saving only took place every 5 minutes instead of every 30 seconds. [#7352](https://github.com/scalableminds/webknossos/pull/7352)
+
 ## [23.10.0](https://github.com/scalableminds/webknossos/releases/tag/23.10.0) - 2023-09-21
 [Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...23.10.0)
 

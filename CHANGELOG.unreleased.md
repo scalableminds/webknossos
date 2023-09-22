@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed that auto-saving only took place every 5 minutes instead of every 30 seconds. [#7352](https://github.com/scalableminds/webknossos/pull/7352)
 
 ### Removed
 

@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed that auto-saving only took place every 5 minutes instead of every 30 seconds. [#7352](https://github.com/scalableminds/webknossos/pull/7352)
 
 ### Removed
 

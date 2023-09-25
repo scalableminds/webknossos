@@ -83,6 +83,9 @@ class UserService @Inject()(conf: WkConf,
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
+  def assertIsSuperUser(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+    assertIsSuperUser(user._multiUser)
+
   def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser))
 

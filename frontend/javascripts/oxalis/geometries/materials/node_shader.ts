@@ -198,7 +198,9 @@ void main() {
     ));
 
     color = texture(treeColors, treeIdToTextureCoordinate).rgb;
-    bool isVisible = texture(treeColors, treeIdToTextureCoordinate).a == 1.0;
+    float alpha = texture(treeColors, treeIdToTextureCoordinate).a;
+    // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
+    bool isVisible = alpha == 1.0 || alpha == 0.5 ;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {

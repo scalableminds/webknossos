@@ -1,10 +1,12 @@
 package models.binary.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
+import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
@@ -48,4 +50,10 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =
     BoundingBox.union(magsWithAttributes.map(_.boundingBox))
+
+  protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
+    for {
+      normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
+      _ <- Option(bounds.length == 2).collect { case true => () }
+    } yield AdditionalAxis(normalizedName, bounds, index)
 }

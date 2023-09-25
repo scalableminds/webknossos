@@ -30,7 +30,7 @@ import {
   getActiveNodeFromTree,
   getTree,
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   findTreeByNodeId,
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -360,6 +360,7 @@ function splitTreeByNodes(
             isVisible: true,
             groupId: activeTree.groupId,
             type: activeTree.type,
+            edgesAreVisible: true,
           };
         } else {
           const immutableNewTree = createTree(
@@ -482,6 +483,7 @@ export function createTree(
   addToActiveGroup: boolean = true,
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
+  edgesAreVisible: boolean = true,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -491,7 +493,7 @@ export function createTree(
 
     if (addToActiveGroup) {
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+      const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
@@ -510,6 +512,7 @@ export function createTree(
       isVisible: true,
       groupId,
       type,
+      edgesAreVisible,
     };
     return Maybe.Just(tree);
   });
@@ -845,6 +848,7 @@ export function createMutableTreeMapFromTreeArray(
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       }),
     ),
     "treeId",

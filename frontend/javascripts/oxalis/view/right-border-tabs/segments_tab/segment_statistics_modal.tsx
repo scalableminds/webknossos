@@ -93,13 +93,13 @@ export function SegmentStatisticsModal({
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          mag.getFinestResolution(),
           segments.map((segment) => segment.id),
         ),
         getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          mag.getFinestResolution(),
           segments.map((segment) => segment.id),
         ),
       ]).then((response) => {

@@ -1122,13 +1122,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getLowestResolution(),
+          mag.getFinestResolution(),
           [segmentIdAtPosition],
         );
         const [boundingBox] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getLowestResolution(),
+          mag.getFinestResolution(),
           [segmentIdAtPosition],
         );
         const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;

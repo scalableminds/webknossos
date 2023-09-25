@@ -101,7 +101,7 @@ Expects:
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebKnossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataSet.upload.validation.failed")
+            (remoteWebKnossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok
@@ -148,12 +148,12 @@ Expects:
             case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
-                  uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataSet.upload.validation.failed"
+                  uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
                 result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                             urlOrHeaderToken(token, request)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
+                    _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
@@ -197,14 +197,14 @@ Expects:
       log() {
         for {
           dataSourceId <- uploadService
-            .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataSet.upload.validation.failed"
+            .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
           result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                       urlOrHeaderToken(token, request)) {
             for {
-              (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+              (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
               _ <- remoteWebKnossosClient.reportUpload(
                 dataSourceId,
-                dataSetSizeBytes,
+                datasetSizeBytes,
                 request.body.needsConversion.getOrElse(false),
                 viaAddRoute = false,
                 userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
@@ -238,14 +238,14 @@ Expects:
   def cancelUpload(token: Option[String]): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
-        case false => Fox.failure("dataSet.upload.validation.failed")
+        case false => Fox.failure("dataset.upload.validation.failed")
         case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
       }
       dataSourceIdFox.flatMap { dataSourceId =>
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
                                           urlOrHeaderToken(token, request)) {
           for {
-            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataSet.delete.webknossos.failed"
+            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -525,7 +525,7 @@ Expects:
           _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
             organizationName,
             dataSetName,
-            reason = Some("the user wants to delete the dataset")) ?~> "dataSet.delete.failed"
+            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
           _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
         } yield Ok
       }

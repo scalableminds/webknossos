@@ -593,6 +593,7 @@ function splitTreeIntoComponents(
       isVisible: tree.isVisible,
       groupId: newGroupId,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     };
     newTrees.push(newTree);
   }
@@ -721,6 +722,7 @@ export function parseNml(nmlString: string): Promise<{
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);

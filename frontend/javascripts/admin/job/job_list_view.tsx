@@ -359,6 +359,7 @@ class JobListView extends React.PureComponent<Props, State> {
               key="createdAt"
               render={(job) => <FormattedDate timestamp={job.createdAt} />}
               sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+              defaultSortOrder="descend"
             />
             <Column
               title="State"

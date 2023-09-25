@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.annotation.Annotation
-import models.binary.{DataSet, DataStore}
+import models.binary.{Dataset, DataStore}
 import models.organization.Organization
 import models.user.{MultiUserDAO, User, UserDAO}
 import models.job.JobCommand.JobCommand
@@ -190,7 +190,7 @@ case class UpdateAnnotationViewOnlyEvent(user: User, annotation: Annotation, cha
     Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
 }
 
-case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+case class OpenDatasetEvent(user: User, dataSet: Dataset)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "open_dataset"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
@@ -218,7 +218,7 @@ case class FailedJobEvent(user: User, command: JobCommand)(implicit ec: Executio
     Fox.successful(Json.obj("command" -> command.toString))
 }
 
-case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore, dataSetSizeBytes: Long)(
+case class UploadDatasetEvent(user: User, dataSet: Dataset, dataStore: DataStore, dataSetSizeBytes: Long)(
     implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "upload_dataset"
@@ -233,7 +233,7 @@ case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore
       ))
 }
 
-case class ChangeDatasetSettingsEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext)
+case class ChangeDatasetSettingsEvent(user: User, dataSet: Dataset)(implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "change_dataset_settings"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =

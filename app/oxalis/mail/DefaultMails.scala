@@ -36,7 +36,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                     organization: Organization): Mail =
     Mail(
       from = defaultSender,
-      subject = s"WEBKNOSSOS | Time limit reached. ${user.abreviatedName} in $projectName",
+      subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
       bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList)
     )

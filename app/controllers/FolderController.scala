@@ -3,7 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
@@ -23,7 +23,7 @@ class FolderController @Inject()(
     teamDAO: TeamDAO,
     userService: UserService,
     teamService: TeamService,
-    dataSetDAO: DataSetDAO,
+    datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -89,7 +89,7 @@ class FolderController @Inject()(
       _ <- bool2Fox(organization._rootFolder != idValidated) ?~> "folder.delete.root"
       _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
       childrenCount <- folderDAO.countChildren(idValidated)
-      datasetsCount <- dataSetDAO.countByFolder(idValidated)
+      datasetsCount <- datasetDAO.countByFolder(idValidated)
       _ <- bool2Fox(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
       _ <- bool2Fox(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
       _ <- folderDAO.deleteOne(idValidated)

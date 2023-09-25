@@ -81,7 +81,6 @@ const viewOverrides: Record<string, string> = {
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw_fallback: {
     layers: {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ alpha: number; intensityRange: [number, nu... Remove this comment to see the full error message
       color: {
         alpha: 100,
         intensityRange: [0, 255],
@@ -94,11 +93,9 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   },
   connectome_file_test_dataset: {
     layers: {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isDisabled: true; }' is not assignable to ... Remove this comment to see the full error message
       another_segmentation: {
         isDisabled: true,
       },
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isDisabled: false; }' is not assignable to... Remove this comment to see the full error message
       segmentation: {
         isDisabled: false,
       },

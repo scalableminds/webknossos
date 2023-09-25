@@ -2,6 +2,7 @@ package oxalis.opengraph
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import com.typesafe.scalalogging.LazyLogging
@@ -10,7 +11,6 @@ import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
-import oxalis.opengraph.OpenGraphPageType.OpenGraphPageType
 import oxalis.security.URLSharing
 import utils.{ObjectId, WkConf}
 
@@ -22,20 +22,8 @@ case class OpenGraphTags(
     image: Option[String]
 )
 
-object OpenGraphTags {
-  def default(pageType: OpenGraphPageType = OpenGraphPageType.unknown): OpenGraphTags = {
-    val description = pageType match {
-      case OpenGraphPageType.dataset    => Some("View this dataset in WEBKNOSSOS")
-      case OpenGraphPageType.annotation => Some("View this annotation in WEBKNOSSOS")
-      case OpenGraphPageType.workflow   => Some("View this voxelytics workflow report in WEBKNOSSOS")
-      case _                            => None // most clients will fall back to <meta name="description">, see template
-    }
-    OpenGraphTags(
-      Some("WEBKNOSSOS"),
-      description,
-      None
-    )
-  }
+object OpenGraphPageType extends ExtendedEnumeration {
+  val dataset, annotation, workflow, unknown = Value
 }
 
 class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
@@ -56,7 +44,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case OpenGraphPageType.dataset    => datasetOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
       case OpenGraphPageType.annotation => annotationOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
       case OpenGraphPageType.workflow   => workflowOpenGraphTags(uriPath)
-      case OpenGraphPageType.unknown    => Fox.successful(OpenGraphTags.default())
+      case OpenGraphPageType.unknown    => Fox.successful(defaultTags())
     }
 
     // In error case (probably no access permissions), fall back to default, so the html template does not break
@@ -64,7 +52,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       tagsBox <- tagsFox.futureBox
       tags = tagsBox match {
         case Full(tags) => tags
-        case _          => OpenGraphTags.default(pageType)
+        case _          => defaultTags(pageType)
       }
     } yield tags
   }
@@ -148,4 +136,18 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
         } yield OpenGraphTags(Some(f"${workflow.name} | WEBKNOSSOS"), Some("Voxelytics Workflow Report"), None)
       case _ => Fox.failure("not a matching uri")
     }
+
+  private def defaultTags(pageType: OpenGraphPageType.Value = OpenGraphPageType.unknown): OpenGraphTags = {
+    val description = pageType match {
+      case OpenGraphPageType.dataset    => Some("View this dataset in WEBKNOSSOS")
+      case OpenGraphPageType.annotation => Some("View this annotation in WEBKNOSSOS")
+      case OpenGraphPageType.workflow   => Some("View this voxelytics workflow report in WEBKNOSSOS")
+      case _                            => None // most clients will fall back to <meta name="description">, see template
+    }
+    OpenGraphTags(
+      Some("WEBKNOSSOS"),
+      description,
+      None
+    )
+  }
 }

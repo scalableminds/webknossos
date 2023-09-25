@@ -29,7 +29,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
           multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
-        openGraphTags <- openGraphService.getOpenGraphTags(request.path)
+        openGraphTags <- openGraphService.getOpenGraphTags(request.path, request.getQueryString("token"))
       } yield
         Ok(
           views.html.main(

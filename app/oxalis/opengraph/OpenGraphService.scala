@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
-import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO}
+import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
@@ -29,9 +29,9 @@ object OpenGraphTags {
 }
 
 class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
-                                 dataSetDAO: DataSetDAO,
+                                 datasetDAO: DatasetDAO,
                                  organizationDAO: OrganizationDAO,
-                                 dataSetDataLayerDAO: DataSetDataLayerDAO,
+                                 datasetLayerDAO: DatasetLayerDAO,
                                  annotationDAO: AnnotationDAO,
                                  conf: WkConf)
     extends LazyLogging {
@@ -94,8 +94,8 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
 
   private def datasetOpenGraphTagsWithOrganizationName(organizationName: String, datasetName: String) =
     for {
-      dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
-      layers <- dataSetDataLayerDAO.findAllForDataSet(dataset._id)
+      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
     } yield
@@ -111,9 +111,9 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
         for {
           annotationIdValidated <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationIdValidated)(GlobalAccessContext)
-          dataset: DataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext)
+          dataset: Dataset <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext)
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
-          layers <- dataSetDataLayerDAO.findAllForDataSet(dataset._id)
+          layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           layerOpt = layers.find(_.category == Category.color)
         } yield
           OpenGraphTags(
@@ -124,7 +124,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case _ => Fox.successful(OpenGraphTags.default)
     }
 
-  private def thumbnailUri(dataset: DataSet,
+  private def thumbnailUri(dataset: Dataset,
                            layerOpt: Option[DataLayerLike],
                            organization: Organization): Option[String] =
     layerOpt match {

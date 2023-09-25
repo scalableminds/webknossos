@@ -3,8 +3,8 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.inject.Inject
-import models.binary.{DataSetDAO, DataSetService}
-import models.configuration.DataSetConfigurationService
+import models.binary.{DatasetDAO, DatasetService}
+import models.configuration.DatasetConfigurationService
 import models.user.UserService
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.Messages
@@ -15,9 +15,9 @@ import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(
     userService: UserService,
-    dataSetService: DataSetService,
-    dataSetDAO: DataSetDAO,
-    dataSetConfigurationService: DataSetConfigurationService,
+    datasetService: DatasetService,
+    datasetDAO: DatasetDAO,
+    datasetConfigurationService: DatasetConfigurationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -41,11 +41,11 @@ class ConfigurationController @Inject()(
       request.identity.toFox
         .flatMap(
           user =>
-            dataSetConfigurationService
+            datasetConfigurationService
               .getDataSetViewConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName)(
                 GlobalAccessContext))
         .orElse(
-          dataSetConfigurationService.getDataSetViewConfigurationForDataset(request.body,
+          datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body,
                                                                             dataSetName,
                                                                             organizationName)(ctx)
         )
@@ -58,19 +58,19 @@ class ConfigurationController @Inject()(
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
-        dataSetConf = conf - "layers"
+        datasetConf = conf - "layers"
         layerConf = conf.get("layers")
         _ <- userService.updateDataSetViewConfiguration(request.identity,
                                                         dataSetName,
                                                         organizationName,
-                                                        dataSetConf,
+                                                        datasetConf,
                                                         layerConf)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))
     }
 
   def readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      dataSetConfigurationService
+      datasetConfigurationService
         .getCompleteAdminViewConfiguration(dataSetName, organizationName)
         .map(configuration => Ok(Json.toJson(configuration)))
     }
@@ -78,10 +78,10 @@ class ConfigurationController @Inject()(
   def updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
-        _ <- dataSetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
+        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
-        _ <- dataSetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
+        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))
     }
 }

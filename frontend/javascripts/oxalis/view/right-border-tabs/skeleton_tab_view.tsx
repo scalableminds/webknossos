@@ -38,7 +38,7 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   getTree,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -68,8 +68,8 @@ import {
   toggleInactiveTreesAction,
   setActiveTreeAction,
   deselectActiveTreeAction,
-  deselectActiveGroupAction,
-  setActiveGroupAction,
+  deselectActiveTreeGroupAction,
+  setActiveTreeGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
@@ -667,7 +667,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
-      this.props.onSetActiveGroup(selectedElement.id);
+      this.props.onSetActiveTreeGroup(selectedElement.id);
     }
   };
 
@@ -805,7 +805,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const activeTreeName = getActiveTree(skeletonTracing)
       .map((activeTree) => activeTree.name)
       .getOrElse("");
-    const activeGroupName = getActiveGroup(skeletonTracing)
+    const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
@@ -1033,12 +1033,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deselectActiveTreeAction());
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onDeselectActiveGroup() {
-    dispatch(deselectActiveGroupAction());
+    dispatch(deselectActiveTreeGroupAction());
   },
 
   showDropzoneModal() {

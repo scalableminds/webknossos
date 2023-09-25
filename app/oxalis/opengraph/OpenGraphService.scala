@@ -10,6 +10,7 @@ import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
+import oxalis.opengraph.OpenGraphPageType.OpenGraphPageType
 import oxalis.security.URLSharing
 import utils.{ObjectId, WkConf}
 
@@ -22,11 +23,19 @@ case class OpenGraphTags(
 )
 
 object OpenGraphTags {
-  def default: OpenGraphTags = OpenGraphTags(
-    Some("WEBKNOSSOS"),
-    None,
-    None
-  )
+  def default(pageType: OpenGraphPageType = OpenGraphPageType.unknown): OpenGraphTags = {
+    val description = pageType match {
+      case OpenGraphPageType.dataset    => Some("View this dataset in WEBKNOSSOS")
+      case OpenGraphPageType.annotation => Some("View this annotation in WEBKNOSSOS")
+      case OpenGraphPageType.workflow   => Some("View this voxelytics workflow report in WEBKNOSSOS")
+      case _                            => None // most clients will fall back to <meta name="description">, see template
+    }
+    OpenGraphTags(
+      Some("WEBKNOSSOS"),
+      description,
+      None
+    )
+  }
 }
 
 class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
@@ -47,7 +56,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case OpenGraphPageType.dataset    => datasetOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
       case OpenGraphPageType.annotation => annotationOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
       case OpenGraphPageType.workflow   => workflowOpenGraphTags(uriPath)
-      case OpenGraphPageType.unknown    => Fox.successful(OpenGraphTags.default)
+      case OpenGraphPageType.unknown    => Fox.successful(OpenGraphTags.default())
     }
 
     // In error case (probably no access permissions), fall back to default, so the html template does not break
@@ -55,7 +64,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       tagsBox <- tagsFox.futureBox
       tags = tagsBox match {
         case Full(tags) => tags
-        case _          => OpenGraphTags.default
+        case _          => OpenGraphTags.default(pageType)
       }
     } yield tags
   }
@@ -80,7 +89,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
         datasetOpenGraphTagsWithOrganizationName(organizationName, datasetName, token)
       case datasetRoute2Regex(organizationName, datasetName) =>
         datasetOpenGraphTagsWithOrganizationName(organizationName, datasetName, token)
-      case _ => Fox.successful(OpenGraphTags.default)
+      case _ => Fox.failure("not a matching uri")
     }
 
   private def datasetOpenGraphTagsWithOrganizationName(organizationName: String,
@@ -94,7 +103,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
     } yield
       OpenGraphTags(
         Some(s"${dataset.displayName.getOrElse(datasetName)} | WEBKNOSSOS"),
-        Some(s"View this dataset of organization ${organization.displayName} in WEBKNOSSOS"),
+        Some(s"View this dataset in WEBKNOSSOS"),
         thumbnailUri(dataset, layerOpt, organization, token)
       )
 
@@ -113,10 +122,10 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
         } yield
           OpenGraphTags(
             Some(s"${annotation.nameOpt.orElse(dataset.displayName).getOrElse(dataset.name)} | WEBKNOSSOS"),
-            Some(s"Annotation on dataset ${dataset.displayName.getOrElse(dataset.name)} in WEBKNOSSOS"),
+            Some(s"View this annotation on dataset ${dataset.displayName.getOrElse(dataset.name)} in WEBKNOSSOS"),
             thumbnailUri(dataset, layerOpt, organization, token)
           )
-      case _ => Fox.successful(OpenGraphTags.default)
+      case _ => Fox.failure("not a matching uri")
     }
 
   private def thumbnailUri(dataset: Dataset,
@@ -131,11 +140,12 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case _ => None
     }
 
-  private def workflowOpenGraphTags(uriPath: String): Fox[OpenGraphTags] =
+  private def workflowOpenGraphTags(uriPath: String)(implicit ec: ExecutionContext): Fox[OpenGraphTags] =
     uriPath match {
       case workflowRouteRegex(workflowHash: String) =>
         for { // TODO access check
           workflow <- voxelyticsDAO.findWorkflowByHash(workflowHash)
         } yield OpenGraphTags(Some(f"${workflow.name} | WEBKNOSSOS"), Some("Voxelytics Workflow Report"), None)
+      case _ => Fox.failure("not a matching uri")
     }
 }

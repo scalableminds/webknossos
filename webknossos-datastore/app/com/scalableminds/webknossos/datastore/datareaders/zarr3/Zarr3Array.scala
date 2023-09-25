@@ -22,8 +22,8 @@ object Zarr3Array extends LazyLogging {
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
     for {
-      headerBytes <- (path / Zarr3ArrayHeader.ZARR_JSON)
-        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.ZARR_JSON}"
+      headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
     } yield
       new Zarr3Array(path,

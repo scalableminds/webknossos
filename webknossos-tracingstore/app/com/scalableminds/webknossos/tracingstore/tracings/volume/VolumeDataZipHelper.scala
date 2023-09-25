@@ -25,6 +25,14 @@ import scala.collection.mutable
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits with LazyLogging {
 
+  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+    for {
+      format <- detectVolumeDataZipFormat(zipFile)
+      _ <- if (format == VolumeDataZipFormat.wkw)
+        withBucketsFromWkwZip(zipFile)(block)
+      else withBucketsFromZarr3Zip(zipFile)(block)
+    } yield ()
+
   private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
     tryo(new java.util.zip.ZipFile(zipFile)).map { zip =>
       val relevantFile: Option[ZipEntry] =
@@ -34,45 +42,40 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
       } else VolumeDataZipFormat.wkw
     }
 
-  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
-    for {
-      format <- detectVolumeDataZipFormat(zipFile)
-      _ <- if (format == VolumeDataZipFormat.wkw) {
-        tryo(ZipIO.withUnziped(zipFile) {
-          case (fileName, is) =>
-            WKWFile.read(is) {
-              case (header, buckets) =>
-                if (header.numBlocksPerCube == 1) {
-                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                    if (buckets.hasNext) {
-                      val data = buckets.next()
-                      if (!isAllZero(data)) {
-                        block(bucketPosition, data)
-                      }
-                    }
+  private def withBucketsFromWkwZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+    tryo(ZipIO.withUnziped(zipFile) {
+      case (fileName, is) =>
+        WKWFile.read(is) {
+          case (header, buckets) =>
+            if (header.numBlocksPerCube == 1) {
+              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                if (buckets.hasNext) {
+                  val data = buckets.next()
+                  if (!isAllZero(data)) {
+                    block(bucketPosition, data)
                   }
                 }
-            }
-        })
-      } else {
-        for {
-          firstHeaderFilePath <- option2Box(
-            ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.ZARR_JSON)))
-          firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
-          firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
-          _ <- ZipIO.withUnziped(zipFile) {
-            case (filename, inputStream) =>
-              if (filename.endsWith(Zarr3ArrayHeader.ZARR_JSON)) ()
-              else {
-                parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
-                  logger.info(s"Storing at bucket position ${bucketPosition}")
-                  val dataCompressed = IOUtils.toByteArray(inputStream)
-                  val data = compressor.decompress(dataCompressed)
-                  block(bucketPosition, data)
-                }
               }
+            }
+        }
+    })
+
+  private def withBucketsFromZarr3Zip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+    for {
+      firstHeaderFilePath <- option2Box(
+        ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)))
+      firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
+      firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
+      _ <- ZipIO.withUnziped(zipFile) {
+        case (filename, inputStream) =>
+          if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) ()
+          else {
+            parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
+              val dataCompressed = IOUtils.toByteArray(inputStream)
+              val data = compressor.decompress(dataCompressed)
+              block(bucketPosition, data)
+            }
           }
-        } yield ()
       }
     } yield ()
 
@@ -111,11 +114,23 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     val resolutionSet = new mutable.HashSet[Vec3Int]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
-        getMagFromWKWHeaderFilePath(fileName.toString).map { mag: Vec3Int =>
+        getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { mag: Vec3Int =>
           resolutionSet.add(mag)
         }
     }
     resolutionSet.toSet
+  }
+
+  private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
+    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
+    path match {
+      case wkwHeaderRx(_, magLiteral) =>
+        Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)
+      case zarr3HeaderRx(_, magLiteral) =>
+        Vec3Int.fromMagLiteral(magLiteral)
+      case _ => None
+    }
   }
 
   protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => T): Box[Unit] = {

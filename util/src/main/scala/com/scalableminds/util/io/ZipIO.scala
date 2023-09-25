@@ -4,10 +4,6 @@ import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
-import akka.stream.Materializer
-import akka.stream.javadsl.StreamConverters
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.scalableminds.util.tools.TextUtils
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -27,18 +23,6 @@ object ZipIO extends LazyLogging {
     * @param stream output stream to write to
     */
   case class OpenZip(stream: ZipOutputStream) {
-
-    def addFileFromSource(name: String, source: Source[ByteString, _])(implicit ec: ExecutionContext,
-                                                                       materializer: Materializer): Future[Unit] = {
-
-      stream.putNextEntry(new ZipEntry(name))
-
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
-
-      val result = Future.successful(IOUtils.copy(inputStream, stream))
-
-      result.map(_ => stream.closeEntry())
-    }
 
     def addFileFromBytes(name: String, data: Array[Byte]): Unit = {
       stream.putNextEntry(new ZipEntry(name))

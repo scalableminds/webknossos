@@ -297,7 +297,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
     else if (uri.endsWith(NgffGroupHeader.FILENAME_DOT_ZGROUP))
       uri.dropRight(NgffGroupHeader.FILENAME_DOT_ZGROUP.length)
     else if (uri.endsWith(PrecomputedHeader.FILENAME_INFO)) uri.dropRight(PrecomputedHeader.FILENAME_INFO.length)
-    else if (uri.endsWith(Zarr3ArrayHeader.ZARR_JSON)) uri.dropRight(Zarr3ArrayHeader.ZARR_JSON.length)
+    else if (uri.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) uri.dropRight(Zarr3ArrayHeader.FILENAME_ZARR_JSON.length)
     else uri
 
   private def exploreRemoteLayersForRemotePath(

@@ -17,7 +17,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
 
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(Zarr3Layer, Vec3Double)]] =
     for {
-      zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.ZARR_JSON)
+      zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrayPath) ?~> s"failed to read zarr v3 header at $zarrayPath"
       _ <- zarrHeader.assertValid

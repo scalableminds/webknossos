@@ -23,7 +23,6 @@ import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/ad
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
-import { Helmet } from "react-helmet";
 
 type LoadingState =
   | { status: "PENDING" }
@@ -420,15 +419,10 @@ export default function WorkflowView() {
   if (report == null || collapsedReport == null || tasksWithHierarchy == null) {
     return <BrainSpinner />;
   }
-  const tabTitle = `${collapsedReport.workflow.name} | Voxelytics | WEBKNOSSOS`;
 
   return (
     <div className="container voxelytics-view">
-      <Helmet>
-        <meta property="og:title" content={tabTitle} />
-        <meta property="og:description" content="It lets you web your knossos" />
-      </Helmet>
-      <TabTitle title={tabTitle} />
+      <TabTitle title={`${collapsedReport.workflow.name} | WEBKNOSSOS`} />
       <TaskListView
         report={collapsedReport}
         tasksWithHierarchy={tasksWithHierarchy}

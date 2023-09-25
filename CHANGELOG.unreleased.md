@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed that segment statistics were requested in the wrong resolution within the statistics modal. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
 
 ### Removed
 

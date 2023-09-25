@@ -1118,17 +1118,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
       } else {
         const tracingId = volumeTracing.tracingId;
         const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
-        const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getFinestResolution(),
+          magInfo.getFinestResolution(),
           [segmentIdAtPosition],
         );
         const [boundingBox] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getFinestResolution(),
+          magInfo.getFinestResolution(),
           [segmentIdAtPosition],
         );
         const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;

@@ -177,7 +177,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     segments,
     segmentGroups,
     visibleSegmentationLayer,
-    allowUpdate: state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
+    allowUpdate:
+      state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -949,10 +950,8 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const isEditingDisabled = !this.props.allowUpdate;
     return {
       key: "changeGroupColor",
-      disabled: isEditingDisabled,
       icon: (
         <i
           className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
@@ -964,7 +963,7 @@ class SegmentsView extends React.Component<Props, State> {
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
-          isDisabled={isEditingDisabled}
+          isDisabled={false}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -979,11 +978,9 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const isEditingDisabled = !this.props.allowUpdate;
     const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
-      disabled: isEditingDisabled,
       icon: (
         <i
           className="fas fa-undo"

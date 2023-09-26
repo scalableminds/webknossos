@@ -306,7 +306,6 @@ function* loadFullAdHocIsosurface(
 
   const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-  debugger
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -324,7 +323,9 @@ function* loadFullAdHocIsosurface(
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
   const usePositionsFromSegmentStats =
-    volumeTracing?.hasSegmentIndex && !volumeTracing.mappingIsEditable && visibleSegmentationLayer?.tracingId != null;
+    volumeTracing?.hasSegmentIndex &&
+    !volumeTracing.mappingIsEditable &&
+    visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,

@@ -438,10 +438,10 @@ function _SegmentListItem({
          * This is because the id (A) is mapped to another one (B). So, the user would need
          * to change the color of B to see the effect for A.
          */
-        disabled: isEditingDisabled || segment.id !== mappedId,
+        disabled: segment.id !== mappedId,
         label: (
           <ChangeColorMenuItemContent
-            isDisabled={isEditingDisabled}
+            isDisabled={false}
             title="Change Segment Color"
             onSetColor={(color, createsNewUndoState) => {
               if (visibleSegmentationLayer == null) {
@@ -463,9 +463,9 @@ function _SegmentListItem({
       },
       {
         key: "resetSegmentColor",
-        disabled: isEditingDisabled || segment.color == null,
+        disabled: segment.color == null,
         onClick: () => {
-          if (isEditingDisabled || visibleSegmentationLayer == null) {
+          if (visibleSegmentationLayer == null) {
             return;
           }
           updateSegment(

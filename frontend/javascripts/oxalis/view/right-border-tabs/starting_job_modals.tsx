@@ -26,6 +26,8 @@ import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { isBoundingBoxExportable } from "../action-bar/download_modal_view";
+import features from "features";
 
 const { ThinSpace } = Unicode;
 const enum JobNames {
@@ -222,8 +224,12 @@ function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
   onChangeSelectedBoundingBox,
-  value,
+  value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const colorLayer = getColorLayers(dataset)[0];
+  const mag1 = colorLayer.resolutions[0];
+
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
       <p>
@@ -240,13 +246,32 @@ function BoundingBoxSelectionFormItem({
             required: isBoundingBoxConfigurable,
             message: "Please select the bounding box for which the inferral should be computed.",
           },
+          {
+            required: true,
+            validator: (_rule, value) => {
+              const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === value);
+              if (selectedBoundingBox) {
+                const { isExportable, alerts: _ } = isBoundingBoxExportable(
+                  selectedBoundingBox.boundingBox,
+                  mag1,
+                );
+                if (isExportable) return Promise.resolve();
+              }
+              return Promise.reject();
+            },
+            message: `The volume of the selected bounding box is too large. The AI neuron segmentation trail is only supported for up to ${
+              features().exportTiffMaxVolumeMVx
+            } Megavoxels. Additionally, no bounding box edge should be longer than ${
+              features().exportTiffMaxEdgeLengthVx
+            }vx.`,
+          },
         ]}
         hidden={!isBoundingBoxConfigurable}
       >
         <BoundingBoxSelection
           userBoundingBoxes={userBoundingBoxes}
           setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
-          value={value}
+          value={selectedBoundingBoxId}
         />
       </Form.Item>
     </div>

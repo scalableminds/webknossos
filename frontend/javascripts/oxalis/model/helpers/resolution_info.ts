@@ -128,30 +128,30 @@ export class ResolutionInfo {
     return this.resolutionMap.get(powerOfTwo);
   }
 
-  getHighestResolutionPowerOf2(): number {
+  getCoarsestResolutionPowerOf2(): number {
     return maxValue(Array.from(this.resolutionMap.keys()));
   }
 
-  getLowestResolutionPowerOf2(): number {
+  getFinestResolutionPowerOf2(): number {
     return minValue(Array.from(this.resolutionMap.keys()));
   }
 
-  getHighestResolutionIndex(): number {
-    return Math.log2(this.getHighestResolutionPowerOf2());
+  getCoarsestResolutionIndex(): number {
+    return Math.log2(this.getCoarsestResolutionPowerOf2());
   }
 
-  getLowestResolutionIndex(): number {
-    return Math.log2(this.getLowestResolutionPowerOf2());
+  getFinestResolutionIndex(): number {
+    return Math.log2(this.getFinestResolutionPowerOf2());
   }
 
-  getHighestResolution(): Vector3 {
+  getCoarsestResolution(): Vector3 {
     // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getHighestResolutionPowerOf2());
+    return this.getResolutionByPowerOf2(this.getCoarsestResolutionPowerOf2());
   }
 
-  getLowestResolution(): Vector3 {
+  getFinestResolution(): Vector3 {
     // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getLowestResolutionPowerOf2());
+    return this.getResolutionByPowerOf2(this.getFinestResolutionPowerOf2());
   }
 
   getAllIndices(): Array<number> {

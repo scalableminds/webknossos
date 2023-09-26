@@ -267,11 +267,11 @@ export function getAISegmentationMenu(
     icon: <SettingOutlined />,
     label: "AI Segmentation",
     children: [
-      {
-        key: "ai-nuclei-segmentation",
-        label: "AI Nuclei Segmentation",
-        onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
-      },
+      // {
+      //   key: "ai-nuclei-segmentation",
+      //   label: "AI Nuclei Segmentation",
+      //   onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
+      // },
       {
         key: "ai-neuron-segmentation",
         label: "AI Neuron Segmentation",
@@ -674,7 +674,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
 
-    if (features().jobsEnabled && activeUser != null && activeUser.isSuperUser) {
+    if (features().jobsEnabled) {
       const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
         this.props.isAINucleiSegmentationModalOpen,
         this.props.isAINeuronSegmentationModalOpen,

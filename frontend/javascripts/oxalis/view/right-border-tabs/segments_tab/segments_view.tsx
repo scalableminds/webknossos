@@ -1036,7 +1036,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
-    // TODO currently not working
     return {
       key: "computeAdHoc",
       icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,

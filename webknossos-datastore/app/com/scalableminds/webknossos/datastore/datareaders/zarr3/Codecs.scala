@@ -39,7 +39,7 @@ trait BytesToBytesCodec extends Codec {
   def decode(bytes: Array[Byte]): Array[Byte]
 }
 
-class EndianCodec(val endian: Option[String]) extends ArrayToBytesCodec {
+class BytesCodec(val endian: Option[String]) extends ArrayToBytesCodec {
 
   /*
   https://zarr-specs.readthedocs.io/en/latest/v3/codecs/endian/v1.0.html
@@ -159,14 +159,23 @@ class ShardingCodec(val chunk_shape: Array[Int],
   override def decode(bytes: Array[Byte]): MultiArray = ???
 }
 
-sealed trait CodecConfiguration { def name: String }
-
-final case class EndianCodecConfiguration(endian: Option[String]) extends CodecConfiguration {
-  override def name: String = EndianCodecConfiguration.name
+sealed trait CodecConfiguration {
+  def name: String
+  def includeConfiguration: Boolean = true
 }
 
-object EndianCodecConfiguration {
-  implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]
+final case class BytesCodecConfiguration(endian: Option[String]) extends CodecConfiguration {
+  override def name: String = BytesCodecConfiguration.name
+}
+
+object BytesCodecConfiguration {
+  implicit val jsonReads: Reads[BytesCodecConfiguration] = Json.reads[BytesCodecConfiguration]
+
+  implicit object BytesCodecConfigurationWrites extends Writes[BytesCodecConfiguration] {
+    override def writes(o: BytesCodecConfiguration): JsValue =
+      o.endian.map(e => Json.obj("endian!!" -> e)).getOrElse(Json.obj())
+  }
+
   val legacyName = "endian"
   val name = "bytes"
 }
@@ -212,13 +221,14 @@ object ZstdCodecConfiguration {
 }
 
 case object Crc32CCodecConfiguration extends CodecConfiguration {
+  override val includeConfiguration: Boolean = false
   val name = "crc32c"
 
-  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
+  implicit object Crc32CCodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
     override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
   }
 
-  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
+  implicit object Crc32CCodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
     override def writes(o: Crc32CCodecConfiguration.type): JsValue = JsObject(Seq())
   }
 }
@@ -242,7 +252,7 @@ final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             codecs: Seq[CodecConfiguration],
                                             index_codecs: Seq[CodecConfiguration])
     extends CodecConfiguration {
-  override def name: String = EndianCodecConfiguration.name
+  override def name: String = ShardingCodecConfiguration.name
 }
 
 object ShardingCodecConfiguration {

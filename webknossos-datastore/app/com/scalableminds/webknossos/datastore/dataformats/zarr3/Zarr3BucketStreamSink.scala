@@ -9,10 +9,12 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   BloscCodecConfiguration,
+  BytesCodecConfiguration,
   ChunkGridConfiguration,
   ChunkGridSpecification,
   ChunkKeyEncoding,
   ChunkKeyEncodingConfiguration,
+  TransposeCodecConfiguration,
   Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
@@ -49,6 +51,8 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
       fill_value = Right(0),
       attributes = None,
       codecs = Seq(
+        TransposeCodecConfiguration("F"),
+        BytesCodecConfiguration(Some("little")),
         BloscCodecConfiguration(
           BloscCompressor.defaultCname,
           BloscCompressor.defaultCLevel,
@@ -58,7 +62,7 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
         )
       ),
       storage_transformers = None,
-      dimension_names = Some((additionalAxes.map(_.name) ++ Seq("z", "y", "x")).toArray)
+      dimension_names = Some((Seq("x", "y", "z") ++ additionalAxes.map(_.name)).toArray)
     )
     bucketStream.map {
       case (bucket, data) =>
@@ -75,18 +79,18 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
     }
   }
 
-  private val dimensionSeparator = "/"
+  private val dimensionSeparator = "."
 
   private def zarrChunkFilePath(bucketPosition: BucketPosition): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
-    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketZ}/${bucketPosition.bucketY}/${bucketPosition.bucketX}"
+    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
     additionalCoordinatesOpt match {
       case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
-        additionalCoordinates.map(_.value).mkString("/") + dimensionSeparator
+        additionalCoordinates.map(_.value).mkString(dimensionSeparator) + dimensionSeparator
       case _ => ""
     }
 

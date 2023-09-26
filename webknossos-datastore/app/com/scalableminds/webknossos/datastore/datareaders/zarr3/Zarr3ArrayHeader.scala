@@ -203,8 +203,8 @@ object Zarr3ArrayHeader extends JsonImplicits {
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
           spec: CodecConfiguration <- c("name") match {
-            case JsString(EndianCodecConfiguration.name)       => c(configurationKey).validate[EndianCodecConfiguration]
-            case JsString(EndianCodecConfiguration.legacyName) => c(configurationKey).validate[EndianCodecConfiguration]
+            case JsString(BytesCodecConfiguration.name)       => c(configurationKey).validate[BytesCodecConfiguration]
+            case JsString(BytesCodecConfiguration.legacyName) => c(configurationKey).validate[BytesCodecConfiguration]
             case JsString(TransposeCodecConfiguration.name)    => c(configurationKey).validate[TransposeCodecConfiguration]
             case JsString(GzipCodecConfiguration.name)         => c(configurationKey).validate[GzipCodecConfiguration]
             case JsString(BloscCodecConfiguration.name)        => c(configurationKey).validate[BloscCodecConfiguration]
@@ -236,7 +236,8 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "fill_value" -> zarrArrayHeader.fill_value,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(Map("" -> ""))),
         "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
-          Json.obj("name" -> codec.name, "configuration" -> codec)
+          val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
+          Json.obj("name" -> codec.name) ++ configurationJson
         },
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names

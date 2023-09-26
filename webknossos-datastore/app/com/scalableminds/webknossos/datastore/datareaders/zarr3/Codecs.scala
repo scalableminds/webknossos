@@ -173,7 +173,7 @@ object BytesCodecConfiguration {
 
   implicit object BytesCodecConfigurationWrites extends Writes[BytesCodecConfiguration] {
     override def writes(o: BytesCodecConfiguration): JsValue =
-      o.endian.map(e => Json.obj("endian!!" -> e)).getOrElse(Json.obj())
+      o.endian.map(e => Json.obj("endian" -> e)).getOrElse(Json.obj())
   }
 
   val legacyName = "endian"

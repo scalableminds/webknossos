@@ -1200,12 +1200,12 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let willShowHideMeshesLabel: boolean =
+    let areGroupOrSelectedSegmentMeshesVisible: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
 
-    const showHideMeshesLabel = willShowHideMeshesLabel
+    const showHideMeshesLabel = areGroupOrSelectedSegmentMeshesVisible
       ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
       : { icon: <EyeOutlined />, text: "Show" };
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
@@ -1222,7 +1222,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleChangeMeshVisibilityInGroup(
                   this.props.visibleSegmentationLayer.name,
                   groupId,
-                  !this.areSelectedSegmentsMeshesVisible(),
+                  !areGroupOrSelectedSegmentMeshesVisible,
                 );
                 this.closeSegmentOrGroupDropdown();
               }}

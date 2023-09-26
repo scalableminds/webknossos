@@ -259,7 +259,7 @@ function BoundingBoxSelectionFormItem({
               }
               return Promise.reject();
             },
-            message: `The volume of the selected bounding box is too large. The AI neuron segmentation trail is only supported for up to ${
+            message: `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
               features().exportTiffMaxVolumeMVx
             } Megavoxels. Additionally, no bounding box edge should be longer than ${
               features().exportTiffMaxEdgeLengthVx

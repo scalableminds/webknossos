@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.2...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed that segment statistics were requested in the wrong resolution and without properly considering the dataset scale. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
 
 ### Removed
 

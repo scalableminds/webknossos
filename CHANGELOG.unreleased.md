@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
-- Fixed that segment statistics were requested in the wrong resolution. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
+- Fixed that segment statistics were requested in the wrong resolution and without properly considering the dataset scale. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
 
 ### Removed
 

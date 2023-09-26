@@ -39,7 +39,7 @@ import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
-import { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
+import { MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
@@ -129,7 +129,6 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   isosurfaces: Record<number, IsosurfaceInformation>;
   dataset: APIDataset;
-  isDatasetViewMode: boolean;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   flycam: Flycam;
@@ -170,7 +169,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : EMPTY_OBJECT,
     dataset: state.dataset,
-    isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
@@ -954,7 +952,6 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      disabled: this.props.isDatasetViewMode,
       icon: (
         <i
           className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
@@ -966,7 +963,7 @@ class SegmentsView extends React.Component<Props, State> {
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
-          isDisabled={this.props.isDatasetViewMode} // changing the color is not possible in dataset view mode
+          isDisabled={false}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -992,7 +989,6 @@ class SegmentsView extends React.Component<Props, State> {
           }}
         />
       ),
-      disabled: this.props.isDatasetViewMode,
       label: (
         <div
           title={title}
@@ -1040,6 +1036,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
+    // TODO currently not working
     return {
       key: "computeAdHoc",
       icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,

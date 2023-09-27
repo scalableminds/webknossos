@@ -3,10 +3,11 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.binary.DataSetDAO
+import models.binary.DatasetDAO
 import models.job._
 import models.organization.OrganizationDAO
 import models.binary.DataStoreDAO
+import models.user.MultiUserDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
@@ -20,11 +21,12 @@ import scala.concurrent.ExecutionContext
 
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
-                               dataSetDAO: DataSetDAO,
+                               datasetDAO: DatasetDAO,
                                jobService: JobService,
                                workerService: WorkerService,
                                workerDAO: WorkerDAO,
                                wkconf: WkConf,
+                               multiUserDAO: MultiUserDAO,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO,
@@ -84,8 +86,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataset.notFound",
             dataSetName) ~> NOT_FOUND
           command = JobCommand.convert_to_wkw
           commandArgs = Json.obj(
@@ -112,8 +114,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
           "organization.notFound",
           organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataset.notFound",
           dataSetName) ~> NOT_FOUND
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
@@ -139,8 +141,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization.notFound",
             organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataset.notFound",
             dataSetName) ~> NOT_FOUND
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
@@ -167,9 +169,11 @@ class JobsController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataset.notFound",
             dataSetName) ~> NOT_FOUND
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -196,10 +200,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
+            "dataset.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- jobService.assertTiffExportBoundingBoxLimits(bbox, mag)
+          _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = JobCommand.export_tiff
@@ -240,8 +244,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization.notFound",
             organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.materializeVolumeAnnotation.notAllowed.organization" ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataset.notFound",
             dataSetName) ~> NOT_FOUND
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
@@ -272,7 +276,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.findLargestSegmentId.notAllowed.organization" ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           command = JobCommand.find_largest_segment_id
@@ -296,7 +300,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"

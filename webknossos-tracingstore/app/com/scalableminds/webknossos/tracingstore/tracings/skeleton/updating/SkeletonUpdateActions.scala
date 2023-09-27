@@ -19,7 +19,8 @@ case class CreateTreeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    `type`: Option[TreeType] = None)
+                                    `type`: Option[TreeType] = None,
+                                    edgesAreVisible: Option[Boolean])
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -34,7 +35,8 @@ case class CreateTreeSkeletonAction(id: Int,
       timestamp,
       groupId,
       isVisible,
-      `type`.map(TreeType.toProto)
+      `type`.map(TreeType.toProto),
+      edgesAreVisible
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -431,6 +433,27 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
   override def isViewOnlyChange: Boolean = true
 }
 
+case class UpdateTreeEdgesVisibility(treeId: Int,
+                                     edgesAreVisible: Boolean,
+                                     actionTimestamp: Option[Long] = None,
+                                     actionAuthorId: Option[String] = None,
+                                     info: Option[String] = None)
+    extends UpdateAction.SkeletonUpdateAction
+    with SkeletonUpdateActionHelper {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
+    def treeTransform(tree: Tree) = tree.copy(edgesAreVisible = Some(edgesAreVisible))
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
+  override def isViewOnlyChange: Boolean = true
+}
+
 case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
                                    actionTimestamp: Option[Long] = None,
                                    actionAuthorId: Option[String] = None,
@@ -532,6 +555,9 @@ object UpdateTreeVisibility {
 object UpdateTreeGroupVisibility {
   implicit val jsonFormat: OFormat[UpdateTreeGroupVisibility] = Json.format[UpdateTreeGroupVisibility]
 }
+object UpdateTreeEdgesVisibility {
+  implicit val jsonFormat: OFormat[UpdateTreeEdgesVisibility] = Json.format[UpdateTreeEdgesVisibility]
+}
 object UpdateUserBoundingBoxes {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxes] = Json.format[UpdateUserBoundingBoxes]
 }
@@ -561,6 +587,7 @@ object SkeletonUpdateAction {
         case "revertToVersion"                 => deserialize[RevertToVersionAction](jsonValue)
         case "updateTreeVisibility"            => deserialize[UpdateTreeVisibility](jsonValue)
         case "updateTreeGroupVisibility"       => deserialize[UpdateTreeGroupVisibility](jsonValue)
+        case "updateTreeEdgesVisibility"       => deserialize[UpdateTreeEdgesVisibility](jsonValue)
         case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxes](jsonValue)
         case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibility](jsonValue)
         case "updateTdCamera"                  => deserialize[UpdateTdCamera](jsonValue)
@@ -607,6 +634,8 @@ object SkeletonUpdateAction {
         Json.obj("name" -> "updateTreeVisibility", "value" -> Json.toJson(s)(UpdateTreeVisibility.jsonFormat))
       case s: UpdateTreeGroupVisibility =>
         Json.obj("name" -> "updateTreeGroupVisibility", "value" -> Json.toJson(s)(UpdateTreeGroupVisibility.jsonFormat))
+      case s: UpdateTreeEdgesVisibility =>
+        Json.obj("name" -> "updateTreeEdgesVisibility", "value" -> Json.toJson(s)(UpdateTreeEdgesVisibility.jsonFormat))
       case s: UpdateUserBoundingBoxes =>
         Json.obj("name" -> "updateUserBoundingBoxes", "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
       case s: UpdateUserBoundingBoxVisibility =>

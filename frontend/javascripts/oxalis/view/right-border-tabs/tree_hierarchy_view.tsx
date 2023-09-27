@@ -42,7 +42,7 @@ import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
-  setActiveGroupAction,
+  setActiveTreeGroupAction,
   setTreeColorAction,
   toggleTreeAction,
   toggleTreeGroupAction,
@@ -53,6 +53,7 @@ import {
   deleteTreeAction,
   toggleInactiveTreesAction,
   shuffleAllTreeColorsAction,
+  setTreeEdgeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -79,7 +80,7 @@ type OwnProps = {
 type Props = OwnProps & {
   onShuffleTreeColor: (arg0: number) => void;
   onSetActiveTree: (arg0: number) => void;
-  onSetActiveGroup: (arg0: number) => void;
+  onSetActiveTreeGroup: (arg0: number) => void;
   onToggleTree: (arg0: number) => void;
   onDeleteTree: (arg0: number) => void;
   onToggleAllTrees: () => void;
@@ -89,6 +90,7 @@ type Props = OwnProps & {
   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   onToggleHideInactiveTrees: () => void;
   onShuffleAllTreeColors: () => void;
+  onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -207,7 +209,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   selectGroupById = (groupId: number) => {
     this.props.deselectAllTrees();
-    this.props.onSetActiveGroup(groupId);
+    this.props.onSetActiveTreeGroup(groupId);
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
@@ -474,7 +476,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "hideTree",
           onClick: () => {
-            this.props.onSetActiveGroup(id);
+            this.props.onSetActiveTreeGroup(id);
             this.props.onToggleHideInactiveTrees();
             this.handleGroupDropdownMenuVisibility(id, false);
           },
@@ -621,6 +623,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               title: "Hide/Show all other trees",
               icon: <i className="fas fa-eye" />,
               label: "Hide/Show all other trees",
+            },
+            {
+              key: "hideTreeEdges",
+              onClick: () => {
+                this.props.onSetActiveTree(tree.treeId);
+                this.props.onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Hide/Show edges of this tree",
+              icon: <span className="hide-tree-edges-icon" />,
+              label: "Hide/Show edges of this tree",
             },
           ],
         };
@@ -778,8 +791,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setActiveTreeAction(treeId));
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onSetTreeColor(treeId: number, color: Vector3) {
@@ -796,6 +809,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onToggleTree(treeId: number) {
     dispatch(toggleTreeAction(treeId));
+  },
+
+  onSetTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
+    dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
   },
 
   onToggleTreeGroup(groupId: number) {

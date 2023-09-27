@@ -26,6 +26,10 @@ export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 
+type SetCreateAnimationModalVisibilityAction = ReturnType<
+  typeof setCreateAnimationModalVisibilityAction
+>;
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
@@ -42,6 +46,7 @@ export type UiAction =
   | SetShareModalVisibilityAction
   | SetAINucleiSegmentationModalVisibilityAction
   | SetAINeuronSegmentationModalVisibilityAction
+  | SetCreateAnimationModalVisibilityAction
   | SetBusyBlockingInfoAction
   | EnterAction
   | EscapeAction
@@ -116,6 +121,11 @@ export const setAINucleiSegmentationModalVisibilityAction = (visible: boolean) =
 export const setAINeuronSegmentationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY",
+    visible,
+  } as const);
+export const setCreateAnimationModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_CREATE_ANIMATION_MODAL_VISIBILITY",
     visible,
   } as const);
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

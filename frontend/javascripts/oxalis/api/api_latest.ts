@@ -1647,7 +1647,7 @@ class DataApi {
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
       const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getLowestResolutionIndex();
+      zoomStep = resolutionInfo.getFinestResolutionIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1709,7 +1709,7 @@ class DataApi {
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getLowestResolutionIndex();
+      zoomStep = resolutionInfo.getFinestResolutionIndex();
     }
 
     const resolutions = resolutionInfo.getDenseResolutions();
@@ -1911,7 +1911,7 @@ class DataApi {
   ): string {
     const { dataset } = Store.getState();
     const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    resolution = resolution || resolutionInfo.getLowestResolution();
+    resolution = resolution || resolutionInfo.getFinestResolution();
 
     const magString = resolution.join("-");
     return (

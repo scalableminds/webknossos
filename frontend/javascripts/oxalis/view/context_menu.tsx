@@ -106,6 +106,8 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1118,23 +1120,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
       } else {
         const tracingId = volumeTracing.tracingId;
         const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
-        const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const layersFinestResolution = magInfo.getFinestResolution();
+        const dataSetScale = Store.getState().dataset.dataSource.scale;
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getLowestResolution(),
+          layersFinestResolution,
           [segmentIdAtPosition],
         );
-        const [boundingBox] = await getSegmentBoundingBoxes(
+        const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getLowestResolution(),
+          layersFinestResolution,
           [segmentIdAtPosition],
         );
-        const boundingBoxTopLeftString = `(${boundingBox.topLeft[0]}, ${boundingBox.topLeft[1]}, ${boundingBox.topLeft[2]})`;
-        const boundingBoxSizeString = `(${boundingBox.width}, ${boundingBox.height}, ${boundingBox.depth})`;
+        const boundingBoxInMag1 = getBoundingBoxInMag1(
+          boundingBoxInRequestedMag,
+          layersFinestResolution,
+        );
+        const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
+        const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
+        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
         return [
-          formatNumberToVolume(segmentSize),
+          formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       }

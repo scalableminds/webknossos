@@ -1050,3 +1050,23 @@ export type FolderUpdater = {
   name: string;
   allowedTeams: string[];
 };
+
+export enum CAMERA_POSITIONS {
+  MOVING,
+  STATIC_XY,
+  STATIC_YZ,
+}
+
+export enum MOVIE_RESOLUTIONS {
+  SD,
+  HD,
+}
+
+export type CreateAnimationOptions = {
+  layerName: string,
+  boundingBox: Vector6,
+  includeWatermark: boolean,
+  meshIds: number[],
+  movieResolution: MOVIE_RESOLUTIONS 
+  cameraPosition: CAMERA_POSITIONS
+}

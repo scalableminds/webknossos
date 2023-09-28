@@ -12,12 +12,41 @@ import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
 import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+
+import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.geometry.BoundingBox
+
+object MovieResolutions extends ExtendedEnumeration {
+  type MovieResolutions = Value
+  val SD = Value("SD")
+  val HD = Value("HD")
+}
+
+object CameraPositions extends ExtendedEnumeration {
+  type CameraPositions = Value
+  val MOVING = Value("MOVING")
+  val STATIC_XY = Value("STATIC_XY")
+  val STATIC_YZ = Value("STATIC_YZ")
+}
+
+case class AnimationJobOptions(
+  layerName: String,
+  boundingBox: BoundingBox,
+  includeWatermark: Boolean,
+  meshIds: Array[Int],
+  movieResolution: MovieResolutions.Value ,
+  cameraPosition: CameraPositions.Value
+)
+
+object AnimationJobOptions {
+  implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
+}
 
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
@@ -30,7 +59,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO,
-                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
+                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext,
+                               playBodyParsers: PlayBodyParsers)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -291,8 +321,9 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runRenderAnimationJob(organizationName: String, dataSetName: String, layerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def runRenderAnimationJob(organizationName: String, dataSetName: String): Action[AnimationJobOptions] =
+    sil.SecuredAction.async(validateJson[AnimationJobOptions]) {
+    implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
@@ -303,14 +334,16 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
+          animationJobOptions = request.body
+          layerName = animationJobOptions.layerName
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
-            "layer_name" -> layerName,
             "export_file_name" -> exportFileName,
-            "user_auth_token" -> userAuthToken.id
+            "user_auth_token" -> userAuthToken.id,
+            "options" -> Json.toJson(animationJobOptions)
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

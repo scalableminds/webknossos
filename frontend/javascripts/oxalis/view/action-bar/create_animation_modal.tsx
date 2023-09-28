@@ -2,7 +2,7 @@ import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Space, Typograph
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
-import { startRenderAnimationJob } from "admin/admin_rest_api";
+import { startcreateAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
 import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -11,22 +11,12 @@ import { getColorLayers, getLayerByName } from "oxalis/model/accessors/dataset_a
 import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
 import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import { CAMERA_POSITIONS, CreateAnimationOptions, MOVIE_RESOLUTIONS } from "types/api_flow_types";
 
 type Props = {
   isOpen: boolean;
   onClose: ModalProps["onCancel"];
 };
-
-enum CAMERA_POSITIONS {
-  MOVING,
-  STATIC_XY,
-  STATIC_YZ,
-}
-
-enum MOVIE_RESOLUTIONS {
-  SD,
-  HD,
-}
 
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
@@ -62,11 +52,21 @@ function CreateAnimationModal(props: Props) {
 
   const submitJob = () => {
     const state = Store.getState();
-    startRenderAnimationJob(
-      state.dataset.owningOrganization,
-      state.dataset.name,
-      selectedLayerName,
-    );
+    const boundingBox = userBoundingBoxes.find(
+      (bb) => bb.id === selectedBoundingBoxId,
+    )?.boundingBox;
+    const meshIds = []; // TODO gather selected mesh ids
+
+    const animationOptions: CreateAnimationOptions = {
+      layerName: selectedLayerName,
+      boundingBox,
+      includeWatermark: isWatermarkEnabled,
+      meshIds,
+      movieResolution: selectedMovieResolution,
+      cameraPosition: selectedCameraPosition,
+    };
+
+    startcreateAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
     Toast.info(
       <>
@@ -90,15 +90,30 @@ function CreateAnimationModal(props: Props) {
       <React.Fragment>
         <Row>
           <Col>
-            <video src="blob:https://youtu.be/8vol7QTDgFI" />
+            <img
+              src="https://miro.medium.com/v2/resize:fit:1400/0*AFr8RQpIteOQidsD"
+              alt="An example previewing a WEBKNOSSOS animation"
+              style={{ height: 300 }}
+            />
           </Col>
         </Row>
-        <Row>
+        <Row
+          style={{
+            margin: "18px 0",
+          }}
+        >
           <Col>
-            <Typography.Text>Something Explanation</Typography.Text>
+            <Typography.Text>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ac nisi mauris. Nunc
+              et enim malesuada, semper lacus ac, posuere ipsum. Aliquam cursus consectetur auctor.
+              Donec consequat libero aliquam, accumsan leo in, fermentum nisi. Nunc ac neque sed
+              felis finibus facilisis id et magna. Aenean at est a lectus efficitur fringilla vel
+              eget ex. Donec quis ipsum et arcu pharetra pellentesque sed eu odio. In aliquet
+              commodo egestas
+            </Typography.Text>
           </Col>
         </Row>
-        <Row>
+        <Row gutter={8}>
           <Divider
             style={{
               margin: "18px 0",
@@ -107,8 +122,8 @@ function CreateAnimationModal(props: Props) {
             Animation Setup
           </Divider>
 
-          <Col>
-            Camera Position
+          <Col span={12}>
+            <Typography.Title level={5}>Camera Position</Typography.Title>
             <Radio.Group
               value={selectedCameraPosition}
               onChange={(ev) => setCameraPosition(ev.target.value)}
@@ -127,8 +142,8 @@ function CreateAnimationModal(props: Props) {
               </Space>
             </Radio.Group>
           </Col>
-          <Col>
-            Movie Resolution
+          <Col span={12}>
+            <Typography.Title level={5}>Movie Resolution</Typography.Title>
             <Radio.Group
               value={selectedMovieResolution}
               onChange={(ev) => setMovieResolution(ev.target.value)}
@@ -144,19 +159,22 @@ function CreateAnimationModal(props: Props) {
               </Space>
             </Radio.Group>
           </Col>
-          <Col>
-            <Checkbox
-              checked={isWatermarkEnabled}
-              onChange={(ev) => setWatermarkEnabled(ev.target.value)}
-            >
-              Include WEBKNOSSOS Watermark
-            </Checkbox>
-            <Checkbox
-              checked={isWatermarkEnabled}
-              onChange={(ev) => setWatermarkEnabled(ev.target.value)}
-            >
-              Include the currently selected 3D meshes
-            </Checkbox>
+          <Col span={12}>
+          <Typography.Title level={5}>Options</Typography.Title>
+            <Space direction="vertical">
+              <Checkbox
+                checked={isWatermarkEnabled}
+                onChange={(ev) => setWatermarkEnabled(ev.target.value)}
+              >
+                Include WEBKNOSSOS Watermark
+              </Checkbox>
+              <Checkbox
+                checked={isWatermarkEnabled}
+                onChange={(ev) => setWatermarkEnabled(ev.target.value)}
+              >
+                Include the currently selected 3D meshes
+              </Checkbox>
+            </Space>
           </Col>
         </Row>
 

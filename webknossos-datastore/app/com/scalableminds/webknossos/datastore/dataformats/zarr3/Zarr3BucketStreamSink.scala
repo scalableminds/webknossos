@@ -1,33 +1,26 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   IntCompressionSetting,
   StringCompressionSetting
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BloscCodecConfiguration,
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  TransposeCodecConfiguration,
-  Zarr3ArrayHeader
-}
 import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
-import java.nio.charset.Charset
 import scala.concurrent.Future
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
+
+  private lazy val defaultLayerName = "volumeAnnotationData"
+  private lazy val dimensionSeparator = "."
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
@@ -62,29 +55,36 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
         )
       ),
       storage_transformers = None,
-      dimension_names = Some((Seq("x", "y", "z") ++ additionalAxes.map(_.name)).toArray)
+      dimension_names = Some(additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )
     bucketStream.map {
       case (bucket, data) =>
-        val filePath = zarrChunkFilePath(bucket)
-        logger.info(s"adding bucket $bucket in zip at file path $filePath")
+        val filePath = zarrChunkFilePath(defaultLayerName, bucket)
         NamedFunctionStream(
           filePath,
           os => Future.successful(os.write(compressor.compress(data)))
         )
     } ++ mags.map { mag =>
-      NamedFunctionStream(
-        zarrHeaderFilePath(mag),
-        os => Future.successful(os.write(Json.prettyPrint(Json.toJson(header)).getBytes(Charset.forName("UTF-8")))))
-    }
+      NamedFunctionStream.fromString(zarrHeaderFilePath(defaultLayerName, mag), Json.prettyPrint(Json.toJson(header)))
+    } ++ Seq(
+      NamedFunctionStream.fromString(
+        GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+        Json.prettyPrint(Json.toJson(createVolumeDataSource(layer)))
+      ))
   }
 
-  private val dimensionSeparator = "."
+  private def createVolumeDataSource(layer: DataLayer): GenericDataSource[DataLayer] =
+    GenericDataSource(
+      id = DataSourceId("", ""),
+      dataLayers = List(Zarr3SegmentationLayer(defaultLayerName, layer.boundingBox, layer.elementClass, List.empty, additionalAxes = layer.additionalAxes)),
+      scale = Vec3Double(1.0, 1.0, 1.0), // TODO
+    )
 
-  private def zarrChunkFilePath(bucketPosition: BucketPosition): String = {
+  private def zarrChunkFilePath(layerName: String, bucketPosition: BucketPosition): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
-    s"${bucketPosition.mag.toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
+    s"$layerName/${bucketPosition.mag
+      .toMagLiteral()}/c/$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
@@ -94,7 +94,8 @@ class Zarr3BucketStreamSink(val layer: DataLayer) extends LazyLogging {
       case _ => ""
     }
 
-  private def zarrHeaderFilePath(mag: Vec3Int): String = s"${mag.toMagLiteral()}/zarr.json"
+  private def zarrHeaderFilePath(layerName: String, mag: Vec3Int): String =
+    s"$layerName/${mag.toMagLiteral()}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
 
   private lazy val compressor =
     new BloscCompressor(

@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSource, GenericDataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -14,7 +14,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      dataSourcePropertiesPath <- Fox.successful(remotePath / "datasource-properties.json")
+      dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)
       ngffExplorer = new NgffExplorer
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {

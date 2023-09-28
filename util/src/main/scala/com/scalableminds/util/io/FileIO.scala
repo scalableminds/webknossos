@@ -1,12 +1,12 @@
 package com.scalableminds.util.io
 
 import java.io._
-
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
+import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
 trait NamedStream {
@@ -21,6 +21,14 @@ trait NamedStream {
   }
 
   def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit]
+}
+
+object NamedFunctionStream {
+  def fromBytes(name: String, bytes: Array[Byte]): NamedFunctionStream =
+    NamedFunctionStream(name, os => Future.successful(os.write(bytes)))
+
+  def fromString(name: String, str: String): NamedFunctionStream =
+    NamedFunctionStream(name, os => Future.successful(os.write(str.getBytes(Charset.forName("UTF-8")))))
 }
 
 case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit]) extends NamedStream {

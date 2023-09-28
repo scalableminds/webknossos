@@ -80,23 +80,23 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     } yield ()
 
   private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
-    val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("z", "y", "x"))
+    val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("x", "y", "z"))
     val additionalAxesNames: Seq[String] = dimensionNames.toSeq.dropRight(3)
+
+    // assume additionalAxes,x,y,z
     val CubeRx = s"(|.*/)(\\d+-\\d+-\\d+)/c/(.+)".r
 
     path match {
       case CubeRx(_, magStr, dimsStr) =>
-        // TODO new axis order
-        val dims: Seq[String] = dimsStr.split("/").toSeq
+        val dims: Seq[String] = dimsStr.split("\\.").toSeq
         val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(dims.dropRight(3)).map {
           case (name, coordinateValue) => AdditionalCoordinate(name, coordinateValue.toInt)
         }
 
-        val bucketX = dims.last
+        val bucketX = dims(dims.length - 3)
         val bucketY = dims(dims.length - 2)
-        val bucketZ = dims(dims.length - 3)
+        val bucketZ = dims.last
 
-        // assume z,y,x,additionalAxes
         Vec3Int.fromMagLiteral(magStr).map { mag =>
           BucketPosition(
             bucketX.toInt * mag.x * DataLayer.bucketLength,

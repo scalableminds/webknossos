@@ -1,4 +1,4 @@
-import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Typography } from "antd";
+import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Space, Typography } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
@@ -7,11 +7,7 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 
-import {
-  getColorLayers,
-  getDataLayers,
-  getLayerByName,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getColorLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
 import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
@@ -116,16 +112,19 @@ function CreateAnimationModal(props: Props) {
             <Radio.Group
               value={selectedCameraPosition}
               onChange={(ev) => setCameraPosition(ev.target.value)}
+              optionType="default"
             >
-              <Radio.Button value={CAMERA_POSITIONS.MOVING}>
-                Camera circling around the dataset
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_XY} disabled>
-                Static camera looking at XY-viewport
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ} disabled>
-                Static camera looking at YZ-viewport
-              </Radio.Button>
+              <Space direction="vertical">
+                <Radio.Button value={CAMERA_POSITIONS.MOVING}>
+                  Camera circling around the dataset
+                </Radio.Button>
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_XY} disabled>
+                  Static camera looking at XY-viewport
+                </Radio.Button>
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ} disabled>
+                  Static camera looking at YZ-viewport
+                </Radio.Button>
+              </Space>
             </Radio.Group>
           </Col>
           <Col>
@@ -133,13 +132,16 @@ function CreateAnimationModal(props: Props) {
             <Radio.Group
               value={selectedMovieResolution}
               onChange={(ev) => setMovieResolution(ev.target.value)}
+              optionType="default"
             >
-              <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
-                Standard Definition (640x480)
-              </Radio.Button>
-              <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled>
-                High Definition (1920x1080)
-              </Radio.Button>
+              <Space direction="vertical">
+                <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
+                  Standard Definition (640x480)
+                </Radio.Button>
+                <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled>
+                  High Definition (1920x1080)
+                </Radio.Button>
+              </Space>
             </Radio.Group>
           </Col>
           <Col>
@@ -147,7 +149,13 @@ function CreateAnimationModal(props: Props) {
               checked={isWatermarkEnabled}
               onChange={(ev) => setWatermarkEnabled(ev.target.value)}
             >
-              WEBKNOSSOS Watermark
+              Include WEBKNOSSOS Watermark
+            </Checkbox>
+            <Checkbox
+              checked={isWatermarkEnabled}
+              onChange={(ev) => setWatermarkEnabled(ev.target.value)}
+            >
+              Include the currently selected 3D meshes
             </Checkbox>
           </Col>
         </Row>
@@ -158,7 +166,7 @@ function CreateAnimationModal(props: Props) {
               margin: "18px 0",
             }}
           >
-            Layer
+            Layer & Bounding Box
           </Divider>
           <LayerSelection
             layers={colorLayers}
@@ -167,15 +175,7 @@ function CreateAnimationModal(props: Props) {
             tracing={tracing}
             style={{ width: "100%" }}
           />
-        </Row>
-        <Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Bounding Box
-          </Divider>
+
           <BoundingBoxSelection
             value={selectedBoundingBoxId}
             userBoundingBoxes={userBoundingBoxes}
@@ -184,7 +184,7 @@ function CreateAnimationModal(props: Props) {
                 setSelectedBoundingBoxId(boxId);
               }
             }}
-            style={{ width: "100%" }}
+            style={{ width: "100%", marginTop: 10 }}
           />
         </Row>
       </React.Fragment>

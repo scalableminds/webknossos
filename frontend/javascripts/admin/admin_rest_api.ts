@@ -1069,13 +1069,17 @@ export async function downsampleSegmentation(
   );
 }
 
-export async function addSegmentIndex(annotationId: string, tracingId: string): Promise<Object> {
-  return await Request.receiveJSON(
+export async function addSegmentIndex(
+  annotationId: string,
+  tracingId: string,
+): Promise<APIAnnotation> {
+  const updatedAnnotation = await Request.receiveJSON(
     `/api/annotations/${annotationId}/addSegmentIndex?tracingId=${tracingId}`,
     {
       method: "PATCH",
     },
   );
+  return updatedAnnotation;
 }
 // ### Datasets
 export async function getDatasets(

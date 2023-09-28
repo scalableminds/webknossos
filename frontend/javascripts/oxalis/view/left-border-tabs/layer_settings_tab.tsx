@@ -451,7 +451,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getAddSegmentIndexButton = (
-    layerName: string,
+    readableName: string,
     volumeTracing: VolumeTracing | null | undefined,
   ) => {
     // Re-Calculation of a segment index or with a fallback layer is not possible.
@@ -464,7 +464,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     return (
       <Tooltip title="Add segment index to this layer">
-        <div onClick={() => this.showAddSegmentIndexModal(volumeTracing, layerName)}>
+        <div onClick={() => this.showAddSegmentIndexModal(volumeTracing, readableName)}>
           <PlusOutlined />
           Add segment index
         </div>

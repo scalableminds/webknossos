@@ -1,4 +1,4 @@
-import { Modal } from "antd";
+import { Alert, Modal } from "antd";
 import React, { useState } from "react";
 import { AsyncButton } from "components/async_clickables";
 import type { VolumeTracing } from "oxalis/store";
@@ -32,18 +32,19 @@ export default function AddSegmentIndexModal({
     >
       <p>
         This will calculate the segment index for the volume annotation layer "{volumeLayerName}".
-        This will take a while and editing will be disabled during this time. Once finished the
-        annotation reloads.
+        This enables certain features, such as computing segment statistics. This operation only has
+        to be performed once and is done automatically for new annotations. This will take a while
+        and editing will be disabled during this time. Once finished the annotation reloads.
       </p>
 
-      <p
+      <Alert
         style={{
           fontWeight: "bold",
         }}
-      >
-        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
-        Also, the version history of the volume data will be reset.
-      </p>
+        message="Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
+        Also, the version history of the volume data will be reset."
+        type="warning"
+      />
       <div
         style={{
           display: "flex",

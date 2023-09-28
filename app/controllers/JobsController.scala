@@ -18,49 +18,44 @@ import utils.{ObjectId, WkConf}
 import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.BoundingBox
+import models.team.PricingPlan
 
 object MovieResolutions extends ExtendedEnumeration {
-  type MovieResolutions = Value
-  val SD = Value("SD")
-  val HD = Value("HD")
+  val SD, HD = Value
 }
 
 object CameraPositions extends ExtendedEnumeration {
-  type CameraPositions = Value
-  val MOVING = Value("MOVING")
-  val STATIC_XY = Value("STATIC_XY")
-  val STATIC_YZ = Value("STATIC_YZ")
+  val MOVING, STATIC_XY, STATIC_YZ = Value
 }
 
 case class AnimationJobOptions(
-  layerName: String,
-  boundingBox: BoundingBox,
-  includeWatermark: Boolean,
-  meshIds: Array[Int],
-  movieResolution: MovieResolutions.Value ,
-  cameraPosition: CameraPositions.Value
+    layerName: String,
+    boundingBox: BoundingBox,
+    includeWatermark: Boolean,
+    meshIds: Array[Int],
+    movieResolution: MovieResolutions.Value,
+    cameraPosition: CameraPositions.Value
 )
 
 object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobsController @Inject()(jobDAO: JobDAO,
-                               sil: Silhouette[WkEnv],
-                               datasetDAO: DatasetDAO,
-                               jobService: JobService,
-                               workerService: WorkerService,
-                               workerDAO: WorkerDAO,
-                               wkconf: WkConf,
-                               multiUserDAO: MultiUserDAO,
-                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               slackNotificationService: SlackNotificationService,
-                               organizationDAO: OrganizationDAO,
-                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext,
-                               playBodyParsers: PlayBodyParsers)
+class JobsController @Inject()(
+    jobDAO: JobDAO,
+    sil: Silhouette[WkEnv],
+    datasetDAO: DatasetDAO,
+    jobService: JobService,
+    workerService: WorkerService,
+    workerDAO: WorkerDAO,
+    wkconf: WkConf,
+    multiUserDAO: MultiUserDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    slackNotificationService: SlackNotificationService,
+    organizationDAO: OrganizationDAO,
+    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -322,12 +317,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
     }
 
   def runRenderAnimationJob(organizationName: String, dataSetName: String): Action[AnimationJobOptions] =
-    sil.SecuredAction.async(validateJson[AnimationJobOptions]) {
-    implicit request =>
+    sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
+          userOrganization <- organizationDAO.findOne(request.identity._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
@@ -335,6 +330,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           animationJobOptions = request.body
+          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+            bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
+          }
+          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+            bool2Fox(animationJobOptions.movieResolution == MovieResolutions.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
+          }
           layerName = animationJobOptions.layerName
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"
           command = JobCommand.render_animation

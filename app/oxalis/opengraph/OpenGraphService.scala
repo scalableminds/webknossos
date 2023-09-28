@@ -6,12 +6,10 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
-import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
-import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
 import oxalis.security.URLSharing
 import java.net.URLDecoder
@@ -29,14 +27,12 @@ object OpenGraphPageType extends ExtendedEnumeration {
   val dataset, annotation, workflow, unknown = Value
 }
 
-class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
-                                 datasetDAO: DatasetDAO,
+class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                  organizationDAO: OrganizationDAO,
                                  datasetLayerDAO: DatasetLayerDAO,
                                  annotationDAO: AnnotationDAO,
                                  shortLinkDAO: ShortLinkDAO,
-                                 conf: WkConf)
-    extends LazyLogging {
+                                 conf: WkConf) {
 
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
                                                                       ctx: DBAccessContext): Fox[OpenGraphTags] =
@@ -66,7 +62,6 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case shortLinkRouteRegex(key) =>
         for {
           shortLink <- shortLinkDAO.findOneByKey(key)
-          _ = logger.info(shortLink.longLink)
           asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8"))
         } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
       case _ => Fox.successful(uriPath, sharingToken)

@@ -866,7 +866,7 @@ export class LineMeasurementTool {
         doubleClickGuard(pos, () => {
           rightClick(pos, plane, event);
         }) ||
-        plane !== this.initialPlane
+        (this.isMeasuring && plane !== this.initialPlane)
       ) {
         return;
       }

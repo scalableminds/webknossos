@@ -63,7 +63,10 @@ export default function DistanceMeasurementTooltip() {
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
   useEffect(() => {
-    if (position != null && currentPosition[thirdDim] !== position[thirdDim]) {
+    if (
+      position != null &&
+      Math.floor(currentPosition[thirdDim]) !== Math.floor(position[thirdDim])
+    ) {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }

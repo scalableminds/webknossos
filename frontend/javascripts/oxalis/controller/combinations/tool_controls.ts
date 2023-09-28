@@ -822,7 +822,8 @@ export class LineMeasurementTool {
       if (lineMeasurementGeometry.wasReset && isMeasuring) {
         isMeasuring = false;
       }
-      if (plane !== initialPlane || !isMeasuring) {
+      const isAltPressed = evt.altKey;
+      if (isAltPressed || plane !== initialPlane || !isMeasuring) {
         MoveHandlers.moveWhenAltIsPressed(_delta, pos, plane, evt);
         return;
       }
@@ -912,7 +913,16 @@ export class AreaMeasurementTool {
       Store.dispatch(hideMeasurementTooltipAction());
     };
     return {
-      leftDownMove: (_delta: Point2, pos: Point2, id: string | null | undefined) => {
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        id: string | null | undefined,
+        evt: MouseEvent,
+      ) => {
+        if (evt.altKey) {
+          MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
+          return;
+        }
         if (id == null) {
           return;
         }

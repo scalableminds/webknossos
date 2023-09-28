@@ -1,4 +1,15 @@
-import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Space, Typography } from "antd";
+import {
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  ModalProps,
+  Radio,
+  Row,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
@@ -9,9 +20,18 @@ import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 
 import { getColorLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
-import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
+import {
+  computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
+} from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import { CAMERA_POSITIONS, CreateAnimationOptions, MOVIE_RESOLUTIONS } from "types/api_flow_types";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
 
 type Props = {
   isOpen: boolean;
@@ -22,17 +42,15 @@ function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const colorLayers = getColorLayers(dataset);
-
   const [selectedLayerName, setSelectedLayerName] = useState<string>(colorLayers[0].name);
-
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
 
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
-
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
     {
@@ -43,19 +61,31 @@ function CreateAnimationModal(props: Props) {
       isVisible: true,
     } as UserBoundingBox,
   ];
-
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(userBoundingBoxes[0].id);
 
   const [selectedCameraPosition, setCameraPosition] = useState(CAMERA_POSITIONS.MOVING);
   const [selectedMovieResolution, setMovieResolution] = useState(MOVIE_RESOLUTIONS.SD);
   const [isWatermarkEnabled, setWatermarkEnabled] = useState(true);
+  const [areMeshesEnabled, setMeshesEnabled] = useState(true);
+
+  const arePaidFeaturesAllowed = isFeatureAllowedByPricingPlan(
+    activeOrganization,
+    PricingPlanEnum.Team,
+  );
+
+  const validate = () => {
+    // TODO
+    // Bounging Box size
+    // number of meshes?
+    return true;
+  };
 
   const submitJob = () => {
     const state = Store.getState();
-    const boundingBox = userBoundingBoxes.find(
-      (bb) => bb.id === selectedBoundingBoxId,
-    )?.boundingBox;
-    const meshIds = []; // TODO gather selected mesh ids
+    const boundingBox = computeBoundingBoxObjectFromBoundingBox(
+      userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
+    );
+    const meshIds = [] as number[]; // TODO gather selected mesh ids
 
     const animationOptions: CreateAnimationOptions = {
       layerName: selectedLayerName,
@@ -65,6 +95,11 @@ function CreateAnimationModal(props: Props) {
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
     };
+
+    if (!validate()) {
+      // TODO show better errors
+      Toast.error("Options for animation are not valid");
+    }
 
     startcreateAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -134,10 +169,16 @@ function CreateAnimationModal(props: Props) {
                   Camera circling around the dataset
                 </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_XY} disabled>
-                  Static camera looking at XY-viewport
+                  Static camera looking at XY-viewport{" "}
+                  <Tooltip title="Cooming soon" placement="right">
+                    <InfoCircleOutlined />
+                  </Tooltip>
                 </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ} disabled>
-                  Static camera looking at YZ-viewport
+                  Static camera looking at YZ-viewport{" "}
+                  <Tooltip title="Cooming soon" placement="right">
+                    <InfoCircleOutlined />
+                  </Tooltip>
                 </Radio.Button>
               </Space>
             </Radio.Group>
@@ -153,27 +194,40 @@ function CreateAnimationModal(props: Props) {
                 <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
                   Standard Definition (640x480)
                 </Radio.Button>
-                <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled>
-                  High Definition (1920x1080)
+                <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
+                  <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                    High Definition (1920x1080)
+                  </PricingEnforcedSpan>
                 </Radio.Button>
               </Space>
             </Radio.Group>
           </Col>
-          <Col span={12}>
-          <Typography.Title level={5}>Options</Typography.Title>
-            <Space direction="vertical">
+          <Col span={24}>
+            <Typography.Title level={5} style={{ marginTop: 18 }}>
+              Options
+            </Typography.Title>
+            <Space direction="horizontal">
               <Checkbox
-                checked={isWatermarkEnabled}
-                onChange={(ev) => setWatermarkEnabled(ev.target.value)}
-              >
-                Include WEBKNOSSOS Watermark
-              </Checkbox>
-              <Checkbox
-                checked={isWatermarkEnabled}
-                onChange={(ev) => setWatermarkEnabled(ev.target.value)}
+                checked={areMeshesEnabled}
+                onChange={(ev) => setMeshesEnabled(ev.target.checked)}
               >
                 Include the currently selected 3D meshes
+                <Tooltip
+                  title="When enabled all meshes currently visibile in WEBKNOSSOS will be included in the rendered scene."
+                  placement="right"
+                >
+                  <InfoCircleOutlined style={{ marginLeft: 10 }} />
+                </Tooltip>
               </Checkbox>
+              <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                <Checkbox
+                  disabled={!arePaidFeaturesAllowed}
+                  checked={isWatermarkEnabled}
+                  onChange={(ev) => setWatermarkEnabled(ev.target.checked)}
+                >
+                  Include WEBKNOSSOS Watermark
+                </Checkbox>
+              </PricingEnforcedSpan>
             </Space>
           </Col>
         </Row>

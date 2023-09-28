@@ -1052,21 +1052,21 @@ export type FolderUpdater = {
 };
 
 export enum CAMERA_POSITIONS {
-  MOVING,
-  STATIC_XY,
-  STATIC_YZ,
+  MOVING = "MOVING",
+  STATIC_XY = "STATIC_XY",
+  STATIC_YZ = "STATIC_YZ",
 }
 
 export enum MOVIE_RESOLUTIONS {
-  SD,
-  HD,
+  SD = "SD",
+  HD = "HD",
 }
 
 export type CreateAnimationOptions = {
-  layerName: string,
-  boundingBox: Vector6,
-  includeWatermark: boolean,
-  meshIds: number[],
-  movieResolution: MOVIE_RESOLUTIONS 
-  cameraPosition: CAMERA_POSITIONS
-}
+  layerName: string;
+  boundingBox: BoundingBoxObject;
+  includeWatermark: boolean;
+  meshIds: number[];
+  movieResolution: MOVIE_RESOLUTIONS;
+  cameraPosition: CAMERA_POSITIONS;
+};

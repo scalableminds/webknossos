@@ -1293,12 +1293,12 @@ export function startNeuronInferralJob(
 export function startcreateAnimationJob(
   organizationName: string,
   datasetName: string,
-  animationOptions: CreateAnimationOptions
+  animationOptions: CreateAnimationOptions,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(
     `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}`,
     {
-      data: animationOptions
+      data: animationOptions,
     },
   );
 }

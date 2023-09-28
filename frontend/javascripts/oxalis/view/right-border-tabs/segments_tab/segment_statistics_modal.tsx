@@ -10,7 +10,8 @@ import React from "react";
 import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
 import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -84,8 +85,9 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const mag = getResolutionInfo(visibleSegmentationLayer.resolutions);
-  const scaleFactor = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+  const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+  const layersFinestResolution = magInfo.getFinestResolution();
+  const dataSetScale = Store.getState().dataset.dataSource.scale;
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
@@ -93,13 +95,13 @@ export function SegmentStatisticsModal({
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          layersFinestResolution,
           segments.map((segment) => segment.id),
         ),
         getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
-          mag.getHighestResolution(),
+          layersFinestResolution,
           segments.map((segment) => segment.id),
         ),
       ]).then((response) => {
@@ -110,10 +112,18 @@ export function SegmentStatisticsModal({
           // segments in request and their statistics in the response are in the same order
           const currentSegment = segments[i];
           const currentBoundingBox = boundingBoxes[i];
+          const boundingBoxInMag1 = getBoundingBoxInMag1(
+            currentBoundingBox,
+            layersFinestResolution,
+          );
           const currentSegmentSizeInVx = segmentSizes[i];
-          const volumeInNm3 = currentSegmentSizeInVx * scaleFactor;
+          const volumeInNm3 = voxelToNm3(
+            dataSetScale,
+            layersFinestResolution,
+            currentSegmentSizeInVx,
+          );
           const currentGroupId = getGroupIdForSegment(currentSegment);
-          const segmentStatObject = {
+          const segmentStateObject = {
             key: currentSegment.id,
             segmentId: currentSegment.id,
             segmentName:
@@ -123,16 +133,16 @@ export function SegmentStatisticsModal({
             volumeInVoxel: currentSegmentSizeInVx,
             volumeInNm3,
             formattedSize: formatNumberToVolume(volumeInNm3),
-            boundingBoxTopLeft: currentBoundingBox.topLeft,
-            boundingBoxTopLeftAsString: `(${currentBoundingBox.topLeft.join(", ")})`,
+            boundingBoxTopLeft: boundingBoxInMag1.topLeft,
+            boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
             boundingBoxPosition: [
-              currentBoundingBox.width,
-              currentBoundingBox.height,
-              currentBoundingBox.depth,
+              boundingBoxInMag1.width,
+              boundingBoxInMag1.height,
+              boundingBoxInMag1.depth,
             ] as Vector3,
-            boundingBoxPositionAsString: `(${currentBoundingBox.width}, ${currentBoundingBox.height}, ${currentBoundingBox.depth})`,
+            boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
           };
-          statisticsObjects.push(segmentStatObject);
+          statisticsObjects.push(segmentStateObject);
         }
         return statisticsObjects;
       });

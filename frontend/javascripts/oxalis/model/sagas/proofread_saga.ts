@@ -654,8 +654,8 @@ function* prepareSplitOrMerge(
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
-  const agglomerateFileMag = resolutionInfo.getLowestResolution();
-  const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
+  const agglomerateFileMag = resolutionInfo.getFinestResolution();
+  const agglomerateFileZoomstep = resolutionInfo.getFinestResolutionIndex();
 
   const getDataValue = (position: Vector3) => {
     const { additionalCoordinates } = Store.getState().flycam;
@@ -765,7 +765,7 @@ function* createGetUnmappedDataValueFn(
   const layerName = volumeTracingLayer.tracingId;
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const mag = resolutionInfo.getLowestResolution();
+  const mag = resolutionInfo.getFinestResolution();
 
   const fallbackLayerName = volumeTracingLayer.fallbackLayer;
   if (fallbackLayerName == null) return null;

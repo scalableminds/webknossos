@@ -8,13 +8,14 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...HEAD)
 
 ### Added
 - Added a new tool that allows either measuring the distance of a path or a non-self-crossing area. [#7258](https://github.com/scalableminds/webknossos/pull/7258)
 ### Changed
 
 ### Fixed
+- Fixed that segment statistics were requested in the wrong resolution and without properly considering the dataset scale. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
 
 ### Removed
 

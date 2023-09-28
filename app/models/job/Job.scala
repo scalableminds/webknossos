@@ -433,13 +433,13 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- workerDAO.findOneByDataStore(dataStoreName)
     } yield ()
 
-  def assertTiffExportBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
+  def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.export.tiff.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.export.tiff.invalidMag"
+      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
+      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
       boundingBoxInMag = parsedBoundingBox / parsedMag
-      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
-      _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
+      _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
 }

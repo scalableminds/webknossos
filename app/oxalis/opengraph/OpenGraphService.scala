@@ -1,5 +1,6 @@
 package oxalis.opengraph
 
+import akka.http.scaladsl.model.Uri
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
@@ -9,9 +10,11 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
+import models.shortlinks.ShortLinkDAO
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.Full
 import oxalis.security.URLSharing
+import java.net.URLDecoder
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -31,31 +34,43 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
                                  organizationDAO: OrganizationDAO,
                                  datasetLayerDAO: DatasetLayerDAO,
                                  annotationDAO: AnnotationDAO,
+                                 shortLinkDAO: ShortLinkDAO,
                                  conf: WkConf)
     extends LazyLogging {
 
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
-                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] = {
-    val ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingToken)
-
-    val pageType = detectPageType(uriPath)
-
-    val tagsFox = pageType match {
-      case OpenGraphPageType.dataset    => datasetOpenGraphTags(uriPath, sharingToken)(ec, ctxWithToken)
-      case OpenGraphPageType.annotation => annotationOpenGraphTags(uriPath, sharingToken)(ec, ctxWithToken)
-      case OpenGraphPageType.workflow   => workflowOpenGraphTags(uriPath)
-      case OpenGraphPageType.unknown    => Fox.successful(defaultTags())
-    }
-
-    // In error case (probably no access permissions), fall back to default, so the html template does not break
+                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
+      (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
+      ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)
+      pageType = detectPageType(uriPathResolved)
+      tagsFox = pageType match {
+        case OpenGraphPageType.dataset => datasetOpenGraphTags(uriPathResolved, sharingTokenResolved)(ec, ctxWithToken)
+        case OpenGraphPageType.annotation =>
+          annotationOpenGraphTags(uriPathResolved, sharingTokenResolved)(ec, ctxWithToken)
+        case OpenGraphPageType.workflow =>
+          Fox.successful(defaultTags(OpenGraphPageType.workflow)) // No sharing token mechanism for workflows yet
+        case OpenGraphPageType.unknown => Fox.successful(defaultTags())
+      }
+      // In error case (probably no access permissions), fall back to default, so the html template does not break
       tagsBox <- tagsFox.futureBox
       tags = tagsBox match {
         case Full(tags) => tags
         case _          => defaultTags(pageType)
       }
     } yield tags
-  }
+
+  private def resolveShortLinkIfNeeded(uriPath: String, sharingToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[(String, Option[String])] =
+    uriPath match {
+      case shortLinkRouteRegex(key) =>
+        for {
+          shortLink <- shortLinkDAO.findOneByKey(key)
+          _ = logger.info(shortLink.longLink)
+          asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8"))
+        } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
+      case _ => Fox.successful(uriPath, sharingToken)
+    }
 
   private def detectPageType(uriPath: String) =
     uriPath match {
@@ -65,6 +80,7 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
       case _                                                   => OpenGraphPageType.unknown
     }
 
+  private val shortLinkRouteRegex = "^/links/(.*)".r
   private val datasetRoute1Regex = "^/datasets/([^/^#]+)/([^/^#]+)/view".r
   private val datasetRoute2Regex = "^/datasets/([^/^#]+)/([^/^#]+)".r
   private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
@@ -123,15 +139,6 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
     layerOpt.map { layer =>
       val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
       s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=1000&h=300$tokenParam"
-    }
-
-  private def workflowOpenGraphTags(uriPath: String)(implicit ec: ExecutionContext): Fox[OpenGraphTags] =
-    uriPath match {
-      case workflowRouteRegex(workflowHash: String) =>
-        for { // TODO access check
-          workflow <- voxelyticsDAO.findWorkflowByHash(workflowHash)
-        } yield OpenGraphTags(Some(f"${workflow.name} | WEBKNOSSOS"), Some("Voxelytics Workflow Report"), None)
-      case _ => Fox.failure("not a matching uri")
     }
 
   private def defaultTags(pageType: OpenGraphPageType.Value = OpenGraphPageType.unknown): OpenGraphTags = {

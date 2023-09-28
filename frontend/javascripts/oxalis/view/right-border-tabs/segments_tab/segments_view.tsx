@@ -1736,7 +1736,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 // Forbid renaming when segments or groups are being renamed,
                                 // since selecting text within the editable input box would not work
                                 // otherwise (instead, the item would be dragged).
-                                this.state.renamingCounter === 0,
+                                this.state.renamingCounter === 0 && this.props.allowUpdate,
                             }}
                             multiple
                             showLine

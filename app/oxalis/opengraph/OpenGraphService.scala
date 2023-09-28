@@ -34,15 +34,15 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
                                  conf: WkConf)
     extends LazyLogging {
 
-  def getOpenGraphTags(uriPath: String, uriToken: Option[String])(implicit ec: ExecutionContext,
-                                                                  ctx: DBAccessContext): Fox[OpenGraphTags] = {
-    val ctxWithToken = URLSharing.fallbackTokenAccessContext(uriToken)
+  def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
+                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] = {
+    val ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingToken)
 
     val pageType = detectPageType(uriPath)
 
     val tagsFox = pageType match {
-      case OpenGraphPageType.dataset    => datasetOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
-      case OpenGraphPageType.annotation => annotationOpenGraphTags(uriPath, uriToken)(ec, ctxWithToken)
+      case OpenGraphPageType.dataset    => datasetOpenGraphTags(uriPath, sharingToken)(ec, ctxWithToken)
+      case OpenGraphPageType.annotation => annotationOpenGraphTags(uriPath, sharingToken)(ec, ctxWithToken)
       case OpenGraphPageType.workflow   => workflowOpenGraphTags(uriPath)
       case OpenGraphPageType.unknown    => Fox.successful(defaultTags())
     }
@@ -120,12 +120,9 @@ class OpenGraphService @Inject()(voxelyticsDAO: VoxelyticsDAO,
                            layerOpt: Option[DataLayerLike],
                            organization: Organization,
                            token: Option[String]): Option[String] =
-    layerOpt match {
-      case Some(layer) if dataset.isPublic =>
-        val tokenParam = token.map(t => s"&token=$t").getOrElse("")
-        Some(
-          s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=1000&h=300$tokenParam")
-      case _ => None
+    layerOpt.map { layer =>
+      val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
+      s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=1000&h=300$tokenParam"
     }
 
   private def workflowOpenGraphTags(uriPath: String)(implicit ec: ExecutionContext): Fox[OpenGraphTags] =

@@ -55,6 +55,7 @@ import {
   hideMeasurementTooltipAction,
   setQuickSelectStateAction,
   setLastMeasuredPositionAction,
+  setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
 
 export type ActionDescriptor = {
@@ -821,6 +822,7 @@ export class LineMeasurementTool {
       // In case the tool was reset by the user, abort measuring.
       if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
         this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
       }
       const isAltPressed = evt.altKey;
       if (isAltPressed || plane !== this.initialPlane || !this.isMeasuring) {
@@ -836,12 +838,17 @@ export class LineMeasurementTool {
       // In case the tool was reset by the user, abort measuring.
       if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
         this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+        return;
+      }
+      if (plane !== this.initialPlane) {
         return;
       }
       if (this.isMeasuring) {
         // Set the last point of the measurement and stop measuring.
         mouseMove({ x: 0, y: 0 }, pos, plane, event);
         this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
       } else {
         // If the tool already stopped measuring, reset the tool.
         lineMeasurementGeometry.resetAndHide();
@@ -852,22 +859,25 @@ export class LineMeasurementTool {
       // In case the tool was reset by the user, abort measuring.
       if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
         this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
         return;
       }
       if (
         doubleClickGuard(pos, () => {
           rightClick(pos, plane, event);
-        })
+        }) ||
+        plane !== this.initialPlane
       ) {
         return;
       }
       // Set a new measurement point.
       const state = Store.getState();
       const position = V3.floor(calculateGlobalPos(state, pos, plane));
-      this.initialPlane = plane;
       if (!this.isMeasuring) {
+        this.initialPlane = plane;
         lineMeasurementGeometry.setStartPoint(position, plane);
         this.isMeasuring = true;
+        Store.dispatch(setIsMeasuringAction(true));
       } else {
         lineMeasurementGeometry.addPoint(position);
       }

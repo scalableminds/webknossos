@@ -476,7 +476,8 @@ function mapStateToProps(state: OxalisState) {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    distanceMeasurementTooltipPosition: state.uiInformation.lastMeasuredPosition,
+    distanceMeasurementTooltipPosition:
+      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
   };
 }

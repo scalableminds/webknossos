@@ -41,7 +41,12 @@ function DistanceEntry({ distance }: { distance: string }) {
 }
 
 export default function DistanceMeasurementTooltip() {
-  const position = useSelector((state: OxalisState) => state.uiInformation.lastMeasuredPosition);
+  const position = useSelector(
+    (state: OxalisState) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+  );
+  const isMeasuring = useSelector(
+    (state: OxalisState) => state.uiInformation.measurementToolInfo.isMeasuring,
+  );
   const flycam = useSelector((state: OxalisState) => state.flycam);
   const state = useSelector((state: OxalisState) => state);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
@@ -106,6 +111,7 @@ export default function DistanceMeasurementTooltip() {
       style={{
         left,
         top,
+        pointerEvents: isMeasuring ? "none" : "auto",
       }}
     >
       <DistanceEntry distance={valueInMetricUnit} />

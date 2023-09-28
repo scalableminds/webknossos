@@ -1,6 +1,6 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
-import { updateKey } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   setToolReducer,
   getNextTool,
@@ -133,14 +133,19 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "HIDE_MEASUREMENT_TOOLTIP": {
-      return updateKey(state, "uiInformation", {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
         lastMeasuredPosition: null,
       });
     }
 
     case "SET_LAST_MEASURED_POSITION": {
-      return updateKey(state, "uiInformation", {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
         lastMeasuredPosition: action.position,
+      });
+    }
+    case "SET_IS_MEASURING": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        isMeasuring: action.isMeasuring,
       });
     }
 

@@ -27,6 +27,7 @@ export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAct
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
+type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -50,7 +51,8 @@ export type UiAction =
   | SetQuickSelectStateAction
   | ShowQuickSelectSettingsAction
   | HideMeasurementTooltipAction
-  | SetLastMeasuredPositionAction;
+  | SetLastMeasuredPositionAction
+  | SetIsMeasuringAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -163,4 +165,9 @@ export const setLastMeasuredPositionAction = (position: Vector3) =>
   ({
     type: "SET_LAST_MEASURED_POSITION",
     position,
+  } as const);
+export const setIsMeasuringAction = (isMeasuring: boolean) =>
+  ({
+    type: "SET_IS_MEASURING",
+    isMeasuring,
   } as const);

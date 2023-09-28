@@ -224,7 +224,6 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
-    lastMeasuredPosition: null,
     activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,
@@ -247,6 +246,10 @@ const defaultState: OxalisState = {
     },
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    measurementToolInfo: {
+      lastMeasuredPosition: null,
+      isMeasuring: false,
+    },
   },
   localSegmentationData: {},
 };

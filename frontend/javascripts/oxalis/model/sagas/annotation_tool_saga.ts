@@ -6,6 +6,7 @@ import {
   type CycleToolAction,
   type EscapeAction,
   hideMeasurementTooltipAction,
+  setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
 import { getNextTool } from "oxalis/model/reducers/reducer_helpers";
 import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
@@ -49,6 +50,7 @@ export function* watchToolReset(): Saga<void> {
       geometry.hide();
       geometry.reset();
       yield* put(hideMeasurementTooltipAction());
+      yield* put(setIsMeasuringAction(false));
     }
   }
 }

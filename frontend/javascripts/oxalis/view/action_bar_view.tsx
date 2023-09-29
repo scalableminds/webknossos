@@ -1,4 +1,4 @@
-import { Alert, Popover } from "antd";
+import { Alert, Popover, Tooltip } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
@@ -36,6 +36,8 @@ import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_acti
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import ButtonComponent from "./components/button_component";
+import { setAINeuronSegmentationModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 
 const VersionRestoreWarning = (
   <Alert
@@ -193,6 +195,20 @@ class ActionBarView extends React.PureComponent<Props, State> {
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
+  renderStartAIJobButton(): React.ReactNode {
+    return (
+      <ButtonComponent
+        key="ai-job-button"
+        onClick={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true))}
+        style={{ marginLeft: 12 }}
+      >
+        <Tooltip title="Start a processing job using AI">
+          <i className="fas fa-magic" /> AI Analysis
+        </Tooltip>
+      </ButtonComponent>
+    );
+  }
+
   renderStartTracingButton(): React.ReactNode {
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
     const ButtonWithAuthentication = withAuthentication(AsyncButton);
@@ -249,6 +265,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {isViewMode ? null : this.renderStartAIJobButton()}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>

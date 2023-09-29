@@ -26,7 +26,7 @@ import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { isBoundingBoxExportable } from "../action-bar/download_modal_view";
+import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 
 const { ThinSpace } = Unicode;

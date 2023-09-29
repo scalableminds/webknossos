@@ -36,6 +36,7 @@ export default function ViewDatasetActionsView(props: Props) {
   const isAINucleiSegmentationModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showAINucleiSegmentationModal,
   );
+  debugger;
   const isAINeuronSegmentationModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showAINeuronSegmentationModal,
   );
@@ -43,7 +44,7 @@ export default function ViewDatasetActionsView(props: Props) {
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
 
-  const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
+  const AISegmentationModals = getAISegmentationMenu(
     isAINucleiSegmentationModalOpen,
     isAINeuronSegmentationModalOpen,
   );
@@ -79,7 +80,6 @@ export default function ViewDatasetActionsView(props: Props) {
         icon: <DownloadOutlined />,
         label: "Download",
       },
-      isAISegmentationEnabled ? AISegmentationMenu : null,
       props.layoutMenu,
     ],
   };

@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Radio, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -72,10 +72,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import {
-  NeuronSegmentationModal,
-  NucleiSegmentationModal,
-} from "../right-border-tabs/starting_job_modals";
+import { NeuronSegmentationModal, NucleiSegmentationModal } from "./starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -261,38 +258,51 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 export function getAISegmentationMenu(
   isAINucleiSegmentationModalOpen: boolean,
   isAINeuronSegmentationModalOpen: boolean,
-): [SubMenuType, React.ReactNode] {
-  const AISegmentationMenu = {
-    key: "ai-segmentation-menu",
-    icon: <SettingOutlined />,
-    label: "AI Segmentation",
-    children: [
-      // {
-      //   key: "ai-nuclei-segmentation",
-      //   label: "AI Nuclei Segmentation",
-      //   onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
-      // },
-      {
-        key: "ai-neuron-segmentation",
-        label: "AI Neuron Segmentation",
-        onClick: () => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true)),
-      },
-    ],
-  };
-
-  const AISegmentationModals = isAINucleiSegmentationModalOpen ? (
-    <NucleiSegmentationModal
-      key="ai-nuclei-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(false))}
-    />
-  ) : isAINeuronSegmentationModalOpen ? (
-    <NeuronSegmentationModal
-      key="ai-neuron-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
-    />
+): React.ReactNode {
+  return isAINeuronSegmentationModalOpen ? (
+    <Modal
+      open
+      title={
+        <>
+          <i className="fas fa-magic" />
+          Automated analysis with WEBKNOSSOS
+        </>
+      }
+      onCancel={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
+    >
+      Choose a processing job for your dataset:
+      <Radio.Group buttonStyle="solid">
+        <Radio.Button>
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={`/assets/images/nuclei_inferral.png`}
+              alt={`Nuclei inferral`}
+              style={{ width: 400, height: "auto", borderRadius: 3 }}
+            />
+          </div>
+        </Radio.Button>
+        <Radio.Button>
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={`/assets/images/nuclei_inferral.png`}
+              alt={`Nuclei inferral`}
+              style={{ width: 400, height: "auto", borderRadius: 3 }}
+            />
+          </div>
+        </Radio.Button>
+        <Radio.Button>
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={`/assets/images/nuclei_inferral.png`}
+              alt={`Nuclei inferral`}
+              style={{ width: 400, height: "auto", borderRadius: 3 }}
+            />
+          </div>
+        </Radio.Button>
+      </Radio.Group >
+      {/* insert modal here */}
+    </Modal >
   ) : null;
-
-  return [AISegmentationMenu, AISegmentationModals];
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -675,11 +685,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     if (features().jobsEnabled) {
-      const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
+      debugger;
+      const AISegmentationModals = getAISegmentationMenu(
         this.props.isAINucleiSegmentationModalOpen,
         this.props.isAINeuronSegmentationModalOpen,
       );
-      menuItems.push(AISegmentationMenu);
       modals.push(AISegmentationModals);
     }
 

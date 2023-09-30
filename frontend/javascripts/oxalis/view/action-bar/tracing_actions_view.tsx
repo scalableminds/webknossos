@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Radio, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Radio, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -259,6 +259,7 @@ export function getAISegmentationMenu(
   isAINucleiSegmentationModalOpen: boolean,
   isAINeuronSegmentationModalOpen: boolean,
 ): React.ReactNode {
+  const radioStyle = { width: 100, height: 100, padding: 10 }
   return isAINeuronSegmentationModalOpen ? (
     <Modal
       open
@@ -271,34 +272,35 @@ export function getAISegmentationMenu(
       onCancel={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
     >
       Choose a processing job for your dataset:
-      <Radio.Group buttonStyle="solid">
-        <Radio.Button>
-          <div style={{ textAlign: "center" }}>
+      <Radio.Group buttonStyle="outline">
+        <Space align="center">
+          <Radio.Button style={radioStyle}>
+            <>
+              Neuron segmentation
             <img
               src={`/assets/images/nuclei_inferral.png`}
               alt={`Nuclei inferral`}
-              style={{ width: 400, height: "auto", borderRadius: 3 }}
+                style={{ width: 80, height: "auto", }}
             />
-          </div>
+            </>
         </Radio.Button>
-        <Radio.Button>
-          <div style={{ textAlign: "center" }}>
+          <Radio.Button style={radioStyle} disabled>
+            Nuclei detection
             <img
               src={`/assets/images/nuclei_inferral.png`}
               alt={`Nuclei inferral`}
-              style={{ width: 400, height: "auto", borderRadius: 3 }}
+              style={{ width: 80, height: "auto", }}
             />
-          </div>
         </Radio.Button>
-        <Radio.Button>
-          <div style={{ textAlign: "center" }}>
+          <Radio.Button style={radioStyle} disabled>
+            Mitochondria detection
             <img
               src={`/assets/images/nuclei_inferral.png`}
               alt={`Nuclei inferral`}
-              style={{ width: 400, height: "auto", borderRadius: 3 }}
+              style={{ width: 80, height: "auto", }}
             />
-          </div>
         </Radio.Button>
+        </Space>
       </Radio.Group >
       {/* insert modal here */}
     </Modal >

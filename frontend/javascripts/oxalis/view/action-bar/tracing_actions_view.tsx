@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Radio, Space, Tooltip } from "antd";
+import { Button, Card, Dropdown, Modal, Radio, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -259,7 +259,7 @@ export function getAISegmentationMenu(
   isAINucleiSegmentationModalOpen: boolean,
   isAINeuronSegmentationModalOpen: boolean,
 ): React.ReactNode {
-  const radioStyle = { width: 100, height: 100, padding: 10 }
+  const radioStyle = { width: "auto", height: "auto", padding: 0 }
   return isAINeuronSegmentationModalOpen ? (
     <Modal
       open
@@ -272,36 +272,38 @@ export function getAISegmentationMenu(
       onCancel={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
     >
       Choose a processing job for your dataset:
-      <Radio.Group buttonStyle="outline">
         <Space align="center">
           <Radio.Button style={radioStyle}>
-            <>
-              Neuron segmentation
+          <Card bordered={false}>
+            Neuron segmentation
             <img
-              src={`/assets/images/nuclei_inferral.png`}
-              alt={`Nuclei inferral`}
+              src={`/assets/images/neuron_segmentation.png`}
+              alt={`Neuron segmentation example`}
                 style={{ width: 80, height: "auto", }}
             />
-            </>
+          </Card>
         </Radio.Button>
-          <Radio.Button style={radioStyle} disabled>
+        <Radio.Button style={radioStyle}>
+          <Card bordered={false}>
             Nuclei detection
             <img
               src={`/assets/images/nuclei_inferral.png`}
-              alt={`Nuclei inferral`}
+              alt={`Nuclei inferral example`}
               style={{ width: 80, height: "auto", }}
             />
+          </Card>
         </Radio.Button>
-          <Radio.Button style={radioStyle} disabled>
+        <Radio.Button style={radioStyle}>
+          <Card bordered={false}>
             Mitochondria detection
             <img
-              src={`/assets/images/nuclei_inferral.png`}
-              alt={`Nuclei inferral`}
+              src={`/assets/images/mito_detection.png`}
+              alt={`Mitochondria detection example`}
               style={{ width: 80, height: "auto", }}
             />
+          </Card>
         </Radio.Button>
-        </Space>
-      </Radio.Group >
+      </Space>
       {/* insert modal here */}
     </Modal >
   ) : null;

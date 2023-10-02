@@ -443,21 +443,6 @@ function StartingJobModal(props: StartingJobModalProps) {
     .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
 
   return (
-    <Modal title={title} onCancel={handleClose} open width={700} footer={null}>
-      {description}
-      <br />
-      {jobNameToImagePath[jobName] != null ? (
-        <>
-          <div style={{ textAlign: "center" }}>
-            <img
-              src={`/assets/images/${jobNameToImagePath[jobName]}`}
-              alt={`${jobName} example`}
-              style={{ width: 400, height: "auto", borderRadius: 3 }}
-            />
-          </div>
-          <br />
-        </>
-      ) : null}
       <Form
         onFinish={startJob}
         layout="vertical"
@@ -494,8 +479,7 @@ function StartingJobModal(props: StartingJobModalProps) {
             {props.buttonLabel ? props.buttonLabel : title}
           </Button>
         </div>
-      </Form>
-    </Modal>
+    </Form>
   );
 }
 
@@ -539,16 +523,6 @@ export function NucleiSegmentationModal({ handleClose }: Props) {
 export function NeuronSegmentationModal({ handleClose }: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
-    <Modal
-      title={
-        <>
-          <i className="fas fa-magic" />
-          Automated Analysis with WEBKNOSSOS
-        </>
-      }
-    ></Modal>
-  );
-  return (
     <StartingJobModal
       handleClose={handleClose}
       jobName={JobNames.NEURON_INFERRAL}
@@ -570,23 +544,7 @@ export function NeuronSegmentationModal({ handleClose }: Props) {
           newDatasetName,
         );
       }}
-      description={
-        <>
-          <p>
-            Start an AI background job that automatically detects and segments all neurons in this
-            dataset. The AI will create a copy of this dataset containing the new neuron
-            segmentation.
-          </p>
-          <p>
-            <b>
-              Note that this feature is still experimental and processing can take a long time.
-              Thus, we suggest to use a small bounding box and not the full dataset extent. The
-              neuron detection currently only works with EM data. The best resolution for the
-              process will be chosen automatically.
-            </b>
-          </p>
-        </>
-      }
+      description={""}
     />
   );
 }

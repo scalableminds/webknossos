@@ -1,4 +1,4 @@
-import { Button, Card, Dropdown, Modal, Radio, Space, Tooltip } from "antd";
+import { Alert, Button, Card, Dropdown, Modal, Radio, Row, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -71,6 +71,8 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { Position } from "react-flow-renderer";
+import { NeuronSegmentationModal } from "./starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -256,17 +258,22 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   };
 }
 
+
 export function getAISegmentationMenu(
-  aiJobModalState:
+  aIJobModalState:
     | "invisible"
     | "nuclei_inferral"
     | "neuron_segmentation"
     | "mitochondria_detection",
 ): React.ReactNode {
+  const centerImageStyle = {
+    margin: "auto",
+    width: 150,
+  }
   const radioStyle = { width: "auto", height: "auto", padding: 0 };
-  console.log(aiJobModalState);
-  return aiJobModalState !== "invisible" ? (
+  return aIJobModalState !== "invisible" ? (
     <Modal
+      width={700}
       open
       title={
         <>
@@ -276,40 +283,51 @@ export function getAISegmentationMenu(
       }
       onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
     >
-      Choose a processing job for your dataset:
+      <Row>Choose a processing job for your dataset:</Row>
       <Space align="center">
-        <Radio.Button style={radioStyle}>
+        <Radio.Button style={radioStyle} checked={aIJobModalState === "neuron_segmentation"}>
           <Card bordered={false}>
-            Neuron segmentation
+            <Row>Neuron segmentation</Row>
+            <Row>
             <img
               src={"/assets/images/neuron_segmentation.png"}
               alt={"Neuron segmentation example"}
-              style={{ width: 80, height: "auto" }}
-            />
+                style={centerImageStyle}
+              /></Row>
           </Card>
         </Radio.Button>
-        <Radio.Button style={radioStyle}>
+        <Radio.Button style={radioStyle} checked={aIJobModalState === "nuclei_inferral"}>
           <Card bordered={false}>
-            Nuclei detection
-            <img
+            <Row>Nuclei detection</Row>
+            <Row><img
               src={"/assets/images/nuclei_inferral.png"}
               alt={"Nuclei inferral example"}
-              style={{ width: 80, height: "auto" }}
+              style={centerImageStyle}
             />
+            </Row>
           </Card>
         </Radio.Button>
-        <Radio.Button style={radioStyle}>
+        <Radio.Button style={radioStyle} checked={aIJobModalState === "mitochondria_detection"}>
           <Card bordered={false}>
-            Mitochondria detection
-            <img
+            <Row>Mitochondria detection
+            </Row>
+            <Row><img
               src={"/assets/images/mito_detection.png"}
               alt={"Mitochondria detection example"}
-              style={{ width: 80, height: "auto" }}
+              style={centerImageStyle}
             />
+            </Row>
           </Card>
         </Radio.Button>
       </Space>
-      {/* insert modal here */}
+      {aIJobModalState === "neuron_segmentation" ?
+        (<><Row>This job will automatically detect and segment all neurons in this dataset. The AI will create a copy of this dataset containing the new neuron segmentation.</Row>
+          <Row><Alert message="Please note that this feature is experimental and currently only works with electron microscopy data." type="warning" showIcon /></Row>
+          <NeuronSegmentationModal handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))} />
+        </>
+        )
+        : null}
+
     </Modal>
   ) : null;
 }

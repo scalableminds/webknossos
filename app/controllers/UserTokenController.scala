@@ -5,7 +5,12 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
-import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  AccessMode,
+  AccessResourceType,
+  UserAccessAnswer,
+  UserAccessRequest
+}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
 

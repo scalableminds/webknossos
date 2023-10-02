@@ -26,7 +26,15 @@ import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
-import security.{CombinedAuthenticator, OpenIdConnectClient, OpenIdConnectUserInfo, PasswordHasher, TokenType, WkEnv, WkSilhouetteEnvironment}
+import security.{
+  CombinedAuthenticator,
+  OpenIdConnectClient,
+  OpenIdConnectUserInfo,
+  PasswordHasher,
+  TokenType,
+  WkEnv,
+  WkSilhouetteEnvironment
+}
 import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 

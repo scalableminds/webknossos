@@ -117,13 +117,7 @@ function RenderAnimationModal(props: Props) {
   };
 
   return (
-    <Modal
-      title="Render Animation"
-      open={isOpen}
-      width={800}
-      onOk={submitJob}
-      onCancel={onClose}
-    >
+    <Modal title="Render Animation" open={isOpen} width={800} onOk={submitJob} onCancel={onClose}>
       <React.Fragment>
         <Row>
           <Col>

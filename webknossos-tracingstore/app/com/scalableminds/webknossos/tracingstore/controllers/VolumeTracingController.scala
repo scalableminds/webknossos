@@ -131,14 +131,16 @@ class VolumeTracingController @Inject()(
   def allDataZip(token: Option[String],
                  tracingId: String,
                  volumeDataZipFormat: String,
-                 version: Option[Long]): Action[AnyContent] =
+                 version: Option[Long],
+                 voxelSize: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
-            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed)
+            voxelSizeParsed <- Fox.runOptional(voxelSize)(vs => Vec3Double.fromUriLiteral(vs))
+            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed, voxelSizeParsed)
           } yield Ok.sendFile(data)
         }
       }

@@ -309,7 +309,8 @@ class AnnotationService @Inject()(
             tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
                                                 None,
                                                 skipVolumeData = true,
-                                                volumeDataZipFormat = VolumeDataZipFormat.wkw)
+                                                volumeDataZipFormat = VolumeDataZipFormat.wkw,
+                                                dataSet.scale)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
@@ -733,18 +734,21 @@ class AnnotationService @Inject()(
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-    def getVolumeDataObjects(dataSetId: ObjectId,
+    def getVolumeDataObjects(datasetId: ObjectId,
                              tracingIds: List[Option[String]],
                              volumeDataZipFormat: VolumeDataZipFormat): Fox[List[Option[Array[Byte]]]] =
       for {
-        dataSet <- datasetDAO.findOne(dataSetId)
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        dataset <- datasetDAO.findOne(datasetId)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
           case None                      => Fox.successful(None)
           case Some(_) if skipVolumeData => Fox.successful(None)
           case Some(tracingId) =>
             tracingStoreClient
-              .getVolumeData(tracingId, version = None, volumeDataZipFormat = volumeDataZipFormat)
+              .getVolumeData(tracingId,
+                             version = None,
+                             volumeDataZipFormat = volumeDataZipFormat,
+                             voxelSize = dataset.scale)
               .map(Some(_))
         }
       } yield tracingDataObjects

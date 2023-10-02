@@ -5,12 +5,11 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3BucketStreamSink
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
@@ -308,15 +307,17 @@ class VolumeTracingService @Inject()(
 
   def allDataZip(tracingId: String,
                  tracing: VolumeTracing,
-                 volumeDataZipFormat: VolumeDataZipFormat): Future[Files.TemporaryFile] = {
+                 volumeDataZipFormat: VolumeDataZipFormat,
+                 voxelSize: Option[Vec3Double]): Future[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
-    allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, os).map(_ => zipped)
+    allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
   }
 
   private def allDataToOutputStream(tracingId: String,
                                     tracing: VolumeTracing,
                                     volumeDataZipFormmat: VolumeDataZipFormat,
+                                    voxelSize: Option[Vec3Double],
                                     os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
@@ -326,7 +327,8 @@ class VolumeTracingService @Inject()(
       case VolumeDataZipFormat.zarr3 =>
         new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
                                              tracing.resolutions.map(mag => vec3IntFromProto(mag)),
-                                             tracing.additionalAxes)
+                                             tracing.additionalAxes,
+                                             voxelSize)
     }
 
     val before = System.currentTimeMillis()

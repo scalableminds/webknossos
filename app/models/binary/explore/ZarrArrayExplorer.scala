@@ -33,6 +33,6 @@ class ZarrArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerEx
         ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else
         ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator), additionalAxes = None)
-    } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
+    } yield List((layer, Vec3Double.ones))
 
 }

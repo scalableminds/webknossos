@@ -433,7 +433,8 @@ Expects:
             tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
                                                 volumeVersion,
                                                 skipVolumeData,
-                                                volumeDataZipFormat)
+                                                volumeDataZipFormat,
+                                                dataset.scale)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>

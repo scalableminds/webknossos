@@ -74,13 +74,6 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
   }
 
-  def saveVolumeTracings(tracings: VolumeTracings): Fox[List[Box[Option[String]]]] = {
-    logger.debug("Called to save VolumeTracings." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/volume/saveMultiple").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .postProtoWithJsonResponse[VolumeTracings, List[Box[Option[String]]]](tracings)
-  }
-
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                versionString: Option[String] = None,
                                isFromTask: Boolean = false,
@@ -186,7 +179,8 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
   def getVolumeTracing(annotationLayer: AnnotationLayer,
                        version: Option[Long] = None,
                        skipVolumeData: Boolean,
-                       volumeDataZipFormat: VolumeDataZipFormat): Fox[FetchedAnnotationLayer] = {
+                       volumeDataZipFormat: VolumeDataZipFormat,
+                       voxelSize: Option[Vec3Double]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -200,6 +194,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
           .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
           .addQueryStringOptional("version", version.map(_.toString))
+          .addQueryStringOptional("voxelSize", voxelSize.map(_.toUriLiteral))
           .getWithBytesResponse
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
@@ -208,13 +203,15 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
 
   def getVolumeData(tracingId: String,
                     version: Option[Long] = None,
-                    volumeDataZipFormat: VolumeDataZipFormat): Fox[Array[Byte]] = {
+                    volumeDataZipFormat: VolumeDataZipFormat,
+                    voxelSize: Option[Vec3Double]): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
     for {
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
         .addQueryStringOptional("version", version.map(_.toString))
+        .addQueryStringOptional("voxelSize", voxelSize.map(_.toUriLiteral))
         .getWithBytesResponse
     } yield data
   }

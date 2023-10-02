@@ -34,6 +34,8 @@ object AxisOrder {
 
   def cxyz: AxisOrder = asCxyzFromRank(rank = 4)
 
+  def xyz: AxisOrder = AxisOrder(0, 1, 2)
+
   // assumes that the last three elements of the shapre are (c),x,y,z (which is what webKnossos sends to the frontend)
   def asCxyzFromRank(rank: Int): AxisOrder =
     if (rank == 3)

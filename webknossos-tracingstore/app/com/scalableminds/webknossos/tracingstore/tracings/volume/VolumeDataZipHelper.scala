@@ -66,6 +66,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
         ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)))
       firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
       firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
+      _ <- firstHeader.assertValid
       _ <- ZipIO.withUnziped(zipFile) {
         case (filename, inputStream) =>
           if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) ()

@@ -98,10 +98,13 @@ class DatasetController @Inject()(userService: UserService,
                 dataLayerName: String,
                 w: Option[Int],
                 h: Option[Int],
-                mappingName: Option[String]): Action[AnyContent] =
+                mappingName: Option[String],
+                sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
+        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getThumbnailWithCache(organizationName, dataSetName, dataLayerName, w, h, mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")

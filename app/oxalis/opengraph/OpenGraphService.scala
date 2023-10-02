@@ -34,6 +34,16 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                  shortLinkDAO: ShortLinkDAO,
                                  conf: WkConf) {
 
+  private val thumbnailWidth = 1000
+  private val thumbnailHeight = 300
+
+  // This should match the frontend-side routes, not api routes, since those are the links people send around
+  private val shortLinkRouteRegex = "^/links/(.*)".r
+  private val datasetRoute1Regex = "^/datasets/([^/^#]+)/([^/^#]+)/view".r
+  private val datasetRoute2Regex = "^/datasets/([^/^#]+)/([^/^#]+)".r
+  private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
+  private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
+
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
                                                                       ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
@@ -75,12 +85,6 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case _                                                   => OpenGraphPageType.unknown
     }
 
-  private val shortLinkRouteRegex = "^/links/(.*)".r
-  private val datasetRoute1Regex = "^/datasets/([^/^#]+)/([^/^#]+)/view".r
-  private val datasetRoute2Regex = "^/datasets/([^/^#]+)/([^/^#]+)".r
-  private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
-  private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
-
   private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
                                                                            ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
@@ -102,7 +106,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
     } yield
       OpenGraphTags(
         Some(s"${dataset.displayName.getOrElse(datasetName)} | WEBKNOSSOS"),
-        Some(s"View this dataset in WEBKNOSSOS"),
+        Some("View this dataset in WEBKNOSSOS"),
         thumbnailUri(dataset, layerOpt, organization, token)
       )
 
@@ -133,7 +137,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                            token: Option[String]): Option[String] =
     layerOpt.map { layer =>
       val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
-      s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=1000&h=300$tokenParam"
+      s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
     }
 
   private def defaultTags(pageType: OpenGraphPageType.Value = OpenGraphPageType.unknown): OpenGraphTags = {

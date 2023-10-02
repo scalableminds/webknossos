@@ -19,7 +19,6 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
-import scala.concurrent.ExecutionContext
 
 case class Zarr3ArrayHeader(
     zarr_format: Int, // must be 3

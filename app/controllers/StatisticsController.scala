@@ -59,7 +59,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
           } yield {
             Ok(
               Json.obj(
-                "name" -> "oxalis",
+                "name" -> "webknossos",
                 "tracingTimes" -> intervalTracingTimeJson(times),
                 "numberOfUsers" -> numberOfUsers,
                 "numberOfDatasets" -> numberOfDatasets,

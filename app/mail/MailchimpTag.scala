@@ -1,7 +1,6 @@
 package mail
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import oxalis.mail
 
 object MailchimpTag extends ExtendedEnumeration {
   type MailchimpTag = Value

@@ -110,7 +110,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
-        showCreateAnimationModal: action.visible,
+        showRenderAnimationModal: action.visible,
       });
     }
 

@@ -13,7 +13,7 @@ import {
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
-import { startcreateAnimationJob } from "admin/admin_rest_api";
+import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
 import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -25,7 +25,7 @@ import {
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { CAMERA_POSITIONS, CreateAnimationOptions, MOVIE_RESOLUTIONS } from "types/api_flow_types";
+import { CAMERA_POSITIONS, RenderAnimationOptions, MOVIE_RESOLUTIONS } from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import {
@@ -38,7 +38,7 @@ type Props = {
   onClose: ModalProps["onCancel"];
 };
 
-function CreateAnimationModal(props: Props) {
+function RenderAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
@@ -85,13 +85,15 @@ function CreateAnimationModal(props: Props) {
     const boundingBox = computeBoundingBoxObjectFromBoundingBox(
       userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
     );
-    const meshIds = [] as number[]; // TODO gather selected mesh ids
+    const meshSegmentIds = [] as number[]; // TODO gather selected mesh ids
 
-    const animationOptions: CreateAnimationOptions = {
+    const animationOptions: RenderAnimationOptions = {
       layerName: selectedLayerName,
+      segmentationLayerName: "segmentation",
+      meshfileName: "meshfile.hdf5",
+      meshSegmentIds,
       boundingBox,
       includeWatermark: isWatermarkEnabled,
-      meshIds,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
     };
@@ -101,7 +103,7 @@ function CreateAnimationModal(props: Props) {
       Toast.error("Options for animation are not valid");
     }
 
-    startcreateAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
+    startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
     Toast.info(
       <>
@@ -116,7 +118,7 @@ function CreateAnimationModal(props: Props) {
 
   return (
     <Modal
-      title="Create an Animation"
+      title="Render Animation"
       open={isOpen}
       width={800}
       onOk={submitJob}
@@ -264,4 +266,4 @@ function CreateAnimationModal(props: Props) {
   );
 }
 
-export default CreateAnimationModal;
+export default RenderAnimationModal;

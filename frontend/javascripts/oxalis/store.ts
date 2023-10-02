@@ -513,7 +513,7 @@ type UiInformation = {
   readonly showShareModal: boolean;
   readonly showAINucleiSegmentationModal: boolean;
   readonly showAINeuronSegmentationModal: boolean;
-  readonly showCreateAnimationModal: boolean;
+  readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;

@@ -1062,7 +1062,7 @@ export enum MOVIE_RESOLUTIONS {
   HD = "HD",
 }
 
-export type CreateAnimationOptions = {
+export type RenderAnimationOptions = {
   layerName: string;
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;

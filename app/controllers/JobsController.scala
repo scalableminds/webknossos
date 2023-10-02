@@ -34,7 +34,9 @@ case class AnimationJobOptions(
     layerName: String,
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
-    meshIds: Array[Int],
+    segmentationLayerName: Option[String],
+    meshfileName: Option[String],
+    meshSegmentIds: Array[Int],
     movieResolution: MovieResolutions.Value,
     cameraPosition: CameraPositions.Value
 )

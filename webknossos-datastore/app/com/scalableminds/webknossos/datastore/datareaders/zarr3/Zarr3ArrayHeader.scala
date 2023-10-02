@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.{BoxImplicits, Fox}
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.BoxImplicits
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator

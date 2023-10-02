@@ -12,6 +12,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 
+- Added social media link previews for links to datasets and annotations (only if they are public or if the links contain sharing tokens). [#7331](https://github.com/scalableminds/webknossos/pull/7331)
+
 ### Changed
 
 ### Fixed

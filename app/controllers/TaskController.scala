@@ -24,10 +24,10 @@ import models.project.ProjectDAO
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

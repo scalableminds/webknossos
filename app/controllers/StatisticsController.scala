@@ -3,17 +3,17 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
-import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import play.api.i18n.Messages
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration

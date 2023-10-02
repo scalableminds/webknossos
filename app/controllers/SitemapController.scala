@@ -3,9 +3,9 @@ package controllers
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.mohiva.play.silhouette.api.Silhouette
-import oxalis.security.WkEnv
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.SitemapWriter
 
 class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv]) extends Controller {

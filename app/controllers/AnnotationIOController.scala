@@ -33,16 +33,16 @@ import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.binary.{Dataset, DatasetDAO, DatasetService}
+import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
+import security.WkEnv
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}

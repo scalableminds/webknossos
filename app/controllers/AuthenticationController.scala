@@ -9,25 +9,25 @@ import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
-import oxalis.security._
-import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
+import security.{CombinedAuthenticator, OpenIdConnectClient, OpenIdConnectUserInfo, PasswordHasher, TokenType, WkEnv, WkSilhouetteEnvironment}
+import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder

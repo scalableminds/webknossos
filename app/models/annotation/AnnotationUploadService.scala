@@ -6,13 +6,13 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.typesafe.scalalogging.LazyLogging
+import files.TempFileService
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
-import oxalis.files.TempFileService
 import play.api.i18n.MessagesProvider
 
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {

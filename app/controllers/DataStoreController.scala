@@ -5,14 +5,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.MultiUserDAO
 import net.liftweb.common.Empty
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.{ExecutionContext, Future}
 

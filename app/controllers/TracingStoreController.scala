@@ -3,11 +3,11 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.{TracingStore, TracingStoreDAO, TracingStoreService}
-import oxalis.security.WkEnv
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 

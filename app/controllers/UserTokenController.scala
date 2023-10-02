@@ -5,24 +5,20 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
-import com.scalableminds.webknossos.datastore.services.{
-  AccessMode,
-  AccessResourceType,
-  UserAccessAnswer,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DatasetDAO, DatasetService, DataStoreService}
+import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext

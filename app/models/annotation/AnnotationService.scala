@@ -42,7 +42,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.binary._
+import models.dataset._
 import models.mesh.{MeshDAO, MeshService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO

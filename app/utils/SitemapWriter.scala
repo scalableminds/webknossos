@@ -6,7 +6,7 @@ import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
-import models.binary.PublicationDAO
+import models.dataset.PublicationDAO
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.{ExecutionContext, Future}

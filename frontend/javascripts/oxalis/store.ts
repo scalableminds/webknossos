@@ -511,8 +511,11 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
-  readonly showAINucleiSegmentationModal: boolean;
-  readonly showAINeuronSegmentationModal: boolean;
+  readonly aIJobModalState:
+    | "invisible"
+    | "nuclei_inferral"
+    | "neuron_segmentation"
+    | "mitochondria_detection";
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;

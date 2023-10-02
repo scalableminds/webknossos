@@ -33,21 +33,12 @@ export const screenshotMenuItem: MenuItemType = {
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
-  const isAINucleiSegmentationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showAINucleiSegmentationModal,
-  );
-  debugger;
-  const isAINeuronSegmentationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showAINeuronSegmentationModal,
-  );
+  const aIJobModalState = useSelector((state: OxalisState) => state.uiInformation.aIJobModalState);
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
 
-  const AISegmentationModals = getAISegmentationMenu(
-    isAINucleiSegmentationModalOpen,
-    isAINeuronSegmentationModalOpen,
-  );
+  const AISegmentationModals = getAISegmentationMenu(aIJobModalState);
   const isAISegmentationEnabled =
     features().jobsEnabled && activeUser != null && activeUser.isSuperUser;
 

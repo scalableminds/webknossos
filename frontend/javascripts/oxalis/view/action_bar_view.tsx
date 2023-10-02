@@ -37,7 +37,7 @@ import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
-import { setAINeuronSegmentationModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 
 const VersionRestoreWarning = (
   <Alert
@@ -199,7 +199,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="ai-job-button"
-        onClick={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true))}
+        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_segmentation"))}
         style={{ marginLeft: 12 }}
       >
         <Tooltip title="Start a processing job using AI">

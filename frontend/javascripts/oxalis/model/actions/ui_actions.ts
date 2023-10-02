@@ -15,12 +15,7 @@ type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibi
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
-type SetAINucleiSegmentationModalVisibilityAction = ReturnType<
-  typeof setAINucleiSegmentationModalVisibilityAction
->;
-type SetAINeuronSegmentationModalVisibilityAction = ReturnType<
-  typeof setAINeuronSegmentationModalVisibilityAction
->;
+type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
@@ -40,8 +35,7 @@ export type UiAction =
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
-  | SetAINucleiSegmentationModalVisibilityAction
-  | SetAINeuronSegmentationModalVisibilityAction
+  | SetAIJobModalStateAction
   | SetBusyBlockingInfoAction
   | EnterAction
   | EscapeAction
@@ -108,15 +102,12 @@ export const setShareModalVisibilityAction = (visible: boolean) =>
     type: "SET_SHARE_MODAL_VISIBILITY",
     visible,
   } as const);
-export const setAINucleiSegmentationModalVisibilityAction = (visible: boolean) =>
+export const setAIJobModalStateAction = (
+  state: "invisible" | "nuclei_inferral" | "neuron_segmentation" | "mitochondria_detection",
+) =>
   ({
-    type: "SET_AI_NUCLEI_SEGMENTATION_MODAL_VISIBILITY",
-    visible,
-  } as const);
-export const setAINeuronSegmentationModalVisibilityAction = (visible: boolean) =>
-  ({
-    type: "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY",
-    visible,
+    type: "SET_AI_JOB_MODAL_STATE",
+    state,
   } as const);
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
   ({

@@ -41,8 +41,7 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
-  setAINucleiSegmentationModalVisibilityAction,
-  setAINeuronSegmentationModalVisibilityAction,
+  setAIJobModalStateAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -72,7 +71,6 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { NeuronSegmentationModal, NucleiSegmentationModal } from "./starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -90,8 +88,11 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
-  isAINeuronSegmentationModalOpen: boolean;
-  isAINucleiSegmentationModalOpen: boolean;
+  aIJobModalState:
+  | "invisible"
+  | "nuclei_inferral"
+  | "neuron_segmentation"
+  | "mitochondria_detection";
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -256,11 +257,15 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 }
 
 export function getAISegmentationMenu(
-  isAINucleiSegmentationModalOpen: boolean,
-  isAINeuronSegmentationModalOpen: boolean,
+  aiJobModalState:
+    | "invisible"
+    | "nuclei_inferral"
+    | "neuron_segmentation"
+    | "mitochondria_detection",
 ): React.ReactNode {
-  const radioStyle = { width: "auto", height: "auto", padding: 0 }
-  return isAINeuronSegmentationModalOpen ? (
+  const radioStyle = { width: "auto", height: "auto", padding: 0 };
+  console.log(aiJobModalState);
+  return aiJobModalState !== "invisible" ? (
     <Modal
       open
       title={
@@ -269,17 +274,17 @@ export function getAISegmentationMenu(
           Automated analysis with WEBKNOSSOS
         </>
       }
-      onCancel={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
+      onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
     >
       Choose a processing job for your dataset:
-        <Space align="center">
-          <Radio.Button style={radioStyle}>
+      <Space align="center">
+        <Radio.Button style={radioStyle}>
           <Card bordered={false}>
             Neuron segmentation
             <img
-              src={`/assets/images/neuron_segmentation.png`}
-              alt={`Neuron segmentation example`}
-                style={{ width: 80, height: "auto", }}
+              src={"/assets/images/neuron_segmentation.png"}
+              alt={"Neuron segmentation example"}
+              style={{ width: 80, height: "auto" }}
             />
           </Card>
         </Radio.Button>
@@ -287,9 +292,9 @@ export function getAISegmentationMenu(
           <Card bordered={false}>
             Nuclei detection
             <img
-              src={`/assets/images/nuclei_inferral.png`}
-              alt={`Nuclei inferral example`}
-              style={{ width: 80, height: "auto", }}
+              src={"/assets/images/nuclei_inferral.png"}
+              alt={"Nuclei inferral example"}
+              style={{ width: 80, height: "auto" }}
             />
           </Card>
         </Radio.Button>
@@ -297,15 +302,15 @@ export function getAISegmentationMenu(
           <Card bordered={false}>
             Mitochondria detection
             <img
-              src={`/assets/images/mito_detection.png`}
-              alt={`Mitochondria detection example`}
-              style={{ width: 80, height: "auto", }}
+              src={"/assets/images/mito_detection.png"}
+              alt={"Mitochondria detection example"}
+              style={{ width: 80, height: "auto" }}
             />
           </Card>
         </Radio.Button>
       </Space>
       {/* insert modal here */}
-    </Modal >
+    </Modal>
   ) : null;
 }
 
@@ -689,11 +694,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     if (features().jobsEnabled) {
-      debugger;
-      const AISegmentationModals = getAISegmentationMenu(
-        this.props.isAINucleiSegmentationModalOpen,
-        this.props.isAINeuronSegmentationModalOpen,
-      );
+      const AISegmentationModals = getAISegmentationMenu(this.props.aIJobModalState);
       modals.push(AISegmentationModals);
     }
 
@@ -779,8 +780,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
-    isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
-    isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
+    aIJobModalState: state.uiInformation.aIJobModalState,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

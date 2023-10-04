@@ -1,6 +1,7 @@
 package models.annotation.nml
 
 import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.io.NamedFunctionStream
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
@@ -12,7 +13,6 @@ import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import models.annotation.Annotation
 import models.task.Task
 import models.user.User
-import play.api.libs.iteratee.Enumerator
 
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
@@ -38,7 +38,8 @@ case class NmlParameters(
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(annotationLayers: List[FetchedAnnotationLayer],
+  def toNmlStream(name: String,
+                  annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
                   scale: Option[Vec3Double],
                   volumeFilename: Option[String],
@@ -47,35 +48,38 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   datasetName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task],
-                  skipVolumeData: Boolean = false): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
-    implicit val writer: IndentingXMLStreamWriter =
-      new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
+                  skipVolumeData: Boolean = false): NamedFunctionStream =
+    NamedFunctionStream(
+      name,
+      os => {
+        implicit val writer: IndentingXMLStreamWriter =
+          new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
-    for {
-      nml <- toNml(annotationLayers,
-                   annotation,
-                   scale,
-                   volumeFilename,
-                   organizationName,
-                   wkUrl,
-                   datasetName,
-                   annotationOwner,
-                   annotationTask,
-                   skipVolumeData)
-      _ = os.close()
-    } yield nml
-  }
+        for {
+          nml <- toNmlWithImplicitWriter(annotationLayers,
+                                         annotation,
+                                         scale,
+                                         volumeFilename,
+                                         organizationName,
+                                         wkUrl,
+                                         datasetName,
+                                         annotationOwner,
+                                         annotationTask,
+                                         skipVolumeData)
+        } yield nml
+      }
+    )
 
-  def toNml(annotationLayers: List[FetchedAnnotationLayer],
-            annotation: Option[Annotation],
-            scale: Option[Vec3Double],
-            volumeFilename: Option[String],
-            organizationName: String,
-            wkUrl: String,
-            datasetName: String,
-            annotationOwner: Option[User],
-            annotationTask: Option[Task],
-            skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Fox[Unit] =
+  private def toNmlWithImplicitWriter(annotationLayers: List[FetchedAnnotationLayer],
+                                      annotation: Option[Annotation],
+                                      scale: Option[Vec3Double],
+                                      volumeFilename: Option[String],
+                                      organizationName: String,
+                                      wkUrl: String,
+                                      datasetName: String,
+                                      annotationOwner: Option[User],
+                                      annotationTask: Option[Task],
+                                      skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
         for {

@@ -45,7 +45,7 @@ class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuratio
     case request: IsosurfaceRequest =>
       sender() ! Await.result(service.requestIsosurface(request).futureBox, timeout)
     case _ =>
-      sender ! Failure("Unexpected message sent to IsosurfaceActor.")
+      sender() ! Failure("Unexpected message sent to IsosurfaceActor.")
   }
 }
 

@@ -280,7 +280,7 @@ trait VolumeTracingBucketHelper
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey, dataLayer.additionalAxes).map(tuple => (tuple._2, data))
-    }.toIterator
+    }.iterator
   }
 }
 
@@ -302,7 +302,7 @@ class VersionedBucketIterator(prefix: String,
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
+    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -312,7 +312,7 @@ class VersionedBucketIterator(prefix: String,
   @tailrec
   private def getNextNonRevertedBucket: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
-      val bucket = currentBatchIterator.next
+      val bucket = currentBatchIterator.next()
       currentStartAfterKey = Some(bucket.key)
       if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalAxes).isEmpty) {
         getNextNonRevertedBucket
@@ -331,7 +331,7 @@ class VersionedBucketIterator(prefix: String,
       nextBucket.isDefined
     }
 
-  override def next: (BucketPosition, Array[Byte], Long) = {
+  override def next(): (BucketPosition, Array[Byte], Long) = {
     val nextRes = nextBucket match {
       case Some(bucket) => bucket
       case None         => getNextNonRevertedBucket.get
@@ -356,8 +356,8 @@ class BucketIterator(prefix: String,
   private val versionedBucketIterator =
     new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
 
-  override def next: (BucketPosition, Array[Byte]) = {
-    val tuple = versionedBucketIterator.next
+  override def next(): (BucketPosition, Array[Byte]) = {
+    val tuple = versionedBucketIterator.next()
     (tuple._1, tuple._2)
   }
 

@@ -7,11 +7,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.wrap.{BlockType, WKWFile, WKWHeader}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int]): Iterator[NamedStream] = {
+  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(
+      implicit ec: ExecutionContext): Iterator[NamedStream] = {
     val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
     bucketStream.map {
@@ -19,7 +20,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {
         val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength)).toString
         NamedFunctionStream(
           filePath,
-          os => Future.successful(WKWFile.write(os, header, Array(data).toIterator))
+          os => Future.successful(WKWFile.write(os, header, Array(data).iterator))
         )
     } ++ mags.map { mag =>
       NamedFunctionStream(wkwHeaderFilePath(mag).toString,

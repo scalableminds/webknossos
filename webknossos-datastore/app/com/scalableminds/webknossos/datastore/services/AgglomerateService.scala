@@ -198,6 +198,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         Tree(
           treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
           createdTimestamp = System.currentTimeMillis(),
+          // unsafeWrapArray is fine, because the underlying arrays are never mutated
           nodes = ArraySeq.unsafeWrapArray(nodes),
           edges = ArraySeq.unsafeWrapArray(skeletonEdges),
           name = s"agglomerate $agglomerateId ($mappingName)",
@@ -308,6 +309,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(
+        // unsafeWrapArray is fine, because the underlying arrays are never mutated
         segments = ArraySeq.unsafeWrapArray(segmentIds),
         edges = ArraySeq.unsafeWrapArray(
           edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))),

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.tools.Fox
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.net.URI
 import java.nio.file.Path
@@ -27,6 +28,11 @@ class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
   override def toString: String = basePath.toString
 
   def exists: Boolean = basePath.toFile.exists()
+
+  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(13, 37).append(basePath).append(dataVault).toHashCode
 }
 
 object FileSystemVaultPath {

@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.util.Helpers.tryo
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
@@ -76,4 +77,9 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
   override def toString: String = uri.toString
 
   def summary: String = s"VaultPath: ${this.toString} for ${dataVault.getClass.getSimpleName}"
+
+  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(uri.toString).append(dataVault).toHashCode
 }

@@ -199,33 +199,7 @@ class ZarrStreamingController @Inject()(
       mag: String,
       cxyz: String,
   )(implicit m: MessagesProvider): Fox[Result] =
-    for {
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                dataSetName,
-                                                                                dataLayerName) ~> NOT_FOUND
-      (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
-      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
-      _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND
-      cubeSize = DataLayer.bucketLength
-      request = DataServiceDataRequest(
-        dataSource,
-        dataLayer,
-        None,
-        Cuboid(
-          topLeft = VoxelPosition(x * cubeSize * magParsed.x,
-                                  y * cubeSize * magParsed.y,
-                                  z * cubeSize * magParsed.z,
-                                  magParsed),
-          width = cubeSize,
-          height = cubeSize,
-          depth = cubeSize
-        ),
-        DataServiceRequestSettings(halfByte = false)
-      )
-      (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
-      _ <- bool2Fox(notFoundIndices.isEmpty) ~> "zarr.chunkNotFound" ~> NOT_FOUND
-    } yield Ok(data)
+    Fox.failure("Not implemented")
 
   def requestZArray(token: Option[String],
                     organizationName: String,

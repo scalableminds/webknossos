@@ -60,6 +60,7 @@ object Dependencies {
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
   private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
   private val bcrypt = "at.favre.lib" % "bcrypt" % "0.10.2"
+  private val zipkinTracing = "io.zipkin.brave.play" %% "play-zipkin-tracing-play" % "3.0.2"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -116,7 +117,8 @@ object Dependencies {
     brotli4jLinuxX86,
     brotli4cOsXX86,
     brotli4cOsXArm,
-    zstdJni
+    zstdJni,
+    zipkinTracing
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

@@ -1,20 +1,15 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
+import brave.play.implicits.ZipkinTraceImplicits
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
@@ -23,8 +18,8 @@ import net.liftweb.util.Helpers.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}
+
 import scala.concurrent.duration.DurationInt
-import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
@@ -38,9 +33,11 @@ class BinaryDataController @Inject()(
     slackNotificationService: DSSlackNotificationService,
     isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
+    val tracer: ZipkinTraceServiceLike,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with MissingBucketHeaders {
+    with MissingBucketHeaders
+    with ZipkinTraceImplicits {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -56,24 +53,26 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      urlOrHeaderToken(token, request)) {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        val t = Instant.now
-        for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                    dataSetName,
-                                                                                    dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(dataSource, dataLayer, request.body)
-          duration = Instant.since(t)
-          _ = if (duration > (10 seconds))
-            logger.info(
-              s"Complete data request took $duration ms.\n"
-                + s"  dataSource: $organizationName/$dataSetName\n"
-                + s"  dataLayer: $dataLayerName\n"
-                + s"  requestCount: ${request.body.size}"
-                + s"  requestHead: ${request.body.headOption}")
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+    tracer.traceFuture("requestViaWebknossos") { _ =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          val t = Instant.now
+          for {
+            (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                      dataSetName,
+                                                                                      dataLayerName) ~> NOT_FOUND
+            (data, indices) <- requestData(dataSource, dataLayer, request.body)
+            duration = Instant.since(t)
+            _ = if (duration > (10 seconds))
+              logger.info(
+                s"Complete data request took $duration ms.\n"
+                  + s"  dataSource: $organizationName/$dataSetName\n"
+                  + s"  dataLayer: $dataLayerName\n"
+                  + s"  requestCount: ${request.body.size}"
+                  + s"  requestHead: ${request.body.headOption}")
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        }
       }
     }
   }
@@ -104,20 +103,7 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
-      for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  dataSetName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
-          VoxelPosition(x, y, z, magParsed),
-          width,
-          height,
-          depth,
-          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
-        )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      Fox.failure("not implemented")
     }
   }
 
@@ -128,15 +114,7 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String
   ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      urlOrHeaderToken(token, request)) {
-      for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  dataSetName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        (data, indices) <- requestData(dataSource, dataLayer, request.body)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
-    }
+    Fox.failure("not implemented")
   }
 
   /**
@@ -154,21 +132,7 @@ class BinaryDataController @Inject()(
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
-      for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  dataSetName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        request = DataRequest(
-          VoxelPosition(x * cubeSize * resolution,
-                        y * cubeSize * resolution,
-                        z * cubeSize * resolution,
-                        Vec3Int(resolution, resolution, resolution)),
-          cubeSize,
-          cubeSize,
-          cubeSize
-        )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      Fox.failure("not implemented")
     }
   }
 
@@ -188,45 +152,7 @@ class BinaryDataController @Inject()(
                     intensityMax: Option[Double],
                     color: Option[String],
                     invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      urlOrHeaderToken(token, request)) {
-      for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  dataSetName,
-                                                                                  dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
-          VoxelPosition(x, y, z, magParsed),
-          width,
-          height,
-          depth = 1,
-          DataServiceRequestSettings(appliedAgglomerate = mappingName)
-        )
-        (data, _) <- requestData(dataSource, dataLayer, request)
-        intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
-        layerColor = color.flatMap(Color.fromHTML)
-        params = ImageCreatorParameters(
-          dataLayer.elementClass,
-          useHalfBytes = false,
-          slideWidth = width,
-          slideHeight = height,
-          imagesPerRow = 1,
-          blackAndWhite = false,
-          intensityRange = intensityRange,
-          isSegmentation = dataLayer.category == Category.segmentation,
-          color = layerColor,
-          invertColor = invertColor
-        )
-        dataWithFallback = if (data.length == 0)
-          new Array[Byte](width * height * dataLayer.bytesPerElement)
-        else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
-        firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
-        outputStream = new ByteArrayOutputStream()
-        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
-    }
+    Fox.failure("not implemented")
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -359,7 +285,7 @@ class BinaryDataController @Inject()(
       dataSource: DataSource,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
-  ): Fox[(Array[Byte], List[Int])] = {
+  )(implicit parentData: TraceData): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.cache.AlfuCache
 
 import java.nio.file.Paths
@@ -19,12 +20,12 @@ import scala.concurrent.ExecutionContext
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(
-    config: DataStoreConfig,
-    agglomerateService: AgglomerateService,
-    applicationHealthService: ApplicationHealthService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
-    datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
+                                        agglomerateService: AgglomerateService,
+                                        applicationHealthService: ApplicationHealthService,
+                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                        datasetErrorLoggingService: DatasetErrorLoggingService,
+                                        val tracer: ZipkinTraceServiceLike)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
@@ -49,7 +50,8 @@ class BinaryDataServiceHolder @Inject()(
     Some(remoteSourceDescriptorService),
     Some(applicationHealthService),
     Some(sharedChunkContentsCache),
-    Some(datasetErrorLoggingService)
+    Some(datasetErrorLoggingService),
+    tracer
   )
 
 }

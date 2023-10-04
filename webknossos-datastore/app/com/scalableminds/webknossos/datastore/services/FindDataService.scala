@@ -26,16 +26,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private def getDataFor(dataSource: DataSource,
                          dataLayer: DataLayer,
                          position: Vec3Int,
-                         resolution: Vec3Int): Fox[Array[Byte]] = {
-    val request = DataRequest(
-      VoxelPosition(position.x, position.y, position.z, resolution),
-      DataLayer.bucketLength,
-      DataLayer.bucketLength,
-      DataLayer.bucketLength
-    )
-    binaryDataService.handleDataRequest(
-      DataServiceDataRequest(dataSource, dataLayer, None, request.cuboid(dataLayer), request.settings))
-  }
+                         resolution: Vec3Int): Fox[Array[Byte]] = Fox.failure("not implemented")
 
   private def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =
     buckets.foldLeft(Array[Byte]()) { (acc, i) =>

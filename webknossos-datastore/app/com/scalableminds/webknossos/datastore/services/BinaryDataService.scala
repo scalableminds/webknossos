@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
+import brave.play.implicits.ZipkinTraceImplicits
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
@@ -23,10 +25,12 @@ class BinaryDataService(val dataBaseDir: Path,
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         val applicationHealthService: Option[ApplicationHealthService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
+                        datasetErrorLoggingService: Option[DatasetErrorLoggingService],
+                        val tracer: ZipkinTraceServiceLike)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with DataSetDeleter
-    with LazyLogging {
+    with LazyLogging
+    with ZipkinTraceImplicits {
 
   /* Note that this must stay in sync with the front-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -35,7 +39,7 @@ class BinaryDataService(val dataBaseDir: Path,
   private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
-  def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
+  def handleDataRequest(request: DataServiceDataRequest)(implicit parentData: TraceData): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
@@ -54,7 +58,8 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+  def handleDataRequests(requests: List[DataServiceDataRequest])(
+      implicit parentData: TraceData): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary(isNecessary: Boolean,
                            inputArray: Array[Byte],
                            conversionFunc: Array[Byte] => Box[Array[Byte]]): Box[Array[Byte]] =
@@ -84,7 +89,8 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
+      implicit parentData: TraceData): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)

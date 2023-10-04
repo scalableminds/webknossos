@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import brave.play.ZipkinTraceServiceLike
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
@@ -14,7 +15,6 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
   IsosurfaceRequest,
@@ -74,7 +74,8 @@ class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val tracer: ZipkinTraceServiceLike
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -86,7 +87,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None, tracer)
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   private val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
@@ -314,13 +315,7 @@ class EditableMappingService @Inject()(
                  tracingId: String,
                  dataRequests: DataRequestCollection,
                  userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
-    for {
-      editableMappingId <- tracing.mappingName.toFox
-      dataLayer = editableMappingLayer(editableMappingId, tracing, tracingId, userToken)
-      requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
-      data <- binaryDataService.handleDataRequests(requests)
-    } yield data
+    Fox.failure("Not implemented")
 
   private def getSegmentToAgglomerateForSegmentIds(segmentIds: Set[Long],
                                                    editableMappingId: String,

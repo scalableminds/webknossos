@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import brave.play.ZipkinTraceServiceLike
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -11,7 +12,6 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
@@ -51,7 +51,8 @@ class VolumeTracingService @Inject()(
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
     val temporaryFileCreator: TemporaryFileCreator,
     val tracingMigrationService: VolumeTracingMigrationService,
-    volumeSegmentIndexService: VolumeSegmentIndexService
+    volumeSegmentIndexService: VolumeSegmentIndexService,
+    val tracer: ZipkinTraceServiceLike,
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -78,7 +79,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None, tracer)
 
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
@@ -340,13 +341,7 @@ class VolumeTracingService @Inject()(
   def data(tracingId: String,
            tracing: VolumeTracing,
            dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
-    for {
-      isTemporaryTracing <- isTemporaryTracing(tracingId)
-      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
-      requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
-      data <- binaryDataService.handleDataRequests(requests)
-    } yield data
+    Fox.failure("not implemented")
 
   def duplicate(tracingId: String,
                 sourceTracing: VolumeTracing,

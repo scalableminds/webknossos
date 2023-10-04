@@ -78,6 +78,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def summary: String = s"VaultPath: ${this.toString} for ${dataVault.getClass.getSimpleName}"
 
+  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+
   override def hashCode(): Int =
     new HashCodeBuilder(17, 31).append(uri.toString).append(dataVault).toHashCode
 }

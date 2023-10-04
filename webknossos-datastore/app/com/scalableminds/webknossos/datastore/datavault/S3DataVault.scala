@@ -80,6 +80,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       encoding <- Encoding.fromRfc7231String(encodingString)
     } yield (bytes, encoding)
 
+  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+
   override def hashCode(): Int =
     new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
 }

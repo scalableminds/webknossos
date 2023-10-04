@@ -148,11 +148,13 @@ class Zarr3Array(vaultPath: VaultPath,
       (chunkIndex, header.chunkSize).zipped.map(_ * _)
     )
 
-  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] =
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] = {
+    logger.info(s"Cache miss! shard path: $shardPath")
     for {
       shardIndexRaw <- readShardIndex(shardPath)
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
+  }
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext,
@@ -162,7 +164,6 @@ class Zarr3Array(vaultPath: VaultPath,
         tracer.trace("chunkIndexToShardIndex")(_ => chunkIndexToShardIndex(chunkIndex)).headOption)
       shardFilename = tracer.trace("getChunkFilename")(_ => getChunkFilename(shardCoordinates))
       shardPath = tracer.trace("make path")(_ => vaultPath / shardFilename)
-      _ = logger.info(f"shard path $shardPath with hash ${shardPath.hashCode()}, this ${this.hashCode()}")
       parsedShardIndex <- tracer
         .trace("readShardIndex")(_ => parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex).futureBox)
         .toFox

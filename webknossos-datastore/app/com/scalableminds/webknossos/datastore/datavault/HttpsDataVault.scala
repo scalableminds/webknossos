@@ -93,6 +93,8 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       }
     }
 
+  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+
   override def hashCode(): Int =
     new HashCodeBuilder(17, 31).append(credential).toHashCode
 }

@@ -58,7 +58,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def toVec3Int: Vec3Int = Vec3Int(x.toInt, y.toInt, z.toInt)
 
-  def round: Vec3Double = Vec3Double(x.round, y.round, z.round)
+  def round: Vec3Double = Vec3Double(x.round.toDouble, y.round.toDouble, z.round.toDouble)
 
   def °(o: Vec3Double): Double = x * o.x + y * o.y + z * o.z
 
@@ -85,7 +85,7 @@ object Vec3Double {
   def apply(from: Vec3Int, to: Vec3Int): Vec3Double =
     Vec3Double(to) - Vec3Double(from)
 
-  def fromArray[T <% Double](array: Array[T]): Option[Vec3Double] =
+  def fromArray(array: Array[Double]): Option[Vec3Double] =
     if (array.length >= 3)
       Some(Vec3Double(array(0), array(1), array(2)))
     else

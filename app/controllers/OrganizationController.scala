@@ -189,8 +189,8 @@ class OrganizationController @Inject()(
     }
 
   private val organizationUpdateReads =
-    ((__ \ 'displayName).read[String] and
-      (__ \ 'newUserMailingList).read[String]).tupled
+    ((__ \ "displayName").read[String] and
+      (__ \ "newUserMailingList").read[String]).tupled
 
   def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

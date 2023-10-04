@@ -17,9 +17,9 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
     extends Controller
     with FoxImplicits {
   private val tracingStorePublicReads: Reads[TracingStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String])(TracingStore.fromUpdateForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String])(TracingStore.fromUpdateForm _)
 
   def listOne: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

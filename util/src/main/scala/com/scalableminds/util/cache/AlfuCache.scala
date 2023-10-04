@@ -10,7 +10,7 @@ import scala.compat.java8.FunctionConverters.asJavaBiFunction
 import scala.compat.java8.FutureConverters.{CompletionStageOps, FutureOps}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.jdk.CollectionConverters.asScalaSetConverter
+import scala.jdk.CollectionConverters._
 
 class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 

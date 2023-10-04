@@ -97,7 +97,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def innerChunkShape =
     header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
   private def indexShape =
-    (shardShape, innerChunkShape).zipped.map(_ / _) // Describes how many chunks are in a shard, i.e. in the index
+    shardShape.zip(innerChunkShape).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
 
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
@@ -106,7 +106,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]) = {
-    val shardOffset = (shardCoordinates, indexShape).zipped.map(_ * _)
+    val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
     indexShape.tails.toList
       .dropRight(1)
       .zipWithIndex
@@ -141,7 +141,7 @@ class Zarr3Array(vaultPath: VaultPath,
       axisOrder.permuteIndicesReverse(header.datasetShape),
       axisOrder.permuteIndicesReverse(header.outerChunkSize),
       header.chunkSize,
-      (chunkIndex, header.chunkSize).zipped.map(_ * _)
+      chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
     )
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(

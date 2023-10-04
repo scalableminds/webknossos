@@ -49,7 +49,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(relevantBucketPositions.toIterator)(bucketPosition =>
+      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(bucketPosition =>
         extendBouningBoxByData(tracing, tracingId, mag, segmentId, boundingBoxMutable, bucketPosition, userToken))
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {

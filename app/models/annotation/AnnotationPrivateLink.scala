@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import play.api.libs.json.{JsValue, Json, OFormat}
 import security.RandomIDGenerator
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}

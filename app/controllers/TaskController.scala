@@ -69,7 +69,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
           taskParameters)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
           .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
-        paramsWithTracings = (taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
+        paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
         result <- taskCreationService.createTasks(paramsWithTracings, request.identity)

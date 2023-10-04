@@ -291,7 +291,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def export(jobId: String): Action[AnyContent] =
+  def redirectToExport(jobId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

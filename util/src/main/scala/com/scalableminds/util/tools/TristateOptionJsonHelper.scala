@@ -10,8 +10,8 @@ trait TristateOptionJsonHelper {
     override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
 
     override def writes(o: Option[T]): JsValue = o match {
-      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
-      case None ⇒ JsNull
+      case Some(t) => implicitly[Writes[T]].writes(t)
+      case None    => JsNull
     }
   }
 
@@ -23,7 +23,7 @@ trait TristateOptionJsonHelper {
       jsPath.asSingleJson(json) match {
         case JsDefined(JsNull) => JsSuccess(defaultValue)
         case JsDefined(value)  => r.reads(value).repath(jsPath).map(Some(_))
-        case JsUndefined()     => JsSuccess(None)
+        case _                 => JsSuccess(None)
       }
     }
 

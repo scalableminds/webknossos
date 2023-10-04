@@ -57,7 +57,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
                               minimalResolution: Array[Double],
                               remotePath: VaultPath,
                               credentialId: Option[String]): Fox[MagLocator] = {
-    val normalizedResolution = (scale.resolution, minimalResolution).zipped.map((r, m) => (r / m).toInt)
+    val normalizedResolution = scale.resolution.zip(minimalResolution).map { case (r, m) => (r / m).toInt }
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)
       path = remotePath / scale.key

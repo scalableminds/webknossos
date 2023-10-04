@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.ObjectId
 import utils.sql.{SQLDAO, SqlClient}

@@ -181,7 +181,7 @@ class DataSourceService @Inject()(
     val propertiesFile = dataSourcePath.resolve(propertiesFileName)
     val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
       val previousContentSource = Source.fromFile(propertiesFile.toString)
-      val previousContent = previousContentSource.getLines.mkString("\n")
+      val previousContent = previousContentSource.getLines().mkString("\n")
       previousContentSource.close()
       previousContent
     } else {

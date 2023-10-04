@@ -37,7 +37,7 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
-          case None => fail
+          case None => fail()
         }
       }
 
@@ -63,7 +63,7 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
-          case None => fail
+          case None => fail()
         }
       }
 

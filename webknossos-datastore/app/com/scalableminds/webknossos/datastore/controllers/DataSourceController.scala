@@ -461,7 +461,7 @@ Expects:
     implicit request =>
       accessTokenService
         .validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName), token) {
-          val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
+          val newOrganizationFolder = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
           newOrganizationFolder.mkdirs()
           if (newOrganizationFolder.isDirectory)
             Ok

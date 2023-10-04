@@ -111,7 +111,9 @@ case class MergeTreeSkeletonAction(sourceId: Int,
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(targetTree: Tree) = {
       val sourceTree = treeById(tracing, sourceId)
-      targetTree.withNodes(targetTree.nodes.union(sourceTree.nodes)).withEdges(targetTree.edges.union(sourceTree.edges))
+      targetTree
+        .withNodes(targetTree.nodes.concat(sourceTree.nodes))
+        .withEdges(targetTree.edges.concat(sourceTree.edges))
     }
 
     tracing.withTrees(mapTrees(tracing, targetId, treeTransform).filter(_.treeId != sourceId))
@@ -143,7 +145,7 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
       sourceTree.edges.partition(e => nodeIds.contains(e.source) && nodeIds.contains(e.target))
     val updatedSource = sourceTree.copy(nodes = remainingNodes, edges = remainingEdges)
     val updatedTarget =
-      targetTree.copy(nodes = targetTree.nodes.union(movedNodes), edges = targetTree.edges.union(movedEdges))
+      targetTree.copy(nodes = targetTree.nodes.concat(movedNodes), edges = targetTree.edges.concat(movedEdges))
 
     def selectTree(tree: Tree) =
       if (tree.treeId == sourceId)
@@ -601,7 +603,7 @@ object SkeletonUpdateAction {
         json.validate[T]
 
     private val positionTransform =
-      (JsPath \ 'position).json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
+      (JsPath \ "position").json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
 
     override def writes(a: UpdateAction[SkeletonTracing]): JsObject = a match {
       case s: CreateTreeSkeletonAction =>

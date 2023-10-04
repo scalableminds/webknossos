@@ -25,19 +25,19 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     with FoxImplicits {
 
   private val dataStoreReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'key).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "key").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm _)
 
   private val dataStorePublicReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
   @ApiOperation(value = "List all available datastores", nickname = "datastoreList")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list of objects containing datastore information"),

@@ -1,9 +1,11 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import brave.play.implicits.ZipkinTraceImplicits
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, futureBox2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.BytesConverter
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -25,13 +27,16 @@ class DatasetArray(vaultPath: VaultPath,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
-                   sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends LazyLogging {
+                   sharedChunkContentsCache: AlfuCache[String, MultiArray],
+                   val tracer: ZipkinTraceServiceLike)
+    extends LazyLogging
+    with ZipkinTraceImplicits {
 
   protected lazy val chunkReader: ChunkReader = new ChunkReader(header)
 
   // Returns byte array in fortran-order with little-endian values
-  def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext,
+                                                    parentData: TraceData): Fox[Array[Byte]] = {
     val paddingDimensionsCount = header.rank - 3
     val offsetArray = channelIndex match {
       case Some(c) if header.rank >= 4 =>
@@ -43,11 +48,12 @@ class DatasetArray(vaultPath: VaultPath,
     readBytes(shapeArray, offsetArray)
   }
 
-  def readBytesWithAdditionalCoordinates(
-      shape: Vec3Int,
-      offset: Vec3Int,
-      additionalCoordinates: Seq[AdditionalCoordinate],
-      additionalAxesMap: Map[String, AdditionalAxis])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def readBytesWithAdditionalCoordinates(shape: Vec3Int,
+                                         offset: Vec3Int,
+                                         additionalCoordinates: Seq[AdditionalCoordinate],
+                                         additionalAxesMap: Map[String, AdditionalAxis])(
+      implicit ec: ExecutionContext,
+      parentData: TraceData): Fox[Array[Byte]] = {
     val dimensionCount = 3 + (if (channelIndex.isDefined) 1 else 0) + additionalAxesMap.size
 
     /*
@@ -81,15 +87,20 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+                                                               parentData: TraceData): Fox[Array[Byte]] =
     for {
-      typedData <- readAsFortranOrder(shape, offset)
-      asBytes <- BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
+      typedData <- tracer.traceFuture("read as fortran order")(_ => readAsFortranOrder(shape, offset).futureBox).toFox
+      asBytes <- tracer
+        .traceFuture("to byte array")(_ =>
+          BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).futureBox)
+        .toFox
     } yield asBytes
 
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
-  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+                                                                        parentData: TraceData): Fox[Object] = {
     val totalOffset: Array[Int] = (offset, header.voxelOffset).zipped.map(_ - _)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
@@ -128,20 +139,28 @@ class DatasetArray(vaultPath: VaultPath,
       .mkString(",")}, offset: ${offsetInChunk.mkString(",")}"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
+      implicit ec: ExecutionContext,
+      parentData: TraceData): Fox[(VaultPath, NumericRange[Long])] = ???
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext,
+                                                                  parentData: TraceData): Fox[MultiArray] =
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex), _ => readSourceChunkData(chunkIndex))
 
-  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
+  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext,
+                                                          parentData: TraceData): Fox[MultiArray] =
     if (header.isSharded) {
       for {
-        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
+        (shardPath, chunkRange) <- tracer
+          .traceFuture("getChunkRange")(_ =>
+            (getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed").futureBox)
+          .toFox
         chunkShape = header.chunkSizeAtIndex(chunkIndex)
-        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange))
+        multiArray <- tracer
+          .traceFuture("chunkReader.read")(_ => (chunkReader.read(shardPath, chunkShape, Some(chunkRange)).futureBox))
+          .toFox
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)

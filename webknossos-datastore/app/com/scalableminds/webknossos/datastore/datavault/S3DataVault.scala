@@ -15,6 +15,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.net.URI
 import scala.collection.immutable.NumericRange
@@ -78,6 +79,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       (bytes, encodingString) <- performRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString)
     } yield (bytes, encoding)
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
 }
 
 object S3DataVault {
@@ -137,6 +141,7 @@ object S3DataVault {
       .withRegion(Regions.DEFAULT_REGION)
       .withForceGlobalBucketAccessEnabled(true)
       .build
+
 }
 
 class AnonymousAWSCredentialsProvider extends AWSCredentialsProvider {

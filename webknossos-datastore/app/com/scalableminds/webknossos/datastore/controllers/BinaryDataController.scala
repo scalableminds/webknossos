@@ -53,7 +53,7 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-    tracer.traceFuture("requestViaWebknossos") { _ =>
+    tracer.traceFuture(f"requestViaWebknossos: $dataSetName, ${request.body.length} buckets") { _ =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         logTime(slackNotificationService.noticeSlowRequest) {

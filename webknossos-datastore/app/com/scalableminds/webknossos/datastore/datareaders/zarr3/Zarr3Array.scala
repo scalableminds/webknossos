@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
 import ucar.ma2.{Array => MultiArray}
@@ -8,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.Fox.{box2Fox, futureBox2Fox}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -20,7 +21,8 @@ object Zarr3Array extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray],
+           tracer: ZipkinTraceServiceLike)(implicit ec: ExecutionContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.ZARR_JSON}"
@@ -33,7 +35,8 @@ object Zarr3Array extends LazyLogging {
                      axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
                      channelIndex,
                      None,
-                     sharedChunkContentsCache)
+                     sharedChunkContentsCache,
+                     tracer)
 }
 
 class Zarr3Array(vaultPath: VaultPath,
@@ -43,7 +46,8 @@ class Zarr3Array(vaultPath: VaultPath,
                  axisOrder: AxisOrder,
                  channelIndex: Option[Int],
                  additionalAxes: Option[Seq[AdditionalAxis]],
-                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
+                 sharedChunkContentsCache: AlfuCache[String, MultiArray],
+                 tracer: ZipkinTraceServiceLike)
     extends DatasetArray(vaultPath,
                          dataSourceId,
                          layerName,
@@ -51,7 +55,8 @@ class Zarr3Array(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache)
+                         sharedChunkContentsCache,
+                         tracer)
     with LazyLogging {
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -89,8 +94,7 @@ class Zarr3Array(vaultPath: VaultPath,
   override protected lazy val chunkReader: ChunkReader =
     new Zarr3ChunkReader(header, this)
 
-  private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
-    AlfuCache()
+  private val parsedShardIndexCache: AlfuCache[VaultPath, Array[(Long, Long)]] = AlfuCache()
 
   private def shardShape =
     header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
@@ -105,7 +109,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def checkSumLength = 4 // 32-bit checksum
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
 
-  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]) = {
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
     val shardOffset = (shardCoordinates, indexShape).zipped.map(_ * _)
     indexShape.tails.toList
       .dropRight(1)
@@ -117,7 +121,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
     shardPath.readLastBytes(getShardIndexSize)
 
-  private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] = {
+  private def parseShardIndex(index: Array[Byte]): Array[(Long, Long)] = {
     val decodedIndex = shardingCodec match {
       case Some(shardingCodec: ShardingCodec) =>
         indexCodecs.foldRight(index)((c, bytes) =>
@@ -133,7 +137,7 @@ class Zarr3Array(vaultPath: VaultPath,
         // BigInt constructor is big endian, sharding index stores values little endian, thus reverse is used.
         (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong)
       })
-      .toSeq
+      .toArray
   }
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
@@ -144,16 +148,31 @@ class Zarr3Array(vaultPath: VaultPath,
       (chunkIndex, header.chunkSize).zipped.map(_ * _)
     )
 
-  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] =
     for {
-      shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
-      shardFilename = getChunkFilename(shardCoordinates)
-      shardPath = vaultPath / shardFilename
-      shardIndex <- shardIndexCache.getOrLoad(shardPath, readShardIndex)
-      chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
-      (chunkOffset, chunkLength) = parseShardIndex(shardIndex)(chunkIndexInShardIndex)
-      _ <- Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
-      range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
+      shardIndexRaw <- readShardIndex(shardPath)
+      parsed = parseShardIndex(shardIndexRaw)
+    } yield parsed
+
+  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext,
+      parentData: TraceData): Fox[(VaultPath, NumericRange[Long])] =
+    for {
+      shardCoordinates <- Fox.option2Fox(
+        tracer.trace("chunkIndexToShardIndex")(_ => chunkIndexToShardIndex(chunkIndex)).headOption)
+      shardFilename = tracer.trace("getChunkFilename")(_ => getChunkFilename(shardCoordinates))
+      shardPath = tracer.trace("make path")(_ => vaultPath / shardFilename)
+      _ = logger.info(f"shard path $shardPath with hash ${shardPath.hashCode()}, this ${this.hashCode()}")
+      parsedShardIndex <- tracer
+        .trace("readShardIndex")(_ => parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex).futureBox)
+        .toFox
+      chunkIndexInShardIndex = tracer.trace("getChunkIndexInShardIndex")(_ =>
+        getChunkIndexInShardIndex(chunkIndex, shardCoordinates))
+      (chunkOffset, chunkLength) = tracer.trace("lookUpChunkOffset")(_ => parsedShardIndex(chunkIndexInShardIndex))
+      _ <- tracer
+        .traceFuture("assertions")(_ =>
+          (Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty).futureBox)
+        .toFox // -1 signifies empty/missing chunk
+      range = tracer.trace("make range")(_ => Range.Long(chunkOffset, chunkOffset + chunkLength, 1))
     } yield (shardPath, range)
 }

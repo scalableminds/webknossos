@@ -191,7 +191,7 @@ class VolumeTracingService @Inject()(
                                     tracing: VolumeTracing): Fox[VolumeTracing] = {
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
+    val bucketStream = dataLayer.volumeBucketProvider(tracer).bucketStreamWithVersion()
     val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, newVersion)
 
     for {
@@ -318,7 +318,7 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider(tracer).bucketStream(Some(tracing.version)),
                                          tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
     val before = System.currentTimeMillis()
@@ -394,7 +394,7 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider(tracer).bucketStream()
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,
                                                         volumeSegmentIndexClient,
@@ -497,7 +497,7 @@ class VolumeTracingService @Inject()(
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
-      bucketStream = volumeLayer.bucketProvider.bucketStream(Some(tracing.version))
+      bucketStream = volumeLayer.bucketProvider(tracer).bucketStream(Some(tracing.version))
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
@@ -582,7 +582,7 @@ class VolumeTracingService @Inject()(
   private def bucketStreamFromSelector(selector: TracingSelector,
                                        tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
     val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
-    dataLayer.bucketProvider.bucketStream(Some(tracing.version))
+    dataLayer.bucketProvider(tracer).bucketStream(Some(tracing.version))
   }
 
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
@@ -674,7 +674,7 @@ class VolumeTracingService @Inject()(
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
-          _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
+          _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider(tracer).bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
           _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
             mergedVolume.largestSegmentId.toLong,

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.precomputed
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -19,7 +20,8 @@ import ucar.ma2.{Array => MultiArray}
 
 class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCubeHandle with LazyLogging {
 
-  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+                                                                 parentData: TraceData): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
     precomputedArray.readBytesXYZ(shape, offset)
@@ -32,7 +34,8 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCube
 class PrecomputedBucketProvider(layer: PrecomputedLayer,
                                 dataSourceId: DataSourceId,
                                 val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                                sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+                                sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                                val tracer: ZipkinTraceServiceLike)
     extends BucketProvider
     with LazyLogging {
 
@@ -57,7 +60,8 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
                       layer.name,
                       precomputedMag.axisOrder,
                       precomputedMag.channelIndex,
-                      chunkContentsCache)
+                      chunkContentsCache,
+                      tracer)
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle
           case None => Empty

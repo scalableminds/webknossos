@@ -97,31 +97,38 @@ class BinaryDataService(val dataBaseDir: Path,
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
       val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
-        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
-          request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
-      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
-        case Failure(msg, Full(e: InternalError), _) =>
-          applicationHealthService.foreach(a => a.pushError(e))
-          logger.warn(
-            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
-          Fox.failure(e.getMessage)
-        case f: Failure =>
-          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
-            logger.debug(
-              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
-                .failureChainAsString(f, includeStackTraces = true)}")
-            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
-          }
-          f.toFox
-        case Full(data) =>
-          if (data.length == 0) {
-            val msg =
-              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
-            logger.warn(msg)
-            Fox.failure(msg)
-          } else Fox.successful(data)
-        case other => other.toFox
-      }
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(
+          _ =>
+            request.dataLayer
+              .bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache, tracer))
+      tracer
+        .traceFuture(f"bucketProvider.load") { _ =>
+          bucketProvider.load(readInstruction, shardHandleCache).futureBox
+        }
+        .flatMap {
+          case Failure(msg, Full(e: InternalError), _) =>
+            applicationHealthService.foreach(a => a.pushError(e))
+            logger.warn(
+              s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
+            Fox.failure(e.getMessage)
+          case f: Failure =>
+            if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
+              logger.debug(
+                s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
+                  .failureChainAsString(f, includeStackTraces = true)}")
+              datasetErrorLoggingService.foreach(
+                _.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
+            }
+            f.toFox
+          case Full(data) =>
+            if (data.length == 0) {
+              val msg =
+                s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
+              logger.warn(msg)
+              Fox.failure(msg)
+            } else Fox.successful(data)
+          case other => other.toFox
+        }
     } else Fox.empty
 
   /**

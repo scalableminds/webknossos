@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.precomputed
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -24,8 +25,13 @@ trait PrecomputedLayer extends DataLayer {
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new PrecomputedBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                     tracer: ZipkinTraceServiceLike) =
+    new PrecomputedBucketProvider(this,
+                                  dataSourceId,
+                                  remoteSourceDescriptorServiceOpt,
+                                  sharedChunkContentsCache,
+                                  tracer)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

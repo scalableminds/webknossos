@@ -5,6 +5,7 @@ import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, St
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.util.Helpers.tryo
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.ByteArrayInputStream
 import java.net.URI
@@ -71,6 +72,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     } yield (bytes, encoding)
   }
 
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(uri.toString).append(credential).toHashCode
 }
 
 object GoogleCloudDataVault {

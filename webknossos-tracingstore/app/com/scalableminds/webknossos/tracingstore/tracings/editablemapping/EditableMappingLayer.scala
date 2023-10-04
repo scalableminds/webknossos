@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -23,12 +24,14 @@ import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSour
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
+class EditableMappingBucketProvider(layer: EditableMappingLayer, val tracer: ZipkinTraceServiceLike)
+    extends BucketProvider
+    with ProtoGeometryImplicits {
 
   override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction,
+                    cache: DataCubeCache)(implicit ec: ExecutionContext, parentData: TraceData): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
       editableMappingId <- Fox.successful(layer.name)
@@ -87,8 +90,9 @@ case class EditableMappingLayer(name: String,
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new EditableMappingBucketProvider(layer = this)
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                              tracer: ZipkinTraceServiceLike): BucketProvider =
+    new EditableMappingBucketProvider(layer = this, tracer)
 
   override def mappings: Option[Set[String]] = None
 

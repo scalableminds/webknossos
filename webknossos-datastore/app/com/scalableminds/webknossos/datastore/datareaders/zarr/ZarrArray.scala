@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
@@ -18,7 +19,8 @@ object ZarrArray extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray],
+           tracer: ZipkinTraceServiceLike)(implicit ec: ExecutionContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
@@ -32,7 +34,8 @@ object ZarrArray extends LazyLogging {
                     axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                     channelIndex,
                     None,
-                    sharedChunkContentsCache)
+                    sharedChunkContentsCache,
+                    tracer)
 }
 
 class ZarrArray(vaultPath: VaultPath,
@@ -42,7 +45,8 @@ class ZarrArray(vaultPath: VaultPath,
                 axisOrder: AxisOrder,
                 channelIndex: Option[Int],
                 additionalAxes: Option[Seq[AdditionalAxis]],
-                sharedChunkContentsCache: AlfuCache[String, MultiArray])
+                sharedChunkContentsCache: AlfuCache[String, MultiArray],
+                tracer: ZipkinTraceServiceLike)
     extends DatasetArray(vaultPath,
                          dataSourceId,
                          layerName,
@@ -50,4 +54,5 @@ class ZarrArray(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache)
+                         sharedChunkContentsCache,
+                         tracer)

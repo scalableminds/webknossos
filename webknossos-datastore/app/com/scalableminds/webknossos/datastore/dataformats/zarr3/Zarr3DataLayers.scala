@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr3
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -24,8 +25,9 @@ trait Zarr3Layer extends DataLayer {
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new Zarr3BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                     tracer: ZipkinTraceServiceLike) =
+    new Zarr3BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache, tracer)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 

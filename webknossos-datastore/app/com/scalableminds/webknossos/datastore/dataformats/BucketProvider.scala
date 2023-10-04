@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.{FileSystemVaultPath, VaultPath}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -14,12 +15,14 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService]
 
+  val tracer: ZipkinTraceServiceLike
+
   // To be defined in subclass.
   def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[DataCubeHandle] =
     Empty
 
-  def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(implicit ec: ExecutionContext,
+                                                                       parentData: TraceData): Fox[Array[Byte]] =
     cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(
       _.cutOutBucket(readInstruction.bucket, readInstruction.dataLayer))
 

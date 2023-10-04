@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -14,7 +15,8 @@ import scala.concurrent.ExecutionContext
 
 class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle with FoxImplicits {
 
-  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+                                                                 parentData: TraceData): Fox[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
     val blockOffsetX = bucket.bucketX % numBlocksPerCubeDimension
     val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
@@ -33,7 +35,9 @@ class WKWCubeHandle(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle 
     wkwFile.close()
 }
 
-class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper {
+class WKWBucketProvider(layer: WKWLayer, val tracer: ZipkinTraceServiceLike)
+    extends BucketProvider
+    with WKWDataFormatHelper {
 
   override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 

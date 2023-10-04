@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -19,7 +20,8 @@ import scala.concurrent.ExecutionContext
 
 class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging {
 
-  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+                                                                 parentData: TraceData): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
 
@@ -37,7 +39,8 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 class ZarrBucketProvider(layer: ZarrLayer,
                          dataSourceId: DataSourceId,
                          val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                         val tracer: ZipkinTraceServiceLike)
     extends BucketProvider
     with LazyLogging {
 
@@ -57,7 +60,13 @@ class ZarrBucketProvider(layer: ZarrLayer,
               } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- ZarrArray
-                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache)
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      zarrMag.axisOrder,
+                      zarrMag.channelIndex,
+                      chunkContentsCache,
+                      tracer)
                 .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty

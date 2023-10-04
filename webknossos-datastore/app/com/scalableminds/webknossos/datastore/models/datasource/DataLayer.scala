@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
@@ -215,7 +216,8 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                     tracer: ZipkinTraceServiceLike): BucketProvider
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 

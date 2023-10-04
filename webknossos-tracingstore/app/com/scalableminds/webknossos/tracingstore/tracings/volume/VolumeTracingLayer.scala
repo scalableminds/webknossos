@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -23,19 +24,22 @@ import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
+  val tracer: ZipkinTraceServiceLike
+
   override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
 
-class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+class VolumeTracingBucketProvider(layer: VolumeTracingLayer, val tracer: ZipkinTraceServiceLike)(
+    implicit val ec: ExecutionContext)
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction,
+                    cache: DataCubeCache)(implicit ec: ExecutionContext, parentData: TraceData): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
@@ -45,15 +49,16 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
     bucketStreamWithVersion(layer, version)
 }
 
-class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer, val tracer: ZipkinTraceServiceLike)(
+    implicit val ec: ExecutionContext)
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
   val temporaryTracingStore: TemporaryTracingStore[VolumeTracing] = layer.temporaryTracingStore
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction,
+                    cache: DataCubeCache)(implicit ec: ExecutionContext, parentData: TraceData): Fox[Array[Byte]] =
     for {
       _ <- assertTracingStillInCache(layer)
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)
@@ -100,18 +105,19 @@ case class VolumeTracingLayer(
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
+  def volumeBucketProvider(tracer: ZipkinTraceServiceLike): AbstractVolumeTracingBucketProvider =
     if (isTemporaryTracing)
-      new TemporaryVolumeTracingBucketProvider(this)
+      new TemporaryVolumeTracingBucketProvider(this, tracer)
     else
-      new VolumeTracingBucketProvider(this)
+      new VolumeTracingBucketProvider(this, tracer)
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    volumeBucketProvider
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                              tracer: ZipkinTraceServiceLike): BucketProvider =
+    volumeBucketProvider(tracer)
 
-  def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
+  def bucketProvider(tracer: ZipkinTraceServiceLike): AbstractVolumeTracingBucketProvider = volumeBucketProvider(tracer)
 
   override val resolutions: List[Vec3Int] =
     if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
+import brave.play.ZipkinTraceServiceLike
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
@@ -21,8 +22,9 @@ trait WKWLayer extends DataLayer {
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new WKWBucketProvider(this)
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                              tracer: ZipkinTraceServiceLike): BucketProvider =
+    new WKWBucketProvider(this, tracer)
 
   def wkwResolutions: List[WKWResolution]
 

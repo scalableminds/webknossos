@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.n5
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -19,7 +20,8 @@ import scala.concurrent.ExecutionContext
 
 class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 
-  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+                                                                 parentData: TraceData): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
     n5Array.readBytesXYZ(shape, offset)
@@ -32,7 +34,8 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 class N5BucketProvider(layer: N5Layer,
                        dataSourceId: DataSourceId,
                        val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                       sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+                       sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
+                       val tracer: ZipkinTraceServiceLike)
     extends BucketProvider
     with LazyLogging {
 
@@ -52,7 +55,13 @@ class N5BucketProvider(layer: N5Layer,
               } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- N5Array
-                .open(magPath, dataSourceId, layer.name, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache)
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      n5Mag.axisOrder,
+                      n5Mag.channelIndex,
+                      chunkContentsCache,
+                      tracer)
                 .map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty

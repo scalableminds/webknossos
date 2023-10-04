@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import brave.play.{TraceData, ZipkinTraceServiceLike}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -19,13 +20,13 @@ import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
-  def open(
-      magPath: VaultPath,
-      dataSourceId: DataSourceId,
-      layerName: String,
-      axisOrderOpt: Option[AxisOrder],
-      channelIndex: Option[Int],
-      sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+  def open(magPath: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray],
+           tracer: ZipkinTraceServiceLike)(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
@@ -42,7 +43,8 @@ object PrecomputedArray extends LazyLogging {
         axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
         channelIndex,
         None,
-        sharedChunkContentsCache
+        sharedChunkContentsCache,
+        tracer
       )
 }
 
@@ -53,7 +55,8 @@ class PrecomputedArray(vaultPath: VaultPath,
                        axisOrder: AxisOrder,
                        channelIndex: Option[Int],
                        additionalAxes: Option[Seq[AdditionalAxis]],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+                       sharedChunkContentsCache: AlfuCache[String, MultiArray],
+                       tracer: ZipkinTraceServiceLike)
     extends DatasetArray(vaultPath,
                          dataSourceId,
                          layerName,
@@ -61,7 +64,8 @@ class PrecomputedArray(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache)
+                         sharedChunkContentsCache,
+                         tracer)
     with FoxImplicits
     with LazyLogging {
 
@@ -248,7 +252,8 @@ class PrecomputedArray(vaultPath: VaultPath,
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
   override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
+      implicit ec: ExecutionContext,
+      parentData: TraceData): Fox[(VaultPath, NumericRange[Long])] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
     val shardPath = getPathForShard(minishardInfo._1)

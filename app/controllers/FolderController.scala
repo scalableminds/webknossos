@@ -3,14 +3,14 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.UserService
-import oxalis.security.WkEnv
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.WkEnv
 import utils.ObjectId
 
 import javax.inject.Inject

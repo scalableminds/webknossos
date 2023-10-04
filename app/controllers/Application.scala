@@ -5,13 +5,13 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, UserService}
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{StoreModules, WkConf}
 

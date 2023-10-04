@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
+import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.organization.{Organization, OrganizationDAO}
 import net.liftweb.common.{Failure, Full}
 import play.api.inject.ApplicationLifecycle

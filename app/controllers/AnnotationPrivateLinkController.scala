@@ -11,8 +11,8 @@ import play.api.libs.json._
 import javax.inject.Inject
 import models.annotation._
 import net.liftweb.common.Full
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WkEnv, WkSilhouetteEnvironment}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

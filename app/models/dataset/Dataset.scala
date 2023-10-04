@@ -83,7 +83,7 @@ object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
-class DatasetDAO @Inject()(sqlClient: SqlClient, datasetDataLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
+class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext)
     extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
   protected val collection = Datasets
@@ -535,7 +535,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetDataLayerDAO: DatasetLay
                               scale = ${source.scaleOpt},
                               status = ${source.statusOpt.getOrElse("").take(1024)}
                          where _id = $id""".asUpdate)
-      _ <- datasetDataLayerDAO.updateLayers(id, source)
+      _ <- datasetLayerDAO.updateLayers(id, source)
     } yield ()
 
   def deactivateUnreported(existingDataSetIds: List[ObjectId],

@@ -9,10 +9,10 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
 import models.user.UserService
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

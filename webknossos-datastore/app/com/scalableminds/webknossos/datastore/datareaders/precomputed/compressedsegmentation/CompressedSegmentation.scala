@@ -26,7 +26,7 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
     val numElements = volumeSize(0) * volumeSize(1) * volumeSize(2)
     val output = initializeArray(numElements)
 
-    val gridSize: Array[Int] = (volumeSize, blockSize.toList).zipped.map((v, b) => (v + b - 1) / b)
+    val gridSize: Array[Int] = volumeSize.zip(blockSize.toList).map { case (v, b) => (v + b - 1) / b }
     for (block2 <- 0 until gridSize(2)) {
       for (block1 <- 0 until gridSize(1)) {
         for (block0 <- 0 until gridSize(0)) {

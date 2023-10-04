@@ -13,7 +13,8 @@ class StandaloneTracingstore @Inject()() extends Controller {
       addRemoteOriginHeaders(
         Ok(
           Json.obj(
-            "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
+            "webknossosTracingstore" -> Json.toJson(
+              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap)
           )
         )))
   }

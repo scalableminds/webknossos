@@ -3,16 +3,16 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.job._
 import models.organization.OrganizationDAO
-import models.binary.DataStoreDAO
+import models.dataset.DataStoreDAO
 import models.user.MultiUserDAO
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WkEnv, WkSilhouetteEnvironment}
+import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
 import java.util.Date
@@ -354,7 +354,7 @@ class JobsController @Inject()(
       }
     }
 
-  def export(jobId: String): Action[AnyContent] =
+  def redirectToExport(jobId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

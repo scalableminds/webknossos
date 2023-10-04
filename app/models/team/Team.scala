@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
 import models.annotation.AnnotationDAO
-import models.binary.Dataset
+import models.dataset.Dataset
 import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO

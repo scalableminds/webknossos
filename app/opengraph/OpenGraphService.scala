@@ -1,4 +1,4 @@
-package oxalis.opengraph
+package opengraph
 
 import akka.http.scaladsl.model.Uri
 import com.google.inject.Inject
@@ -7,14 +7,14 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import models.annotation.AnnotationDAO
-import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO}
+import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
 import net.liftweb.common.Full
-import oxalis.security.URLSharing
-import java.net.URLDecoder
+import security.URLSharing
 import utils.{ObjectId, WkConf}
 
+import java.net.URLDecoder
 import scala.concurrent.ExecutionContext
 
 case class OpenGraphTags(

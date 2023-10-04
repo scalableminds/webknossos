@@ -74,7 +74,7 @@ class DataVaultTestSuite extends PlaySpec {
           }
           "using invalid credentials" in {
             val vaultPath =
-              new VaultPath(uri,
+              VaultPath(uri,
                             GoogleCloudDataVault.create(
                               RemoteSourceDescriptor(
                                 uri,

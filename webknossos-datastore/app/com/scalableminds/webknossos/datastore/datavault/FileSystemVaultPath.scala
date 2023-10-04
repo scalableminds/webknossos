@@ -29,7 +29,13 @@ class FileSystemVaultPath(basePath: Path, dataVault: FileSystemDataVault)
 
   def exists: Boolean = basePath.toFile.exists()
 
-  override def equals(obj: Any): Boolean = hashCode() == obj.hashCode()
+  private def getBasePath: Path = basePath
+  private def getDataVault: DataVault = dataVault
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: FileSystemVaultPath => other.getBasePath == basePath && other.getDataVault == dataVault
+    case _                          => false
+  }
 
   override def hashCode(): Int =
     new HashCodeBuilder(13, 37).append(basePath).append(dataVault).toHashCode

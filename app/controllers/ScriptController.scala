@@ -23,9 +23,9 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     with FoxImplicits {
 
   private val scriptPublicReads =
-    ((__ \ Symbol("name")).read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ Symbol("gist")).read[String] and
-      (__ \ Symbol("owner")).read[ObjectId])(Script.fromForm _)
+    ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
+      (__ \ "gist").read[String] and
+      (__ \ "owner").read[ObjectId])(Script.fromForm _)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>

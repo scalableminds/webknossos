@@ -5,10 +5,10 @@ import com.scalableminds.util.tools.Fox
 import io.swagger.annotations._
 import models.team._
 import models.user.UserDAO
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import javax.inject.Inject

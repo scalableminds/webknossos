@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfi
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 
 import javax.inject.Inject
-import models.binary.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService, ThumbnailCachingService}
+import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService, ThumbnailCachingService}
 import models.user.{User, UserDatasetConfigurationDAO, UserDatasetLayerConfigurationDAO}
 import play.api.libs.json._
 

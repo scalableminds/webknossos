@@ -13,14 +13,14 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
-import models.binary.{Dataset, DatasetDAO, DatasetService}
+import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
+import telemetry.SlackNotificationService
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

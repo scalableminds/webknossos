@@ -4,7 +4,6 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.UserService
-import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.lifted.Rep
@@ -15,6 +14,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import com.scalableminds.webknossos.schema.Tables._
+import security.WkEnv
 
 class MaintenanceController @Inject()(
     sil: Silhouette[WkEnv],

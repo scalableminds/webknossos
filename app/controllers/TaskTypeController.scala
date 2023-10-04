@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
@@ -15,6 +14,7 @@ import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 

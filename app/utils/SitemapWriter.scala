@@ -7,7 +7,7 @@ import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
-import models.binary.PublicationDAO
+import models.dataset.PublicationDAO
 import org.apache.commons.io.output.ByteArrayOutputStream
 
 import java.nio.charset.StandardCharsets

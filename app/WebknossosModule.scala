@@ -1,18 +1,18 @@
 import com.google.inject.AbstractModule
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import controllers.InitialDataService
+import files.TempFileService
+import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
 import models.annotation.{AnnotationMutexService, AnnotationStore}
-import models.binary.{DatasetService, ThumbnailCachingService}
+import models.dataset.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user._
 import models.user.time.TimeSpanService
 import models.voxelytics.LokiClient
-import oxalis.files.TempFileService
-import oxalis.mail.MailchimpTicker
-import oxalis.telemetry.SlackNotificationService
+import telemetry.SlackNotificationService
 import utils.sql.SqlClient
 
 class WebknossosModule extends AbstractModule {

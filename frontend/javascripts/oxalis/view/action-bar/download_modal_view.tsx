@@ -108,7 +108,7 @@ function getExportLayerInfos(
   };
 }
 
-function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
+export function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
@@ -132,7 +132,7 @@ function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
           type="error"
           message={`An edge length of the selected bounding box (${shape.join(
             ", ",
-          )}) is too large. Tiff export is only supported for boxes with no edge length over ${
+          )}) is too large. Tiff export is only supported for boxes with edges smaller than ${
             features().exportTiffMaxEdgeLengthVx
           } vx.`}
         />
@@ -296,7 +296,7 @@ function _DownloadModalView({
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getLowestResolution());
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestResolution());
   const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 

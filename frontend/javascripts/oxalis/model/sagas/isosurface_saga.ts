@@ -309,8 +309,9 @@ function* loadFullAdHocIsosurface(
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
   // Fetch from datastore if no volumetracing ...
-  let useDataStore = volumeTracing == null;
+  let useDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
   if (isosurfaceExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
     useDataStore = isosurfaceExtraInfo.useDataStore;
@@ -322,7 +323,9 @@ function* loadFullAdHocIsosurface(
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
   const usePositionsFromSegmentStats =
-    volumeTracing?.hasSegmentIndex && !volumeTracing.mappingIsEditable;
+    volumeTracing?.hasSegmentIndex &&
+    !volumeTracing.mappingIsEditable &&
+    visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,

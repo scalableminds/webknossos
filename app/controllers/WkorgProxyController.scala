@@ -6,6 +6,7 @@ import com.mohiva.play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
+import oxalis.opengraph.OpenGraphService
 import oxalis.security.WkEnv
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Action, AnyContent}
@@ -14,8 +15,11 @@ import utils.WkConf
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class WkorgProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[WkEnv], multiUserDAO: MultiUserDAO)(
-    implicit ec: ExecutionContext)
+class WkorgProxyController @Inject()(ws: WSClient,
+                                     conf: WkConf,
+                                     sil: Silhouette[WkEnv],
+                                     multiUserDAO: MultiUserDAO,
+                                     openGraphService: OpenGraphService)(implicit ec: ExecutionContext)
     extends Controller {
 
   def proxyPageOrMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -25,7 +29,19 @@ class WkorgProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
           multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
-      } yield Ok(views.html.main(conf, multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString))
+        openGraphTags <- openGraphService.getOpenGraphTags(
+          request.path,
+          request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
+      } yield
+        Ok(
+          views.html.main(
+            conf,
+            multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString,
+            openGraphTags.title,
+            openGraphTags.description,
+            openGraphTags.image
+          )
+        )
     }
   }
 

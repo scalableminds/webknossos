@@ -7,6 +7,7 @@ import models.binary.DatasetDAO
 import models.job._
 import models.organization.OrganizationDAO
 import models.binary.DataStoreDAO
+import models.user.MultiUserDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
@@ -25,6 +26,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                workerService: WorkerService,
                                workerDAO: WorkerDAO,
                                wkconf: WkConf,
+                               multiUserDAO: MultiUserDAO,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO,
@@ -170,6 +172,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataset.notFound",
             dataSetName) ~> NOT_FOUND
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -199,7 +203,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
             "dataset.notFound",
             dataSetName) ~> NOT_FOUND
-          _ <- jobService.assertTiffExportBoundingBoxLimits(bbox, mag)
+          _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = JobCommand.export_tiff

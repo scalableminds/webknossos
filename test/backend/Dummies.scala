@@ -13,7 +13,7 @@ object Dummies {
     Node(id,
          Vec3IntProto(id, id + 1, id + 2),
          Vec3DoubleProto(id, id + 1, id + 2),
-         id,
+         id.toFloat,
          1,
          10,
          8,
@@ -66,10 +66,10 @@ object Dummies {
   )
 
   //tree with two components, from tree1 and tree2
-  val comp1Nodes = Seq(createDummyNode(10), createDummyNode(11), createDummyNode(12), createDummyNode(13))
-  val comp2Nodes = Seq(createDummyNode(20), createDummyNode(21))
-  val comp1Edges = Seq(Edge(10, 11), Edge(10, 12), Edge(12, 13))
-  val comp2Edges = Seq(Edge(20, 21))
+  val comp1Nodes: Seq[Node] = Seq(createDummyNode(10), createDummyNode(11), createDummyNode(12), createDummyNode(13))
+  val comp2Nodes: Seq[Node] = Seq(createDummyNode(20), createDummyNode(21))
+  val comp1Edges: Seq[Edge] = Seq(Edge(10, 11), Edge(10, 12), Edge(12, 13))
+  val comp2Edges: Seq[Edge] = Seq(Edge(20, 21))
   val componentTree: Tree =
     Tree(3, comp1Nodes ++ comp2Nodes, comp1Edges ++ comp2Edges, None, Seq(), Seq(), "Test Tree-3", timestamp, None)
 

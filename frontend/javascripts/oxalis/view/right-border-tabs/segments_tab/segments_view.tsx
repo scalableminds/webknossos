@@ -159,6 +159,9 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   const { segments, segmentGroups } = getVisibleSegments(state);
 
+  const isVisibleButUneditableSegmentationLayerActive =
+    visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     isosurfaces:
@@ -174,7 +177,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     segments,
     segmentGroups,
     visibleSegmentationLayer,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
+    allowUpdate:
+      state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -946,10 +950,8 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const isEditingDisabled = !this.props.allowUpdate;
     return {
       key: "changeGroupColor",
-      disabled: isEditingDisabled,
       icon: (
         <i
           className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
@@ -961,7 +963,7 @@ class SegmentsView extends React.Component<Props, State> {
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
-          isDisabled={isEditingDisabled}
+          isDisabled={false}
           onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -976,11 +978,9 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const isEditingDisabled = !this.props.allowUpdate;
     const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
-      disabled: isEditingDisabled,
       icon: (
         <i
           className="fas fa-undo"
@@ -1199,12 +1199,12 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let willShowHideMeshesLabel: boolean =
+    let areGroupOrSelectedSegmentMeshesVisible: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
 
-    const showHideMeshesLabel = willShowHideMeshesLabel
+    const showHideMeshesLabel = areGroupOrSelectedSegmentMeshesVisible
       ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
       : { icon: <EyeOutlined />, text: "Show" };
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
@@ -1221,7 +1221,7 @@ class SegmentsView extends React.Component<Props, State> {
                 this.handleChangeMeshVisibilityInGroup(
                   this.props.visibleSegmentationLayer.name,
                   groupId,
-                  !this.areSelectedSegmentsMeshesVisible(),
+                  !areGroupOrSelectedSegmentMeshesVisible,
                 );
                 this.closeSegmentOrGroupDropdown();
               }}
@@ -1736,7 +1736,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 // Forbid renaming when segments or groups are being renamed,
                                 // since selecting text within the editable input box would not work
                                 // otherwise (instead, the item would be dragged).
-                                this.state.renamingCounter === 0,
+                                this.state.renamingCounter === 0 && this.props.allowUpdate,
                             }}
                             multiple
                             showLine

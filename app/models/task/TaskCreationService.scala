@@ -13,14 +13,14 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
-import models.binary.{Dataset, DatasetDAO, DatasetService}
+import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
+import telemetry.SlackNotificationService
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -312,7 +312,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           .unzip)
     } else
       Fox
-        .serialCombined((fullParams, skeletons, volumes).zipped.toList) {
+        .serialCombined(fullParams.lazyZip(skeletons).lazyZip(volumes).toList) {
           case (paramBox, skeleton, volume) =>
             paramBox match {
               case Full(params) =>
@@ -350,7 +350,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                 skeletonBases: List[Box[SkeletonTracing]],
                                 volumeBases: List[Box[(VolumeTracing, Option[File])]])
     : List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]] =
-    (fullParams, skeletonBases, volumeBases).zipped.map {
+    fullParams.lazyZip(skeletonBases).lazyZip(volumeBases).map {
       case (paramBox, skeletonBox, volumeBox) =>
         paramBox match {
           case Full(params) =>
@@ -407,14 +407,20 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
         }
-        skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
+        skeletonTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(skeletonTracingIds).toList,
                                                     isSkeletonId = true)
-        volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,
+        volumeTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(volumeTracingIds).toList,
                                                   isSkeletonId = false)
-        requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList
+        requestedTasksWithTracingIds = requestedTasks
+          .lazyZip(skeletonTracingsIdsMerged)
+          .lazyZip(volumeTracingsIdsMerged)
+          .toList
         taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
           createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, requestingUser))
-        zipped = (requestedTasks, skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged), taskObjects).zipped.toList
+        zipped = requestedTasks
+          .lazyZip(skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged))
+          .lazyZip(taskObjects)
+          .toList
         createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
           tuple =>
             annotationService.createAnnotationBase(

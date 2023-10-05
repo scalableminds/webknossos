@@ -119,7 +119,14 @@ function RenderAnimationModal(props: Props) {
   };
 
   return (
-    <Modal title="Render Animation" open={isOpen} width={800} onOk={submitJob} onCancel={onClose} okText="Start Rendering">
+    <Modal
+      title="Render Animation"
+      open={isOpen}
+      width={800}
+      onOk={submitJob}
+      onCancel={onClose}
+      okText="Start Rendering"
+    >
       <React.Fragment>
         <Row gutter={8}>
           <Col span={8}>
@@ -140,15 +147,14 @@ function RenderAnimationModal(props: Props) {
             </Typography.Text>
           </Col>
         </Row>
-                  <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Animation Setup
-          </Divider>
-        <Row gutter={[8,26]}>
-
+        <Divider
+          style={{
+            margin: "18px 0",
+          }}
+        >
+          Animation Setup
+        </Divider>
+        <Row gutter={[8, 26]}>
           <Col span={8}>
             <Typography.Title level={5}>Camera Position</Typography.Title>
           </Col>
@@ -231,19 +237,16 @@ function RenderAnimationModal(props: Props) {
             </Space>
           </Col>
         </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Layer & Bounding Box
-          </Divider>
-        <Row gutter={[8,10]}>
-
+        <Divider
+          style={{
+            margin: "18px 0",
+          }}
+        >
+          Layer & Bounding Box
+        </Divider>
+        <Row gutter={[8, 10]}>
           <Col span={8}>
-            <Typography.Title level={5}>
-              Layer
-            </Typography.Title>
+            <Typography.Title level={5}>Layer</Typography.Title>
           </Col>
           <Col span={16}>
             <LayerSelection
@@ -256,7 +259,7 @@ function RenderAnimationModal(props: Props) {
           </Col>
 
           <Col span={8}>
-            <Typography.Title level={5} style={{marginTop: 8}}>
+            <Typography.Title level={5} style={{ marginTop: 8 }}>
               Bounding Box
             </Typography.Title>
           </Col>

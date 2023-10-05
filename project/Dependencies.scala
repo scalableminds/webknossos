@@ -2,8 +2,8 @@ import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  private val akkaVersion = "2.6.19"
-  private val akkaHttpVersion = "10.2.6"
+  private val akkaVersion = "2.6.21"
+  private val akkaHttpVersion = "10.2.10"
   private val log4jVersion = "2.17.0"
   private val webknossosWrapVersion = "1.1.23"
   private val silhouetteVersion = "7.0.7"
@@ -40,6 +40,7 @@ object Dependencies {
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
   private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
+  private val jodaTime = "joda-time" % "joda-time" % "2.12.5"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
   private val guava = "com.google.guava" % "guava" % "18.0"
   private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
@@ -75,6 +76,7 @@ object Dependencies {
     liftCommon,
     log4jApi,
     log4jCore,
+    jodaTime,
     playJson,
     playFramework,
     reactiveBson,
@@ -82,6 +84,11 @@ object Dependencies {
     scalaLogging,
     akkaCaching,
     bcrypt
+  )
+
+  val dependencyOverrides: Seq[ModuleID] = Seq(
+    // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
+    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0"
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(

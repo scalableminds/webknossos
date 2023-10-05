@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Dropdown, Modal, Radio, Row, Space, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -41,7 +41,6 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
-  setAIJobModalStateAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -71,8 +70,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { Position } from "react-flow-renderer";
-import { NeuronSegmentationModal } from "./starting_job_modals";
+import { StartingJobModal } from "./starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -91,10 +89,10 @@ type StateProps = {
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
   aIJobModalState:
-  | "invisible"
-  | "nuclei_inferral"
-  | "neuron_segmentation"
-  | "mitochondria_detection";
+    | "invisible"
+    | "nuclei_inferral"
+    | "neuron_segmentation"
+    | "mitochondria_detection";
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -256,80 +254,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       },
     ],
   };
-}
-
-
-export function getAISegmentationMenu(
-  aIJobModalState:
-    | "invisible"
-    | "nuclei_inferral"
-    | "neuron_segmentation"
-    | "mitochondria_detection",
-): React.ReactNode {
-  const centerImageStyle = {
-    margin: "auto",
-    width: 150,
-  }
-  const radioStyle = { width: "auto", height: "auto", padding: 0 };
-  return aIJobModalState !== "invisible" ? (
-    <Modal
-      width={700}
-      open
-      title={
-        <>
-          <i className="fas fa-magic" />
-          Automated analysis with WEBKNOSSOS
-        </>
-      }
-      onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
-    >
-      <Row>Choose a processing job for your dataset:</Row>
-      <Space align="center">
-        <Radio.Button style={radioStyle} checked={aIJobModalState === "neuron_segmentation"}>
-          <Card bordered={false}>
-            <Row>Neuron segmentation</Row>
-            <Row>
-            <img
-              src={"/assets/images/neuron_segmentation.png"}
-              alt={"Neuron segmentation example"}
-                style={centerImageStyle}
-              /></Row>
-          </Card>
-        </Radio.Button>
-        <Radio.Button style={radioStyle} checked={aIJobModalState === "nuclei_inferral"}>
-          <Card bordered={false}>
-            <Row>Nuclei detection</Row>
-            <Row><img
-              src={"/assets/images/nuclei_inferral.png"}
-              alt={"Nuclei inferral example"}
-              style={centerImageStyle}
-            />
-            </Row>
-          </Card>
-        </Radio.Button>
-        <Radio.Button style={radioStyle} checked={aIJobModalState === "mitochondria_detection"}>
-          <Card bordered={false}>
-            <Row>Mitochondria detection
-            </Row>
-            <Row><img
-              src={"/assets/images/mito_detection.png"}
-              alt={"Mitochondria detection example"}
-              style={centerImageStyle}
-            />
-            </Row>
-          </Card>
-        </Radio.Button>
-      </Space>
-      {aIJobModalState === "neuron_segmentation" ?
-        (<><Row>This job will automatically detect and segment all neurons in this dataset. The AI will create a copy of this dataset containing the new neuron segmentation.</Row>
-          <Row><Alert message="Please note that this feature is experimental and currently only works with electron microscopy data." type="warning" showIcon /></Row>
-          <NeuronSegmentationModal handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))} />
-        </>
-        )
-        : null}
-
-    </Modal>
-  ) : null;
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -712,8 +636,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     if (features().jobsEnabled) {
-      const AISegmentationModals = getAISegmentationMenu(this.props.aIJobModalState);
-      modals.push(AISegmentationModals);
+      modals.push(<StartingJobModal aIJobModalState={this.props.aIJobModalState} />);
     }
 
     menuItems.push(screenshotMenuItem);

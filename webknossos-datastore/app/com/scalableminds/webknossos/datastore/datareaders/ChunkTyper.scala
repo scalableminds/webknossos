@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream

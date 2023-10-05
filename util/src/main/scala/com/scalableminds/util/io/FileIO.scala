@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.Fox
 
 import java.io._
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import scala.concurrent.{ExecutionContext, Future, blocking}

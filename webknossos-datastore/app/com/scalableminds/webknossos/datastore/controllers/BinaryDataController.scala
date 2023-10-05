@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations._
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}

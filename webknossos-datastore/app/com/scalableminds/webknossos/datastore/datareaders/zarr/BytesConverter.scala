@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.{ArrayDataType, bytesPerElementFor}
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
 

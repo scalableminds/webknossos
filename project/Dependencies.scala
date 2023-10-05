@@ -22,7 +22,6 @@ object Dependencies {
   private val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
   private val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   private val liftCommon = "net.liftweb" %% "lift-common" % "3.5.0"
-  private val liftUtil = "net.liftweb" %% "lift-util" % "3.5.0"
   private val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Provided
   private val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion % Provided
   private val playFramework = "com.typesafe.play" %% "play" % "2.9.0-RC3"
@@ -74,7 +73,6 @@ object Dependencies {
     commonsIo,
     commonsLang,
     liftCommon,
-    liftUtil,
     log4jApi,
     log4jCore,
     playJson,

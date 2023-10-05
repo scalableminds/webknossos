@@ -85,10 +85,10 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     val additionalAxesNames: Seq[String] = dimensionNames.toSeq.dropRight(3)
 
     // assume additionalAxes,x,y,z
-    val CubeRx = s"(|.*/)(\\d+-\\d+-\\d+)/c/(.+)".r
+    val chunkPathRegex = s"(|.*/)(\\d+-\\d+-\\d+)/c\\.(.+)".r
 
     path match {
-      case CubeRx(_, magStr, dimsStr) =>
+      case chunkPathRegex(_, magStr, dimsStr) =>
         val dims: Seq[String] = dimsStr.split("\\.").toSeq
         val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(dims.dropRight(3)).map {
           case (name, coordinateValue) => AdditionalCoordinate(name, coordinateValue.toInt)

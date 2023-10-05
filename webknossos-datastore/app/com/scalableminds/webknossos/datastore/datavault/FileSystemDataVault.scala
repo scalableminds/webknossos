@@ -45,7 +45,11 @@ class FileSystemDataVault extends DataVault {
   override def hashCode(): Int =
     new HashCodeBuilder(19, 31).toHashCode
 
-  override def equals(obj: Any): Boolean = true
+  override def equals(obj: Any): Boolean = obj match {
+    case _: FileSystemDataVault => true
+    case _                      => false
+  }
+
 }
 
 object FileSystemDataVault {

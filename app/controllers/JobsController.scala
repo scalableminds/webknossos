@@ -22,11 +22,11 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.BoundingBox
 import models.team.PricingPlan
 
-object MovieResolutions extends ExtendedEnumeration {
+object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
 }
 
-object CameraPositions extends ExtendedEnumeration {
+object CameraPositionSetting extends ExtendedEnumeration {
   val MOVING, STATIC_XY, STATIC_YZ = Value
 }
 
@@ -37,8 +37,10 @@ case class AnimationJobOptions(
     segmentationLayerName: Option[String],
     meshfileName: Option[String],
     meshSegmentIds: Array[Int],
-    movieResolution: MovieResolutions.Value,
-    cameraPosition: CameraPositions.Value
+    movieResolution: MovieResolutionSetting.Value,
+    cameraPosition: CameraPositionSetting.Value,
+    intensityMin: Double,
+    intensityMax: Double
 )
 
 object AnimationJobOptions {
@@ -336,7 +338,7 @@ class JobsController @Inject()(
             bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
           }
           _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
-            bool2Fox(animationJobOptions.movieResolution == MovieResolutions.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
+            bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"
@@ -346,7 +348,16 @@ class JobsController @Inject()(
             "dataset_name" -> dataSetName,
             "export_file_name" -> exportFileName,
             "user_auth_token" -> userAuthToken.id,
-            "options" -> Json.toJson(animationJobOptions)
+            "layer_name" -> animationJobOptions.layerName,
+            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
+            "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
+            "include_watermark" -> animationJobOptions.includeWatermark,
+            "mesh_segment_ids" -> animationJobOptions.meshSegmentIds,
+            "meshfile_name" -> animationJobOptions.meshfileName,
+            "movie_resolution" -> animationJobOptions.movieResolution,
+            "camera_position" -> animationJobOptions.cameraPosition,
+            "intensity_min" -> animationJobOptions.intensityMin,
+            "intensity_max" -> animationJobOptions.intensityMax,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

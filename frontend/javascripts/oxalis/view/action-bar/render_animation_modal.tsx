@@ -93,6 +93,8 @@ function RenderAnimationModal(props: Props) {
       meshfileName: "meshfile.hdf5",
       meshSegmentIds,
       boundingBox,
+      intensityMin: 0,
+      intensityMax: 255, // TODO use from current view config
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
@@ -119,21 +121,15 @@ function RenderAnimationModal(props: Props) {
   return (
     <Modal title="Render Animation" open={isOpen} width={800} onOk={submitJob} onCancel={onClose}>
       <React.Fragment>
-        <Row>
-          <Col>
+        <Row gutter={8}>
+          <Col span={12}>
             <img
-              src="https://miro.medium.com/v2/resize:fit:1400/0*AFr8RQpIteOQidsD"
-              alt="An example previewing a WEBKNOSSOS animation"
-              style={{ height: 300 }}
+              src="/assets/images/animation-illustration.png"
+              alt="Render an animation showing your dataset in 3D"
+              style={{ width: 200, display: 'inline-block' }}
             />
           </Col>
-        </Row>
-        <Row
-          style={{
-            margin: "18px 0",
-          }}
-        >
-          <Col>
+          <Col span={12}>
             <Typography.Text>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ac nisi mauris. Nunc
               et enim malesuada, semper lacus ac, posuere ipsum. Aliquam cursus consectetur auctor.

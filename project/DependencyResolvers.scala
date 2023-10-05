@@ -5,9 +5,9 @@ object DependencyResolvers {
   val sciJava = "SciJava Public" at "https://maven.scijava.org/content/repositories/public/"
   val senbox = "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
 
-  val dependencyResolvers = Seq(
-    Resolver.sonatypeRepo("releases"),
-    Resolver.sonatypeRepo("snapshots"),
+  val dependencyResolvers: Seq[Serializable] = Seq(
+    Resolver.sonatypeOssRepos("releases"),
+    Resolver.sonatypeOssRepos("snapshots"),
     Resolver.typesafeRepo("releases"),
     sciJava,
     atlassian,

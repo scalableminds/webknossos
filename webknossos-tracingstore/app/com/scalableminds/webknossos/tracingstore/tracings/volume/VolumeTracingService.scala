@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -33,7 +34,7 @@ import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
@@ -308,7 +309,7 @@ class VolumeTracingService @Inject()(
   def allDataZip(tracingId: String,
                  tracing: VolumeTracing,
                  volumeDataZipFormat: VolumeDataZipFormat,
-                 voxelSize: Option[Vec3Double]): Future[Files.TemporaryFile] = {
+                 voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
     allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -318,7 +319,7 @@ class VolumeTracingService @Inject()(
                                     tracing: VolumeTracing,
                                     volumeDataZipFormmat: VolumeDataZipFormat,
                                     voxelSize: Option[Vec3Double],
-                                    os: OutputStream): Future[Unit] = {
+                                    os: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
       case VolumeDataZipFormat.wkw =>
@@ -331,16 +332,13 @@ class VolumeTracingService @Inject()(
                                              voxelSize)
     }
 
-    val before = System.currentTimeMillis()
+    val before = Instant.now
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
-      case failure: scala.util.Failure[Unit] =>
-        logger.debug(
-          s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case _: scala.util.Success[Unit] =>
-        val after = System.currentTimeMillis()
-        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
+      case b: scala.util.Success[Box[Unit]] =>
+        logger.info(s"Zipping volume data for $tracingId took ${Instant.since(before)} ms. Result: ${b.get}")
+      case _ => ()
     }
     zipResult
   }

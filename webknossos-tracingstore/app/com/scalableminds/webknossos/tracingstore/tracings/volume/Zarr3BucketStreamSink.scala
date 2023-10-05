@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, Buck
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging with ProtoGeometryImplicits {
@@ -29,7 +29,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])],
             mags: Seq[Vec3Int],
             additionalAxes: Seq[AdditionalAxisProto],
-            voxelSize: Option[Vec3Double]): Iterator[NamedStream] = {
+            voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Iterator[NamedStream] = {
     val header = Zarr3ArrayHeader(
       zarr_format = 3,
       node_type = "array",

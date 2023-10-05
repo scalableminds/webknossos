@@ -188,7 +188,7 @@ export default class LayerRenderingManager {
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const maximumResolutionIndex = resolutionInfo.getHighestResolutionIndex();
+    const maximumResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
 
     if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high

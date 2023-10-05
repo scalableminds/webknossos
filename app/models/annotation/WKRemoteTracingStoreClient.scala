@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import models.binary.Dataset
+import models.dataset.Dataset
 import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext

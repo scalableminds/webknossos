@@ -12,23 +12,23 @@ import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
+import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DatasetDAO, DatasetService}
+import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-import oxalis.security.{URLSharing, UserAwareRequestLogging, WkEnv}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{URLSharing, UserAwareRequestLogging, WkEnv}
+import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject

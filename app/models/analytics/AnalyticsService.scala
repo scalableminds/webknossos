@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.annotation.Annotation
-import models.binary.{Dataset, DataStore}
+import models.dataset.{Dataset, DataStore}
 import models.organization.Organization
 import models.user.{MultiUserDAO, User, UserDAO}
 import models.job.JobCommand.JobCommand

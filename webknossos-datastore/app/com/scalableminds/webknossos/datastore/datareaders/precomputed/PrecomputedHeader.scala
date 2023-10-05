@@ -71,7 +71,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
       (beginOffset, endOffset)
     })
 
-  def gridSize: Array[Int] = (chunkSize, precomputedScale.size).zipped.map((c, s) => (s.toDouble / c).ceil.toInt)
+  def gridSize: Array[Int] = chunkSize.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
 
   override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }

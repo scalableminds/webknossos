@@ -10,14 +10,14 @@ import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, AnnotationInformationProvider, TracingStoreService}
-import models.binary.{DatasetDAO, DatasetService}
+import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
 import models.user.time.TimeSpanService
-import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext
 

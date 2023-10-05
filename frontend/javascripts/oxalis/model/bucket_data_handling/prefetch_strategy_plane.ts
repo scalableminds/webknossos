@@ -99,7 +99,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       return [];
     }
 
-    const maxZoomStep = resolutionInfo.getHighestResolutionIndex();
+    const maxZoomStep = resolutionInfo.getCoarsestResolutionIndex();
     const zoomStepDiff = currentZoomStep - zoomStep;
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
       cube,

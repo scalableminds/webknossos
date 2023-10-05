@@ -13,10 +13,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.DatasetDAO
+import mail.{DefaultMails, Send}
+import models.dataset.DatasetDAO
 import models.team._
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.{PasswordHasher, TokenDAO}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
@@ -24,6 +23,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.organization.OrganizationDAO
 import net.liftweb.common.{Box, Full}
+import security.{PasswordHasher, TokenDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -196,7 +196,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
 
     private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
       val rawCodecSpecs: Seq[JsValue] = value match {
-        case JsArray(arr) => arr
+        case JsArray(arr) => arr.toSeq
         case _            => Seq()
       }
       val configurationKey = "configuration"

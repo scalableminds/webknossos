@@ -148,13 +148,11 @@ class Zarr3Array(vaultPath: VaultPath,
       (chunkIndex, header.chunkSize).zipped.map(_ * _)
     )
 
-  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] = {
-    logger.info(s"Cache miss! shard path: $shardPath")
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] =
     for {
       shardIndexRaw <- readShardIndex(shardPath)
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
-  }
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext,

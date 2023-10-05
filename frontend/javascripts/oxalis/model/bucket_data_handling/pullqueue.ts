@@ -15,9 +15,9 @@ export const PullQueueConstants = {
   // For buckets that should be loaded immediately and
   // should never be removed from the queue
   PRIORITY_HIGHEST: -1,
-  BATCH_LIMIT: 6,
+  BATCH_LIMIT: 1,
 };
-const BATCH_SIZE = 6;
+const BATCH_SIZE = 1;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
 
 class PullQueue {

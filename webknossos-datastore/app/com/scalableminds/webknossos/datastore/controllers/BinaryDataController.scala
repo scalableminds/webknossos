@@ -53,25 +53,28 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-    tracer.traceFuture(f"requestViaWebknossos: $dataSetName, ${request.body.length} buckets") { _ =>
+    tracer.traceFuture(f"requestViaWebknossos: $dataSetName/$dataLayerName, ${request.body.length} buckets") { _ =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          val t = Instant.now
-          for {
-            (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                      dataSetName,
-                                                                                      dataLayerName) ~> NOT_FOUND
-            (data, indices) <- requestData(dataSource, dataLayer, request.body)
-            duration = Instant.since(t)
-            _ = if (duration > (10 seconds))
-              logger.info(
-                s"Complete data request took $duration ms.\n"
-                  + s"  dataSource: $organizationName/$dataSetName\n"
-                  + s"  dataLayer: $dataLayerName\n"
-                  + s"  requestCount: ${request.body.size}"
-                  + s"  requestHead: ${request.body.headOption}")
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        tracer.traceFuture(f"with logTime") { _ =>
+          logTime(slackNotificationService.noticeSlowRequest) {
+            val t = Instant.now
+            for {
+              (dataSource, dataLayer) <- Fox.futureBox2Fox(tracer.traceFuture(f"getSourceAndLayer") { _ =>
+                (dataSourceRepository
+                  .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ~> NOT_FOUND).futureBox
+              })
+              (data, indices) <- requestData(dataSource, dataLayer, request.body)
+              duration = Instant.since(t)
+              _ = if (duration > (10 seconds))
+                logger.info(
+                  s"Complete data request took $duration ms.\n"
+                    + s"  dataSource: $organizationName/$dataSetName\n"
+                    + s"  dataLayer: $dataLayerName\n"
+                    + s"  requestCount: ${request.body.size}"
+                    + s"  requestHead: ${request.body.headOption}")
+            } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+          }
         }
       }
     }

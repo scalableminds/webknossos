@@ -9,10 +9,10 @@ import javax.inject.Inject
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.user.User
-import oxalis.security.WkEnv
 import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

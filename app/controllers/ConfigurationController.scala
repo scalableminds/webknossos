@@ -3,13 +3,13 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.inject.Inject
-import models.binary.{DatasetDAO, DatasetService}
+import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
 import models.user.UserService
-import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{URLSharing, WkEnv}
 
 import scala.concurrent.ExecutionContext
 

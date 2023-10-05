@@ -18,7 +18,7 @@ import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters.asScalaSetConverter
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 // applies the updates of *one* update group.
 // uses mutable maps for the updated keys before flushing them to the db after applying all updates of one group

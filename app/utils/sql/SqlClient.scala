@@ -1,9 +1,9 @@
 package utils.sql
 
-import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
+import telemetry.SlackNotificationService
 
 import javax.inject.Inject
 

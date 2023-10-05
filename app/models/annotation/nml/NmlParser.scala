@@ -262,8 +262,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
-    val additionalAxes = nodes.headOption.map(
+  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider): Box[Seq[AdditionalAxisProto]] = {
+    val additionalAxes: Option[collection.Seq[AdditionalAxisProto]] = nodes.headOption.map(
       _.child.flatMap(
         additionalAxisNode => {
           for {
@@ -281,7 +281,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     additionalAxes match {
       case Some(axes) =>
         if (axes.map(_.name).distinct.size == axes.size) {
-          Full(axes)
+          Full(axes.toSeq)
         } else {
           Failure(Messages("nml.additionalCoordinates.notUnique"))
         }
@@ -519,17 +519,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   }
 
   private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
-    val regex = "additionalCoordinate-(\\w)".r("name")
+    val regex = "^additionalCoordinate-(\\w)".r
     node.attributes.flatMap {
-      case attribute: Attribute => {
-        if (attribute.key.startsWith("additionalCoordinate")) {
-          Some(
-            new AdditionalCoordinateProto(regex.findAllIn(attribute.key).group("name"),
-                                          attribute.value.toString().toInt))
-        } else {
-          None
+      case attribute: Attribute =>
+        attribute.key match {
+          case regex(axisName) =>
+            Some(new AdditionalCoordinateProto(axisName, attribute.value.toString().toInt))
+          case _ => None
         }
-      }
       case _ => None
     }.toSeq
   }

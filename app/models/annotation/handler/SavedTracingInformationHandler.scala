@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.user.{User, UserService}
 import utils.ObjectId
 

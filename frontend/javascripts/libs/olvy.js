@@ -1,4 +1,4 @@
-// Downloaded on 2023-10-05 from https://app.olvy.co/script.js
+// Downloaded on 2023-10-05 from https://app.olvy.co/script.js and adjusted to comply with our linting rules
 (function () {
   "use strict";
   if (window.Olvy) {
@@ -77,7 +77,7 @@
     },
     __registerView() {
       window.frames[this.__getOrgAndIDSuffixed("olvy")].postMessage(
-        { key: this.__getOrgAndIDSuffixed(`olvy-register-view`), value: "" },
+        { key: this.__getOrgAndIDSuffixed("olvy-register-view"), value: "" },
         "*",
       );
     },
@@ -104,13 +104,13 @@
           "message",
           (e) => {
             if (
-              e.data === this.__getOrgAndIDSuffixed(`olvy-close`) ||
+              e.data === this.__getOrgAndIDSuffixed("olvy-close") ||
               (typeof e.data === "string" && e.data.startsWith("olvy-close"))
             ) {
               this.hide();
-            } else if (e.data === this.__getOrgAndIDSuffixed(`olvy-embed-loaded`)) {
+            } else if (e.data === this.__getOrgAndIDSuffixed("olvy-embed-loaded")) {
               this.contentLoaded = true;
-              if (this.config.user && this.config.user.identifier) {
+              if (this.config.user?.identifier) {
                 this.setUser(this.config.user);
               }
               if (this.config.type === "embed") {
@@ -125,7 +125,7 @@
     },
     setupModal() {
       const modalElement = document.createElement("div");
-      modalElement.id = this.__getOrgAndIDSuffixed(`olvy-modal`);
+      modalElement.id = this.__getOrgAndIDSuffixed("olvy-modal");
       modalElement.classList.add("olvy-modal");
       modalElement.innerHTML = `
       <div class="olvy-modal-overlay" id="${this.__getOrgAndIDSuffixed(
@@ -162,7 +162,7 @@
         });
       }
       document.addEventListener("keydown", (e) => {
-        if (e.keyCode == 27) {
+        if (e.keyCode === 27) {
           this.hide();
         }
       });
@@ -189,7 +189,7 @@
       this.config.user = Object.assign({}, this.config.user, user);
       if (this.contentLoaded) {
         window.frames[this.__getOrgAndIDSuffixed("olvy")].postMessage(
-          { key: this.__getOrgAndIDSuffixed(`olvy-setUser`), value: this.config.user },
+          { key: this.__getOrgAndIDSuffixed("olvy-setUser"), value: this.config.user },
           "*",
         );
       }
@@ -336,13 +336,13 @@
       document.querySelector("head").appendChild(CSSElement);
     },
     show() {
-      let modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed(`olvy-modal`)}`);
+      let modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed("olvy-modal")}`);
       if (!modalElement) {
         this.setupModal();
       }
-      modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed(`olvy-modal`)}`);
+      modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed("olvy-modal")}`);
       modalElement.classList.add("visible");
-      const bodyElement = document.querySelector(`body`);
+      const bodyElement = document.querySelector("body");
       bodyElement.classList.add("olvy-widget-open");
       this.visible = true;
       window.localStorage.setItem(
@@ -353,10 +353,9 @@
         this.__registerView();
       }
       if (
-        document.querySelector(this.config.target) &&
         document
           .querySelector(this.config.target)
-          .querySelector(`.olvy-unread-indicator.olvy-organisation-${this.config.organisation}`)
+          ?.querySelector(`.olvy-unread-indicator.olvy-organisation-${this.config.organisation}`)
       ) {
         document
           .querySelector(this.config.target)
@@ -370,11 +369,11 @@
       }
     },
     hide() {
-      const modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed(`olvy-modal`)}`);
+      const modalElement = document.querySelector(`#${this.__getOrgAndIDSuffixed("olvy-modal")}`);
       if (modalElement) {
         modalElement.classList.remove("visible");
       }
-      const bodyElement = document.querySelector(`body`);
+      const bodyElement = document.querySelector("body");
       if (bodyElement) {
         bodyElement.classList.remove("olvy-widget-open");
       }
@@ -397,10 +396,9 @@
     },
     removeUnreadIndicatorElement() {
       if (
-        document.querySelector(this.config.target) &&
         document
           .querySelector(this.config.target)
-          .querySelector(`.olvy-unread-indicator.olvy-organisation-${this.config.organisation}`)
+          ?.querySelector(`.olvy-unread-indicator.olvy-organisation-${this.config.organisation}`)
       ) {
         document
           .querySelector(this.config.target)
@@ -439,7 +437,7 @@
       ) {
         console.warn("[Olvy] - not registering script events on localhost");
       }
-      if (eventType == "script_load" && window !== undefined) {
+      if (eventType === "script_load" && window !== undefined) {
         try {
           const timestamp = window.localStorage.getItem(`olvy-script-load-${organisationId}`);
           if (timestamp) {
@@ -447,7 +445,7 @@
             const lastString = `${lastTimestamp.getDate()}${lastTimestamp.getMonth()}${lastTimestamp.getFullYear()}`;
             const now = new Date();
             const nowString = `${now.getDate()}${now.getMonth()}${now.getFullYear()}`;
-            if (lastString == nowString) {
+            if (lastString === nowString) {
               return;
             }
           }
@@ -455,7 +453,7 @@
             `olvy-script-load-${organisationId}`,
             new Date().toISOString(),
           );
-        } catch (e) {
+        } catch (_e) {
           console.error("[Olvy] - error logging script load event");
         }
       }
@@ -480,15 +478,15 @@
         } else {
           return 0;
         }
-      } catch (e) {
+      } catch (_e) {
         console.log("[Olvy] - Error fetching unread count");
         return 0;
       }
     },
     teardown() {
-      if (document.querySelector(`#${this.__getOrgAndIDSuffixed(`olvy-modal`)}`)) {
+      if (document.querySelector(`#${this.__getOrgAndIDSuffixed("olvy-modal")}`)) {
         document.body.removeChild(
-          document.querySelector(`#${this.__getOrgAndIDSuffixed(`olvy-modal`)}`),
+          document.querySelector(`#${this.__getOrgAndIDSuffixed("olvy-modal")}`),
         );
       }
       if (document.querySelector(this.config.target)) {
@@ -513,7 +511,7 @@
     if (OlvyConfig) {
       window.Olvy.init(OlvyConfig);
     }
-  } catch (e) {
+  } catch (_e) {
     console.warn("[Olvy] - Ran into an issue initialising from OlvyConfig variable");
   }
 })();

@@ -28,7 +28,7 @@ import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
 // @ts-ignore
-import olvy from "libs/olvy.js";
+import _olvy from "libs/olvy.js";
 
 function loadInitialTheme() {
   let metaElement = document.querySelector("meta[name='commit-hash']");

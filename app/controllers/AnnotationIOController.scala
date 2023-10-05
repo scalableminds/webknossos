@@ -390,8 +390,6 @@ Expects:
                                     skipVolumeData: Boolean,
                                     volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
 
-    logger.info(s"Download Explorational. volumeAsZarr: $volumeDataZipFormat")
-
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
     def skeletonToTemporaryFile(dataset: Dataset,

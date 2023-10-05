@@ -119,17 +119,17 @@ function RenderAnimationModal(props: Props) {
   };
 
   return (
-    <Modal title="Render Animation" open={isOpen} width={800} onOk={submitJob} onCancel={onClose}>
+    <Modal title="Render Animation" open={isOpen} width={800} onOk={submitJob} onCancel={onClose} okText="Start Rendering">
       <React.Fragment>
         <Row gutter={8}>
-          <Col span={12}>
+          <Col span={8}>
             <img
               src="/assets/images/animation-illustration.png"
               alt="Render an animation showing your dataset in 3D"
-              style={{ width: 200, display: 'inline-block' }}
+              style={{ width: 220, display: "inline-block" }}
             />
           </Col>
-          <Col span={12}>
+          <Col span={16}>
             <Typography.Text>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ac nisi mauris. Nunc
               et enim malesuada, semper lacus ac, posuere ipsum. Aliquam cursus consectetur auctor.
@@ -140,17 +140,19 @@ function RenderAnimationModal(props: Props) {
             </Typography.Text>
           </Col>
         </Row>
-        <Row gutter={8}>
-          <Divider
+                  <Divider
             style={{
               margin: "18px 0",
             }}
           >
             Animation Setup
           </Divider>
+        <Row gutter={[8,26]}>
 
-          <Col span={12}>
+          <Col span={8}>
             <Typography.Title level={5}>Camera Position</Typography.Title>
+          </Col>
+          <Col span={16}>
             <Radio.Group
               value={selectedCameraPosition}
               onChange={(ev) => setCameraPosition(ev.target.value)}
@@ -175,8 +177,11 @@ function RenderAnimationModal(props: Props) {
               </Space>
             </Radio.Group>
           </Col>
-          <Col span={12}>
+
+          <Col span={8}>
             <Typography.Title level={5}>Movie Resolution</Typography.Title>
+          </Col>
+          <Col span={16}>
             <Radio.Group
               value={selectedMovieResolution}
               onChange={(ev) => setMovieResolution(ev.target.value)}
@@ -184,21 +189,24 @@ function RenderAnimationModal(props: Props) {
             >
               <Space direction="vertical">
                 <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
-                  Standard Definition (640x480)
+                  Standard Definition (640 × 480)
                 </Radio.Button>
                 <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
                   <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-                    High Definition (1920x1080)
+                    High Definition (1920 × 1080)
                   </PricingEnforcedSpan>
                 </Radio.Button>
               </Space>
             </Radio.Group>
           </Col>
-          <Col span={24}>
-            <Typography.Title level={5} style={{ marginTop: 18 }}>
+
+          <Col span={8}>
+            <Typography.Title level={5} style={{ marginTop: 8 }}>
               Options
             </Typography.Title>
-            <Space direction="horizontal">
+          </Col>
+          <Col span={16}>
+            <Space direction="vertical">
               <Checkbox
                 checked={areMeshesEnabled}
                 onChange={(ev) => setMeshesEnabled(ev.target.checked)}
@@ -223,8 +231,6 @@ function RenderAnimationModal(props: Props) {
             </Space>
           </Col>
         </Row>
-
-        <Row>
           <Divider
             style={{
               margin: "18px 0",
@@ -232,24 +238,40 @@ function RenderAnimationModal(props: Props) {
           >
             Layer & Bounding Box
           </Divider>
-          <LayerSelection
-            layers={colorLayers}
-            value={selectedLayerName}
-            onChange={setSelectedLayerName}
-            tracing={tracing}
-            style={{ width: "100%" }}
-          />
+        <Row gutter={[8,10]}>
 
-          <BoundingBoxSelection
-            value={selectedBoundingBoxId}
-            userBoundingBoxes={userBoundingBoxes}
-            setSelectedBoundingBoxId={(boxId: number | null) => {
-              if (boxId != null) {
-                setSelectedBoundingBoxId(boxId);
-              }
-            }}
-            style={{ width: "100%", marginTop: 10 }}
-          />
+          <Col span={8}>
+            <Typography.Title level={5}>
+              Layer
+            </Typography.Title>
+          </Col>
+          <Col span={16}>
+            <LayerSelection
+              layers={colorLayers}
+              value={selectedLayerName}
+              onChange={setSelectedLayerName}
+              tracing={tracing}
+              style={{ width: "100%" }}
+            />
+          </Col>
+
+          <Col span={8}>
+            <Typography.Title level={5} style={{marginTop: 8}}>
+              Bounding Box
+            </Typography.Title>
+          </Col>
+          <Col span={16}>
+            <BoundingBoxSelection
+              value={selectedBoundingBoxId}
+              userBoundingBoxes={userBoundingBoxes}
+              setSelectedBoundingBoxId={(boxId: number | null) => {
+                if (boxId != null) {
+                  setSelectedBoundingBoxId(boxId);
+                }
+              }}
+              style={{ width: "100%", marginTop: 10 }}
+            />
+          </Col>
         </Row>
       </React.Fragment>
     </Modal>

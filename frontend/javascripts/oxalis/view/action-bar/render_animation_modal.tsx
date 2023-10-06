@@ -1,15 +1,4 @@
-import {
-  Checkbox,
-  Col,
-  Divider,
-  Modal,
-  ModalProps,
-  Radio,
-  Row,
-  Space,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Space, Tooltip } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
@@ -122,29 +111,33 @@ function RenderAnimationModal(props: Props) {
     <Modal
       title="Render Animation"
       open={isOpen}
-      width={800}
+      width={700}
       onOk={submitJob}
       onCancel={onClose}
       okText="Start Rendering"
     >
       <React.Fragment>
         <Row gutter={8}>
-          <Col span={8}>
+          <Col span={8} style={{ textAlign: "center" }}>
             <img
               src="/assets/images/animation-illustration.png"
               alt="Render an animation showing your dataset in 3D"
-              style={{ width: 220, display: "inline-block" }}
+              style={{ width: 160, display: "inline-block" }}
             />
           </Col>
           <Col span={16}>
-            <Typography.Text>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ac nisi mauris. Nunc
-              et enim malesuada, semper lacus ac, posuere ipsum. Aliquam cursus consectetur auctor.
-              Donec consequat libero aliquam, accumsan leo in, fermentum nisi. Nunc ac neque sed
-              felis finibus facilisis id et magna. Aenean at est a lectus efficitur fringilla vel
-              eget ex. Donec quis ipsum et arcu pharetra pellentesque sed eu odio. In aliquet
-              commodo egestas
-            </Typography.Text>
+            <p>
+              Render a 15-second animation of your data. Watch as the block of volumetric image data
+              shrinks to reveal segmented objects. Choose from three perspective options and select
+              the color layer and meshes you want to render.
+            </p>
+            <p>
+              For custom animations, please{" "}
+              <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+                contact us
+              </a>
+              .
+            </p>
           </Col>
         </Row>
         <Divider
@@ -154,10 +147,8 @@ function RenderAnimationModal(props: Props) {
         >
           Animation Setup
         </Divider>
-        <Row gutter={[8, 26]}>
-          <Col span={8}>
-            <Typography.Title level={5}>Camera Position</Typography.Title>
-          </Col>
+        <Row gutter={[8, 30]}>
+          <Col span={8}>Camera Position</Col>
           <Col span={16}>
             <Radio.Group
               value={selectedCameraPosition}
@@ -184,9 +175,7 @@ function RenderAnimationModal(props: Props) {
             </Radio.Group>
           </Col>
 
-          <Col span={8}>
-            <Typography.Title level={5}>Movie Resolution</Typography.Title>
-          </Col>
+          <Col span={8}>Movie Resolution</Col>
           <Col span={16}>
             <Radio.Group
               value={selectedMovieResolution}
@@ -206,11 +195,7 @@ function RenderAnimationModal(props: Props) {
             </Radio.Group>
           </Col>
 
-          <Col span={8}>
-            <Typography.Title level={5} style={{ marginTop: 8 }}>
-              Options
-            </Typography.Title>
-          </Col>
+          <Col span={8}>Options</Col>
           <Col span={16}>
             <Space direction="vertical">
               <Checkbox
@@ -237,17 +222,9 @@ function RenderAnimationModal(props: Props) {
             </Space>
           </Col>
         </Row>
-        <Divider
-          style={{
-            margin: "18px 0",
-          }}
-        >
-          Layer & Bounding Box
-        </Divider>
-        <Row gutter={[8, 10]}>
-          <Col span={8}>
-            <Typography.Title level={5}>Layer</Typography.Title>
-          </Col>
+        <Divider style={{ margin: "18px 0" }}>Layer & Bounding Box</Divider>
+        <Row gutter={[8, 20]}>
+          <Col span={8}>Layer</Col>
           <Col span={16}>
             <LayerSelection
               layers={colorLayers}
@@ -257,12 +234,7 @@ function RenderAnimationModal(props: Props) {
               style={{ width: "100%" }}
             />
           </Col>
-
-          <Col span={8}>
-            <Typography.Title level={5} style={{ marginTop: 8 }}>
-              Bounding Box
-            </Typography.Title>
-          </Col>
+          <Col span={8}>Bounding Box</Col>
           <Col span={16}>
             <BoundingBoxSelection
               value={selectedBoundingBoxId}
@@ -272,7 +244,7 @@ function RenderAnimationModal(props: Props) {
                   setSelectedBoundingBoxId(boxId);
                 }
               }}
-              style={{ width: "100%", marginTop: 10 }}
+              style={{ width: "100%" }}
             />
           </Col>
         </Row>

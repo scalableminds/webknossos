@@ -1,6 +1,6 @@
 import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
-import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card, Alert } from "antd";
+import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card, Col } from "antd";
 import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
@@ -29,6 +29,7 @@ import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 
 const { ThinSpace } = Unicode;
 
@@ -375,6 +376,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
         </>
       }
       onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      footer={null}
     >
       <Row>Choose a processing job for your dataset:</Row>
       <Space align="center">
@@ -427,22 +429,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
           </Card>
         </Radio.Button>
       </Space>
-      {aIJobModalState === "neuron_inferral" ? (
-        <>
-          <Row>
-            This job will automatically detect and segment all neurons in this dataset. The AI will
-            create a copy of this dataset containing the new neuron segmentation.
-          </Row>
-          <Row>
-            <Alert
-              message="Please note that this feature is experimental and currently only works with electron microscopy data."
-              type="warning"
-              showIcon
-            />
-          </Row>
-          <NeuronSegmentationModal />
-        </>
-      ) : null}
+      {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationModal /> : null}
       {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationModal /> : null}
     </Modal>
   ) : null;
@@ -451,7 +438,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
 function StartingJobForm(props: StartingJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title } = props;
+  const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
   const [form] = Form.useForm();
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -553,6 +540,7 @@ function StartingJobForm(props: StartingJobFormProps) {
       }}
       form={form}
     >
+      {description}
       <DatasetNameFormItem
         label="New Dataset Name"
         activeUser={activeUser}
@@ -644,7 +632,23 @@ export function NeuronSegmentationModal() {
           newDatasetName,
         );
       }}
-      description={""}
+      description={
+        <>
+          <Row>
+            This job will automatically detect and segment all neurons in this dataset. The AI will
+            create a copy of this dataset containing the new neuron segmentation.
+          </Row>
+          <Row style={{ display: "inline" }}>
+            <Col>
+              <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 20 }} />
+            </Col>
+            <Col>
+              Please note that this feature is experimental and currently only works with electron
+              microscopy data.
+            </Col>
+          </Row>
+        </>
+      }
     />
   );
 }

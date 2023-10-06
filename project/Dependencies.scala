@@ -2,29 +2,34 @@ import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  private val akkaVersion = "2.6.21"
-  private val akkaHttpVersion = "10.2.10"
-  private val log4jVersion = "2.17.0"
   private val webknossosWrapVersion = "1.1.23"
   private val silhouetteVersion = "7.0.7"
 
-  private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
-  private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
-  private val akkaHttp = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
-  private val akkaCaching = "com.typesafe.akka" %% "akka-http-caching" % akkaHttpVersion
-  private val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
+  // Asynchronous caching. import com.github.benmanes.caffeine
+  private val caffeine = "com.github.ben-manes.caffeine" % "caffeine" % "3.1.8"
+  // Base64, Hashing. import org.apache.commons.codec
+  private val commonsCodec = "commons-codec" % "commons-codec" % "1.16.0"
+  // Sending emails. import org.apache.commons.mail
   private val commonsEmail = "org.apache.commons" % "commons-email" % "1.5"
+  // File utils. import org.apache.commons.io
   private val commonsIo = "commons-io" % "commons-io" % "2.9.0"
-  private val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
-  private val gson = "com.google.code.gson" % "gson" % "1.7.1"
-  private val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
-  private val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  // HashCodeBuilder. import org.apache.commons.lang3
+  private val commonsLang = "org.apache.commons" % "commons-lang3" % "3.12.0"
+  // Streaming JSON parsing. import com.google.gson
+  private val gson = "com.google.code.gson" % "gson" % "2.10.1"
+  // Protocol buffers. import scalapb
   private val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
+  // Protocol buffer GRPC calls. Communication to FossilDB. import scalapb.grpc
   private val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+  // Protocol buffer GRPC calls. Communication to FossilDB. import io.grpc
+  private val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
+  // Protocol buffer GRPC health check for FossilDB. import io.grpc
+  private val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  // Box/Tryo. import net.liftweb
   private val liftCommon = "net.liftweb" %% "lift-common" % "3.5.0"
-  private val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Provided
-  private val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion % Provided
+  // Play Web Framework. import play
   private val playFramework = "com.typesafe.play" %% "play" % "2.9.0-RC3"
+  // Play’s JSON serialization. import play.api.libs.json
   private val playJson = "com.typesafe.play" %% "play-json" % "2.10.1"
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10"
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
@@ -32,7 +37,7 @@ object Dependencies {
   private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
   private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
   private val silhouetteCrypto = "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion
-  private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
+  private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % "1.1.23"
   private val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   private val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
   private val redis = "net.debasishg" %% "redisclient" % "3.42"
@@ -74,15 +79,14 @@ object Dependencies {
     commonsIo,
     commonsLang,
     liftCommon,
-    log4jApi,
-    log4jCore,
     jodaTime,
     playJson,
     playFramework,
     reactiveBson,
     scalapbRuntime,
     scalaLogging,
-    akkaCaching,
+    caffeine,
+    // akkaCaching,
     bcrypt
   )
 
@@ -95,7 +99,6 @@ object Dependencies {
     grpc,
     grpcServices,
     scalapbRuntimeGrpc,
-    akkaLogging,
     ehcache,
     gson,
     webknossosWrap,
@@ -106,7 +109,6 @@ object Dependencies {
     swaggerScala,
     playRoutesCompiler,
     spire,
-    akkaHttp,
     redis,
     jhdf,
     ucarCdm,
@@ -130,7 +132,6 @@ object Dependencies {
   )
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
-    akkaTest,
     commonsCodec,
     scalaTestPlusPlay,
     silhouette,

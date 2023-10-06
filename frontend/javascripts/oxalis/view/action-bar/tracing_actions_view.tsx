@@ -70,7 +70,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { StartingJobModal } from "./starting_job_modals";
+import { StartingJobModal, StartAIJobModalState } from "./starting_job_modals";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -88,11 +88,7 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
-  aIJobModalState:
-    | "invisible"
-    | "nuclei_inferral"
-    | "neuron_segmentation"
-    | "mitochondria_detection";
+  aIJobModalState: StartAIJobModalState;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;

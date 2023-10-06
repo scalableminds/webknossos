@@ -31,26 +31,27 @@ import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 
 const { ThinSpace } = Unicode;
-const enum JobNames {
-  NEURON_INFERRAL = "neuron inferral",
-  NUCLEI_INFERRAL = "nuclei inferral",
-  MATERIALIZE_VOLUME_ANNOTATION = "materialize volume annotation",
-}
-const jobNameToImagePath: Record<JobNames, string | null> = {
-  "neuron inferral": "neuron_inferral_example.jpg",
-  "nuclei inferral": "nuclei_inferral_example.jpg",
-  "materialize volume annotation": "materialize_volume_annotation_example.jpg",
+
+export type StartAIJobModalState =
+  | "neuron_inferral"
+  | "nuclei_inferral"
+  | "mitochondria_inferral"
+  | "materialize_volume_annotation"
+  | "invisible";
+
+const jobNameToImagePath: Record<StartAIJobModalState, string | null> = {
+  neuron_inferral: "neuron_inferral_example.png",
+  nuclei_inferral: "nuclei_inferral_example.png",
+  mitochondria_inferral: "mito_inferral_example.png",
+  materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
+  invisible: "",
 };
 type Props = {
   handleClose: () => void;
 };
 
 type StartingJobModalProps = {
-  aIJobModalState:
-    | "invisible"
-    | "nuclei_inferral"
-    | "neuron_segmentation"
-    | "mitochondria_detection";
+  aIJobModalState: StartAIJobModalState;
 };
 
 type JobApiCallArgsType = {
@@ -379,14 +380,14 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
       <Space align="center">
         <Radio.Button
           style={radioStyle}
-          checked={aIJobModalState === "neuron_segmentation"}
-          onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_segmentation"))}
+          checked={aIJobModalState === "neuron_inferral"}
+          onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
         >
           <Card bordered={false}>
             <Row>Neuron segmentation</Row>
             <Row>
               <img
-                src={"/assets/images/neuron_segmentation.png"}
+                src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
                 alt={"Neuron segmentation example"}
                 style={centerImageStyle}
               />
@@ -402,7 +403,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
             <Row>Nuclei detection</Row>
             <Row>
               <img
-                src={"/assets/images/nuclei_inferral.png"}
+                src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
                 alt={"Nuclei inferral example"}
                 style={centerImageStyle}
               />
@@ -411,14 +412,14 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
         </Radio.Button>
         <Radio.Button
           style={radioStyle}
-          checked={aIJobModalState === "mitochondria_detection"}
-          onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_detection"))}
+          checked={aIJobModalState === "mitochondria_inferral"}
+          onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
         >
           <Card bordered={false}>
             <Row>Mitochondria detection</Row>
             <Row>
               <img
-                src={"/assets/images/mito_detection.png"}
+                src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
                 alt={"Mitochondria detection example"}
                 style={centerImageStyle}
               />
@@ -426,7 +427,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
           </Card>
         </Radio.Button>
       </Space>
-      {aIJobModalState === "neuron_segmentation" ? (
+      {aIJobModalState === "neuron_inferral" ? (
         <>
           <Row>
             This job will automatically detect and segment all neurons in this dataset. The AI will
@@ -525,7 +526,7 @@ function StartingJobForm(props: StartingJobFormProps) {
     initialOutputSegmentationLayerName || "segmentation"
   }_corrected`;
   // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
-  const hasOutputSegmentationLayer = jobName === JobNames.MATERIALIZE_VOLUME_ANNOTATION;
+  const hasOutputSegmentationLayer = jobName === "materialize_volume_annotation";
   const notAllowedOutputLayerNames = allLayers
     .filter((layer) => {
       // Existing layer names may not be used for the output layer. The only exception
@@ -588,7 +589,7 @@ export function NucleiSegmentationModal() {
     <StartingJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       buttonLabel="Start AI Segmentation"
-      jobName={JobNames.NUCLEI_INFERRAL}
+      jobName={"nuclei_inferral"}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
@@ -624,7 +625,7 @@ export function NeuronSegmentationModal() {
   return (
     <StartingJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
-      jobName={JobNames.NEURON_INFERRAL}
+      jobName={"neuron_inferral"}
       buttonLabel="Start AI Segmentation"
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
@@ -698,7 +699,7 @@ export function MaterializeVolumeAnnotationModal({
       <StartingJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"
-        jobName={JobNames.MATERIALIZE_VOLUME_ANNOTATION}
+        jobName={"materialize_volume_annotation"}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
         fixedSelectedLayer={fixedSelectedLayer}

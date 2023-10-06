@@ -1,5 +1,6 @@
 import type { AnnotationTool } from "oxalis/constants";
 import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
+import { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -103,7 +104,7 @@ export const setShareModalVisibilityAction = (visible: boolean) =>
     visible,
   } as const);
 export const setAIJobModalStateAction = (
-  state: "invisible" | "nuclei_inferral" | "neuron_segmentation" | "mitochondria_detection",
+  state: StartAIJobModalState,
 ) =>
   ({
     type: "SET_AI_JOB_MODAL_STATE",

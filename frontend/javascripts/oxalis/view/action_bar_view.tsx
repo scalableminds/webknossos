@@ -199,7 +199,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_segmentation"))}
+        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
         style={{ marginLeft: 12 }}
       >
         <Tooltip title="Start a processing job using AI">

@@ -1,6 +1,6 @@
 import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
-import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card, Col } from "antd";
+import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card } from "antd";
 import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
@@ -634,18 +634,28 @@ export function NeuronSegmentationModal() {
       }}
       description={
         <>
+          <Space />
           <Row>
             This job will automatically detect and segment all neurons in this dataset. The AI will
             create a copy of this dataset containing the new neuron segmentation.
           </Row>
-          <Row style={{ display: "inline" }}>
-            <Col>
-              <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 20 }} />
-            </Col>
-            <Col>
+          <Space />
+          <Row style={{ display: "grid" }}>
+            <div
+              style={{
+                gridColumnStart: 1,
+                gridColumnEnd: 2,
+                gridRowStart: 1,
+                gridRowEnd: 3,
+                margin: "auto",
+              }}
+            >
+              <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 22 }} />
+            </div>
+            <div style={{ gridColumnStart: 2, gridColumnEnd: 3, gridRowStart: 1, gridRowEnd: 3 }}>
               Please note that this feature is experimental and currently only works with electron
               microscopy data.
-            </Col>
+            </div>
           </Row>
         </>
       }

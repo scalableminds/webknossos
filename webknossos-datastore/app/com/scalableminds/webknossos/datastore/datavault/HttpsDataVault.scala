@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor
 }
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.http.Status
 import play.api.libs.ws.{WSAuthScheme, WSClient, WSResponse}
 
@@ -92,6 +93,15 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       }
     }
 
+  private def getCredential = credential
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: HttpsDataVault => other.getCredential == credential
+    case _                     => false
+  }
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(credential).toHashCode
 }
 
 object HttpsDataVault {

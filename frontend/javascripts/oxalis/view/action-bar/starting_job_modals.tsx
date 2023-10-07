@@ -378,59 +378,61 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
       onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       footer={null}
     >
-      <Row>Choose a processing job for your dataset:</Row>
-      <Space align="center">
-        <Radio.Button
-          style={radioStyle}
-          checked={aIJobModalState === "neuron_inferral"}
-          onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
-        >
-          <Card bordered={false}>
-            <Row>Neuron segmentation</Row>
-            <Row>
-              <img
-                src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
-                alt={"Neuron segmentation example"}
-                style={centerImageStyle}
-              />
-            </Row>
-          </Card>
-        </Radio.Button>
-        <Radio.Button
-          style={radioStyle}
-          checked={aIJobModalState === "nuclei_inferral"}
-          onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
-        >
-          <Card bordered={false}>
-            <Row>Nuclei detection</Row>
-            <Row>
-              <img
-                src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                alt={"Nuclei inferral example"}
-                style={centerImageStyle}
-              />
-            </Row>
-          </Card>
-        </Radio.Button>
-        <Radio.Button
-          style={radioStyle}
-          checked={aIJobModalState === "mitochondria_inferral"}
-          onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
-        >
-          <Card bordered={false}>
-            <Row>Mitochondria detection</Row>
-            <Row>
-              <img
-                src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
-                alt={"Mitochondria detection example"}
-                style={centerImageStyle}
-              />
-            </Row>
-          </Card>
-        </Radio.Button>
+      <Space direction="vertical" size="middle">
+        <Row>Choose a processing job for your dataset:</Row>
+        <Space align="center">
+          <Radio.Button
+            style={radioStyle}
+            checked={aIJobModalState === "neuron_inferral"}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+          >
+            <Card bordered={false}>
+              <Row>Neuron segmentation</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
+                  alt={"Neuron segmentation example"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Card>
+          </Radio.Button>
+          <Radio.Button
+            style={radioStyle}
+            checked={aIJobModalState === "nuclei_inferral"}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+          >
+            <Card bordered={false}>
+              <Row>Nuclei detection</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                  alt={"Nuclei inferral example"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Card>
+          </Radio.Button>
+          <Radio.Button
+            style={radioStyle}
+            checked={aIJobModalState === "mitochondria_inferral"}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+          >
+            <Card bordered={false}>
+              <Row>Mitochondria detection</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                  alt={"Mitochondria detection example"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Card>
+          </Radio.Button>
+        </Space>
+        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationModal /> : null}
+        {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationModal /> : null}
       </Space>
-      {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationModal /> : null}
-      {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationModal /> : null}
     </Modal>
   ) : null;
 }
@@ -634,29 +636,29 @@ export function NeuronSegmentationModal() {
       }}
       description={
         <>
-          <Space />
-          <Row>
-            This job will automatically detect and segment all neurons in this dataset. The AI will
-            create a copy of this dataset containing the new neuron segmentation.
-          </Row>
-          <Space />
-          <Row style={{ display: "grid" }}>
-            <div
-              style={{
-                gridColumnStart: 1,
-                gridColumnEnd: 2,
-                gridRowStart: 1,
-                gridRowEnd: 3,
-                margin: "auto",
-              }}
-            >
-              <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 22 }} />
-            </div>
-            <div style={{ gridColumnStart: 2, gridColumnEnd: 3, gridRowStart: 1, gridRowEnd: 3 }}>
-              Please note that this feature is experimental and currently only works with electron
-              microscopy data.
-            </div>
-          </Row>
+          <Space direction="vertical" size="middle">
+            <Row>
+              This job will automatically detect and segment all neurons in this dataset. The AI
+              will create a copy of this dataset containing the new neuron segmentation.
+            </Row>
+            <Row style={{ display: "grid" }}>
+              <div
+                style={{
+                  gridColumnStart: 1,
+                  gridColumnEnd: 2,
+                  gridRowStart: 1,
+                  gridRowEnd: 3,
+                  margin: "auto",
+                }}
+              >
+                <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 22 }} />
+              </div>
+              <div style={{ gridColumnStart: 2, gridColumnEnd: 3, gridRowStart: 1, gridRowEnd: 3 }}>
+                Please note that this feature is experimental and currently only works with electron
+                microscopy data.
+              </div>
+            </Row>
+          </Space>
         </>
       }
     />

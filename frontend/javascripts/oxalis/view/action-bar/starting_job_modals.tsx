@@ -738,7 +738,7 @@ export function MaterializeVolumeAnnotationModal({
   }
 
   return (
-    <Modal>
+    <Modal onCancel={handleClose} open width={700} footer={null}>
       <StartingJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"

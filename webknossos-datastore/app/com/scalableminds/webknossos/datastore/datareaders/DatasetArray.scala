@@ -40,12 +40,7 @@ class DatasetArray(vaultPath: VaultPath,
     }
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
-    val (shapeArray2, offsetArray2) = axisOrder match {
-      case AxisOrder3D(x, y, z, c, t) => (shapeArray, offsetArray)
-      case AxisOrder2D(x, y, c)       => (shapeArray.drop(1) :+ 1, offsetArray.drop(1) :+ 0)
-    }
-
-    readBytes(shapeArray2, offsetArray2)
+    readBytes(shapeArray, offsetArray)
   }
 
   def readBytesWithAdditionalCoordinates(

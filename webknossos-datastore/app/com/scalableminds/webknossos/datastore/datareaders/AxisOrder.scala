@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import play.api.libs.json.{JsNumber, JsObject, JsResult, JsValue, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{JsError, JsNumber, JsObject, JsResult, JsValue, Json, OFormat, Reads, Writes}
 
 sealed abstract class AxisOrder() {
   def x: Int
@@ -55,6 +55,7 @@ object AxisOrder {
             } yield AxisOrder2D(x_value, y_value, c_value)
         }
       }
+      case _ => JsError()
     }
   }
 

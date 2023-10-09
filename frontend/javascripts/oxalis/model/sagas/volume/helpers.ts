@@ -23,7 +23,7 @@ import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { Model } from "oxalis/singletons";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { VolumeTracing } from "oxalis/store";
+import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
@@ -56,6 +56,19 @@ export function* getBoundingBoxForViewport(
 
   const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
+}
+
+export function getBoundingBoxInMag1(boudingBox: BoundingBoxObject, magOfBB: Vector3) {
+  return {
+    topLeft: [
+      boudingBox.topLeft[0] * magOfBB[0],
+      boudingBox.topLeft[1] * magOfBB[1],
+      boudingBox.topLeft[2] * magOfBB[2],
+    ] as Vector3,
+    width: boudingBox.width * magOfBB[0],
+    height: boudingBox.height * magOfBB[1],
+    depth: boudingBox.depth * magOfBB[2],
+  };
 }
 
 export function applyLabeledVoxelMapToAllMissingResolutions(

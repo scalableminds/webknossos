@@ -159,7 +159,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2
       directedSynapseListsMutable(dstAgglomerate).in ++= pairWithSynapses._2
     }
-    directedSynapseListsMutable.mapValues(_.freeze)
+    directedSynapseListsMutable.view.mapValues(_.freeze).toMap
   }
 
   private def ingoingSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =

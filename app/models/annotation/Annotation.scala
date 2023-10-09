@@ -43,6 +43,8 @@ case class Annotation(
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
+  def nameOpt: Option[String] = if (name.isEmpty) None else Some(name)
+
   lazy val id: String = _id.toString
 
   def tracingType: TracingType.Value = {

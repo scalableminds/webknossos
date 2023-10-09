@@ -6,6 +6,7 @@ object Dependencies {
   private val silhouetteVersion = "7.0.7"
   private val brotliVersion = "1.11.0"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
+  private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   // Asynchronous caching. import com.github.benmanes.caffeine
   private val caffeine = "com.github.ben-manes.caffeine" % "caffeine" % "3.1.8"
@@ -24,9 +25,9 @@ object Dependencies {
   // Protocol buffer GRPC calls. Communication to FossilDB. import scalapb.grpc
   private val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
   // Protocol buffer GRPC calls. Communication to FossilDB. import io.grpc
-  private val grpc = "io.grpc" % "grpc-netty-shaded" % scalapbVersion
+  private val grpc = "io.grpc" % "grpc-netty-shaded" % grpcVersion
   // Protocol buffer GRPC health check for FossilDB. import io.grpc
-  private val grpcServices = "io.grpc" % "grpc-services" % scalapbVersion
+  private val grpcServices = "io.grpc" % "grpc-services" % grpcVersion
   // Box/Tryo. import net.liftweb
   private val liftCommon = "net.liftweb" %% "lift-common" % "3.5.0"
   // Play Web Framework. import play
@@ -82,17 +83,22 @@ object Dependencies {
   // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
   private val bcrypt = "at.favre.lib" % "bcrypt" % "0.10.2"
 
-  // Swagger API annotations.
+  // Swagger API descriptions. import io.swagger
   private val swaggerCore = "io.swagger" % "swagger-core" % "1.6.11"
   // Swagger API annotations. import io.swagger.annotations
   private val swaggerScala = "io.swagger" %% "swagger-scala-module" % "1.0.6"
+  // Swagger API descriptions generated from play routes. import play.routes
   private val playRoutesCompiler = "com.typesafe.play" %% "routes-compiler" % "2.8.16"
 
   private val sql = Seq(
+    // SQL Queries. import slick
     "com.typesafe.slick" %% "slick" % "3.4.1",
+    // SQL Queries connection pool. not imported.
     "com.typesafe.slick" %% "slick-hikaricp" % "3.4.1",
+    // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % "3.4.1",
-    "org.postgresql" % "postgresql" % "42.5.2"
+    // SQL Queries postgres specifics. not imported.
+    "org.postgresql" % "postgresql" % "42.5.4"
   )
 
   // private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"

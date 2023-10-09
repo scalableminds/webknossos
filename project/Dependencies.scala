@@ -4,6 +4,8 @@ import sbt._
 object Dependencies {
   private val webknossosWrapVersion = "1.1.23"
   private val silhouetteVersion = "7.0.7"
+  private val brotliVersion = "1.11.0"
+  private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
 
   // Asynchronous caching. import com.github.benmanes.caffeine
   private val caffeine = "com.github.ben-manes.caffeine" % "caffeine" % "3.1.8"
@@ -18,52 +20,71 @@ object Dependencies {
   // Streaming JSON parsing. import com.google.gson
   private val gson = "com.google.code.gson" % "gson" % "2.10.1"
   // Protocol buffers. import scalapb
-  private val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
+  private val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion
   // Protocol buffer GRPC calls. Communication to FossilDB. import scalapb.grpc
-  private val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+  private val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
   // Protocol buffer GRPC calls. Communication to FossilDB. import io.grpc
-  private val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
+  private val grpc = "io.grpc" % "grpc-netty-shaded" % scalapbVersion
   // Protocol buffer GRPC health check for FossilDB. import io.grpc
-  private val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  private val grpcServices = "io.grpc" % "grpc-services" % scalapbVersion
   // Box/Tryo. import net.liftweb
   private val liftCommon = "net.liftweb" %% "lift-common" % "3.5.0"
   // Play Web Framework. import play
   private val playFramework = "com.typesafe.play" %% "play" % "2.9.0-RC3"
   // Play’s JSON serialization. import play.api.libs.json
   private val playJson = "com.typesafe.play" %% "play-json" % "2.10.1"
+  // ObjectIds. import reactivemongo.api.bson
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10"
+  // LazyLogging. import com.typesafe.scalalogging
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
+  // End-to-end tests. import org.scalatestplus.play
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
+  // Authenticated requests. import com.mohiva.play.silhouette
   private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion
-  private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
+  // Signing Cookies. import com.mohiva.play.silhouette.crypto
   private val silhouetteCrypto = "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion
+  // Reading wkw files. import com.scalableminds.webknossos.wrap
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % "1.1.23"
-  private val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
-  private val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
+  // Writing XML. import com.sun.xml.txw2
+  private val xmlWriter = "org.glassfish.jaxb" % "txw2" % "4.0.2"
+  // Makes txw2 write self-closing tags in xml (which we want). Not imported.
+  private val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "4.0.6"
+  // Redis database client. import com.redis
   private val redis = "net.debasishg" %% "redisclient" % "3.42"
+  // Handling of unsigned integer types. import spire
   private val spire = "org.typelevel" %% "spire" % "0.17.0"
+  // Graph algorithms. import org.jgrapht
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
-  private val jhdf = "cisd" % "jhdf5" % "19.04.0"
-  private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
+  // Read hdf5 files. import ch.systemsx.cisd.hdf5
+  private val jhdf = "cisd" % "jhdf5" % "19.04.1"
+  // MultiArray (ndarray) handles. import ucar
+  private val ucarCdm = "edu.ucar" % "cdm-core" % "5.4.2"
+  // Datetime utils. import org.joda.time
   private val jodaTime = "joda-time" % "joda-time" % "2.12.5"
+  // Json Web Tokens (used for OIDC Auth). import pdi.jwt
+  private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.2.0"
+  // Amazon S3 cloud storage client. import com.amazonaws
+  private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.470"
+  // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
+  private val googleCloudStorage = "com.google.cloud" % "google-cloud-storage" % "2.20.1"
+  // Blosc compression. import org.blosc
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
-  private val guava = "com.google.guava" % "guava" % "18.0"
-  private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
-  private val tika = "org.apache.tika" % "tika-core" % "1.5"
-  private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.14.2"
+  // Zstd compression. import org.apache.commons.compress
   private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
-  private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
-  private val googleCloudStorage = "com.google.cloud" % "google-cloud-storage" % "2.13.1"
-  private val googleCloudStorageNio = "com.google.cloud" % "google-cloud-nio" % "0.123.28"
+  // Zstd compression native bindings. not imported
+  private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
+  // Brotli compression. import com.aayushatharva.brotli4j
   private val brotli4j = "com.aayushatharva.brotli4j" % "brotli4j" % "1.11.0"
+  // Brotli compression native bindings. not imported
   private val brotli4jLinuxX86 = brotli4j.withName("native-linux-x86_64")
   private val brotli4cOsXX86 = brotli4j.withName("native-osx-x86_64")
   private val brotli4cOsXArm = brotli4j.withName("native-osx-aarch64")
-  private val zstdJni = "com.github.luben" % "zstd-jni" % "1.5.5-5"
+  // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
   private val bcrypt = "at.favre.lib" % "bcrypt" % "0.10.2"
 
-  // For swagger annotations
+  // Swagger API annotations.
   private val swaggerCore = "io.swagger" % "swagger-core" % "1.6.11"
+  // Swagger API annotations. import io.swagger.annotations
   private val swaggerScala = "io.swagger" %% "swagger-scala-module" % "1.0.6"
   private val playRoutesCompiler = "com.typesafe.play" %% "routes-compiler" % "2.8.16"
 
@@ -73,6 +94,8 @@ object Dependencies {
     "com.typesafe.slick" %% "slick-codegen" % "3.4.1",
     "org.postgresql" % "postgresql" % "42.5.2"
   )
+
+  // private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test"
 
   val utilDependencies: Seq[ModuleID] = Seq(
     commonsEmail,
@@ -112,14 +135,10 @@ object Dependencies {
     redis,
     jhdf,
     ucarCdm,
-    jackson,
-    guava,
     awsS3,
-    tika,
     jblosc,
     commonsCompress,
     googleCloudStorage,
-    googleCloudStorageNio,
     brotli4j,
     brotli4jLinuxX86,
     brotli4cOsXX86,
@@ -135,7 +154,7 @@ object Dependencies {
     commonsCodec,
     scalaTestPlusPlay,
     silhouette,
-    silhouetteTestkit,
+    // silhouetteTestkit,
     silhouetteCrypto,
     specs2 % Test,
     xmlWriter,

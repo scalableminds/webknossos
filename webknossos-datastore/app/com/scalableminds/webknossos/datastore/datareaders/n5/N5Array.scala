@@ -2,13 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  AxisOrder3D,
-  ChunkReader,
-  DatasetArray,
-  DatasetHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -36,7 +30,7 @@ object N5Array extends LazyLogging {
                   dataSourceId,
                   layerName,
                   header,
-                  axisOrderOpt.getOrElse(AxisOrder3D.asZyxFromRank(header.rank)),
+                  axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                   channelIndex,
                   None,
                   sharedChunkContentsCache)

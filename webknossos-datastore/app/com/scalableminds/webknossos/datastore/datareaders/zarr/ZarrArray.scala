@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, AxisOrder3D, DatasetArray, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -29,7 +29,7 @@ object ZarrArray extends LazyLogging {
                     dataSourceId,
                     layerName,
                     header,
-                    axisOrderOpt.getOrElse(AxisOrder3D.asZyxFromRank(header.rank)),
+                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                     channelIndex,
                     None,
                     sharedChunkContentsCache)

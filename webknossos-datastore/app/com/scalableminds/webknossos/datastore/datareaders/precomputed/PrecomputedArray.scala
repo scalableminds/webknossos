@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, AxisOrder3D, DatasetArray}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -39,7 +39,7 @@ object PrecomputedArray extends LazyLogging {
         dataSourceId,
         layerName,
         scaleHeader,
-        axisOrderOpt.getOrElse(AxisOrder3D.asZyxFromRank(scaleHeader.rank)),
+        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
         channelIndex,
         None,
         sharedChunkContentsCache

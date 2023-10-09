@@ -36,6 +36,9 @@ sealed abstract class AxisOrder() {
 }
 
 object AxisOrder {
+
+  // assumes that the last three elements of the shape are z,y,x (standard in OME NGFF)
+  def asZyxFromRank(rank: Int): AxisOrder3D = AxisOrder3D(rank - 1, rank - 2, rank - 3)
   implicit object AxisOrderReads extends Reads[AxisOrder] {
     def reads(json: JsValue): JsResult[AxisOrder] = json match {
       case JsObject(obj) => {
@@ -82,8 +85,6 @@ case class AxisOrder3D(override val x: Int,
     extends AxisOrder
 
 object AxisOrder3D {
-  // assumes that the last three elements of the shape are z,y,x (standard in OME NGFF)
-  def asZyxFromRank(rank: Int): AxisOrder3D = AxisOrder3D(rank - 1, rank - 2, rank - 3)
 
   def cxyz: AxisOrder3D = asCxyzFromRank(rank = 4)
 

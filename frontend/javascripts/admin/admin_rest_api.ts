@@ -2130,9 +2130,9 @@ window.setMaintenance = setMaintenance;
 
 // Meshes
 
-// These parameters are bundled into an object to avoid that the computeIsosurface function
+// These parameters are bundled into an object to avoid that the computeAdHocMesh function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type IsosurfaceRequest = {
+type meshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
@@ -2146,9 +2146,9 @@ type IsosurfaceRequest = {
   findNeighbors: boolean;
 };
 
-export function computeIsosurface(
+export function computeAdHocMesh(
   requestUrl: string,
-  isosurfaceRequest: IsosurfaceRequest,
+  meshRequest: meshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
@@ -2160,7 +2160,7 @@ export function computeIsosurface(
     subsamplingStrides,
 
     ...rest
-  } = isosurfaceRequest;
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();

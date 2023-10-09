@@ -109,7 +109,7 @@ class SceneController {
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.segmentMeshController.isosurfacesLODRootGroup);
+    this.scene.add(this.segmentMeshController.meshesLODRootGroup);
     this.scene.add(this.meshesRootGroup);
     this.rootGroup.add(new THREE.DirectionalLight());
     this.setupDebuggingMethods();
@@ -323,7 +323,7 @@ class SceneController {
 
     this.taskBoundingBox?.updateForCam(id);
 
-    this.segmentMeshController.isosurfacesLODRootGroup.visible = id === OrthoViews.TDView;
+    this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
 
     const originalPosition = getPosition(Store.getState().flycam);
@@ -519,8 +519,8 @@ class SceneController {
 
     this.taskBoundingBox?.setVisibility(false);
 
-    if (this.segmentMeshController.isosurfacesLODRootGroup != null) {
-      this.segmentMeshController.isosurfacesLODRootGroup.visible = false;
+    if (this.segmentMeshController.meshesLODRootGroup != null) {
+      this.segmentMeshController.meshesLODRootGroup.visible = false;
     }
   }
 

@@ -37,9 +37,9 @@ import {
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   maybeFetchMeshFilesAction,
-  removeIsosurfaceAction,
-  updateIsosurfaceVisibilityAction,
-  refreshIsosurfaceAction,
+  removeMeshAction,
+  updateMeshVisibilityAction,
+  refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -1463,16 +1463,16 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(performMinCutAction(treeId, boundingBoxId));
   },
   removeMesh(layerName: string, meshId: number) {
-    dispatch(removeIsosurfaceAction(layerName, meshId));
+    dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, meshId, false));
+    dispatch(updateMeshVisibilityAction(layerName, meshId, false));
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
   },
   refreshMesh(layerName: string, segmentId: number) {
-    dispatch(refreshIsosurfaceAction(layerName, segmentId));
+    dispatch(refreshMeshAction(layerName, segmentId));
   },
 });
 

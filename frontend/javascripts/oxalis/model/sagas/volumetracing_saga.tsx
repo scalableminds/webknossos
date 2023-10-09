@@ -52,8 +52,8 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
-  AddAdHocIsosurfaceAction,
-  AddPrecomputedIsosurfaceAction,
+  AddAdHocMeshAction,
+  AddPrecomputedMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -671,8 +671,8 @@ export function* diffVolumeTracing(
 
 function* ensureSegmentExists(
   action:
-    | AddAdHocIsosurfaceAction
-    | AddPrecomputedIsosurfaceAction
+    | AddAdHocMeshAction
+    | AddPrecomputedMeshAction
     | SetActiveCellAction
     | ClickSegmentAction,
 ): Saga<void> {

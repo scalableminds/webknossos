@@ -54,11 +54,11 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   maybeFetchMeshFilesAction,
-  refreshIsosurfaceAction,
-  removeIsosurfaceAction,
-  triggerIsosurfacesDownloadAction,
+  refreshMeshAction,
+  removeMeshAction,
+  triggerMeshesDownloadAction,
   updateCurrentMeshFileAction,
-  updateIsosurfaceVisibilityAction,
+  updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   setAdditionalCoordinatesAction,
@@ -79,7 +79,7 @@ import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
   ActiveMappingInfo,
   Flycam,
-  IsosurfaceInformation,
+  MeshInformation,
   OxalisState,
   Segment,
   SegmentGroup,
@@ -119,15 +119,15 @@ const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
 const refreshInterval = 5000;
 
-export const stlIsosurfaceConstants = {
-  isosurfaceMarker: [105, 115, 111],
+export const stlMeshConstants = {
+  meshMarker: [105, 115, 111],
   // ASCII codes for ISO
-  segmentIdIndex: 3, // Write cell index after the isosurfaceMarker
+  segmentIdIndex: 3, // Write cell index after the meshMarker
 };
 const segmentsTabId = "segment-list";
 
 type StateProps = {
-  isosurfaces: Record<number, IsosurfaceInformation>;
+  meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
@@ -164,9 +164,9 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
-    isosurfaces:
+    meshes:
       visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
+        ? state.localSegmentationData[visibleSegmentationLayer.name].meshes
         : EMPTY_OBJECT,
     dataset: state.dataset,
     isJSONMappingEnabled:
@@ -457,7 +457,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    const { segments, segmentGroups, isosurfaces } = nextProps;
+    const { segments, segmentGroups, meshes } = nextProps;
     if (segments == null) {
       return { prevProps: nextProps };
     }
@@ -514,7 +514,7 @@ class SegmentsView extends React.Component<Props, State> {
         },
       };
     }
-    if (prevState.prevProps?.isosurfaces !== isosurfaces) {
+    if (prevState.prevProps?.meshes !== meshes) {
       // Derive the areSegmentsInGroupVisible state so that we know per group
       // if it contains only visible elements. This is used to know whether "Show meshes" or
       // "Hide meshes" context item should be shown.
@@ -526,9 +526,9 @@ class SegmentsView extends React.Component<Props, State> {
         const segmentsOfGroup = groupToSegmentsMap[group.groupId];
         if (segmentsOfGroup == null) return;
         const isSomeSegmentLoadedAndInvisible = segmentsOfGroup.some((segment) => {
-          const segmentIsosurface = isosurfaces[segment.id];
+          const segmentMesh = meshes[segment.id];
           // Only regard loaded, but invisible meshes
-          return segmentIsosurface != null && !isosurfaces[segment.id].isVisible;
+          return segmentMesh != null && !meshes[segment.id].isVisible;
         });
 
         newVisibleMap[group.groupId] = !isSomeSegmentLoadedAndInvisible;
@@ -1189,12 +1189,12 @@ class SegmentsView extends React.Component<Props, State> {
 
   areSelectedSegmentsMeshesVisible = () => {
     const selectedSegments = this.getSelectedSegments();
-    const isosurfaces = this.props.isosurfaces;
+    const meshes = this.props.meshes;
     const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
-      const segmentIsosurface = isosurfaces[segment.id];
-      return segmentIsosurface != null && !isosurfaces[segment.id].isVisible;
+      const segmentMesh = meshes[segment.id];
+      return segmentMesh != null && !meshes[segment.id].isVisible;
     });
-    // show "Hide meshes" if no isosurface is loaded and invisible
+    // show "Hide meshes" if no mesh is loaded and invisible
     return !isSomeMeshLoadedAndInvisible;
   };
 
@@ -1253,11 +1253,11 @@ class SegmentsView extends React.Component<Props, State> {
 
     this.handlePerSegment(groupId, (segment) => {
       if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[
           segment.id
         ] != null
       ) {
-        Store.dispatch(refreshIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+        Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
   };
@@ -1279,11 +1279,11 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return;
     this.handlePerSegment(groupId, (segment) => {
       if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces[
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[
           segment.id
         ] != null
       ) {
-        Store.dispatch(removeIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+        Store.dispatch(removeMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
   };
@@ -1294,8 +1294,8 @@ class SegmentsView extends React.Component<Props, State> {
     isVisible: boolean,
   ) => {
     this.handlePerSegment(groupId, (segment) => {
-      if (Store.getState().localSegmentationData[layerName].isosurfaces[segment.id] != null) {
-        Store.dispatch(updateIsosurfaceVisibilityAction(layerName, segment.id, isVisible));
+      if (Store.getState().localSegmentationData[layerName].meshes[segment.id] != null) {
+        Store.dispatch(updateMeshVisibilityAction(layerName, segment.id, isVisible));
       }
     });
   };
@@ -1388,7 +1388,7 @@ class SegmentsView extends React.Component<Props, State> {
         layerName: visibleSegmentationLayer.name,
       };
     });
-    Store.dispatch(triggerIsosurfacesDownloadAction(segmentsArray));
+    Store.dispatch(triggerMeshesDownloadAction(segmentsArray));
   };
 
   handleDeleteGroup = (groupId: number) => {
@@ -1575,7 +1575,7 @@ class SegmentsView extends React.Component<Props, State> {
                     activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
-                    isosurface={this.props.isosurfaces[segment.id]}
+                    mesh={this.props.meshes[segment.id]}
                     isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
@@ -1789,9 +1789,9 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null || relevantSegments.length === 0) return false;
-    const isosurfacesOfLayer =
-      Store.getState().localSegmentationData[visibleSegmentationLayer.name].isosurfaces;
-    return relevantSegments.some((segment) => isosurfacesOfLayer[segment.id] != null);
+    const meshesOfLayer =
+      Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes;
+    return relevantSegments.some((segment) => meshesOfLayer[segment.id] != null);
   };
 
   onDrop = (dropInfo: {

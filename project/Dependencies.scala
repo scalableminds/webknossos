@@ -30,7 +30,6 @@ object Dependencies {
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
     // Asynchronous caching. import com.github.benmanes.caffeine
     caffeine,
-    // TODO "com.github.ben-manes.caffeine" % "caffeine" % "3.1.8",
     // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
     "at.favre.lib" % "bcrypt" % "0.10.2"
   )

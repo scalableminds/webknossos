@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.annotation._
@@ -12,8 +13,7 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.thirdparty.BrainTracing
+import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
@@ -50,7 +50,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -65,7 +65,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -80,7 +80,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }

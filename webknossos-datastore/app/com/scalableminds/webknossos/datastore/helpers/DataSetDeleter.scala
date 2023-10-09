@@ -19,7 +19,7 @@ trait DataSetDeleter extends LazyLogging with DirectoryConstants {
     def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
       try {
         val deduplicatedTargetPath =
-          if (retryCount == 0) targetPath else targetPath.resolveSibling(targetPath.getFileName + s"($retryCount)")
+          if (retryCount == 0) targetPath else targetPath.resolveSibling(f"${targetPath.getFileName} ($retryCount)")
         val path = Files.move(sourcePath, deduplicatedTargetPath)
         if (path == null) {
           throw new Exception("Deleting dataset failed")

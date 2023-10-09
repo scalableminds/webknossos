@@ -24,10 +24,10 @@ import models.project.ProjectDAO
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -69,7 +69,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
           taskParameters)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
           .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
-        paramsWithTracings = (taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
+        paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
         result <- taskCreationService.createTasks(paramsWithTracings, request.identity)

@@ -5,7 +5,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}

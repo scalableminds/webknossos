@@ -7,7 +7,7 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.io.Directory
 import scala.util.Random
 

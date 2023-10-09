@@ -4,9 +4,9 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import io.swagger.annotations.{Api, ApiOperation, ApiParam}
 import models.shortlinks.{ShortLink, ShortLinkDAO}
-import oxalis.security.{RandomIDGenerator, WkEnv}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{RandomIDGenerator, WkEnv}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject

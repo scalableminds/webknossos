@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import controllers.InitialDataService
 
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO}
+import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}

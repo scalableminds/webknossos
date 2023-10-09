@@ -5,14 +5,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.MultiUserDAO
 import net.liftweb.common.Empty
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,19 +25,19 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     with FoxImplicits {
 
   private val dataStoreReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'key).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "key").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm _)
 
   private val dataStorePublicReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
   @ApiOperation(value = "List all available datastores", nickname = "datastoreList")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list of objects containing datastore information"),

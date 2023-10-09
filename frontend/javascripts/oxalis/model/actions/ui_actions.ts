@@ -103,9 +103,7 @@ export const setShareModalVisibilityAction = (visible: boolean) =>
     type: "SET_SHARE_MODAL_VISIBILITY",
     visible,
   } as const);
-export const setAIJobModalStateAction = (
-  state: StartAIJobModalState,
-) =>
+export const setAIJobModalStateAction = (state: StartAIJobModalState) =>
   ({
     type: "SET_AI_JOB_MODAL_STATE",
     state,

@@ -1,6 +1,6 @@
 import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
-import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card } from "antd";
+import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card, Tooltip } from "antd";
 import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
@@ -367,7 +367,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
   const radioStyle = { width: "auto", height: "auto", padding: 0 };
   return aIJobModalState !== "invisible" ? (
     <Modal
-      width={700}
+      width={667}
       open
       title={
         <>
@@ -387,48 +387,60 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
             onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
           >
             <Card bordered={false}>
-              <Row>Neuron segmentation</Row>
-              <Row>
-                <img
-                  src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
-                  alt={"Neuron segmentation example"}
-                  style={centerImageStyle}
-                />
-              </Row>
+              <Space direction="vertical" size="small">
+                <Row>Neuron segmentation</Row>
+                <Row>
+                  <img
+                    src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
+                    alt={"Neuron segmentation example"}
+                    style={centerImageStyle}
+                  />
+                </Row>
+              </Space>
             </Card>
           </Radio.Button>
-          <Radio.Button
-            style={radioStyle}
-            checked={aIJobModalState === "nuclei_inferral"}
-            onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
-          >
-            <Card bordered={false}>
-              <Row>Nuclei detection</Row>
-              <Row>
-                <img
-                  src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                  alt={"Nuclei inferral example"}
-                  style={centerImageStyle}
-                />
-              </Row>
-            </Card>
-          </Radio.Button>
-          <Radio.Button
-            style={radioStyle}
-            checked={aIJobModalState === "mitochondria_inferral"}
-            onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
-          >
-            <Card bordered={false}>
-              <Row>Mitochondria detection</Row>
-              <Row>
-                <img
-                  src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
-                  alt={"Mitochondria detection example"}
-                  style={centerImageStyle}
-                />
-              </Row>
-            </Card>
-          </Radio.Button>
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              disabled
+              style={radioStyle}
+              checked={aIJobModalState === "nuclei_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row>Nuclei detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                      alt={"Nuclei inferral example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              disabled
+              style={radioStyle}
+              checked={aIJobModalState === "mitochondria_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row>Mitochondria detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                      alt={"Mitochondria detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
         </Space>
         {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationModal /> : null}
         {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationModal /> : null}
@@ -578,7 +590,7 @@ export function NucleiSegmentationModal() {
   return (
     <StartingJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
-      buttonLabel="Start AI Segmentation"
+      buttonLabel="Start AI neuron segmentation"
       jobName={"nuclei_inferral"}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
@@ -616,7 +628,7 @@ export function NeuronSegmentationModal() {
     <StartingJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       jobName={"neuron_inferral"}
-      buttonLabel="Start AI Segmentation"
+      buttonLabel="Start AI neuron segmentation"
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
@@ -641,7 +653,7 @@ export function NeuronSegmentationModal() {
               This job will automatically detect and segment all neurons in this dataset. The AI
               will create a copy of this dataset containing the new neuron segmentation.
             </Row>
-            <Row style={{ display: "grid" }}>
+            <Row style={{ display: "grid", marginBottom: 16 }}>
               <div
                 style={{
                   gridColumnStart: 1,
@@ -653,7 +665,15 @@ export function NeuronSegmentationModal() {
               >
                 <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 22 }} />
               </div>
-              <div style={{ gridColumnStart: 2, gridColumnEnd: 3, gridRowStart: 1, gridRowEnd: 3 }}>
+              <div
+                style={{
+                  gridColumnStart: 2,
+                  gridColumnEnd: 3,
+                  gridRowStart: 1,
+                  gridRowEnd: 3,
+                  marginLeft: 4,
+                }}
+              >
                 Please note that this feature is experimental and currently only works with electron
                 microscopy data.
               </div>

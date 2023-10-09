@@ -38,6 +38,8 @@ import { ArbitraryVectorInput } from "libs/vector_input";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
+import features from "features";
+import { StartAIJobModalState, StartingJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
   <Alert
@@ -57,6 +59,7 @@ type StateProps = {
   isReadOnly: boolean;
   is2d: boolean;
   viewMode: ViewMode;
+  aiJobModalState: StartAIJobModalState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -240,6 +243,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
+    const activeUser = this.props.activeUser;
+    const isAIAnalysisActive = () => {
+      const jobsEnabled = features().jobsEnabled;
+      if (isViewMode) {
+        return jobsEnabled && activeUser != null && activeUser.isSuperUser;
+      }
+      return jobsEnabled;
+    };
 
     const layoutMenu = getLayoutMenu({
       ...layoutProps,
@@ -265,7 +276,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isViewMode ? null : this.renderStartAIJobButton()}
+          {isAIAnalysisActive() ? this.renderStartAIJobButton() : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
@@ -278,6 +289,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
+        <StartingJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }
@@ -292,6 +304,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
+  aiJobModalState: state.uiInformation.aIJobModalState,
 });
 
 const connector = connect(mapStateToProps);

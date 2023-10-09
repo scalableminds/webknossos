@@ -70,8 +70,6 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { StartingJobModal, StartAIJobModalState } from "./starting_job_modals";
-
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
 );
@@ -88,7 +86,6 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
-  aIJobModalState: StartAIJobModalState;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -631,10 +628,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
 
-    if (features().jobsEnabled) {
-      modals.push(<StartingJobModal aIJobModalState={this.props.aIJobModalState} />);
-    }
-
     menuItems.push(screenshotMenuItem);
     menuItems.push({
       key: "user-scripts-button",
@@ -717,7 +710,6 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
-    aIJobModalState: state.uiInformation.aIJobModalState,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

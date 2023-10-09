@@ -117,3 +117,20 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
     }.get)
 }
+
+// In no-partial-copy shortcut, the MultiArray shape is never used, so it is just set to flat.
+// type is always BYTE
+class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
+  val ma2DataType: MADataType = MADataType.BYTE
+
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
+    header.bytesPerElement
+    val flatShape = new Array[Int](bytes.length)
+    MultiArray.factory(ma2DataType, flatShape, bytes)
+  }
+
+  override def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] = {
+    val flatShape = new Array[Int](chunkShape.product * header.bytesPerElement)
+    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber)
+  }
+}

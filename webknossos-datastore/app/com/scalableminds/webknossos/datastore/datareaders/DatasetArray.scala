@@ -83,13 +83,14 @@ class DatasetArray(vaultPath: VaultPath,
   // returns byte array in fortran-order with little-endian values
   private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      typedData <- readAsFortranOrder(shape, offset)
-      asBytes <- BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
+      typedMultiArray <- readAsFortranOrder(shape, offset)
+      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
     } yield asBytes
 
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
-  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
+      implicit ec: ExecutionContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
                                                       axisOrder.permuteIndicesReverse(header.chunkSize),
@@ -98,12 +99,12 @@ class DatasetArray(vaultPath: VaultPath,
     if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-      } yield sourceChunk.getStorage
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex), skipTyping = true)
+      } yield sourceChunk
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-      val targetInCOrder: MultiArray =
-        MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
+      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
+      val targetInCOrder: MultiArray = MultiArrayUtils.orderFlippedView(targetMultiArray)
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
@@ -119,7 +120,7 @@ class DatasetArray(vaultPath: VaultPath,
       })
       for {
         _ <- copiedFuture
-      } yield targetBuffer
+      } yield targetMultiArray
     }
   }
 
@@ -133,20 +134,23 @@ class DatasetArray(vaultPath: VaultPath,
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
-    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex), _ => readSourceChunkData(chunkIndex))
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int], skipTyping: Boolean = false)(
+      implicit ec: ExecutionContext): Fox[MultiArray] =
+    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
+                                       _ => readSourceChunkData(chunkIndex, skipTyping))
 
-  private def readSourceChunkData(chunkIndex: Array[Int])(implicit ec: ExecutionContext): Fox[MultiArray] =
+  private def readSourceChunkData(chunkIndex: Array[Int], skipTyping: Boolean)(
+      implicit ec: ExecutionContext): Fox[MultiArray] =
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
         chunkShape = header.chunkSizeAtIndex(chunkIndex)
-        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange))
+        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), skipTyping)
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)
       val chunkShape = header.chunkSizeAtIndex(chunkIndex)
-      chunkReader.read(chunkPath, chunkShape, None)
+      chunkReader.read(chunkPath, chunkShape, None, skipTyping)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =

@@ -14,8 +14,10 @@ class ChunkReader(header: DatasetHeader) {
 
   private lazy val chunkTyper = ChunkTyper.createFromHeader(header)
 
-  def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: Option[NumericRange[Long]])(
-      implicit ec: ExecutionContext): Fox[MultiArray] =
+  def read(path: VaultPath,
+           chunkShapeFromMetadata: Array[Int],
+           range: Option[NumericRange[Long]],
+           skipTyping: Boolean = false)(implicit ec: ExecutionContext): Fox[MultiArray] =
     for {
       chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).futureBox
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)

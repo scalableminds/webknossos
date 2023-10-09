@@ -161,7 +161,7 @@ class DatasetArray(vaultPath: VaultPath,
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
         isBufferShapeEqualChunkShape(bufferShape) &&
-        axisOrder == AxisOrder3D.asCxyzFromRank(header.rank)
+        axisOrder == AxisOrder.asCxyzFromRank(header.rank)
       case _ => false
     }
 

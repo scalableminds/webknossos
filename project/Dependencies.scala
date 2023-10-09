@@ -93,7 +93,6 @@ object Dependencies {
     "commons-codec" % "commons-codec" % "1.16.0",
     // End-to-end tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test",
-    // TODO "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % silhouetteVersion % "test",
     // Authenticated requests. import com.mohiva.play.silhouette
     "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import com.mohiva.play.silhouette.crypto

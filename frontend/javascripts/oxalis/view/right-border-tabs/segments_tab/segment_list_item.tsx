@@ -256,8 +256,7 @@ function _MeshInfoItem(props: {
     return null;
   }
 
-  const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } =
-    mesh;
+  const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } = mesh;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
     <Tooltip title="Download Mesh">

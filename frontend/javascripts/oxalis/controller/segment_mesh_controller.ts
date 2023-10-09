@@ -14,8 +14,7 @@ export default class SegmentMeshController {
   // meshesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   meshesLODRootGroup: CustomLOD;
-  meshesGroupsPerSegmentationId: Record<string, Record<number, Record<number, THREE.Group>>> =
-    {};
+  meshesGroupsPerSegmentationId: Record<string, Record<number, Record<number, THREE.Group>>> = {};
 
   constructor() {
     this.meshesLODRootGroup = new CustomLOD();
@@ -30,11 +29,7 @@ export default class SegmentMeshController {
     return segments[id] != null;
   }
 
-  addMeshFromVertices(
-    vertices: Float32Array,
-    segmentationId: number,
-    layerName: string,
-  ): void {
+  addMeshFromVertices(vertices: Float32Array, segmentationId: number, layerName: string): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -127,17 +122,14 @@ export default class SegmentMeshController {
     if (this.meshesGroupsPerSegmentationId[layerName][segmentationId] == null) {
       return;
     }
-    _.forEach(
-      this.meshesGroupsPerSegmentationId[layerName][segmentationId],
-      (meshGroup, lod) => {
-        const lodNumber = parseInt(lod);
-        if (lodNumber !== NO_LOD_MESH_INDEX) {
-          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-        } else {
-          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-        }
-      },
-    );
+    _.forEach(this.meshesGroupsPerSegmentationId[layerName][segmentationId], (meshGroup, lod) => {
+      const lodNumber = parseInt(lod);
+      if (lodNumber !== NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+      } else {
+        this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+      }
+    });
     delete this.meshesGroupsPerSegmentationId[layerName][segmentationId];
   }
 

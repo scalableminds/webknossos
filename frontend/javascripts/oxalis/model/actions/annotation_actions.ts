@@ -183,11 +183,7 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateMeshVisibilityAction = (
-  layerName: string,
-  id: number,
-  visibility: boolean,
-) =>
+export const updateMeshVisibilityAction = (layerName: string, id: number, visibility: boolean) =>
   ({
     type: "UPDATE_ISOSURFACE_VISIBILITY",
     layerName,

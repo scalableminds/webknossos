@@ -42,7 +42,7 @@ import {
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { actionChannel, takeEvery, call, take, race, put, all } from "typed-redux-saga";
-import {stlMeshConstants} from "oxalis/view/right-border-tabs/segments_tab/segments_view";
+import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeAdHocMesh,
   sendAnalyticsEvent,
@@ -247,11 +247,7 @@ function* loadAdHocMesh(
 
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
-  const { zoomStep, resolutionInfo } = yield* call(
-    getInfoForMeshLoading,
-    layer,
-    meshExtraInfo,
-  );
+  const { zoomStep, resolutionInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
   batchCounterPerSegment[segmentId] = 0;
 
   // If a REMOVE_ISOSURFACE action is dispatched and consumed
@@ -693,13 +689,7 @@ function* loadPrecomputedMeshForSegmentId(
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   yield* put(
-    addPrecomputedMeshAction(
-      layerName,
-      id,
-      seedPosition,
-      seedAdditionalCoordinates,
-      meshFileName,
-    ),
+    addPrecomputedMeshAction(layerName, id, seedPosition, seedAdditionalCoordinates, meshFileName),
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
@@ -1012,11 +1002,7 @@ function sortByDistanceTo(
  * Ad Hoc and Precomputed Meshes
  *
  */
-function* downloadMeshCellById(
-  cellName: string,
-  segmentId: number,
-  layerName: string,
-): Saga<void> {
+function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const geometry = segmentMeshController.getMeshGeometryInBestLOD(segmentId, layerName);
 

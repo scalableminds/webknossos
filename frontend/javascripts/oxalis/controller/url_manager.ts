@@ -58,9 +58,7 @@ export type UrlStateByLayer = Record<
   }
 >;
 
-function mapMeshInfoToUrlMeshDescriptor(
-  meshInfo: MeshInformation,
-): MeshUrlDescriptor {
+function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescriptor {
   const { segmentId, seedPosition } = meshInfo;
   const baseUrlDescriptor: BaseMeshUrlDescriptor = {
     segmentId,

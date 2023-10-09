@@ -1253,9 +1253,8 @@ class SegmentsView extends React.Component<Props, State> {
 
     this.handlePerSegment(groupId, (segment) => {
       if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[
-          segment.id
-        ] != null
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
+        null
       ) {
         Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
       }
@@ -1279,9 +1278,8 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return;
     this.handlePerSegment(groupId, (segment) => {
       if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[
-          segment.id
-        ] != null
+        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
+        null
       ) {
         Store.dispatch(removeMeshAction(visibleSegmentationLayer.name, segment.id));
       }

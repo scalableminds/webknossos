@@ -670,11 +670,7 @@ export function* diffVolumeTracing(
 }
 
 function* ensureSegmentExists(
-  action:
-    | AddAdHocMeshAction
-    | AddPrecomputedMeshAction
-    | SetActiveCellAction
-    | ClickSegmentAction,
+  action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
     getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),

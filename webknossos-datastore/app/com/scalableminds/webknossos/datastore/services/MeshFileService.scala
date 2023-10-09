@@ -18,9 +18,9 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 case class ListMeshChunksRequest(
     meshFile: String,
@@ -118,7 +118,12 @@ object NeuroglancerSegmentManifest {
         }
       }
 
-      chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
+      chunkPositionsList.append(
+        currentChunkPositions._1
+          .lazyZip(currentChunkPositions._2)
+          .lazyZip(currentChunkPositions._3)
+          .map(Vec3Int(_, _, _))
+          .toList)
 
       val currentChunkSizes = ListBuffer[Long]()
       for (_ <- 0 until numChunksPerLod(lod)) {
@@ -162,8 +167,9 @@ case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: St
       chunks = MeshSegmentInfo(
         chunks.chunkShape,
         chunks.gridOrigin,
-        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
-          MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
+        lods = chunks.lods
+          .lazyZip(that.chunks.lods)
+          .map((lod1, lod2) => MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
       )
     )
 }
@@ -205,7 +211,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       mappingVersionForMeshFile(meshFilePath)
     }
 
-    val mappingNameFoxes = (meshFileNames, meshFileVersions).zipped.map { (fileName, fileVersion) =>
+    val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
       val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
       mappingNameForMeshFile(meshFilePath, fileVersion)
     }
@@ -214,7 +220,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
 
       mappingNameOptions = mappingNameBoxes.map(_.toOption)
-      zipped = (meshFileNames, mappingNameOptions, meshFileVersions).zipped
+      zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
     } yield zipped.map(MeshFileInfo(_, _, _)).toSet
   }
 
@@ -253,7 +259,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .asScala
         .toList
       Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    }.flatten ?~> "mesh.file.open.failed"
+    }.toFox.flatten ?~> "mesh.file.open.failed"
   }
 
   def listMeshChunksForSegmentV3(organizationName: String,

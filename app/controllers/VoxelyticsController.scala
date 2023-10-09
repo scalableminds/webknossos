@@ -6,9 +6,9 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
 import models.voxelytics._
-import oxalis.security.WkEnv
 import play.api.libs.json._
 import play.api.mvc._
+import security.WkEnv
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject

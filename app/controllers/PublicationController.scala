@@ -4,10 +4,10 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import io.swagger.annotations._
-import models.binary.{PublicationDAO, PublicationService}
-import oxalis.security.WkEnv
+import models.dataset.{PublicationDAO, PublicationService}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import javax.inject.Inject

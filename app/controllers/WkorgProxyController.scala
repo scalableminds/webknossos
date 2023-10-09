@@ -6,10 +6,10 @@ import com.mohiva.play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
-import oxalis.opengraph.OpenGraphService
-import oxalis.security.WkEnv
+import opengraph.OpenGraphService
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext

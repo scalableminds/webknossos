@@ -1,6 +1,6 @@
 package com.scalableminds.util.cache
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.SetHasAsScala
 
 trait LRUConcurrentCache[K, V] {
   def maxEntries: Int

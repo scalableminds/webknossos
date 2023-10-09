@@ -8,11 +8,11 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.DataStoreDAO
-import oxalis.telemetry.SlackNotificationService
+import models.dataset.DataStoreDAO
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
+import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
 import utils.{ObjectId, WkConf}
 

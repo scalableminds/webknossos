@@ -7,7 +7,7 @@ import net.liftweb.util.Helpers.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
 
-import ucar.ma2.{Array => MultiArray, DataType => MADataType}
+import ucar.ma2.{Array => MultiArray}
 
 object BytesConverter {
   def toByteArray(multiArray: MultiArray, dataType: ArrayDataType, byteOrder: ByteOrder): Box[Array[Byte]] = tryo {

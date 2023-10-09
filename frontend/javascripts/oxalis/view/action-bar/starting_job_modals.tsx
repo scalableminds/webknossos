@@ -713,6 +713,7 @@ export function MaterializeVolumeAnnotationModal({
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
+  const jobName = "materialize_volume_annotation";
   let description = (
     <p>
       Start a job that takes the current state of this volume annotation and materializes it into a
@@ -736,9 +737,28 @@ export function MaterializeVolumeAnnotationModal({
       </p>
     );
   }
+  const jobImage =
+    jobNameToImagePath[jobName] != null ? (
+      <>
+        <div style={{ textAlign: "center" }}>
+          <img
+            src={`/assets/images/${jobNameToImagePath[jobName]}`}
+            alt={`${jobName} example`}
+            style={{ width: 400, height: "auto", borderRadius: 3 }}
+          />
+        </div>
+        <br />
+      </>
+    ) : null;
 
   return (
-    <Modal onCancel={handleClose} open width={700} footer={null}>
+    <Modal
+      onCancel={handleClose}
+      open
+      width={700}
+      footer={null}
+      title="Start Materializing this Volume Annotation"
+    >
       <StartingJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"
@@ -768,7 +788,13 @@ export function MaterializeVolumeAnnotationModal({
             isMergerModeEnabled,
           );
         }}
-        description={description}
+        description={
+          <div>
+            {description}
+            <br />
+            {jobImage}
+          </div>
+        }
       />
     </Modal>
   );

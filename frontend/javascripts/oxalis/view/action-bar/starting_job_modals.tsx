@@ -29,7 +29,7 @@ import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { ExclamationCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 
 const { ThinSpace } = Unicode;
 
@@ -243,14 +243,22 @@ function BoundingBoxSelectionFormItem({
 
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
-      <p>
-        Please select the bounding box for which the inferral should be computed. Note that large
-        bounding boxes can take very long. You can create a new bounding box for the desired volume
-        with the bounding box tool in the toolbar at the top. The created bounding boxes will be
-        listed below.
-      </p>
       <Form.Item
-        label="Bounding Box"
+        label={
+          <div>
+            <Space>
+              Bounding Box
+              <Tooltip
+                title="Please select the bounding box for which the segmentation should be computed. Note that
+        large bounding boxes can take very long. You can create a new bounding box for the desired
+        volume with the bounding box tool in the toolbar at the top. The created bounding boxes will
+        be listed below."
+              >
+                <InfoCircleOutlined />
+              </Tooltip>
+            </Space>
+          </div>
+        }
         name="boundingBoxId"
         rules={[
           {
@@ -364,7 +372,6 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
     margin: "auto",
     width: 150,
   };
-  const radioStyle = { width: "auto", height: "auto", padding: 0 };
   return aIJobModalState !== "invisible" ? (
     <Modal
       width={667}
@@ -382,7 +389,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
         <Row>Choose a processing job for your dataset:</Row>
         <Space align="center">
           <Radio.Button
-            style={radioStyle}
+            className="aIJobSelection"
             checked={aIJobModalState === "neuron_inferral"}
             onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
           >
@@ -401,8 +408,8 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
           </Radio.Button>
           <Tooltip title="Coming soon">
             <Radio.Button
+              className="aIJobSelection"
               disabled
-              style={radioStyle}
               checked={aIJobModalState === "nuclei_inferral"}
               onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
             >
@@ -422,8 +429,8 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
           </Tooltip>
           <Tooltip title="Coming soon">
             <Radio.Button
+              className="aIJobSelection"
               disabled
-              style={radioStyle}
               checked={aIJobModalState === "mitochondria_inferral"}
               onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
             >

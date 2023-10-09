@@ -243,8 +243,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const activeUser = this.props.activeUser;
-    const isAIAnalysisActive = () => {
+    const isAIAnalysisEnabled = () => {
+      const activeUser = this.props.activeUser;
       const jobsEnabled = features().jobsEnabled;
       if (isViewMode) {
         return jobsEnabled && activeUser != null && activeUser.isSuperUser;
@@ -276,7 +276,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisActive() ? this.renderStartAIJobButton() : null}
+          {isAIAnalysisEnabled() ? this.renderStartAIJobButton() : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>

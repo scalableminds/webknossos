@@ -449,8 +449,8 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
             </Radio.Button>
           </Tooltip>
         </Space>
-        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationModal /> : null}
-        {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationModal /> : null}
+        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
+        {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationForm /> : null}
       </Space>
     </Modal>
   ) : null;
@@ -592,7 +592,7 @@ function StartingJobForm(props: StartingJobFormProps) {
   );
 }
 
-export function NucleiSegmentationModal() {
+export function NucleiSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobForm
@@ -629,7 +629,7 @@ export function NucleiSegmentationModal() {
     />
   );
 }
-export function NeuronSegmentationModal() {
+export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobForm

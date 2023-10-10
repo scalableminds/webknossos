@@ -39,7 +39,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import features from "features";
-import { StartAIJobModalState, StartingJobModal } from "./action-bar/starting_job_modals";
+import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
   <Alert
@@ -289,7 +289,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <StartingJobModal aIJobModalState={this.props.aiJobModalState} />
+        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }

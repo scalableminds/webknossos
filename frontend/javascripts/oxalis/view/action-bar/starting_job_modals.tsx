@@ -37,10 +37,13 @@ export type StartAIJobModalState =
   | "neuron_inferral"
   | "nuclei_inferral"
   | "mitochondria_inferral"
-  | "materialize_volume_annotation"
   | "invisible";
 
-const jobNameToImagePath: Record<StartAIJobModalState, string | null> = {
+// "materialize_volume_annotation" is only used in this module
+const jobNameToImagePath: Record<
+  StartAIJobModalState | "materialize_volume_annotation",
+  string | null
+> = {
   neuron_inferral: "neuron_inferral_example.png",
   nuclei_inferral: "nuclei_inferral_example.png",
   mitochondria_inferral: "mito_inferral_example.png",
@@ -51,7 +54,7 @@ type Props = {
   handleClose: () => void;
 };
 
-type StartingJobModalProps = {
+type StartAIJobModalProps = {
   aIJobModalState: StartAIJobModalState;
 };
 
@@ -61,7 +64,7 @@ type JobApiCallArgsType = {
   outputSegmentationLayerName?: string;
   selectedBoundingBox: UserBoundingBox | null | undefined;
 };
-type StartingJobFormProps = Props & {
+type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType) => Promise<void | APIJob>;
   jobName: keyof typeof jobNameToImagePath;
   description: React.ReactNode;
@@ -367,7 +370,7 @@ export function OutputSegmentationLayerNameFormItem({
   );
 }
 
-export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
+export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const centerImageStyle = {
     margin: "auto",
     width: 150,
@@ -456,7 +459,7 @@ export function StartingJobModal({ aIJobModalState }: StartingJobModalProps) {
   ) : null;
 }
 
-function StartingJobForm(props: StartingJobFormProps) {
+function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
   const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
@@ -595,7 +598,7 @@ function StartingJobForm(props: StartingJobFormProps) {
 export function NucleiSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
-    <StartingJobForm
+    <StartJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       buttonLabel="Start AI neuron segmentation"
       jobName={"nuclei_inferral"}
@@ -632,7 +635,7 @@ export function NucleiSegmentationForm() {
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
-    <StartingJobForm
+    <StartJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       jobName={"neuron_inferral"}
       buttonLabel="Start AI neuron segmentation"
@@ -670,7 +673,7 @@ export function NeuronSegmentationForm() {
                   margin: "auto",
                 }}
               >
-                <ExclamationCircleOutlined style={{ color: "yellow", fontSize: 22 }} />
+                <ExclamationCircleOutlined style={{ color: "#ffda33", fontSize: 22 }} />
               </div>
               <div
                 style={{
@@ -759,7 +762,7 @@ export function MaterializeVolumeAnnotationModal({
       footer={null}
       title="Start Materializing this Volume Annotation"
     >
-      <StartingJobForm
+      <StartJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"
         jobName={"materialize_volume_annotation"}

@@ -1058,10 +1058,13 @@ class SegmentsView extends React.Component<Props, State> {
 
   getShowSegmentStatistics = (id: number): ItemType => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    const state = Store.getState();
+    const volumeTracing = getActiveSegmentationTracing(state); // TODO make pretty
     if (
       visibleSegmentationLayer == null ||
       !("fallbackLayer" in visibleSegmentationLayer) ||
-      visibleSegmentationLayer.fallbackLayer != null
+      visibleSegmentationLayer.fallbackLayer != null ||
+      !volumeTracing?.hasSegmentIndex
     ) {
       //in this case there is a fallback layer
       return null;

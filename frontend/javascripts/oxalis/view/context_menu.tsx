@@ -1115,7 +1115,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
     visibleSegmentationLayer.fallbackLayer == null;
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
-      if (contextMenuPosition == null || volumeTracing == null || !hasNoFallbackLayer) {
+      if (
+        contextMenuPosition == null ||
+        volumeTracing == null ||
+        !hasNoFallbackLayer ||
+        !volumeTracing.hasSegmentIndex
+      ) {
         return [];
       } else {
         const tracingId = volumeTracing.tracingId;

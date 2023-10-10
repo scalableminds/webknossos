@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
@@ -42,8 +42,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.binary._
-import models.mesh.{MeshDAO, MeshService}
+import models.dataset._
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
@@ -52,7 +51,6 @@ import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.{ObjectId, WkConf}
 
@@ -106,8 +104,6 @@ class AnnotationService @Inject()(
     annotationRestrictionDefults: AnnotationRestrictionDefaults,
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
-    meshDAO: MeshDAO,
-    meshService: MeshService,
     conf: WkConf,
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
@@ -643,7 +639,7 @@ class AnnotationService @Inject()(
       ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
-      nmlsAndNames <- Fox.serialCombined(downloadAnnotations.flatten) {
+      nmlsAndVolumes <- Fox.serialCombined(downloadAnnotations.flatten) {
         case DownloadAnnotation(skeletonTracingIdOpt,
                                 volumeTracingIdOpt,
                                 skeletonTracingOpt,
@@ -661,18 +657,21 @@ class AnnotationService @Inject()(
                                                                                               volumeTracingIdOpt,
                                                                                               skeletonTracingOpt,
                                                                                               volumeTracingOpt)
-            nml = nmlWriter.toNmlStream(fetchedAnnotationLayersForAnnotation,
-                                        Some(annotation),
-                                        scaleOpt,
-                                        Some(name + "_data.zip"),
-                                        organizationName,
-                                        conf.Http.uri,
-                                        datasetName,
-                                        Some(user),
-                                        taskOpt)
-          } yield (nml, name, volumeDataOpt)
+            nml = nmlWriter.toNmlStream(
+              name,
+              fetchedAnnotationLayersForAnnotation,
+              Some(annotation),
+              scaleOpt,
+              Some(name + "_data.zip"),
+              organizationName,
+              conf.Http.uri,
+              datasetName,
+              Some(user),
+              taskOpt
+            )
+          } yield (nml, volumeDataOpt)
       }
-      zip <- createZip(nmlsAndNames, zipFileName)
+      zip <- createZip(nmlsAndVolumes, zipFileName)
     } yield zip
 
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
@@ -768,27 +767,26 @@ class AnnotationService @Inject()(
     Fox.combined(tracingsGrouped.toList)
   }
 
-  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])],
-                        zipFileName: String): Future[TemporaryFile] = {
+  private def createZip(nmls: List[(NamedStream, Option[Array[Byte]])], zipFileName: String): Fox[TemporaryFile] = {
     val zipped = temporaryFileCreator.create(TextUtils.normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
-    def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])]): Future[Boolean] =
+    def addToZip(nmls: List[(NamedStream, Option[Array[Byte]])]): Fox[Boolean] =
       nmls match {
-        case (nml, name, volumeDataOpt) :: tail =>
+        case (nml, volumeDataOpt) :: tail =>
           if (volumeDataOpt.isDefined) {
-            val subZip = temporaryFileCreator.create(TextUtils.normalize(name), ".zip")
+            val subZip = temporaryFileCreator.create(TextUtils.normalize(nml.name), ".zip")
             val subZipper =
               ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.path.toString))))
-            volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(name + "_data.zip", volumeData))
+            volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(nml.name + "_data.zip", volumeData))
             for {
-              _ <- subZipper.addFileFromEnumerator(name + ".nml", nml)
+              _ <- subZipper.addFileFromNamedStream(nml, suffix = ".nml")
               _ = subZipper.close()
-              _ = zipper.addFileFromTemporaryFile(name + ".zip", subZip)
+              _ = zipper.addFileFromTemporaryFile(nml.name + ".zip", subZip)
               res <- addToZip(tail)
             } yield res
           } else {
-            zipper.addFileFromEnumerator(name + ".nml", nml).flatMap(_ => addToZip(tail))
+            zipper.addFileFromNamedStream(nml, suffix = ".nml").flatMap(_ => addToZip(tail))
           }
         case _ =>
           Future.successful(true)

@@ -65,7 +65,7 @@ import type {
   APIDatasetCompact,
   MaintenanceInfo,
   AdditionalCoordinate,
-  CreateAnimationOptions,
+  RenderAnimationOptions,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -1290,10 +1290,10 @@ export function startNeuronInferralJob(
   );
 }
 
-export function startcreateAnimationJob(
+export function startRenderAnimationJob(
   organizationName: string,
   datasetName: string,
-  animationOptions: CreateAnimationOptions,
+  animationOptions: RenderAnimationOptions,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(
     `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}`,

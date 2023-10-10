@@ -43,7 +43,7 @@ import {
   setShareModalVisibilityAction,
   setAINucleiSegmentationModalVisibilityAction,
   setAINeuronSegmentationModalVisibilityAction,
-  setCreateAnimationModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -66,7 +66,7 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import {
   screenshotMenuItem,
-  createAnimationMenuItem,
+  renderAnimationMenuItem,
 } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
@@ -80,7 +80,7 @@ import {
   NeuronSegmentationModal,
   NucleiSegmentationModal,
 } from "../right-border-tabs/starting_job_modals";
-import CreateAnimationModal from "./create_animation_modal";
+import RenderAnimationModal from "./render_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -100,7 +100,7 @@ type StateProps = {
   isShareModalOpen: boolean;
   isAINeuronSegmentationModalOpen: boolean;
   isAINucleiSegmentationModalOpen: boolean;
-  isCreateAnimationModalOpen: boolean;
+  isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -690,12 +690,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     menuItems.push(screenshotMenuItem);
-    menuItems.push(createAnimationMenuItem);
+    menuItems.push(renderAnimationMenuItem);
     modals.push(
-      <CreateAnimationModal
-        key="create-animation-modal"
-        isOpen={this.props.isCreateAnimationModalOpen}
-        onClose={() => Store.dispatch(setCreateAnimationModalVisibilityAction(false))}
+      <RenderAnimationModal
+        key="render-animation-modal"
+        isOpen={this.props.isRenderAnimationModalOpen}
+        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
       />,
     );
 
@@ -782,7 +782,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isShareModalOpen: state.uiInformation.showShareModal,
     isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
     isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
-    isCreateAnimationModalOpen: state.uiInformation.showCreateAnimationModal,
+    isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

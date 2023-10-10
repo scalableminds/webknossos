@@ -35,7 +35,7 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     var buffer: BufferedSource = null
     try {
       buffer = Source.fromFile(path.toFile)
-      Full(Json.parse(buffer.getLines.mkString))
+      Full(Json.parse(buffer.getLines().mkString))
     } catch {
       case _: java.io.EOFException =>
         logger.warn(
@@ -96,8 +96,8 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
 
     override def writes(o: Option[T]): JsValue = o match {
-      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
-      case None ⇒ JsNull
+      case Some(t) => implicitly[Writes[T]].writes(t)
+      case None    => JsNull
     }
   }
 

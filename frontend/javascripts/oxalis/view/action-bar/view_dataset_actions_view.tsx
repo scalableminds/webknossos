@@ -14,14 +14,14 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import {
   setPythonClientModalVisibilityAction,
   setShareModalVisibilityAction,
-  setCreateAnimationModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
 import features from "features";
 import { getAISegmentationMenu } from "./tracing_actions_view";
-import CreateAnimationModal from "./create_animation_modal";
+import RenderAnimationModal from "./render_animation_modal";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -33,12 +33,12 @@ export const screenshotMenuItem: MenuItemType = {
   label: "Screenshot (Q)",
 };
 
-export const createAnimationMenuItem: MenuItemType = {
-  key: "create-animation-button",
-  label: "Create Animation",
+export const renderAnimationMenuItem: MenuItemType = {
+  key: "render-animation-button",
+  label: "Render Animation",
   icon: <VideoCameraOutlined />,
   onClick: () => {
-    Store.dispatch(setCreateAnimationModalVisibilityAction(true));
+    Store.dispatch(setRenderAnimationModalVisibilityAction(true));
   },
 };
 
@@ -54,8 +54,8 @@ export default function ViewDatasetActionsView(props: Props) {
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
-  const isCreateAnimationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showCreateAnimationModal,
+  const isRenderAnimationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
   );
 
   const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
@@ -88,7 +88,7 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
-      createAnimationMenuItem,
+      renderAnimationMenuItem,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
@@ -100,10 +100,10 @@ export default function ViewDatasetActionsView(props: Props) {
     ],
   };
 
-  const createAnimationModal = (
-    <CreateAnimationModal
-      isOpen={isCreateAnimationModalOpen}
-      onClose={() => Store.dispatch(setCreateAnimationModalVisibilityAction(false))}
+  const renderAnimationModal = (
+    <RenderAnimationModal
+      isOpen={isRenderAnimationModalOpen}
+      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
     />
   );
 
@@ -115,7 +115,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
-      {createAnimationModal}
+      {renderAnimationModal}
       {isAISegmentationEnabled ? AISegmentationModals : null}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent

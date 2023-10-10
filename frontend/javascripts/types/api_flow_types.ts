@@ -1062,11 +1062,15 @@ export enum MOVIE_RESOLUTIONS {
   HD = "HD",
 }
 
-export type CreateAnimationOptions = {
+export type RenderAnimationOptions = {
   layerName: string;
+  segmentationLayerName?: string;
+  meshfileName?: string;
+  meshSegmentIds: number[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
-  meshIds: number[];
+  intensityMin: number;
+  intensityMax: number;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
 };

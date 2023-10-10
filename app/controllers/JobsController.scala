@@ -3,64 +3,63 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.job._
 import models.organization.OrganizationDAO
-import models.binary.DataStoreDAO
+import models.dataset.DataStoreDAO
 import models.user.MultiUserDAO
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WkEnv, WkSilhouetteEnvironment}
+import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
 import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.BoundingBox
+import models.team.PricingPlan
 
-object MovieResolutions extends ExtendedEnumeration {
-  type MovieResolutions = Value
-  val SD = Value("SD")
-  val HD = Value("HD")
+object MovieResolutionSetting extends ExtendedEnumeration {
+  val SD, HD = Value
 }
 
-object CameraPositions extends ExtendedEnumeration {
-  type CameraPositions = Value
-  val MOVING = Value("MOVING")
-  val STATIC_XY = Value("STATIC_XY")
-  val STATIC_YZ = Value("STATIC_YZ")
+object CameraPositionSetting extends ExtendedEnumeration {
+  val MOVING, STATIC_XY, STATIC_YZ = Value
 }
 
 case class AnimationJobOptions(
-  layerName: String,
-  boundingBox: BoundingBox,
-  includeWatermark: Boolean,
-  meshIds: Array[Int],
-  movieResolution: MovieResolutions.Value ,
-  cameraPosition: CameraPositions.Value
+    layerName: String,
+    boundingBox: BoundingBox,
+    includeWatermark: Boolean,
+    segmentationLayerName: Option[String],
+    meshfileName: Option[String],
+    meshSegmentIds: Array[Int],
+    movieResolution: MovieResolutionSetting.Value,
+    cameraPosition: CameraPositionSetting.Value,
+    intensityMin: Double,
+    intensityMax: Double
 )
 
 object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobsController @Inject()(jobDAO: JobDAO,
-                               sil: Silhouette[WkEnv],
-                               datasetDAO: DatasetDAO,
-                               jobService: JobService,
-                               workerService: WorkerService,
-                               workerDAO: WorkerDAO,
-                               wkconf: WkConf,
-                               multiUserDAO: MultiUserDAO,
-                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               slackNotificationService: SlackNotificationService,
-                               organizationDAO: OrganizationDAO,
-                               dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext,
-                               playBodyParsers: PlayBodyParsers)
+class JobsController @Inject()(
+    jobDAO: JobDAO,
+    sil: Silhouette[WkEnv],
+    datasetDAO: DatasetDAO,
+    jobService: JobService,
+    workerService: WorkerService,
+    workerDAO: WorkerDAO,
+    wkconf: WkConf,
+    multiUserDAO: MultiUserDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    slackNotificationService: SlackNotificationService,
+    organizationDAO: OrganizationDAO,
+    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -322,12 +321,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
     }
 
   def runRenderAnimationJob(organizationName: String, dataSetName: String): Action[AnimationJobOptions] =
-    sil.SecuredAction.async(validateJson[AnimationJobOptions]) {
-    implicit request =>
+    sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
+          userOrganization <- organizationDAO.findOne(request.identity._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
@@ -335,6 +334,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           animationJobOptions = request.body
+          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+            bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
+          }
+          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+            bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
+          }
           layerName = animationJobOptions.layerName
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataSetName}__$layerName.mp4"
           command = JobCommand.render_animation
@@ -343,7 +348,16 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataSetName,
             "export_file_name" -> exportFileName,
             "user_auth_token" -> userAuthToken.id,
-            "animation_options" -> Json.toJson(animationJobOptions)
+            "layer_name" -> animationJobOptions.layerName,
+            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
+            "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
+            "include_watermark" -> animationJobOptions.includeWatermark,
+            "mesh_segment_ids" -> animationJobOptions.meshSegmentIds,
+            "meshfile_name" -> animationJobOptions.meshfileName,
+            "movie_resolution" -> animationJobOptions.movieResolution,
+            "camera_position" -> animationJobOptions.cameraPosition,
+            "intensity_min" -> animationJobOptions.intensityMin,
+            "intensity_max" -> animationJobOptions.intensityMax,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)
@@ -351,7 +365,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def export(jobId: String): Action[AnyContent] =
+  def redirectToExport(jobId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

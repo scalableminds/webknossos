@@ -231,7 +231,7 @@ const defaultState: OxalisState = {
     showPythonClientModal: false,
     showAINucleiSegmentationModal: false,
     showAINeuronSegmentationModal: false,
-    showCreateAnimationModal: false,
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,

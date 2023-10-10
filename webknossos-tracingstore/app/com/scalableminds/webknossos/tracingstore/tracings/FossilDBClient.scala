@@ -123,9 +123,9 @@ class FossilDBClient(collection: String,
       version: Option[Long] = None,
       limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
-      val boxTuples: List[Box[(A, B, C)]] = (keys, versions, values).zipped.map {
-        case (k, v, Full(value)) => Full(k, v, value)
-        case _                   => Empty
+      val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
+        case ((k, v), Full(value)) => Full(k, v, value)
+        case _                     => Empty
       }
       boxTuples.flatten
     }

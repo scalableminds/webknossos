@@ -192,7 +192,6 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       parsedHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       header = parsedHeader.shape.length match {
         case 2 =>
-          // 2d-Datasets use a shape [1, y, x] internally to facilitate reading 3 dimensional shapes
           parsedHeader.copy(shape = parsedHeader.shape ++ Array(1), chunks = parsedHeader.chunks ++ Array(1))
         case _ => parsedHeader
       }

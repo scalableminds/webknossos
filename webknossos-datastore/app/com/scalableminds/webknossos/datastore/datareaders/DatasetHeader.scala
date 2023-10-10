@@ -39,12 +39,14 @@ trait DatasetHeader {
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)
       None
-    else
-      Some(
-        BoundingBox(Vec3Int.zeros,
-                    datasetShape(axisOrder.x),
-                    datasetShape(axisOrder.y),
-                    if (axisOrder.hasZAxis) datasetShape(axisOrder.z) else 1))
+    else {
+      axisOrder match {
+        case AxisOrder3D(x, y, z, _, _) =>
+          Some(BoundingBox(Vec3Int.zeros, datasetShape(x), datasetShape(y), datasetShape(z)))
+        case AxisOrder2D(x, y, c) => Some(BoundingBox(Vec3Int.zeros, datasetShape(x), datasetShape(y), 1))
+      }
+
+    }
 
   lazy val rank: Int = datasetShape.length
 

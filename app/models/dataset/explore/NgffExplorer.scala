@@ -188,7 +188,15 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
   private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath) = {
     val magPath = layerPath / ngffDataset.path
     val zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
-    parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
+    for {
+      parsedHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
+      header = parsedHeader.shape.length match {
+        case 2 =>
+          // 2d-Datasets use a shape [1, y, x] internally to facilitate reading 3 dimensional shapes
+          parsedHeader.copy(shape = parsedHeader.shape ++ Array(1), chunks = parsedHeader.chunks ++ Array(1))
+        case _ => parsedHeader
+      }
+    } yield header
   }
 
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
@@ -233,7 +241,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     for {
       xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
       yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitFactor <- Fox.runIf(axisOrder.z >= 0)(axes(axisOrder.z).spaceUnitToNmFactor)
+      zUnitFactor <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.z).spaceUnitToNmFactor)
     } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor.getOrElse(1))
 
   private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],

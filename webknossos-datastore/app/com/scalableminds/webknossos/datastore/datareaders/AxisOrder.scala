@@ -9,6 +9,8 @@ sealed abstract class AxisOrder() {
 
   def c: Option[Int]
 
+  def hasZAxis: Boolean = false
+
   def permutation(rank: Int): Array[Int] =
     c match {
       case Some(channel) =>
@@ -32,7 +34,6 @@ sealed abstract class AxisOrder() {
   def permuteIndicesReverse(indices: Array[Int]): Array[Int] =
     inversePermutation(indices.length).map(indices(_))
 
-  def hasZAxis: Boolean = z >= 0
 }
 
 object AxisOrder {
@@ -40,14 +41,14 @@ object AxisOrder {
   // assumes that the last three elements of the shape are z,y,x (standard in OME NGFF)
   def asZyxFromRank(rank: Int): AxisOrder3D = AxisOrder3D(rank - 1, rank - 2, rank - 3)
 
-  def cxyz: AxisOrder3D = asCxyzFromRank(rank = 4)
-
-  // assumes that the last three elements of the shape are (c),x,y,z (which is what webKnossos sends to the frontend)
+  // assumes that the last three elements of the shape are (c),x,y,z (which is what WEBKNOSSOS sends to the frontend)
   def asCxyzFromRank(rank: Int): AxisOrder3D =
     if (rank == 3)
       AxisOrder3D(rank - 3, rank - 2, rank - 1)
     else
       AxisOrder3D(rank - 3, rank - 2, rank - 1, Some(rank - 4))
+
+  def cxyz: AxisOrder3D = asCxyzFromRank(rank = 4)
 
   implicit object AxisOrderReads extends Reads[AxisOrder] {
     def reads(json: JsValue): JsResult[AxisOrder] = json match {
@@ -92,7 +93,9 @@ case class AxisOrder3D(override val x: Int,
                        override val z: Int,
                        override val c: Option[Int] = None,
                        t: Option[Int] = None)
-    extends AxisOrder
+    extends AxisOrder {
+  override def hasZAxis: Boolean = true
+}
 
 object AxisOrder3D {
 
@@ -100,17 +103,10 @@ object AxisOrder3D {
 }
 
 case class AxisOrder2D(override val x: Int, override val y: Int, override val c: Option[Int] = None) extends AxisOrder {
-  override def permutation(rank: Int): Array[Int] = {
-    if (rank == 3) return Array(2, 1, 0);
-    c match {
-      case Some(channel) =>
-        ((0 until (rank - 3)).toList :+ channel :+ x :+ y).toArray
-      case None =>
-        ((0 until (rank - 2)).toList :+ x :+ y).toArray
-    }
-  }
 
-  override def z: Int = -1
+  override def hasZAxis: Boolean = false
+
+  override def z: Int = Math.max(Math.max(x, y), c.getOrElse(-1))
 }
 
 object AxisOrder2D {

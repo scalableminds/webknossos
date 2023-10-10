@@ -31,8 +31,14 @@ case class ZarrHeader(
     override val order: ArrayOrder
 ) extends DatasetHeader {
 
-  lazy val datasetShape: Array[Int] = shape
-  lazy val chunkSize: Array[Int] = chunks
+  lazy val datasetShape: Array[Int] = shape.length match {
+    case 2 => Array(shape(0), shape(1), 1) // 2d arrays are treated as 3d arrays with depth 1
+    case _ => shape
+  }
+  lazy val chunkSize: Array[Int] = chunks.length match {
+    case 2 => Array(chunks(0), chunks(1), 1) // 2d arrays are treated as 3d arrays with depth 1
+    case _ => chunks
+  }
   lazy val dataType: String = dtype
 
   override lazy val byteOrder: ByteOrder =

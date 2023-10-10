@@ -80,7 +80,7 @@ import {
   NeuronSegmentationModal,
   NucleiSegmentationModal,
 } from "../right-border-tabs/starting_job_modals";
-import RenderAnimationModal from "./render_animation_modal";
+import CreateAnimationModal from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -692,7 +692,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     menuItems.push(screenshotMenuItem);
     menuItems.push(renderAnimationMenuItem);
     modals.push(
-      <RenderAnimationModal
+      <CreateAnimationModal
         key="render-animation-modal"
         isOpen={this.props.isRenderAnimationModalOpen}
         onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}

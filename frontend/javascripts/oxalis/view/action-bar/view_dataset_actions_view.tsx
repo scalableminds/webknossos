@@ -21,7 +21,7 @@ import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
 import features from "features";
 import { getAISegmentationMenu } from "./tracing_actions_view";
-import RenderAnimationModal from "./render_animation_modal";
+import CreateAnimationModal from "./create_animation_modal";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -101,7 +101,7 @@ export default function ViewDatasetActionsView(props: Props) {
   };
 
   const renderAnimationModal = (
-    <RenderAnimationModal
+    <CreateAnimationModal
       isOpen={isRenderAnimationModalOpen}
       onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
     />

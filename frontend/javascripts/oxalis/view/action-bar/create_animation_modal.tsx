@@ -1,4 +1,4 @@
-import { Checkbox, Col, Divider, Modal, ModalProps, Radio, Row, Space, Tooltip } from "antd";
+import { Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
@@ -27,7 +27,7 @@ type Props = {
   onClose: React.MouseEventHandler;
 };
 
-function RenderAnimationModal(props: Props) {
+function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
@@ -68,10 +68,11 @@ function RenderAnimationModal(props: Props) {
     // number of meshes?
     // add mag existence checks to avoid downloading huge amounts of data
     // supported dtypes
+    // only 3D datasets
     return true;
   };
 
-  const submitJob = () => {
+  const submitJob = (evt: React.MouseEvent) => {
     const state = Store.getState();
     const boundingBox = computeBoundingBoxObjectFromBoundingBox(
       userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
@@ -108,12 +109,12 @@ function RenderAnimationModal(props: Props) {
       </>,
     );
     
-    onClose()
+    onClose(evt)
   };
 
   return (
     <Modal
-      title="Render Animation"
+      title="Create Animation"
       open={isOpen}
       width={700}
       onOk={submitJob}
@@ -131,7 +132,7 @@ function RenderAnimationModal(props: Props) {
           </Col>
           <Col span={16}>
             <p>
-              Render a 15-second animation of your data. Watch as the block of volumetric image data
+              Create a short, engaging animation of your data. Watch as the block of volumetric image data
               shrinks to reveal segmented objects. Choose from three perspective options and select
               the color layer and meshes you want to render.
             </p>
@@ -257,4 +258,4 @@ function RenderAnimationModal(props: Props) {
   );
 }
 
-export default RenderAnimationModal;
+export default CreateAnimationModal;

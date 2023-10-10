@@ -6,7 +6,6 @@ import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
-
 import ucar.ma2.{Array => MultiArray}
 
 object BytesConverter {

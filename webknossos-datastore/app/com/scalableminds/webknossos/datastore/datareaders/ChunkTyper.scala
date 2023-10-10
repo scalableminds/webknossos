@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 
@@ -57,7 +56,7 @@ class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
     }.get)
 }
 
-class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper with LazyLogging {
+class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.SHORT
 
@@ -124,13 +123,12 @@ class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.BYTE
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
-    header.bytesPerElement
-    val flatShape = new Array[Int](bytes.length)
+    val flatShape = Array(bytes.length)
     MultiArray.factory(ma2DataType, flatShape, bytes)
   }
 
   override def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] = {
-    val flatShape = new Array[Int](chunkShape.product * header.bytesPerElement)
+    val flatShape = Array(chunkShape.product * header.bytesPerElement)
     MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber)
   }
 }

@@ -269,23 +269,26 @@ function BoundingBoxSelectionFormItem({
             message: "Please select the bounding box for which the inferral should be computed.",
           },
           {
-            required: true,
             validator: (_rule, value) => {
+              if (!isBoundingBoxConfigurable) return Promise.resolve();
+
               const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === value);
+              let rejectionReason = "";
               if (selectedBoundingBox) {
                 const { isExportable, alerts: _ } = isBoundingBoxExportable(
                   selectedBoundingBox.boundingBox,
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
+                  features().exportTiffMaxVolumeMVx
+                } Megavoxels. Additionally, no bounding box edge should be longer than ${
+                  features().exportTiffMaxEdgeLengthVx
+                }vx.`;
               }
-              return Promise.reject();
+              // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
+              return Promise.reject(rejectionReason);
             },
-            message: `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
-              features().exportTiffMaxVolumeMVx
-            } Megavoxels. Additionally, no bounding box edge should be longer than ${
-              features().exportTiffMaxEdgeLengthVx
-            }vx.`,
           },
         ]}
         hidden={!isBoundingBoxConfigurable}

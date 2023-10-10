@@ -27,7 +27,7 @@ object MovieResolutionSetting extends ExtendedEnumeration {
 }
 
 object CameraPositionSetting extends ExtendedEnumeration {
-  val MOVING, STATIC_XY, STATIC_YZ = Value
+  val MOVING, STATIC_XZ, STATIC_YZ = Value
 }
 
 case class AnimationJobOptions(
@@ -35,7 +35,7 @@ case class AnimationJobOptions(
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
     segmentationLayerName: Option[String],
-    meshfileName: Option[String],
+    meshFileName: Option[String],
     meshSegmentIds: Array[Int],
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
@@ -353,7 +353,7 @@ class JobsController @Inject()(
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "mesh_segment_ids" -> animationJobOptions.meshSegmentIds,
-            "meshfile_name" -> animationJobOptions.meshfileName,
+            "meshfile_name" -> animationJobOptions.meshFileName,
             "movie_resolution" -> animationJobOptions.movieResolution,
             "camera_position" -> animationJobOptions.cameraPosition,
             "intensity_min" -> animationJobOptions.intensityMin,

@@ -34,8 +34,8 @@ export const screenshotMenuItem: MenuItemType = {
 };
 
 export const renderAnimationMenuItem: MenuItemType = {
-  key: "render-animation-button",
-  label: "Render Animation",
+  key: "create-animation-button",
+  label: "Create Animation",
   icon: <VideoCameraOutlined />,
   onClick: () => {
     Store.dispatch(setRenderAnimationModalVisibilityAction(true));

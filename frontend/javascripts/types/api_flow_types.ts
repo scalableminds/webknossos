@@ -1053,7 +1053,7 @@ export type FolderUpdater = {
 
 export enum CAMERA_POSITIONS {
   MOVING = "MOVING",
-  STATIC_XY = "STATIC_XY",
+  STATIC_XZ = "STATIC_XZ",
   STATIC_YZ = "STATIC_YZ",
 }
 
@@ -1065,7 +1065,7 @@ export enum MOVIE_RESOLUTIONS {
 export type RenderAnimationOptions = {
   layerName: string;
   segmentationLayerName?: string;
-  meshfileName?: string;
+  meshFileName?: string;
   meshSegmentIds: number[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;

@@ -21,6 +21,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 
 type Props = {
   isOpen: boolean;
@@ -77,12 +78,26 @@ function CreateAnimationModal(props: Props) {
     const boundingBox = computeBoundingBoxObjectFromBoundingBox(
       userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
     );
-    const meshSegmentIds = [] as number[]; // TODO gather selected mesh ids
+
+    let meshSegmentIds = [] as number[];
+    let meshFileName = "meshfile.hdf5";
+
+    const volumeLayer = getActiveSegmentationTracingLayer(state);
+
+    if (volumeLayer) {
+      const availableMeshes = state.localSegmentationData[volumeLayer.name].isosurfaces;
+      meshSegmentIds = Object.values(availableMeshes)
+        .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
+        .map((mesh) => mesh.segmentId);
+
+      const currenMeshFile = state.localSegmentationData[volumeLayer.name].currentMeshFile;
+      meshFileName = currenMeshFile?.meshFileName || meshFileName;
+    }
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedLayerName,
       segmentationLayerName: "segmentation",
-      meshfileName: "meshfile.hdf5",
+      meshFileName,
       meshSegmentIds,
       boundingBox,
       intensityMin: 0,
@@ -108,8 +123,8 @@ function CreateAnimationModal(props: Props) {
         for details on the progress of this job.
       </>,
     );
-    
-    onClose(evt)
+
+    onClose(evt);
   };
 
   return (
@@ -126,15 +141,15 @@ function CreateAnimationModal(props: Props) {
           <Col span={8} style={{ textAlign: "center" }}>
             <img
               src="/assets/images/animation-illustration.png"
-              alt="Render an animation showing your dataset in 3D"
+              alt="Create an animation showing your dataset in 3D"
               style={{ width: 160, display: "inline-block" }}
             />
           </Col>
           <Col span={16}>
             <p>
-              Create a short, engaging animation of your data. Watch as the block of volumetric image data
-              shrinks to reveal segmented objects. Choose from three perspective options and select
-              the color layer and meshes you want to render.
+              Create a short, engaging animation of your data. Watch as the block of volumetric
+              image data shrinks to reveal segmented objects. Choose from three perspective options
+              and select the color layer and meshes you want to render.
             </p>
             <p>
               For custom animations, please{" "}
@@ -164,13 +179,13 @@ function CreateAnimationModal(props: Props) {
                 <Radio.Button value={CAMERA_POSITIONS.MOVING}>
                   Camera circling around the dataset
                 </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_XY} disabled>
-                  Static camera looking at XY-viewport{" "}
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
+                  Static camera looking at XZ-viewport{" "}
                   <Tooltip title="Cooming soon" placement="right">
                     <InfoCircleOutlined />
                   </Tooltip>
                 </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ} disabled>
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
                   Static camera looking at YZ-viewport{" "}
                   <Tooltip title="Cooming soon" placement="right">
                     <InfoCircleOutlined />
@@ -209,7 +224,7 @@ function CreateAnimationModal(props: Props) {
               >
                 Include the currently selected 3D meshes
                 <Tooltip
-                  title="When enabled all meshes currently visibile in WEBKNOSSOS will be included in the rendered scene."
+                  title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
                   placement="right"
                 >
                   <InfoCircleOutlined style={{ marginLeft: 10 }} />

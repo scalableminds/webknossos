@@ -343,7 +343,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataSetName,
             "export_file_name" -> exportFileName,
             "user_auth_token" -> userAuthToken.id,
-            "options" -> Json.toJson(animationJobOptions)
+            "animation_options" -> Json.toJson(animationJobOptions)
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

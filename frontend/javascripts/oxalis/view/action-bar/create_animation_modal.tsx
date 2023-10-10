@@ -35,7 +35,7 @@ import {
 
 type Props = {
   isOpen: boolean;
-  onClose: ModalProps["onCancel"];
+  onClose: React.MouseEventHandler;
 };
 
 function CreateAnimationModal(props: Props) {
@@ -77,6 +77,8 @@ function CreateAnimationModal(props: Props) {
     // TODO
     // Bounging Box size
     // number of meshes?
+    // add mag existence checks to avoid downloading huge amounts of data
+    // supported dtypes
     return true;
   };
 
@@ -112,6 +114,8 @@ function CreateAnimationModal(props: Props) {
         for details on the progress of this job.
       </>,
     );
+    
+    onClose()
   };
 
   return (

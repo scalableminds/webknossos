@@ -155,7 +155,7 @@ class Skeleton {
     const nodeGeometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     // const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
     const edgeMaterial = new MeshLineMaterial({
-      color: new THREE.Color(255, 0, 0),
+      color: new THREE.Color(0.68, 0.12, 0.02),
       resolution: new THREE.Vector2(528, 434),
       sizeAttenuation: 1,
       lineWidth: 0.01,
@@ -462,7 +462,7 @@ class Skeleton {
     nodeUniforms.activeNodeId.value = activeNodeId;
     const edgeUniforms = this.edges.material.uniforms;
     // edgeUniforms.activeTreeId.value = activeTreeId;
-    this.edges.material.lineWidth = state.userConfiguration.particleSize / 200;
+    this.edges.material.lineWidth = state.userConfiguration.particleSize / 500;
     this.prevTracing = skeletonTracing;
   }
 

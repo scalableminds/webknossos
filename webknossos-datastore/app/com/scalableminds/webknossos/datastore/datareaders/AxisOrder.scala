@@ -106,7 +106,8 @@ case class AxisOrder2D(override val x: Int, override val y: Int, override val c:
 
   override def hasZAxis: Boolean = false
 
-  override def z: Int = Math.max(Math.max(x, y), c.getOrElse(-1))
+  // z is appended to the end of the array (this is reflected in DatasetArray adding 1 at the end of header shape and chunksize)
+  override def z: Int = Math.max(Math.max(x, y), c.getOrElse(-1)) + 1
 }
 
 object AxisOrder2D {

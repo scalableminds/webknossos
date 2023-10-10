@@ -37,7 +37,7 @@ trait DatasetHeader {
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)
+    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank && axisOrder.hasZAxis)
       None
     else {
       axisOrder match {

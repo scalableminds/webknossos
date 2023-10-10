@@ -24,9 +24,9 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
 
     bucket.additionalCoordinates match {
-      case Some(additionalCoordinates) =>
+      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
         zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
-      case None => zarrArray.readBytesXYZ(shape, offset)
+      case _ => zarrArray.readBytesXYZ(shape, offset)
     }
   }
 

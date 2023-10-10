@@ -14,9 +14,9 @@ We would love to integrate analysis solutions for more modalities and use cases.
 ## Nuclei Inferral
 As a first trial, WEBKNOSSOS includes nuclei segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will find and segment all nuclei within the dataset.
 
-You can launch the nuclei inferral from the `Info` tab in the right-hand side panel. Use the `Process Dataset` link to start the analysis.
+You can launch the nuclei inferral from the `Menu` dropdown in the action bar at the top. Use the `Start AI analysis` link to start the analysis.
 
-![Nuclei segmentations can be launched from the Info tab.](images/process_dataset.jpeg)
+![Nuclei segmentations can be launched from the action bar.](images/process_dataset.png)
 
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 

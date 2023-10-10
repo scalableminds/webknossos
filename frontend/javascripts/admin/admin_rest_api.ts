@@ -2132,7 +2132,7 @@ window.setMaintenance = setMaintenance;
 
 // These parameters are bundled into an object to avoid that the computeAdHocMesh function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type meshRequest = {
+type MeshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
@@ -2148,7 +2148,7 @@ type meshRequest = {
 
 export function computeAdHocMesh(
   requestUrl: string,
-  meshRequest: meshRequest,
+  meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;

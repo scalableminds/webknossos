@@ -57,7 +57,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       case Some(path) => Fox.successful(Some(path))
       case None => {
         // Only scalar mag paths are attempted for now
-        val magPath = remoteLayerPath / mag.mag.toMagLiteral(allowScalar=true)
+        val magPath = remoteLayerPath / mag.mag.toMagLiteral(allowScalar = true)
         val magHeaderPath = magPath / headerFilename
         for {
           _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"

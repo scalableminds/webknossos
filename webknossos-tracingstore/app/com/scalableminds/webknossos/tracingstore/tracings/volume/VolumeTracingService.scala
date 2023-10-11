@@ -651,27 +651,40 @@ class VolumeTracingService @Inject()(
 
   def addSegmentIndex(tracingId: String,
                       tracing: VolumeTracing,
-                      currentVersion: Int,
-                      userToken: Option[String]): Fox[Unit] =
+                      currentVersion: Long,
+                      userToken: Option[String]): Fox[Int] =
     if (tracing.hasSegmentIndex.getOrElse(false)) {
       // tracing has a segment index already, do nothing
-      Fox.successful(())
+      Fox.successful(-1)
     } else if (!VolumeSegmentIndexService.canHaveSegmentIndex(tracing.fallbackLayer)) {
       // tracing is not eligible for segment index, do nothing
-      Fox.successful(())
+      Fox.successful(-1)
     } else {
+      var processedBucketCount = 0
       for {
         isTemporaryTracing <- isTemporaryTracing(tracingId)
         sourceDataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
         buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-        segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, currentVersion + 1)
+        segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, currentVersion + 1L)
         _ <- Fox.serialCombined(buckets) {
           case (bucketPosition, bucketData) =>
+            processedBucketCount += 1
             updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, tracing.elementClass)
         }
         _ <- segmentIndexBuffer.flush()
-        // TODO create + apply the update action
-      } yield ()
+        updateGroup = UpdateActionGroup[VolumeTracing](
+          tracing.version + 1L,
+          System.currentTimeMillis(),
+          None,
+          List(AddSegmentIndex()),
+          None,
+          None,
+          "dummyTransactionId",
+          1,
+          0
+        )
+        _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
+      } yield processedBucketCount
     }
 
   def importVolumeData(tracingId: String,

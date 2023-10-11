@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
@@ -216,6 +217,29 @@ class VolumeTracingController @Inject()(
                                                                 currentVersion,
                                                                 urlOrHeaderToken(token, request))
           } yield Ok(Json.toJson(largestSegmentId))
+        }
+      }
+    }
+
+  def addSegmentIndex(token: Option[String], tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            currentVersion <- tracingService.currentVersion(tracingId)
+            before = Instant.now
+            processedBucketCount <- tracingService.addSegmentIndex(tracingId,
+                                                                   tracing,
+                                                                   currentVersion,
+                                                                   urlOrHeaderToken(token, request))
+            currentVersionNew <- tracingService.currentVersion(tracingId)
+            _ <- bool2Fox(currentVersionNew == currentVersion + 1L) ?~> "version increment failed?"
+            duration = Instant.since(before)
+            _ = if (processedBucketCount != -1)
+              logger.info(
+                s"Added segment index for tracing $tracingId. Took $duration for $processedBucketCount buckets")
+          } yield Ok
         }
       }
     }

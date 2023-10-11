@@ -1105,10 +1105,11 @@ function ContextMenuInner(propsWithInputRef: Props) {
     datasetScale,
     globalPosition,
     maybeViewport,
+    visibleSegmentationLayer,
+    volumeTracing,
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const { visibleSegmentationLayer, volumeTracing } = props;
   const hasNoFallbackLayer =
     visibleSegmentationLayer != null &&
     "fallbackLayer" in visibleSegmentationLayer &&
@@ -1162,6 +1163,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1251,7 +1258,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  if (hasNoFallbackLayer) {
+  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
@@ -1265,7 +1272,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (hasNoFallbackLayer) {
+  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
@@ -1295,11 +1302,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-  // Thus the segment id is always unambiguous / clearly defined.
-  if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
+  if (isHoveredSegmentOrMesh) {
     const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
     infoRows.push(
       getInfoMenuItem(

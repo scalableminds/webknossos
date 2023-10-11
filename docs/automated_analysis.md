@@ -16,7 +16,7 @@ As a first trial, WEBKNOSSOS includes nuclei segmentation. This analysis is desi
 
 You can launch the nuclei inferral from the `Menu` dropdown in the action bar at the top. Use the `Start AI analysis` link to start the analysis.
 
-![Nuclei segmentations can be launched from the action bar.](images/process_dataset.png)
+![Nuclei segmentations can be launched from the action bar.](images/process_dataset.jpeg)
 
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 

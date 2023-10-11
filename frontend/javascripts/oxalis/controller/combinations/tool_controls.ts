@@ -787,13 +787,15 @@ export class QuickSelectTool {
 
 function getDoubleClickGuard() {
   const DOUBLE_CLICK_TIME_THRESHOLD = 600;
+  const MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK = 6;
   let lastLeftClickTime = 0;
   let lastClickPosition: Point2 = { x: -100, y: -100 };
   const doubleClickGuard = (pos: Point2, onDoubleClick: () => void) => {
     const currentTime = Date.now();
     if (
       currentTime - lastLeftClickTime <= DOUBLE_CLICK_TIME_THRESHOLD &&
-      Math.abs(pos.x - lastClickPosition.x) + Math.abs(pos.y - lastClickPosition.y) < 6
+      Math.abs(pos.x - lastClickPosition.x) + Math.abs(pos.y - lastClickPosition.y) <
+        MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK
     ) {
       // A double click should also terminate measuring.
       onDoubleClick();

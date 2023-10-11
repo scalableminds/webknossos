@@ -65,7 +65,7 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
-      case BytesCodecConfiguration(endian)   => new BytesCodec(endian)
+      case BytesCodecConfiguration(endian)    => new BytesCodec(endian)
       case TransposeCodecConfiguration(order) => new TransposeCodec(order)
       case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)

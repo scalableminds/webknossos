@@ -359,7 +359,8 @@ class VolumeTracingService @Inject()(
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0,
       // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
-      hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions.fallbackLayer)
+      hasSegmentIndex =
+        VolumeSegmentIndexService.canHaveSegmentIndexOpt(tracingWithResolutionRestrictions.fallbackLayer)
     )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
@@ -647,6 +648,31 @@ class VolumeTracingService @Inject()(
       } yield mergedVolume.stats(shouldCreateSegmentIndex)
     }
   }
+
+  def addSegmentIndex(tracingId: String,
+                      tracing: VolumeTracing,
+                      currentVersion: Int,
+                      userToken: Option[String]): Fox[Unit] =
+    if (tracing.hasSegmentIndex.getOrElse(false)) {
+      // tracing has a segment index already, do nothing
+      Fox.successful(())
+    } else if (!VolumeSegmentIndexService.canHaveSegmentIndex(tracing.fallbackLayer)) {
+      // tracing is not eligible for segment index, do nothing
+      Fox.successful(())
+    } else {
+      for {
+        isTemporaryTracing <- isTemporaryTracing(tracingId)
+        sourceDataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
+        buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
+        segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, currentVersion + 1)
+        _ <- Fox.serialCombined(buckets) {
+          case (bucketPosition, bucketData) =>
+            updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, tracing.elementClass)
+        }
+        _ <- segmentIndexBuffer.flush()
+        // TODO create + apply the update action
+      } yield ()
+    }
 
   def importVolumeData(tracingId: String,
                        tracing: VolumeTracing,

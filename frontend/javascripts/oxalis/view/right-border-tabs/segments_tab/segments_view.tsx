@@ -84,6 +84,7 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
+  VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -136,6 +137,7 @@ type StateProps = {
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  activeVolumeTracing: VolumeTracing | null | undefined;
   allowUpdate: boolean;
   organization: string;
   datasetName: string;
@@ -177,6 +179,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     segments,
     segmentGroups,
     visibleSegmentationLayer,
+    activeVolumeTracing,
     allowUpdate:
       state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
@@ -1058,13 +1061,11 @@ class SegmentsView extends React.Component<Props, State> {
 
   getShowSegmentStatistics = (id: number): ItemType => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    const state = Store.getState();
-    const volumeTracing = getActiveSegmentationTracing(state); // TODO make pretty
     if (
       visibleSegmentationLayer == null ||
       !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
-      !volumeTracing?.hasSegmentIndex
+      !this.props.activeVolumeTracing?.hasSegmentIndex
     ) {
       //in this case there is a fallback layer
       return null;
@@ -1504,8 +1505,7 @@ class SegmentsView extends React.Component<Props, State> {
       segments.length > 0
     ) {
       const state = Store.getState();
-      const volumeTracing = getActiveSegmentationTracing(state);
-      const tracingId = volumeTracing?.tracingId;
+      const tracingId = this.props.activeVolumeTracing?.tracingId;
       if (tracingId == null) return null;
       const tracingStoreUrl = state.tracing.tracingStore.url;
       return this.state.activeStatisticsModalGroupId === groupId ? (

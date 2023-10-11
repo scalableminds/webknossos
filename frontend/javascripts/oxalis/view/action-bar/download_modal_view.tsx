@@ -280,7 +280,7 @@ function _DownloadModalView({
   const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
   const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
   const hasVolumes = hasVolumeTracings(tracing);
-  const initialFilesToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr" : "wkw") : "nml";
+  const initialFilesToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
@@ -336,7 +336,7 @@ function _DownloadModalView({
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
-      const includeVolumeData = filesToDownload === "wkw" || filesToDownload === "zarr";
+      const includeVolumeData = filesToDownload === "wkw" || filesToDownload === "zarr3";
       downloadAnnotation(
         tracing.annotationId,
         tracing.annotationType,
@@ -580,7 +580,7 @@ function _DownloadModalView({
                           <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
                         </Radio>
                       </Tooltip>
-                      <Radio value="zarr" style={radioButtonStyle}>
+                      <Radio value="zarr3" style={radioButtonStyle}>
                         Include volume annotations as Zarr
                         <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
                       </Radio>

@@ -202,6 +202,13 @@ final case class BloscCodecConfiguration(cname: String,
 object BloscCodecConfiguration {
   implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
+
+  def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
+    case 0 => "noshuffle"
+    case 1 => "shuffle"
+    case 2 => "bitshuffle"
+    case _ => ???
+  }
 }
 
 final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {

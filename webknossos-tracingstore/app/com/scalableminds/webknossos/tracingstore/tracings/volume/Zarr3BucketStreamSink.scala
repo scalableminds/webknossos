@@ -33,15 +33,16 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
     val header = Zarr3ArrayHeader(
       zarr_format = 3,
       node_type = "array",
-      shape = additionalAxes.map(_.bounds.y).toArray ++ layer.boundingBox.bottomRight.toArray,
+      // channel, additional axes, XYZ
+      shape = Array(1) ++ additionalAxes.map(_.bounds.y).toArray ++ layer.boundingBox.bottomRight.toArray,
       data_type = Left(layer.elementClass.toString),
       chunk_grid = Left(
         ChunkGridSpecification(
           "regular",
           ChunkGridConfiguration(
-            chunk_shape = Array.fill(additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
-                                                                        DataLayer.bucketLength,
-                                                                        DataLayer.bucketLength))
+            chunk_shape = Array.fill(additionalAxes.length + 1)(1) ++ Array(DataLayer.bucketLength,
+                                                                            DataLayer.bucketLength,
+                                                                            DataLayer.bucketLength))
         )),
       chunk_key_encoding =
         ChunkKeyEncoding("default",
@@ -54,13 +55,13 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
         BloscCodecConfiguration(
           BloscCompressor.defaultCname,
           BloscCompressor.defaultCLevel,
-          IntCompressionSetting(BloscCompressor.defaultShuffle),
+          StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
           Some(BloscCompressor.defaultTypesize),
           BloscCompressor.defaultBlocksize
         )
       ),
       storage_transformers = None,
-      dimension_names = Some(additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
+      dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )
     bucketStream.map {
       case (bucket, data) =>
@@ -80,10 +81,12 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
 
   private def createVolumeDataSource(layer: VolumeTracingLayer,
                                      voxelSize: Option[Vec3Double]): GenericDataSource[DataLayer] = {
-    val magLocators = layer.tracing.resolutions.map { mag =>
-      MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.xyz))
-    }
     val additionalAxes = layer.additionalAxes.flatMap(a => if (a.isEmpty) None else Some(a))
+    val rank = additionalAxes.map(_.length).getOrElse(0) + 4
+    val magLocators = layer.tracing.resolutions.map { mag =>
+      MagLocator(mag = vec3IntToProto(mag),
+                 axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = rank - 1)))
+    }
     GenericDataSource(
       id = DataSourceId("", ""),
       dataLayers = List(
@@ -99,8 +102,8 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
   private def zarrChunkFilePath(layerName: String, bucketPosition: BucketPosition): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
-    s"$layerName/${bucketPosition.mag
-      .toMagLiteral()}/c$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
+    val channelPart = 1
+    s"$layerName/${bucketPosition.mag.toMagLiteral()}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =

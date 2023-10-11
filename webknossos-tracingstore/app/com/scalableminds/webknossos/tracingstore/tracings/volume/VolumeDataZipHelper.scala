@@ -82,7 +82,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
 
   private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
     val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("x", "y", "z"))
-    val additionalAxesNames: Seq[String] = dimensionNames.toSeq.dropRight(3)
+    val additionalAxesNames: Seq[String] = dimensionNames.toSeq.drop(1).dropRight(3) // drop channel left, and xyz right
 
     // assume additionalAxes,x,y,z
     val chunkPathRegex = s"(|.*/)(\\d+-\\d+-\\d+)/c\\.(.+)".r
@@ -90,7 +90,8 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     path match {
       case chunkPathRegex(_, magStr, dimsStr) =>
         val dims: Seq[String] = dimsStr.split("\\.").toSeq
-        val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(dims.dropRight(3)).map {
+        val additionalAxesDims = dims.drop(1).dropRight(3) // drop channel left, and xyz right
+        val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(additionalAxesDims).map {
           case (name, coordinateValue) => AdditionalCoordinate(name, coordinateValue.toInt)
         }
 

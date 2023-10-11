@@ -131,7 +131,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
       case wkwHeaderRx(_, magLiteral) =>
         Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)
       case zarr3HeaderRx(_, magLiteral) =>
-        Vec3Int.fromMagLiteral(magLiteral)
+        Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)
       case _ => None
     }
   }

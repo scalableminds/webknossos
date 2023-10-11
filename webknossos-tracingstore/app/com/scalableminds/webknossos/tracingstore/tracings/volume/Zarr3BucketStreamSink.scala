@@ -102,8 +102,8 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
   private def zarrChunkFilePath(layerName: String, bucketPosition: BucketPosition): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart = additionalCoordinatesFilePath(bucketPosition.additionalCoordinates)
-    val channelPart = 1
-    s"$layerName/${bucketPosition.mag.toMagLiteral()}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
+    val channelPart = 0
+    s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]) =
@@ -114,7 +114,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
     }
 
   private def zarrHeaderFilePath(layerName: String, mag: Vec3Int): String =
-    s"$layerName/${mag.toMagLiteral()}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
+    s"$layerName/${mag.toMagLiteral(allowScalar = true)}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
 
   private lazy val compressor =
     new BloscCompressor(

@@ -185,7 +185,7 @@ module.exports = function (env = {}) {
       },
     },
     // See https://webpack.js.org/configuration/devtool/
-    devtool: "source-map",
+    devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
     devServer: {
       static: {

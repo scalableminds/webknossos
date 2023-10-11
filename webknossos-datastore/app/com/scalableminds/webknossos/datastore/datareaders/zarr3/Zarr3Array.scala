@@ -1,14 +1,13 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
-import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Fox.box2Fox
+import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -55,7 +54,11 @@ class Zarr3Array(vaultPath: VaultPath,
     with LazyLogging {
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
-    s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
+    if (header.chunk_key_encoding.name == "default") {
+      s"c${header.dimension_separator.toString}${super.getChunkFilename(chunkIndex)}"
+    } else {
+      super.getChunkFilename(chunkIndex)
+    }
 
   lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) = initializeCodecs(
     header.codecs)

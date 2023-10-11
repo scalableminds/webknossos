@@ -907,6 +907,11 @@ export async function getTracingForAnnotationType(
   );
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
+  if (typ == "Volume") {
+    console.log("fetched volume tracing. hasSegmentIndex:", tracing.hasSegmentIndex, "version:", version);
+  }
+
+
   if (!process.env.IS_TESTING) {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
     console.log("Parsed protobuf tracing:", tracing);

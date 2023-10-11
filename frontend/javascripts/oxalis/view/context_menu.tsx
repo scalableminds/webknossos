@@ -108,6 +108,7 @@ import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -836,6 +837,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 title={
                   isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
                 }
+                onOpenChange={(open: boolean) => {
+                  if (open) {
+                    Store.dispatch(ensureLayerMappingsAreLoadedAction());
+                  }
+                }}
               >
                 <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
               </Tooltip>

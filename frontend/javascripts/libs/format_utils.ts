@@ -212,6 +212,9 @@ export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): strin
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
   return `${roundedLength} vx`;
 }
+export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
+  return `${formatLengthAsVx(areaInVx, roundTo)}²`;
+}
 export function formatExtentWithLength(
   extent: BoundingBoxObject,
   formattingFunction: (arg0: number) => string,

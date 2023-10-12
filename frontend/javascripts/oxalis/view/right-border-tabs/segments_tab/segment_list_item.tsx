@@ -147,10 +147,11 @@ const getMakeSegmentActiveMenuItem = (
     someAdditionalCoordinates?: AdditionalCoordinate[],
   ) => void,
   activeCellId: number | null | undefined,
+  isEditingDisabled: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
-  const disabled = segment.id === activeCellId;
-  const title = disabled
+  const isActiveSegment = segment.id === activeCellId;
+  const title = isActiveSegment
     ? "This segment ID is already active."
     : "Make this the active segment ID.";
   return {
@@ -163,8 +164,12 @@ const getMakeSegmentActiveMenuItem = (
           segment.someAdditionalCoordinates || undefined,
         ),
       ),
-    disabled,
-    label: <Tooltip title={title}>Activate Segment ID</Tooltip>,
+    disabled: isActiveSegment || isEditingDisabled,
+    label: (
+      <Tooltip title={title} trigger={isEditingDisabled ? "" : "hover"}>
+        Activate Segment ID
+      </Tooltip>
+    ),
   };
 };
 
@@ -418,7 +423,13 @@ function _SegmentListItem({
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       ),
-      getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu),
+      getMakeSegmentActiveMenuItem(
+        segment,
+        setActiveCell,
+        activeCellId,
+        isEditingDisabled,
+        andCloseContextMenu,
+      ),
       {
         key: "changeSegmentColor",
         /*
@@ -427,10 +438,10 @@ function _SegmentListItem({
          * This is because the id (A) is mapped to another one (B). So, the user would need
          * to change the color of B to see the effect for A.
          */
-        disabled: isEditingDisabled || segment.id !== mappedId,
+        disabled: segment.id !== mappedId,
         label: (
           <ChangeColorMenuItemContent
-            isDisabled={isEditingDisabled}
+            isDisabled={false}
             title="Change Segment Color"
             onSetColor={(color, createsNewUndoState) => {
               if (visibleSegmentationLayer == null) {
@@ -452,9 +463,9 @@ function _SegmentListItem({
       },
       {
         key: "resetSegmentColor",
-        disabled: isEditingDisabled || segment.color == null,
+        disabled: segment.color == null,
         onClick: () => {
-          if (isEditingDisabled || visibleSegmentationLayer == null) {
+          if (visibleSegmentationLayer == null) {
             return;
           }
           updateSegment(
@@ -470,9 +481,8 @@ function _SegmentListItem({
       },
       {
         key: "removeSegmentFromList",
-        disabled: isEditingDisabled,
         onClick: () => {
-          if (isEditingDisabled || visibleSegmentationLayer == null) {
+          if (visibleSegmentationLayer == null) {
             return;
           }
           removeSegment(segment.id, visibleSegmentationLayer.name);

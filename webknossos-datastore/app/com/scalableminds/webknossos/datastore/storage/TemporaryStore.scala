@@ -27,7 +27,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def findAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
     map.synchronized {
-      map.filterKeys(predicate)
+      map.view.filterKeys(predicate).toMap
     }
 
   def removeAll(): Unit =
@@ -37,7 +37,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def removeAllExcept(l: Array[K]): collection.Map[K, V] =
     map.synchronized {
-      map.filterKeys(l.contains)
+      map.view.filterKeys(l.contains).toMap
     }
 
   def removeAllConditional(predicate: K => Boolean): Unit =

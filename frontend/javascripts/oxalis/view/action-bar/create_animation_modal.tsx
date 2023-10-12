@@ -7,7 +7,11 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 
-import { getColorLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getDefaultValueRangeOfLayer,
+  getLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
 import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
 import {
   computeBoundingBoxFromBoundingBoxObject,
@@ -35,8 +39,9 @@ function CreateAnimationModal(props: Props) {
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const colorLayers = getColorLayers(dataset);
-  const [selectedLayerName, setSelectedLayerName] = useState<string>(colorLayers[0].name);
-  const selectedLayer = getLayerByName(dataset, selectedLayerName);
+  const colorLayer = colorLayers[0];
+  const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
+  const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
 
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -46,7 +51,7 @@ function CreateAnimationModal(props: Props) {
     {
       id: -1,
       name: "Full layer",
-      boundingBox: computeBoundingBoxFromBoundingBoxObject(selectedLayer.boundingBox),
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(selectedColorLayer.boundingBox),
       color: [255, 255, 255],
       isVisible: true,
     } as UserBoundingBox,
@@ -79,8 +84,10 @@ function CreateAnimationModal(props: Props) {
       userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
     );
 
+    // Submit currently visible pre-computed meshes
     let meshSegmentIds = [] as number[];
     let meshFileName = "meshfile.hdf5";
+    let segmentationLayerName = "segmentatation";
 
     const volumeLayer = getActiveSegmentationTracingLayer(state);
 
@@ -92,16 +99,25 @@ function CreateAnimationModal(props: Props) {
 
       const currenMeshFile = state.localSegmentationData[volumeLayer.name].currentMeshFile;
       meshFileName = currenMeshFile?.meshFileName || meshFileName;
+
+      segmentationLayerName = volumeLayer.name;
     }
 
+    // Submit the configured min/max intensity info to support float datasets
+    const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
+    const layerConfiguration = state.datasetConfiguration.layers[selectedColorLayer.name];
+    const { intensityRange } = layerConfiguration;
+    const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, selectedColorLayer.name);
+    const [intensityMin, intensityMax] = intensityRange || defaultIntensityRange;
+
     const animationOptions: RenderAnimationOptions = {
-      layerName: selectedLayerName,
-      segmentationLayerName: "segmentation",
+      layerName: selectedColorLayerName,
+      segmentationLayerName,
       meshFileName,
       meshSegmentIds,
       boundingBox,
-      intensityMin: 0,
-      intensityMax: 255, // TODO use from current view config
+      intensityMin,
+      intensityMax,
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
@@ -248,8 +264,8 @@ function CreateAnimationModal(props: Props) {
           <Col span={16}>
             <LayerSelection
               layers={colorLayers}
-              value={selectedLayerName}
-              onChange={setSelectedLayerName}
+              value={selectedColorLayerName}
+              onChange={setSelectedColorLayerName}
               tracing={tracing}
               style={{ width: "100%" }}
             />

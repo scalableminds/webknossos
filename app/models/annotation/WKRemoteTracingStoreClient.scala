@@ -118,13 +118,12 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
-  def addSegmentIndex(volumeTracingId: String): Fox[Unit] = {
-    logger.debug(s"Called to add segment index to volume tracing $volumeTracingId")
+  def addSegmentIndex(volumeTracingId: String): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/addSegmentIndex").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .silent
       .post()
       .map(_ => ())
-  }
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

@@ -226,15 +226,16 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId)
+            tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
             currentVersion <- tracingService.currentVersion(tracingId)
             before = Instant.now
-            processedBucketCount <- tracingService.addSegmentIndex(tracingId,
-                                                                   tracing,
-                                                                   currentVersion,
-                                                                   urlOrHeaderToken(token, request))
+            processedBucketCount <- tracingService.addSegmentIndex(
+              tracingId,
+              tracing,
+              currentVersion,
+              urlOrHeaderToken(token, request)) ?~> "addSegmentIndex.failed"
             currentVersionNew <- tracingService.currentVersion(tracingId)
-            _ <- bool2Fox(currentVersionNew == currentVersion + 1L) ?~> "version increment failed?"
+            _ <- bool2Fox(processedBucketCount == -1 || currentVersionNew == currentVersion + 1L) ?~> "version increment failed?"
             duration = Instant.since(before)
             _ = if (processedBucketCount != -1)
               logger.info(

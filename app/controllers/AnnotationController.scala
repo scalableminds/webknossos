@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
@@ -55,6 +56,7 @@ class AnnotationController @Inject()(
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
     datasetDAO: DatasetDAO,
+    tracingStoreDAO: TracingStoreDAO,
     datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
@@ -71,6 +73,7 @@ class AnnotationController @Inject()(
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
     conf: WkConf,
+    rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with UserAwareRequestLogging
@@ -370,6 +373,31 @@ class AnnotationController @Inject()(
       updated <- provider.provideAnnotation(id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
     } yield JsonOk(json)
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def addSegmentIndicesToAll(startAfterTracingId: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      {
+        var processedCount = 0
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
+          annotationLayers <- annotationLayerDAO.findAllVolumeLayers
+          tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
+          client = new WKRemoteTracingStoreClient(tracingStore, null, rpc)
+          _ <- Fox.serialCombined(annotationLayers) { annotationLayer =>
+            processedCount += 1
+            logger.info(
+              f"Processing tracing ${annotationLayer.tracingId}. $processedCount of ${annotationLayers.length} (${percent(processedCount, annotationLayers.length)})...")
+            client.addSegmentIndex(annotationLayer.tracingId) ?~> "annotation.addSegmentIndex.failed"
+          }
+        } yield JsonOk(s"Processed $processedCount volume annotation layers")
+      }
+    }
+
+  private def percent(done: Int, todo: Int) = {
+    val value = done.toDouble / todo.toDouble * 100
+    f"$value%1.1f %%"
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(

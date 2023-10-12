@@ -42,7 +42,7 @@ import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
-  setActiveGroupAction,
+  setActiveTreeGroupAction,
   setTreeColorAction,
   toggleTreeAction,
   toggleTreeGroupAction,
@@ -80,7 +80,7 @@ type OwnProps = {
 type Props = OwnProps & {
   onShuffleTreeColor: (arg0: number) => void;
   onSetActiveTree: (arg0: number) => void;
-  onSetActiveGroup: (arg0: number) => void;
+  onSetActiveTreeGroup: (arg0: number) => void;
   onToggleTree: (arg0: number) => void;
   onDeleteTree: (arg0: number) => void;
   onToggleAllTrees: () => void;
@@ -209,7 +209,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   selectGroupById = (groupId: number) => {
     this.props.deselectAllTrees();
-    this.props.onSetActiveGroup(groupId);
+    this.props.onSetActiveTreeGroup(groupId);
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
@@ -476,7 +476,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "hideTree",
           onClick: () => {
-            this.props.onSetActiveGroup(id);
+            this.props.onSetActiveTreeGroup(id);
             this.props.onToggleHideInactiveTrees();
             this.handleGroupDropdownMenuVisibility(id, false);
           },
@@ -791,8 +791,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setActiveTreeAction(treeId));
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onSetTreeColor(treeId: number, color: Vector3) {

@@ -49,6 +49,7 @@ import {
   meshV0,
   meshV3,
   getMeshfilesForDatasetLayer,
+  getBucketPositionsForAdHocMesh,
 } from "admin/admin_rest_api";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
@@ -97,10 +98,8 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 // (at x, y, z) position whether the mesh chunk was loaded.
 const adhocIsosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
-  // @ts-ignore
-  return window.__marchingCubeSizeInMag1 != null
-    ? // @ts-ignore
-      window.__marchingCubeSizeInMag1
+  return (window as any).__marchingCubeSizeInMag1 != null
+    ? (window as any).__marchingCubeSizeInMag1
     : [128, 128, 128];
 }
 const modifiedCells: Set<number> = new Set();
@@ -118,10 +117,8 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
   const maybeMap = isosurfacesMap.get(segmentId);
 
   if (maybeMap == null) {
-    const newMap = new ThreeDMap();
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ThreeDMap<unknown>' is not assig... Remove this comment to see the full error message
+    const newMap = new ThreeDMap<boolean>();
     isosurfacesMap.set(segmentId, newMap);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'ThreeDMap<unknown>' is not assignable to typ... Remove this comment to see the full error message
     return newMap;
   }
 
@@ -165,12 +162,11 @@ const NEIGHBOR_LOOKUP = [
 
 function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
-  const neighboringPosition = [
+  const neighboringPosition: Vector3 = [
     clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
     clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
     clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
   ];
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
 }
 
@@ -183,41 +179,6 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
     false,
     action.layerName,
     action.extraInfo,
-  );
-}
-
-function* loadAdHocIsosurface(
-  seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
-  segmentId: number,
-  removeExistingIsosurface: boolean = false,
-  layerName?: string | null | undefined,
-  maybeExtraInfo?: AdHocIsosurfaceInfo,
-): Saga<void> {
-  const layer =
-    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
-
-  if (segmentId === 0 || layer == null) {
-    return;
-  }
-
-  if (_.size(layer.cube.additionalAxes) > 0) {
-    // Also see https://github.com/scalableminds/webknossos/issues/7229
-    Toast.warning(
-      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
-    );
-  }
-
-  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
-
-  yield* call(
-    loadIsosurfaceForSegmentId,
-    segmentId,
-    seedPosition,
-    seedAdditionalCoordinates,
-    isosurfaceExtraInfo,
-    removeExistingIsosurface,
-    layer,
   );
 }
 
@@ -260,27 +221,46 @@ function* getInfoForIsosurfaceLoading(
   };
 }
 
-function* loadIsosurfaceForSegmentId(
-  segmentId: number,
+function* loadAdHocIsosurface(
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
-  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
-  removeExistingIsosurface: boolean,
-  layer: DataLayer,
+  segmentId: number,
+  removeExistingIsosurface: boolean = false,
+  layerName?: string | null | undefined,
+  maybeExtraInfo?: AdHocIsosurfaceInfo,
 ): Saga<void> {
+  const layer =
+    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
+
+  if (segmentId === 0 || layer == null) {
+    return;
+  }
+
+  if (_.size(layer.cube.additionalAxes) > 0) {
+    // Also see https://github.com/scalableminds/webknossos/issues/7229
+    Toast.warning(
+      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
+    );
+  }
+
+  yield* call([Model, Model.ensureSavedState]);
+
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
+
   const { zoomStep, resolutionInfo } = yield* call(
     getInfoForIsosurfaceLoading,
     layer,
     isosurfaceExtraInfo,
   );
   batchCounterPerSegment[segmentId] = 0;
+
   // If a REMOVE_ISOSURFACE action is dispatched and consumed
-  // here before loadIsosurfaceWithNeighbors is finished, the latter saga
+  // here before loadFullAdHocIsosurface is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
   yield* race({
-    loadIsosurfaceWithNeighbors: call(
-      loadIsosurfaceWithNeighbors,
+    loadFullAdHocIsosurface: call(
+      loadFullAdHocIsosurface,
       layer,
       segmentId,
       seedPosition,
@@ -299,7 +279,7 @@ function* loadIsosurfaceForSegmentId(
   });
 }
 
-function* loadIsosurfaceWithNeighbors(
+function* loadFullAdHocIsosurface(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
@@ -312,7 +292,6 @@ function* loadIsosurfaceWithNeighbors(
   let isInitialRequest = true;
   const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
-  let positionsToRequest = [clippedPosition];
   yield* put(
     addAdHocIsosurfaceAction(
       layer.name,
@@ -325,14 +304,46 @@ function* loadIsosurfaceWithNeighbors(
   );
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
+  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+
+  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+  // Fetch from datastore if no volumetracing ...
+  let useDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
+  if (isosurfaceExtraInfo.useDataStore != null) {
+    // ... except if the caller specified whether to use the data store ...
+    useDataStore = isosurfaceExtraInfo.useDataStore;
+  } else if (volumeTracing?.mappingIsEditable) {
+    // ... or if an editable mapping is active.
+    useDataStore = false;
+  }
+
+  // Segment stats can only be used for volume tracings that have a segment index
+  // and that don't have editable mappings.
+  const usePositionsFromSegmentStats =
+    volumeTracing?.hasSegmentIndex &&
+    !volumeTracing.mappingIsEditable &&
+    visibleSegmentationLayer?.tracingId != null;
+  let positionsToRequest = usePositionsFromSegmentStats
+    ? yield* getChunkPositionsFromSegmentStats(
+        tracingStoreHost,
+        layer,
+        segmentId,
+        cubeSize,
+        mag,
+        clippedPosition,
+      )
+    : [clippedPosition];
+
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
     if (currentPosition == null) {
       throw new Error("Satisfy typescript");
     }
-
     const neighbors = yield* call(
-      maybeLoadIsosurface,
+      maybeLoadIsosurfaceChunk,
       layer,
       segmentId,
       currentPosition,
@@ -341,19 +352,47 @@ function* loadIsosurfaceWithNeighbors(
       resolutionInfo,
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
+      useDataStore,
+      !usePositionsFromSegmentStats,
     );
     isInitialRequest = false;
+
+    // If we are using the positions from the segment index, the backend will
+    // send an empty neighbors array, as it's not necessary to have them.
+    if (usePositionsFromSegmentStats && neighbors.length > 0) {
+      throw new Error("Retrieved neighbor positions even though these were not requested.");
+    }
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
 
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
 }
 
+function* getChunkPositionsFromSegmentStats(
+  tracingStoreHost: string,
+  layer: DataLayer,
+  segmentId: number,
+  cubeSize: Vector3,
+  mag: Vector3,
+  clippedPosition: Vector3,
+) {
+  const unscaledPositions = yield* call(
+    getBucketPositionsForAdHocMesh,
+    tracingStoreHost,
+    layer.name,
+    segmentId,
+    cubeSize,
+    mag,
+  );
+  const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
+  return sortByDistanceTo(positions, clippedPosition) as Vector3[];
+}
+
 function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
   return batchCounterPerSegment[segmentId] > MESH_CHUNK_THROTTLE_LIMIT;
 }
 
-function* maybeLoadIsosurface(
+function* maybeLoadIsosurfaceChunk(
   layer: DataLayer,
   segmentId: number,
   clippedPosition: Vector3,
@@ -362,6 +401,8 @@ function* maybeLoadIsosurface(
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
+  useDataStore: boolean,
+  findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
@@ -379,8 +420,7 @@ function* maybeLoadIsosurface(
   // since in the coarse resolution less data needs to be loaded. Another possibility to increase performance is
   // window.__marchingCubeSizeInMag1 which affects the cube size the marching cube algorithm will work on. If the cube is significantly larger than the
   // segments, computations are wasted.
-  // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
-  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [1, 1, 1];
+  const subsamplingStrides = (window as any).__isosurfaceSubsamplingStrides || [1, 1, 1];
   const scale = yield* select((state) => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
@@ -390,16 +430,7 @@ function* maybeLoadIsosurface(
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  // Fetch from datastore if no volumetracing ...
-  let useDataStore = volumeTracing == null;
-  if (isosurfaceExtraInfo.useDataStore != null) {
-    // ... except if the caller specified whether to use the data store ...
-    useDataStore = isosurfaceExtraInfo.useDataStore;
-  } else if (volumeTracing?.mappingIsEditable) {
-    // ... or if an editable mapping is active.
-    useDataStore = false;
-  }
+
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
@@ -411,6 +442,8 @@ function* maybeLoadIsosurface(
   let retryCount = 0;
 
   const { segmentMeshController } = getSceneController();
+
+  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -425,8 +458,9 @@ function* maybeLoadIsosurface(
           mag,
           segmentId,
           subsamplingStrides,
-          cubeSize: getZoomedCubeSize(zoomStep, resolutionInfo),
+          cubeSize,
           scale,
+          findNeighbors,
           ...isosurfaceExtraInfo,
         },
       );
@@ -440,8 +474,7 @@ function* maybeLoadIsosurface(
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
-      // @ts-ignore
-      ErrorHandling.notify(exception);
+      ErrorHandling.notify(exception as Error);
       console.warn("Retrying mesh generation...");
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
@@ -641,8 +674,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       layer,
     ),
     cancel: take(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'otherAction' implicitly has an 'any' ty... Remove this comment to see the full error message
-      (otherAction) =>
+      (otherAction: Action) =>
         otherAction.type === "REMOVE_ISOSURFACE" &&
         otherAction.segmentId === segmentId &&
         otherAction.layerName === layer.name,
@@ -837,11 +869,7 @@ function _getLoadChunksTasks(
         }
         const availableChunks = availableChunksMap[lod];
         // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-        const sortedAvailableChunks = _.sortBy(
-          availableChunks,
-          (chunk: Vector3 | meshV3.MeshChunk) =>
-            V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-        ) as Array<Vector3> | Array<meshV3.MeshChunk>;
+        const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
         let tasks;
         if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
@@ -968,6 +996,15 @@ function _getLoadChunksTasks(
       }),
     ),
   );
+}
+
+function sortByDistanceTo(
+  availableChunks: Vector3[] | meshV3.MeshChunk[] | null | undefined,
+  seedPosition: Vector3,
+) {
+  return _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
+    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
+  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 }
 
 /*

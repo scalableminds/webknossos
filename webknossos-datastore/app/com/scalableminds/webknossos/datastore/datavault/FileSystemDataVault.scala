@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datavault
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import net.liftweb.util.Helpers.tryo
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path}
@@ -40,6 +41,14 @@ class FileSystemDataVault extends DataVault {
           }.toFox
       }
     } else Fox.empty
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(19, 31).toHashCode
+
+  override def equals(obj: Any): Boolean = obj match {
+    case _: FileSystemDataVault => true
+    case _                      => false
+  }
 
 }
 

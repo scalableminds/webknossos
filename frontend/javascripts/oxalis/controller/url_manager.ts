@@ -404,15 +404,14 @@ export function updateTypeAndId(
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
 const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   obj[encodeURIComponent(decodedValue)] = decodedValue;
   return obj;
-}, {});
+}, {} as Record<string, string>);
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'matched' implicitly has an 'any' type.
-const decodeWhitelistedCharacters = (matched) => encodedCharacterToDecodedCharacter[matched];
+const decodeWhitelistedCharacters = (matched: string) =>
+  encodedCharacterToDecodedCharacter[matched];
 
 export function encodeUrlHash(unencodedHash: string): string {
   const urlEncodedHash = encodeURIComponent(unencodedHash);

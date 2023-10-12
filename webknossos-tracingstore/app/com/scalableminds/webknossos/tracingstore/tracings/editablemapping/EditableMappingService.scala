@@ -39,7 +39,7 @@ import java.util
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.jdk.CollectionConverters.asScalaSetConverter
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
@@ -519,7 +519,8 @@ class EditableMappingService @Inject()(
         subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
-        mappingType = None
+        mappingType = None,
+        findNeighbors = request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

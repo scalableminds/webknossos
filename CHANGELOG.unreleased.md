@@ -8,30 +8,21 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.2...HEAD)
 
 ### Added
-- Datasets and annotations can now be more than 3-dimensional, using additional coordinates. [#7136](https://github.com/scalableminds/webknossos/pull/7136)
-- Added disabled drag handles to volume and skeleton layers for visual consistency. These layer cannot be dragged or reordered. [#7295](https://github.com/scalableminds/webknossos/pull/7295)
-- Dataset thumbnails for grayscale layers can now be colored using the value in the view configuration. [#7255](https://github.com/scalableminds/webknossos/pull/7255)
-- OpenID Connect authorization is now compatible with Providers that send the user information in an id_token. [#7294](https://github.com/scalableminds/webknossos/pull/7294)
+- Added a new tool that allows either measuring the distance of a path or a non-self-crossing area. [#7258](https://github.com/scalableminds/webknossos/pull/7258)
+- Added social media link previews for links to datasets and annotations (only if they are public or if the links contain sharing tokens). [#7331](https://github.com/scalableminds/webknossos/pull/7331)
+- Loading sharded zarr3 datasets is now significantly faster. [#7363](https://github.com/scalableminds/webknossos/pull/7363)
 - Higher-dimension coordinates (e.g., for the t axis) are now encoded in the URL, too, so that reloading the page will keep you at your current position. Only relevant for 4D datasets. [#7328](https://github.com/scalableminds/webknossos/pull/7328)
-- Volume and bounding box information is shown in segments' context menus as well as in a separate modal in the segments tab. There is also an option to export the statistics. [#7249](https://github.com/scalableminds/webknossos/pull/7249)
-- A banner underneath the navigation bar informs about current and upcoming maintenances of WEBKNOSSOS. [#7284](https://github.com/scalableminds/webknossos/pull/7284)
-- The AI-based quick select tool can now also be used for ND datasets. [#7287](https://github.com/scalableminds/webknossos/pull/7287)
 
 ### Changed
-- Annotating volume data uses a transaction-based mechanism now. As a result, WK is more robust against partial saves (i.e., due to a crashing tab). [#7264](https://github.com/scalableminds/webknossos/pull/7264)
-- Improved speed of saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
-- Improved progress indicator when saving volume data. [#7264](https://github.com/scalableminds/webknossos/pull/7264)
-- Adapted Zarr 3 implementations to recent changes in the specification (index codecs, zstd codec). [#7305](https://github.com/scalableminds/webknossos/pull/7305)
+- Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)
+- Remote datasets with a datasource-properties.json can now also be imported without the need for OME metadata. [#7372](https://github.com/scalableminds/webknossos/pull/7372)
 
 ### Fixed
-- Fixed that the deletion of a selected segment would crash the segments tab. [#7316](https://github.com/scalableminds/webknossos/pull/7316)
-- Fixed reading sharded Zarr 3 data from the local file system. [#7321](https://github.com/scalableminds/webknossos/pull/7321)
-- Fixed no-bucket data zipfile when downloading volume annotations. [#7323](https://github.com/scalableminds/webknossos/pull/7323)
-- Fixed too tight assertions when saving annotations, leading to failed save requests. [#7326](https://github.com/scalableminds/webknossos/pull/7326)
-- Fixed a bug when saving large amounts of skeleton annotation data at once. [#7329](https://github.com/scalableminds/webknossos/pull/7329)
+- Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)
+- Fixed a bug where data from zarr2 datasets that have a channel axis was broken. [#7374](https://github.com/scalableminds/webknossos/pull/7374)
 
 ### Removed
 

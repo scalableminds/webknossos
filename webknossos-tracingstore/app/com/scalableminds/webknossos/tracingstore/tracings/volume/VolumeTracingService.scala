@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -26,14 +27,13 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
@@ -303,33 +303,25 @@ class VolumeTracingService @Inject()(
         } yield savedResolutions.toSet
     }
 
-  def allDataEnumerator(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] =
-    Enumerator.outputStream { os =>
-      allDataToOutputStream(tracingId, tracing, os)
-    }
-
-  def allDataFile(tracingId: String, tracing: VolumeTracing): Future[Files.TemporaryFile] = {
+  def allDataFile(tracingId: String, tracing: VolumeTracing): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
     allDataToOutputStream(tracingId, tracing, os).map(_ => zipped)
   }
 
-  private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
+  private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
                                          tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
-    val before = System.currentTimeMillis()
+    val before = Instant.now
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
-      case failure: scala.util.Failure[Unit] =>
-        logger.debug(
-          s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case _: scala.util.Success[Unit] =>
-        val after = System.currentTimeMillis()
-        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
+      case b: scala.util.Success[Box[Unit]] =>
+        logger.info(s"Zipping volume data for $tracingId took ${Instant.since(before)} ms. Result: ${b.get}")
+      case _ => ()
     }
     zipResult
   }
@@ -492,7 +484,8 @@ class VolumeTracingService @Inject()(
         request.subsamplingStrides,
         request.scale,
         None,
-        None
+        None,
+        request.findNeighbors
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

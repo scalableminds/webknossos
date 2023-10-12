@@ -253,6 +253,7 @@ export type VolumeTracing = TracingBase & {
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly mappingIsEditable?: boolean;
+  readonly hasSegmentIndex: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -318,11 +319,10 @@ export type DatasetConfiguration = {
   // they still correlated with each other.
   readonly nativelyRenderedLayerName: string | null;
 };
-export type PartialDatasetConfiguration = Partial<
-  DatasetConfiguration & {
-    readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
-  }
->;
+
+export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {
+  readonly layers?: Record<string, Partial<DatasetLayerConfiguration>>;
+};
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
@@ -526,6 +526,7 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
+  readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
 };
 type BaseIsosurfaceInformation = {
   readonly segmentId: number;

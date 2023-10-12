@@ -5,13 +5,13 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, UserService}
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{StoreModules, WkConf}
 
@@ -47,8 +47,8 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       addRemoteOriginHeaders(
         Ok(
           Json.obj(
-            "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
-            "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
+            "webknossos" -> Json.toJson(webknossos.BuildInfo.toMap.view.mapValues(_.toString).toMap),
+            "webknossos-wrap" -> Json.toJson(webknossoswrap.BuildInfo.toMap.view.mapValues(_.toString).toMap),
             "schemaVersion" -> schemaVersion.toOption,
             "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
             "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled

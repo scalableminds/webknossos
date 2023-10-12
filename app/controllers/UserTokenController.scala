@@ -13,16 +13,17 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DatasetDAO, DatasetService, DataStoreService}
+import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -166,7 +167,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
-    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
+    // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
@@ -199,7 +200,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
   private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
     if (mode != AccessMode.read)
-      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access mode for job exports: $mode")))
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

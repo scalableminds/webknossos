@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.binary.Dataset
+import models.dataset.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}

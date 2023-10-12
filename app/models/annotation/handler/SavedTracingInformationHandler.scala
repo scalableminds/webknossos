@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
-import models.binary.DatasetDAO
+import models.dataset.DatasetDAO
 import models.user.{User, UserService}
 import utils.ObjectId
 
@@ -25,12 +25,12 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).futureBox
-      userName <- userBox.map(_.abreviatedName).getOrElse("")
-      dataSetName <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
+      userName <- userBox.map(_.abbreviatedName).getOrElse("")
+      datasetName <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = formatHash(annotation.id)
-      normalize(s"${dataSetName}__${task}__${userName}__$id")
+      normalize(s"${datasetName}__${task}__${userName}__$id")
     }
 
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =

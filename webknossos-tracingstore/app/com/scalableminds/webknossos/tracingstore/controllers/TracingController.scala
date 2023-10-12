@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -62,6 +62,22 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           tracingService.save(tracing, None, 0).map { newId =>
             Ok(Json.toJson(newId))
           }
+        }
+      }
+    }
+  }
+
+  def saveMultiple(token: Option[String]): Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
+    log() {
+      logTime(slackNotificationService.noticeSlowRequest) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
+            tracingOpt match {
+              case Some(tracing) => tracingService.save(tracing, None, 0).map(Some(_))
+              case _             => Fox.successful(None)
+            }
+          })
+          savedIds.map(id => Ok(Json.toJson(id)))
         }
       }
     }

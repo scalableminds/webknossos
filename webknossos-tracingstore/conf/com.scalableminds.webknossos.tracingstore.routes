@@ -50,6 +50,7 @@ GET         /volume/zarr/:tracingId/:mag/:cxyz                  @com.scalablemin
 
 # Skeleton tracings
 POST        /skeleton/save                                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save(token: Option[String])
+POST        /skeleton/saveMultiple                              @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.saveMultiple(token: Option[String])
 
 POST        /skeleton/mergedFromContents                        @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents(token: Option[String], persist: Boolean)
 POST        /skeleton/mergedFromIds                             @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromIds(token: Option[String], persist: Boolean)

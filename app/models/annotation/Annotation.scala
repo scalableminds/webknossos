@@ -126,13 +126,19 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       parsed <- ObjectId.fromString(head)
     } yield parsed
 
-  def findAllVolumeLayers: Fox[List[AnnotationLayer]] =
+  def findAllVolumeLayers(currentOffset: Int, pageSize: Int): Fox[List[AnnotationLayer]] =
     for {
       rows <- run(
-        q"select _annotation, tracingId, typ, name from webknossos.annotation_layers where typ = 'Volume' order by tracingId"
+        q"select _annotation, tracingId, typ, name from webknossos.annotation_layers where typ = 'Volume' order by tracingId offset $currentOffset limit $pageSize"
           .as[AnnotationLayersRow])
       parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed
+
+  def countAllVolumeLayers: Fox[Int] =
+    for {
+      rows <- run(q"select COUNT(*) from webknossos.annotation_layers where typ = 'Volume'".as[Int])
+      head <- rows.headOption.toFox
+    } yield head
 
   def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
     for {

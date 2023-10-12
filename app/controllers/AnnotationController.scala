@@ -376,19 +376,23 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def addSegmentIndicesToAll(startAfterTracingId: Option[String]): Action[AnyContent] =
+  def addSegmentIndicesToAll(startOffset: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
-        var processedCount = 0
+        var processedCount: Int = 0
         for {
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-          annotationLayers <- annotationLayerDAO.findAllVolumeLayers
+          totalCount <- annotationLayerDAO.countAllVolumeLayers
+          toProcessCount = totalCount - startOffset.getOrElse(0)
+          pageSize: Int = 1000
+          currentOffset: Int = startOffset.getOrElse(0)
+          annotationLayers <- annotationLayerDAO.findAllVolumeLayers(currentOffset, pageSize)
           tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
           client = new WKRemoteTracingStoreClient(tracingStore, null, rpc)
-          _ <- Fox.serialCombined(annotationLayers) { annotationLayer =>
+          _ <- Fox.serialSequenceBox(annotationLayers) { annotationLayer =>
             processedCount += 1
             logger.info(
-              f"Processing tracing ${annotationLayer.tracingId}. $processedCount of ${annotationLayers.length} (${percent(processedCount, annotationLayers.length)})...")
+              f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $toProcessCount (${percent(processedCount, toProcessCount)})...")
             client.addSegmentIndex(annotationLayer.tracingId) ?~> "annotation.addSegmentIndex.failed"
           }
         } yield JsonOk(s"Processed $processedCount volume annotation layers")

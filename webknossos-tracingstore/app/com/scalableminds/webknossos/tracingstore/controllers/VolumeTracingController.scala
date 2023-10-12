@@ -224,7 +224,7 @@ class VolumeTracingController @Inject()(
   def addSegmentIndex(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
             currentVersion <- tracingService.currentVersion(tracingId)

@@ -83,12 +83,15 @@ case class Zarr3ArrayHeader(
     shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
   }
 
-  // Note: this currently works only for F and C as transformation inputs
+  // Note: this currently works if only a single transpose codec is present,
+  // and if it is either "F", "C" or an array value equivalent to "F" or "C"
   // compare https://github.com/scalableminds/webknossos/issues/7116
   private def getOrder: ArrayOrder.Value =
-    CodecTreeExplorer.find {
-      case TransposeCodecConfiguration(order) => order == "F"
-      case _                                  => false
+    CodecTreeExplorer.findOne {
+      case TransposeCodecConfiguration(StringTransposeSetting(order)) => order == "F"
+      case TransposeCodecConfiguration(IntArrayTransposeSetting(order)) =>
+        order.sameElements(TransposeSetting.fOrderFromRank(rank).order)
+      case _ => false
     }(codecs).map(_ => ArrayOrder.F).getOrElse(ArrayOrder.C)
 
   private def getDimensionSeparator =

@@ -18,6 +18,26 @@ import ucar.ma2.{Array => MultiArray}
 
 import java.util.zip.CRC32C
 
+sealed trait TransposeSetting
+final case class StringTransposeSetting(order: String) extends TransposeSetting
+final case class IntArrayTransposeSetting(order: Array[Int]) extends TransposeSetting
+
+object TransposeSetting {
+  implicit object TransposeSettingFormat extends Format[TransposeSetting] {
+
+    override def reads(json: JsValue): JsResult[TransposeSetting] =
+      json.validate[String].map(StringTransposeSetting).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting))
+
+    override def writes(transposeSetting: TransposeSetting): JsValue =
+      transposeSetting match {
+        case StringTransposeSetting(x)   => Json.toJson(x)
+        case IntArrayTransposeSetting(x) => Json.toJson(x)
+      }
+  }
+
+  def fOrderFromRank(rank: Int): IntArrayTransposeSetting = IntArrayTransposeSetting(Array.range(rank - 1, -1, -1))
+}
+
 trait Codec
 
 /*
@@ -57,7 +77,7 @@ class BytesCodec(val endian: Option[String]) extends ArrayToBytesCodec {
   override def decode(bytes: Array[Byte]): MultiArray = ???
 }
 
-class TransposeCodec(order: String) extends ArrayToArrayCodec {
+class TransposeCodec(order: TransposeSetting) extends ArrayToArrayCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/v1.0.html
   // encode, decode currently not implemented because the flipping is done by the header
@@ -180,8 +200,7 @@ object BytesCodecConfiguration {
   val name = "bytes"
 }
 
-// Should also support other parameters
-final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration {
+final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration {
   override def name: String = TransposeCodecConfiguration.name
 }
 
@@ -270,14 +289,14 @@ object ShardingCodecConfiguration {
 
 object CodecTreeExplorer {
 
-  def find(condition: Function[CodecConfiguration, Boolean])(
+  def findOne(condition: Function[CodecConfiguration, Boolean])(
       codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
     val results: Seq[Option[CodecConfiguration]] = codecs.map {
       case s: ShardingCodecConfiguration => {
         if (condition(s)) {
           Some(s)
         } else {
-          find(condition)(s.codecs)
+          findOne(condition)(s.codecs)
         }
       }
       case c: CodecConfiguration => Some(c).filter(condition)

@@ -30,6 +30,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
             mags: Seq[Vec3Int],
             additionalAxes: Seq[AdditionalAxisProto],
             voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Iterator[NamedStream] = {
+    val rank = additionalAxes.length + 4
     val header = Zarr3ArrayHeader(
       zarr_format = 3,
       node_type = "array",
@@ -50,7 +51,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
       fill_value = Right(0),
       attributes = None,
       codecs = Seq(
-        TransposeCodecConfiguration("F"),
+        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(rank)),
         BytesCodecConfiguration(Some("little")),
         BloscCodecConfiguration(
           BloscCompressor.defaultCname,

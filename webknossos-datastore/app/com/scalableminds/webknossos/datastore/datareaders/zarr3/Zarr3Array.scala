@@ -60,8 +60,8 @@ class Zarr3Array(vaultPath: VaultPath,
       super.getChunkFilename(chunkIndex)
     }
 
-  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) = initializeCodecs(
-    header.codecs)
+  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) =
+    initializeCodecs(header.codecs)
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {

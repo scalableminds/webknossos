@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.2...HEAD)
 
 ### Added
 - Added a new tool that allows either measuring the distance of a path or a non-self-crossing area. [#7258](https://github.com/scalableminds/webknossos/pull/7258)
@@ -20,7 +20,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Remote datasets with a datasource-properties.json can now also be imported without the need for OME metadata. [#7372](https://github.com/scalableminds/webknossos/pull/7372)
 
 ### Fixed
-- Fixed that segment statistics were requested in the wrong resolution and without properly considering the dataset scale. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
 - Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)
 - Fixed a bug where data from zarr2 datasets that have a channel axis was broken. [#7374](https://github.com/scalableminds/webknossos/pull/7374)
 

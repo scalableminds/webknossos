@@ -1053,7 +1053,7 @@ export async function downloadAnnotation(
   if (!includeVolumeData) {
     searchParams.append("skipVolumeData", "true");
   } else {
-    if (downloadFileFormat == "nml") {
+    if (downloadFileFormat === "nml") {
       throw new Error(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );

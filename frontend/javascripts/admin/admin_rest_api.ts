@@ -1035,7 +1035,7 @@ export async function downloadAnnotation(
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
-  volumeDataZipFormat: string = "wkw",
+  downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
   const searchParams = new URLSearchParams();
@@ -1053,7 +1053,12 @@ export async function downloadAnnotation(
   if (!includeVolumeData) {
     searchParams.append("skipVolumeData", "true");
   } else {
-    searchParams.append("volumeDataZipFormat", volumeDataZipFormat);
+    if (downloadFileFormat == "nml") {
+      throw new Error(
+        "Cannot download annotation with nml-only format while includeVolumeData is true",
+      );
+    }
+    searchParams.append("downloadFileFormat", downloadFileFormat);
   }
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;

@@ -280,11 +280,13 @@ function _DownloadModalView({
   const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
   const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
   const hasVolumes = hasVolumeTracings(tracing);
-  const initialFilesToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
+  const initialFileFormatToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
-  const [filesToDownload, setFilesToDownload] = useState<string>(initialFilesToDownload);
+  const [fileFormatToDownload, setFileFormatToDownload] = useState<"zarr3" | "wkw" | "nml">(
+    initialFileFormatToDownload,
+  );
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
@@ -336,13 +338,13 @@ function _DownloadModalView({
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
-      const includeVolumeData = filesToDownload === "wkw" || filesToDownload === "zarr3";
+      const includeVolumeData = fileFormatToDownload === "wkw" || fileFormatToDownload === "zarr3";
       downloadAnnotation(
         tracing.annotationId,
         tracing.annotationType,
         hasVolumeFallback,
         {},
-        filesToDownload,
+        fileFormatToDownload,
         includeVolumeData,
       );
       onClose();
@@ -561,9 +563,9 @@ function _DownloadModalView({
               </Col>
               <Col span={15}>
                 <Radio.Group
-                  defaultValue={initialFilesToDownload}
-                  value={filesToDownload}
-                  onChange={(e) => setFilesToDownload(e.target.value)}
+                  defaultValue={initialFileFormatToDownload}
+                  value={fileFormatToDownload}
+                  onChange={(e) => setFileFormatToDownload(e.target.value)}
                   style={{ marginLeft: 16 }}
                 >
                   {hasVolumes ? (

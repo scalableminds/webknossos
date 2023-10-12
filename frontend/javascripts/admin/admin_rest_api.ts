@@ -1058,7 +1058,7 @@ export async function downloadAnnotation(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );
     }
-    searchParams.append("downloadFileFormat", downloadFileFormat);
+    searchParams.append("volumeDataZipFormat", downloadFileFormat);
   }
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;

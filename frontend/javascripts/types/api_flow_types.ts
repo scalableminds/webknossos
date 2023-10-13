@@ -1071,6 +1071,7 @@ export type RenderAnimationOptions = {
   includeWatermark: boolean;
   intensityMin: number;
   intensityMax: number;
+  magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
 };

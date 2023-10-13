@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.DatasetDAO
@@ -40,7 +41,8 @@ case class AnimationJobOptions(
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
-    intensityMax: Double
+    intensityMax: Double,
+    magForTextures: Vec3Int
 )
 
 object AnimationJobOptions {
@@ -358,6 +360,7 @@ class JobsController @Inject()(
             "camera_position" -> animationJobOptions.cameraPosition,
             "intensity_min" -> animationJobOptions.intensityMin,
             "intensity_max" -> animationJobOptions.intensityMax,
+            "mag_for_textures" -> animationJobOptions.magForTextures,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

@@ -1,16 +1,17 @@
-import { Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
+import { Alert, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
-import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
+import Store, { BoundingBoxObject, OxalisState, UserBoundingBox } from "oxalis/store";
 
 import {
   getColorLayers,
   getDefaultValueRangeOfLayer,
   getLayerByName,
+  is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
 import {
@@ -18,7 +19,12 @@ import {
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { CAMERA_POSITIONS, RenderAnimationOptions, MOVIE_RESOLUTIONS } from "types/api_flow_types";
+import {
+  CAMERA_POSITIONS,
+  RenderAnimationOptions,
+  MOVIE_RESOLUTIONS,
+  APIDataLayer,
+} from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import {
@@ -26,11 +32,42 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import { Vector3 } from "oxalis/constants";
 
 type Props = {
   isOpen: boolean;
   onClose: React.MouseEventHandler;
 };
+
+// When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
+const TARGET_TEXTURE_SIZE = 2000; // in pixels
+
+function selectMagForTextureCreation(
+  layer: APIDataLayer,
+  boundingBox: BoundingBoxObject,
+): [Vector3, number] {
+  // Utility method to determine the best mag in relation to the dataset size to create the textures from in the worker job
+  // We aim to create textures with a rough length/height of 2000px (aka target_video_frame_size)
+
+  const bb = [boundingBox.width, boundingBox.height, boundingBox.depth];
+  const longestSide = Math.max(...bb);
+  const indexLongestSide = bb.indexOf(longestSide);
+
+  let bestMag = layer.resolutions[0];
+  let bestDifference = Infinity;
+
+  for (const mag of layer.resolutions) {
+    const size = longestSide / mag[indexLongestSide];
+    const diff = Math.abs(TARGET_TEXTURE_SIZE - size);
+
+    if (bestDifference > diff) {
+      bestDifference = diff;
+      bestMag = mag;
+    }
+  }
+
+  return [bestMag, bestDifference];
+}
 
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
@@ -42,6 +79,9 @@ function CreateAnimationModal(props: Props) {
   const colorLayer = colorLayers[0];
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
   const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
+
+  const [isValid, setIsValid] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -68,14 +108,46 @@ function CreateAnimationModal(props: Props) {
     PricingPlanEnum.Team,
   );
 
-  const validate = () => {
-    // TODO
-    // Bounging Box size
-    // number of meshes?
-    // add mag existence checks to avoid downloading huge amounts of data
-    // supported dtypes
-    // only 3D datasets
-    return true;
+  const validateAnimationOptions = (
+    colorLayer: APIDataLayer,
+    animationOptions: RenderAnimationOptions,
+  ) => {
+    //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
+
+    const state = Store.getState();
+    const errorMessages: string[] = [];
+
+    const [_, estimated_texture_size] = selectMagForTextureCreation(
+      colorLayer,
+      animationOptions.boundingBox,
+    );
+
+    const hasEnoughMags = estimated_texture_size < 1.5 * TARGET_TEXTURE_SIZE;
+    if (hasEnoughMags)
+      errorMessages.push(
+        "The selected bounding box is too large to create an animation. Either shrink the bounding box or consider downsampling the dataset to coarser magnifications.",
+      );
+
+    const isDtypeSupported = colorLayer.elementClass !== "uint24";
+    if (isDtypeSupported)
+      errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
+
+    const isDataset3D =
+      !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
+    if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
+
+    const isTooManyMeshes = animationOptions.meshSegmentIds.length > 30;
+    if (isTooManyMeshes)
+      errorMessages.push(
+        "You selected too many meshes for the animation. Please keep the number of meshes below 30 to create an animation.",
+      );
+
+    const validationStatus = hasEnoughMags && isDtypeSupported && isDataset3D && !isTooManyMeshes;
+
+    setValidationErrors(errorMessages);
+    setIsValid(validationStatus);
+
+    return validationStatus;
   };
 
   const submitJob = (evt: React.MouseEvent) => {
@@ -110,6 +182,8 @@ function CreateAnimationModal(props: Props) {
     const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, selectedColorLayer.name);
     const [intensityMin, intensityMax] = intensityRange || defaultIntensityRange;
 
+    const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
+
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
       segmentationLayerName,
@@ -118,15 +192,13 @@ function CreateAnimationModal(props: Props) {
       boundingBox,
       intensityMin,
       intensityMax,
+      magForTextures,
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validate()) {
-      // TODO show better errors
-      Toast.error("Options for animation are not valid");
-    }
+    if (!validateAnimationOptions(colorLayer, animationOptions)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -284,6 +356,21 @@ function CreateAnimationModal(props: Props) {
             />
           </Col>
         </Row>
+        {!isValid ? (
+          <Row gutter={[8, 20]}>
+            <Alert
+              type="error"
+              style={{ marginTop: 18 }}
+              message={
+                <ul>
+                  {validationErrors.map((errorMessage) => (
+                    <li key={errorMessage.slice(5)}>{errorMessage}</li>
+                  ))}
+                </ul>
+              }
+            />
+          </Row>
+        ) : null}
       </React.Fragment>
     </Modal>
   );

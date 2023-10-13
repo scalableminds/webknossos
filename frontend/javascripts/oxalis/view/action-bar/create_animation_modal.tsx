@@ -274,15 +274,9 @@ function CreateAnimationModal(props: Props) {
                 </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
                   Static camera looking at XZ-viewport{" "}
-                  <Tooltip title="Cooming soon" placement="right">
-                    <InfoCircleOutlined />
-                  </Tooltip>
                 </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
                   Static camera looking at YZ-viewport{" "}
-                  <Tooltip title="Cooming soon" placement="right">
-                    <InfoCircleOutlined />
-                  </Tooltip>
                 </Radio.Button>
               </Space>
             </Radio.Group>

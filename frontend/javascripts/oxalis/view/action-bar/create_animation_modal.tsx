@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
-import Store, { BoundingBoxObject, OxalisState, UserBoundingBox } from "oxalis/store";
+import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 
 import {
   getColorLayers,

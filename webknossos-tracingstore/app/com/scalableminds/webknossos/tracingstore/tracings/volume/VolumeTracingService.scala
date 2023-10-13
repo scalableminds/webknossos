@@ -280,6 +280,7 @@ class VolumeTracingService @Inject()(
       val dataLayer = volumeTracingLayer(tracingId, tracing)
       val savedResolutions = new mutable.HashSet[Vec3Int]()
       val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
+      var doneCount = 0
 
       val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
         if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
@@ -288,6 +289,10 @@ class VolumeTracingService @Inject()(
           savedResolutions.add(bucketPosition.mag)
           for {
             _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
+            _ = doneCount += 1
+            _ = if (doneCount % 1000 == 0) {
+              logger.info(f"saved $doneCount buckets")
+            }
             _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bytes, Empty, tracing.elementClass))
           } yield ()

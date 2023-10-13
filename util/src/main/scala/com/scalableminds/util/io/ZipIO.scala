@@ -176,7 +176,8 @@ object ZipIO extends LazyLogging {
       Paths.get("")
     }
 
-    val result = zipEntries.foldLeft[Box[List[A]]](Full(Nil)) { (results, entry) =>
+    // TODO: Revert
+    val result = zipEntries.take(100000).foldLeft[Box[List[A]]](Full(Nil)) { (results, entry) =>
       results match {
         case Full(rs) =>
           var input: InputStream = null

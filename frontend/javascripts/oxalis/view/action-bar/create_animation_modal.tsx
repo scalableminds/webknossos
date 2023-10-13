@@ -32,7 +32,8 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { Vector3 } from "oxalis/constants";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 type Props = {
   isOpen: boolean;
@@ -43,21 +44,24 @@ type Props = {
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
 
 function selectMagForTextureCreation(
-  layer: APIDataLayer,
-  boundingBox: BoundingBoxObject,
+  colorLayer: APIDataLayer,
+  boundingBox: BoundingBoxType,
 ): [Vector3, number] {
   // Utility method to determine the best mag in relation to the dataset size to create the textures from in the worker job
   // We aim to create textures with a rough length/height of 2000px (aka target_video_frame_size)
+  const colorLayerBB = new BoundingBox(
+    computeBoundingBoxFromBoundingBoxObject(colorLayer.boundingBox),
+  );
+  const bb = new BoundingBox(boundingBox).intersectedWith(colorLayerBB);
 
-  const bb = [boundingBox.width, boundingBox.height, boundingBox.depth];
-  const longestSide = Math.max(...bb);
-  const indexLongestSide = bb.indexOf(longestSide);
+  const longestSide = Math.max(...bb.getSize());
+  const dimensionLongestSide = bb.getSize().indexOf(longestSide);
 
-  let bestMag = layer.resolutions[0];
+  let bestMag = colorLayer.resolutions[0];
   let bestDifference = Infinity;
 
-  for (const mag of layer.resolutions) {
-    const size = longestSide / mag[indexLongestSide];
+  for (const mag of colorLayer.resolutions) {
+    const size = longestSide / mag[dimensionLongestSide];
     const diff = Math.abs(TARGET_TEXTURE_SIZE - size);
 
     if (bestDifference > diff) {
@@ -110,7 +114,8 @@ function CreateAnimationModal(props: Props) {
 
   const validateAnimationOptions = (
     colorLayer: APIDataLayer,
-    animationOptions: RenderAnimationOptions,
+    selectedBoundingBox: BoundingBoxType,
+    meshSegmentIds: number[],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
 
@@ -119,7 +124,7 @@ function CreateAnimationModal(props: Props) {
 
     const [_, estimated_texture_size] = selectMagForTextureCreation(
       colorLayer,
-      animationOptions.boundingBox,
+      selectedBoundingBox,
     );
 
     const hasEnoughMags = estimated_texture_size < 1.5 * TARGET_TEXTURE_SIZE;
@@ -136,7 +141,7 @@ function CreateAnimationModal(props: Props) {
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
     if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
-    const isTooManyMeshes = animationOptions.meshSegmentIds.length > 30;
+    const isTooManyMeshes = meshSegmentIds.length > 30;
     if (isTooManyMeshes)
       errorMessages.push(
         "You selected too many meshes for the animation. Please keep the number of meshes below 30 to create an animation.",
@@ -152,9 +157,9 @@ function CreateAnimationModal(props: Props) {
 
   const submitJob = (evt: React.MouseEvent) => {
     const state = Store.getState();
-    const boundingBox = computeBoundingBoxObjectFromBoundingBox(
-      userBoundingBoxes.find((bb) => bb.id === selectedBoundingBoxId)!.boundingBox,
-    );
+    const boundingBox = userBoundingBoxes.find(
+      (bb) => bb.id === selectedBoundingBoxId,
+    )!.boundingBox;
 
     // Submit currently visible pre-computed meshes
     let meshSegmentIds = [] as number[];
@@ -172,7 +177,7 @@ function CreateAnimationModal(props: Props) {
       const currenMeshFile = state.localSegmentationData[volumeLayer.name].currentMeshFile;
       meshFileName = currenMeshFile?.meshFileName || meshFileName;
 
-      segmentationLayerName = volumeLayer.name;
+      // segmentationLayerName = volumeLayer.name # TODO backend?
     }
 
     // Submit the configured min/max intensity info to support float datasets
@@ -189,16 +194,16 @@ function CreateAnimationModal(props: Props) {
       segmentationLayerName,
       meshFileName,
       meshSegmentIds,
-      boundingBox,
       intensityMin,
       intensityMax,
       magForTextures,
+      boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, animationOptions)) return;
+    if (!validateAnimationOptions(colorLayer, boundingBox, meshSegmentIds)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -222,7 +227,7 @@ function CreateAnimationModal(props: Props) {
       width={700}
       onOk={submitJob}
       onCancel={onClose}
-      okText="Start Rendering"
+      okText="Start Animation"
     >
       <React.Fragment>
         <Row gutter={8}>
@@ -312,7 +317,7 @@ function CreateAnimationModal(props: Props) {
               >
                 Include the currently selected 3D meshes
                 <Tooltip
-                  title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
+                  title="When enabled, all (pre-computed) meshes currently visible in WEBKNOSSOS will be included in the animation."
                   placement="right"
                 >
                   <InfoCircleOutlined style={{ marginLeft: 10 }} />

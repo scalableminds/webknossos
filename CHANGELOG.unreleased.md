@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added social media link previews for links to datasets and annotations (only if they are public or if the links contain sharing tokens). [#7331](https://github.com/scalableminds/webknossos/pull/7331)
 - Loading sharded zarr3 datasets is now significantly faster. [#7363](https://github.com/scalableminds/webknossos/pull/7363)
 - Higher-dimension coordinates (e.g., for the t axis) are now encoded in the URL, too, so that reloading the page will keep you at your current position. Only relevant for 4D datasets. [#7328](https://github.com/scalableminds/webknossos/pull/7328)
+- Added a feature to create an engaging animation of a dataset and its meshes processed in Blender with a WK worker job. [#7348](https://github.com/scalableminds/webknossos/pull/7348)
 
 ### Changed
 - Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)

@@ -209,7 +209,7 @@ function CreateAnimationModal(props: Props) {
 
     Toast.info(
       <>
-        The job to render this dataset as an animation has been started. See the{" "}
+        A background job to create this animation has been started. See the{" "}
         <a target="_blank" href="/jobs" rel="noopener noreferrer">
           Processing Jobs
         </a>{" "}

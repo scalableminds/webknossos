@@ -69,7 +69,6 @@ type StateProps = {
   blockedByUser: APIUserCompact | null | undefined;
 };
 type Props = OwnProps & StateProps;
-export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 

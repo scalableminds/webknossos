@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
+import models.user.{Invite, MultiUserDAO, User, UserDAO}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -22,7 +22,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
-                                    userService: UserService,
                                     rpc: RPC,
                                     initialDataService: InitialDataService,
                                     conf: WkConf,
@@ -44,8 +43,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
-        "id" -> organization._id.toString,
-        "name" -> organization.name,
+        "id" -> organization._id,
+        "name" -> organization._id, // Included for backwards compatibility
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName,
@@ -84,22 +83,21 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }
 
-  def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
+  def createOrganization(organizationIdOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
     for {
       normalizedDisplayName <- TextUtils.normalizeStrong(organizationDisplayName).toFox ?~> "organization.name.invalid"
-      organizationName = organizationNameOpt
+      organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedDisplayName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
+      existingOrganization <- organizationDAO.findOneByName(organizationId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
 
       organization = Organization(
-        ObjectId.generate,
-        organizationName,
+        organizationId,
         "",
         "",
         organizationDisplayName,
@@ -129,8 +127,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: ObjectId, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
-                                                                                ec: ExecutionContext): Fox[Unit] =
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+                                                                              ec: ExecutionContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)

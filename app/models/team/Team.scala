@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 
 case class Team(
     _id: ObjectId,
-    _organization: ObjectId,
+    _organization: String,
     name: String,
     isOrganizationTeam: Boolean = false,
     created: Instant = Instant.now,
@@ -48,7 +48,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> team._id.toString,
         "name" -> team.name,
-        "organization" -> organization.name
+        "organization" -> organization._id
       )
     }
 
@@ -106,7 +106,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Fox.successful(
       Team(
         ObjectId(r._Id),
-        ObjectId(r._Organization),
+        r._Organization,
         r.name,
         r.isorganizationteam,
         Instant.fromSql(r.created),

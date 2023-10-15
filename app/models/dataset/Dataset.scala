@@ -1,6 +1,6 @@
 package models.dataset
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -191,7 +191,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
-                        organizationIdOpt: Option[ObjectId],
+                        organizationIdOpt: Option[String],
                         folderIdOpt: Option[ObjectId],
                         uploaderIdOpt: Option[ObjectId],
                         searchQuery: Option[String],
@@ -212,7 +212,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def findAllCompactWithSearch(isActiveOpt: Option[Boolean],
                                isUnreported: Option[Boolean],
-                               organizationIdOpt: Option[ObjectId],
+                               organizationIdOpt: Option[String],
                                folderIdOpt: Option[ObjectId],
                                uploaderIdOpt: Option[ObjectId],
                                searchQuery: Option[String],
@@ -293,7 +293,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
                                        isUnreported: Option[Boolean],
-                                       organizationIdOpt: Option[ObjectId],
+                                       organizationIdOpt: Option[String],
                                        folderIdOpt: Option[ObjectId],
                                        uploaderIdOpt: Option[ObjectId],
                                        searchQuery: Option[String],
@@ -356,15 +356,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption
     } yield r
 
-  def findOneByNameAndOrganizationName(name: String, organizationName: String)(
+  @deprecated
+  def findOneByNameAndOrganizationName(name: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
-      dataset <- findOneByNameAndOrganization(name, organization._id)
-    } yield dataset
+    findOneByNameAndOrganization(name, organizationId)
 
-  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

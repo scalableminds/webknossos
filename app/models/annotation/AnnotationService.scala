@@ -206,7 +206,7 @@ class AnnotationService @Inject()(
   private def createTracingsForExplorational(dataSet: Dataset,
                                              dataSource: DataSource,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
-                                             datasetOrganizationName: String,
+                                             datasetOrganizationId: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
@@ -241,7 +241,7 @@ class AnnotationService @Inject()(
             val skeleton = SkeletonTracingDefaults.createInstance.copy(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
-              organizationName = Some(datasetOrganizationName),
+              organizationName = Some(datasetOrganizationId),
               additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
@@ -266,7 +266,7 @@ class AnnotationService @Inject()(
               fallbackLayer <- Fox.runOptional(fallbackLayerName)(getFallbackLayer)
               volumeTracing <- createVolumeTracing(
                 dataSource,
-                datasetOrganizationName,
+                datasetOrganizationId,
                 fallbackLayer,
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
@@ -368,7 +368,7 @@ class AnnotationService @Inject()(
       annotationLayers <- createTracingsForExplorational(dataSet,
                                                          usableDataSource,
                                                          annotationLayerParameters,
-                                                         datasetOrganization.name)
+                                                         datasetOrganization._id)
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, _dataSet, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
@@ -538,7 +538,7 @@ class AnnotationService @Inject()(
   }
 
   def createVolumeTracingBase(dataSetName: String,
-                              organizationId: ObjectId,
+                              organizationId: String,
                               boundingBox: Option[BoundingBox],
                               startPosition: Vec3Int,
                               startRotation: Vec3Double,
@@ -561,7 +561,7 @@ class AnnotationService @Inject()(
 
       volumeTracing <- createVolumeTracing(
         dataSource,
-        organization.name,
+        organization._id,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)

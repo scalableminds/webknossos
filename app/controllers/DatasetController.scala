@@ -166,9 +166,15 @@ class DatasetController @Inject()(userService: UserService,
         value =
           "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
       isUnreported: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
-                example = "sample_organization")
+      @ApiParam(
+        value =
+          "[DEPRECATED use organizationId instead (same value)] Optional filtering: List only datasets of the organization specified by its url-safe name (id)",
+        example = "sample_organization, f8f15a641a2f79c0"
+      )
       organizationName: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its id",
+                example = "sample_organization, f8f15a641a2f79c0")
+      organizationId: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
       onlyMyOrganization: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
@@ -189,10 +195,10 @@ class DatasetController @Inject()(userService: UserService,
     for {
       folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
       uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
-      organizationIdOpt <- if (onlyMyOrganization.getOrElse(false))
-        Fox.successful(request.identity.map(_._organization))
+      organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
+        request.identity.map(_._organization)
       else
-        Fox.runOptional(organizationName)(orgaName => organizationDAO.findIdByName(orgaName)(GlobalAccessContext))
+        organizationId.orElse(organizationName)
       js <- if (compact.getOrElse(false)) {
         for {
           datasetInfos <- datasetDAO.findAllCompactWithSearch(

@@ -195,7 +195,7 @@ class DatasetController @Inject()(userService: UserService,
         Fox.runOptional(organizationName)(orgaName => organizationDAO.findIdByName(orgaName)(GlobalAccessContext))
       js <- if (compact.getOrElse(false)) {
         for {
-          datasetInfos: Seq[DatasetCompactInfo] <- datasetDAO.findAllCompactWithSearch(
+          datasetInfos <- datasetDAO.findAllCompactWithSearch(
             isActive,
             isUnreported,
             organizationIdOpt,
@@ -209,7 +209,7 @@ class DatasetController @Inject()(userService: UserService,
         } yield Json.toJson(datasetInfos)
       } else {
         for {
-          datasets: Seq[Dataset] <- datasetDAO.findAllWithSearch(isActive,
+          datasets <- datasetDAO.findAllWithSearch(isActive,
                                                    isUnreported,
                                                    organizationIdOpt,
                                                    folderIdValidated,

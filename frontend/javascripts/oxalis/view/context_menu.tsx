@@ -1281,11 +1281,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "distanceInfo",
-        <>
-          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
-          {maybeClickedNodeId != null ? "Node" : "Position"}
-          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </>,
+        <Tooltip title="Distance to the active Node of the active Tree">
+          <>
+            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
+            this {maybeClickedNodeId != null ? "Node" : "Position"}
+            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+          </>
+        </Tooltip>,
       ),
     );
   }

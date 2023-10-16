@@ -2,9 +2,13 @@ package models.dataset.explore
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -12,39 +16,53 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / "datasource-properties.json")
       dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)
-      ngffExplorer = new NgffExplorer
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
+        case l: Zarr3SegmentationLayer =>
+          for {
+            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, Zarr3ArrayHeader.ZARR_JSON)
+          } yield l.copy(mags = mags)
+        case l: Zarr3DataLayer =>
+          for {
+            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, Zarr3ArrayHeader.ZARR_JSON)
+          } yield l.copy(mags = mags)
         case l: ZarrSegmentationLayer =>
           for {
-            zarrLayersFromNgff <- ngffExplorer.explore(remotePath / l.name, credentialId)
-          } yield
-            zarrLayersFromNgff.map(
-              zarrLayer =>
-                (ZarrSegmentationLayer(zarrLayer._1.name,
-                                       l.boundingBox,
-                                       zarrLayer._1.elementClass,
-                                       zarrLayer._1.mags,
-                                       largestSegmentId = l.largestSegmentId),
-                 zarrLayer._2))
+            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY)
+          } yield l.copy(mags = mags)
         case l: ZarrDataLayer =>
           for {
-            zarrLayersFromNgff <- ngffExplorer.explore(remotePath / l.name, credentialId)
-          } yield
-            zarrLayersFromNgff.map(
-              zarrLayer =>
-                (ZarrDataLayer(zarrLayer._1.name,
-                               Category.color,
-                               l.boundingBox,
-                               zarrLayer._1.elementClass,
-                               zarrLayer._1.mags,
-                               additionalAxes = None),
-                 zarrLayer._2))
-        case layer => Fox.failure(s"Only remote Zarr layers are supported, got ${layer.getClass}.")
+            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY)
+          } yield l.copy(mags = mags)
+        case layer => Fox.failure(s"Only remote Zarr or Zarr3 layers are supported, got ${layer.getClass}.")
       }
-    } yield zarrLayers.flatten
+      zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
+    } yield zarrLayersWithScale
+
+  private def fixMagsWithRemotePaths(mags: List[MagLocator],
+                                     remoteLayerPath: VaultPath,
+                                     headerFilename: String): Fox[List[MagLocator]] =
+    Fox.serialCombined(mags)(m =>
+      for {
+        magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
+      } yield m.copy(path = magPath))
+
+  private def fixRemoteMagPath(mag: MagLocator,
+                               remoteLayerPath: VaultPath,
+                               headerFilename: String): Fox[Option[String]] =
+    mag.path match {
+      case Some(path) => Fox.successful(Some(path))
+      case None => {
+        // Only scalar mag paths are attempted for now
+        val magPath = remoteLayerPath / mag.mag.toMagLiteral(allowScalar = true)
+        val magHeaderPath = magPath / headerFilename
+        for {
+          _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"
+        } yield Some(magPath.toUri.toString)
+      }
+    }
 
 }

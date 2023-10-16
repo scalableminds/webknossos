@@ -10,7 +10,7 @@ import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import meshSaga from "oxalis/model/sagas/mesh_saga";
 import { watchMaximumRenderableLayers, watchZ1Downsampling } from "oxalis/model/sagas/dataset_saga";
-import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
+import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
@@ -58,6 +58,7 @@ function* restartableSaga(): Saga<void> {
       call(watchMaximumRenderableLayers),
       call(MappingSaga),
       call(watchToolDeselection),
+      call(watchToolReset),
       call(ProofreadSaga),
       ...AnnotationSagas.map((saga) => call(saga)),
       ...SaveSagas.map((saga) => call(saga)),

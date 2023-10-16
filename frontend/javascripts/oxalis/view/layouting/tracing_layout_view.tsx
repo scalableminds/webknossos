@@ -41,6 +41,7 @@ import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
+import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -312,7 +313,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
+      this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -345,6 +347,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             maybeClickedMeshId={this.state.contextMenuMeshId}
             maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
           />
+        )}
+
+        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
+          <DistanceMeasurementTooltip />
         )}
 
         <NmlUploadZoneContainer
@@ -470,6 +476,8 @@ function mapStateToProps(state: OxalisState) {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
+    distanceMeasurementTooltipPosition:
+      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
   };
 }

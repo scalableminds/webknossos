@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Loading sharded zarr3 datasets is now significantly faster. [#7363](https://github.com/scalableminds/webknossos/pull/7363) and [#7370](https://github.com/scalableminds/webknossos/pull/7370)
 - OME-NGFF datasets with only 2 dimensions can now be imported and viewed. [#7349](https://github.com/scalableminds/webknossos/pull/7349)
 - Higher-dimension coordinates (e.g., for the t axis) are now encoded in the URL, too, so that reloading the page will keep you at your current position. Only relevant for 4D datasets. [#7328](https://github.com/scalableminds/webknossos/pull/7328)
+- WEBKNOSSOS can now also explore datasets on the local file system if enabled in the new config key `datastore.localFolderWhitelist`. [#7389](https://github.com/scalableminds/webknossos/pull/7389)
 
 ### Changed
 - Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)
@@ -24,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)
 - Fixed a bug where data from zarr2 datasets that have a channel axis was broken. [#7374](https://github.com/scalableminds/webknossos/pull/7374)
+- Fixed a bug which changed the cursor position while editing the name of a tree or the comment of a node. [#7390](#https://github.com/scalableminds/webknossos/pull/7390)
 
 ### Removed
 

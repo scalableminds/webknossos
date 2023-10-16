@@ -107,6 +107,8 @@ function _getDisabledInfoWhenVolumeIsDisabled(
       isDisabled: isVolumeDisabled,
       explanation: genericDisabledExplanation,
     },
+    [AnnotationToolEnum.LINE_MEASUREMENT]: notDisabledInfo,
+    [AnnotationToolEnum.AREA_MEASUREMENT]: notDisabledInfo,
   };
 }
 
@@ -188,6 +190,14 @@ function _getDisabledInfoFromArgs(
                 activeUser,
               )
           : agglomerateState.reason,
+    },
+    [AnnotationToolEnum.LINE_MEASUREMENT]: {
+      isDisabled: false,
+      explanation: genericDisabledExplanation,
+    },
+    [AnnotationToolEnum.AREA_MEASUREMENT]: {
+      isDisabled: false,
+      explanation: genericDisabledExplanation,
     },
   };
 }
@@ -281,7 +291,9 @@ export function adaptActiveToolToShortcuts(
     activeTool === AnnotationToolEnum.ERASE_BRUSH ||
     activeTool === AnnotationToolEnum.ERASE_TRACE ||
     activeTool === AnnotationToolEnum.QUICK_SELECT ||
-    activeTool === AnnotationToolEnum.PROOFREAD
+    activeTool === AnnotationToolEnum.PROOFREAD ||
+    activeTool === AnnotationToolEnum.LINE_MEASUREMENT ||
+    activeTool === AnnotationToolEnum.AREA_MEASUREMENT
   ) {
     // These tools do not have any modifier-related behavior currently (except for ALT
     // which is already handled below)

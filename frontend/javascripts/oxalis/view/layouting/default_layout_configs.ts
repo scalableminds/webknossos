@@ -6,7 +6,7 @@
  */
 import _ from "lodash";
 import { getIsInIframe } from "libs/utils";
-import { navbarHeight } from "navbar";
+import constants from "oxalis/constants";
 import type { BorderTabType, ControlMode, ViewMode } from "oxalis/constants";
 import Constants, {
   ArbitraryViews,
@@ -48,7 +48,7 @@ export const getGroundTruthLayoutRect = () => {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= navbarHeight;
+      height -= constants.NAVBAR_HEIGHT;
     } else {
       // use fallback values
       height = dummyExtent;

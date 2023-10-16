@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{DatasetService, DataStoreDAO, WKRemoteDataStoreClient}
+import models.dataset.{DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
@@ -27,7 +27,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.{WkEnv, WkSilhouetteEnvironment}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import java.net.URI
 import javax.inject.Inject
@@ -57,7 +57,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                           dataStoreDAO: DataStoreDAO,
                                           datasetService: DatasetService,
                                           wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                          rpc: RPC)
+                                          rpc: RPC,
+                                          wkConf: WkConf)
     extends FoxImplicits
     with LazyLogging {
 
@@ -267,6 +268,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
     for {
       uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
+      _ <- assertLocalPathInWhitelist(uri)
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
@@ -290,6 +292,11 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
         )
       )
     } yield layersWithVoxelSizes
+
+  private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (uri.getScheme == DataVaultService.schemeFile) {
+      bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist")
+    } else Fox.successful(())
 
   private def removeHeaderFileNamesFromUriSuffix(uri: String): String =
     if (uri.endsWith(N5Header.FILENAME_ATTRIBUTES_JSON)) uri.dropRight(N5Header.FILENAME_ATTRIBUTES_JSON.length)

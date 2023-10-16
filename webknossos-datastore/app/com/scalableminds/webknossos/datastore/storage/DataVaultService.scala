@@ -10,12 +10,10 @@ import com.scalableminds.webknossos.datastore.datavault.{
   S3DataVault,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.storage.DataVaultService.schemeFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.ws.WSClient
 
-import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 

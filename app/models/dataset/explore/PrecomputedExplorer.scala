@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedLayer,
   PrecomputedSegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder3D
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
@@ -64,7 +64,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
 
       // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
       // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
-      axisOrder = AxisOrder3D(0, 1, 2)
+      axisOrder = AxisOrder.xyz(0, 1, 2)
     } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 }

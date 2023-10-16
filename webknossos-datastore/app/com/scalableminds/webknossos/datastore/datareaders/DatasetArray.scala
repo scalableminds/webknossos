@@ -32,26 +32,27 @@ class DatasetArray(vaultPath: VaultPath,
 
   // Helper variables to allow reading 2d datasets as 3d datasets with depth 1
 
-  lazy val rank: Int = axisOrder match {
-    case AxisOrder3D(_, _, _, _, _) => header.rank
-    case AxisOrder2D(_, _, _)       => header.rank + 1
+  lazy val rank: Int = if (axisOrder.hasZAxis) {
+    header.rank
+  } else {
+    header.rank + 1
   }
 
-  lazy val datasetShape: Array[Int] = axisOrder match {
-    case AxisOrder3D(_, _, _, _, _) => header.datasetShape
-    case AxisOrder2D(_, _, _)       => header.datasetShape :+ 1
+  lazy val datasetShape: Array[Int] = if (axisOrder.hasZAxis) {
+    header.datasetShape
+  } else {
+    header.datasetShape :+ 1
   }
 
-  lazy val chunkSize: Array[Int] = axisOrder match {
-    case AxisOrder3D(_, _, _, _, _) => header.chunkSize
-    case AxisOrder2D(_, _, _)       => header.chunkSize :+ 1
+  lazy val chunkSize: Array[Int] = if (axisOrder.hasZAxis) {
+    header.chunkSize
+  } else {
+    header.chunkSize :+ 1
   }
 
   private def chunkSizeAtIndex(index: Array[Int]) =
-    axisOrder match {
-      case AxisOrder3D(_, _, _, _, _) => header.chunkSizeAtIndex(index)
-      case AxisOrder2D(_, _, _) =>
-        chunkSize // irregular sized chunk indexes are currently not supported for 2d datasets
+    if (axisOrder.hasZAxis) { header.chunkSizeAtIndex(index) } else {
+      chunkSize // irregular sized chunk indexes are currently not supported for 2d datasets
     }
 
   // Returns byte array in fortran-order with little-endian values
@@ -174,11 +175,10 @@ class DatasetArray(vaultPath: VaultPath,
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
-    axisOrder match {
-      case AxisOrder3D(_, _, _, _, _) => chunkIndex.mkString(header.dimension_separator.toString)
-      case AxisOrder2D(_, _, _) =>
-        chunkIndex.drop(1).mkString(header.dimension_separator.toString) // (c),x,y,z -> z is dropped in 2d case
-
+    if (axisOrder.hasZAxis) {
+      chunkIndex.mkString(header.dimension_separator.toString)
+    } else {
+      chunkIndex.drop(1).mkString(header.dimension_separator.toString) // (c),x,y,z -> z is dropped in 2d case
     }
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int],

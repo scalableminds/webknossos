@@ -37,13 +37,17 @@ trait DatasetHeader {
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank && axisOrder.hasZAxis)
+    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
       None
     else {
-      axisOrder match {
-        case AxisOrder3D(x, y, z, _, _) =>
-          Some(BoundingBox(Vec3Int.zeros, datasetShape(x), datasetShape(y), datasetShape(z)))
-        case AxisOrder2D(x, y, c) => Some(BoundingBox(Vec3Int.zeros, datasetShape(x), datasetShape(y), 1))
+      if (axisOrder.hasZAxis) {
+        Some(
+          BoundingBox(Vec3Int.zeros,
+                      datasetShape(axisOrder.x),
+                      datasetShape(axisOrder.y),
+                      datasetShape(axisOrder.zWithFallback)))
+      } else {
+        Some(BoundingBox(Vec3Int.zeros, datasetShape(axisOrder.x), datasetShape(axisOrder.y), 1))
       }
 
     }

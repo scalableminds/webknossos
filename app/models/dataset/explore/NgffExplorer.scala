@@ -5,7 +5,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, AxisOrder2D, AxisOrder3D}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -230,9 +230,9 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       _ <- bool2Fox(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
     } yield
       if (z >= 0) {
-        AxisOrder3D(x, y, z, cOpt)
+        AxisOrder(x, y, Some(z), cOpt)
       } else {
-        AxisOrder2D(x, y, cOpt)
+        AxisOrder(x, y, None, cOpt)
       }
   }
 
@@ -240,7 +240,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     for {
       xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
       yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitFactor <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.z).spaceUnitToNmFactor)
+      zUnitFactor <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).spaceUnitToNmFactor)
     } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor.getOrElse(1))
 
   private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
@@ -279,7 +279,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     val scalesFromTransforms = filtered.flatMap(_.scale)
     val xFactors = scalesFromTransforms.map(_(axisOrder.x))
     val yFactors = scalesFromTransforms.map(_(axisOrder.y))
-    val zFactors = if (axisOrder.hasZAxis) scalesFromTransforms.map(_(axisOrder.z)) else Seq(1.0, 1.0)
+    val zFactors = if (axisOrder.hasZAxis) scalesFromTransforms.map(_(axisOrder.zWithFallback)) else Seq(1.0, 1.0)
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 }

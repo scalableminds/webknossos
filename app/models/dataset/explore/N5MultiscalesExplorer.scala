@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder3D
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
@@ -39,7 +39,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield (layer, voxelSizeNanometers)
 
-  private def extractAxisOrder(axes: List[String]): Fox[AxisOrder3D] = {
+  private def extractAxisOrder(axes: List[String]): Fox[AxisOrder] = {
     val x = axes.indexWhere(_ == "x")
     val y = axes.indexWhere(_ == "y")
     val z = axes.indexWhere(_ == "z")
@@ -48,16 +48,16 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
     val cOpt = if (c == -1) None else Some(c)
     for {
       _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder3D(x, y, z, cOpt)
+    } yield AxisOrder(x, y, Some(z), cOpt)
   }
 
-  private def extractAxisUnitFactors(unitsOpt: Option[List[String]], axisOrder: AxisOrder3D): Fox[Vec3Double] =
+  private def extractAxisUnitFactors(unitsOpt: Option[List[String]], axisOrder: AxisOrder): Fox[Vec3Double] =
     unitsOpt match {
       case Some(units) =>
         for {
           xUnitFactor <- spaceUnitToNmFactor(units(axisOrder.x))
           yUnitFactor <- spaceUnitToNmFactor(units(axisOrder.y))
-          zUnitFactor <- spaceUnitToNmFactor(units(axisOrder.z))
+          zUnitFactor <- spaceUnitToNmFactor(units(axisOrder.zWithFallback))
         } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
       case None => Fox.successful(Vec3Double(1e3, 1e3, 1e3)) // assume default micrometers
     }
@@ -92,8 +92,8 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(transform.scale, axisOrder) ?~> "Could not extract voxel size from scale transforms"
     } yield voxelSizeInAxisUnits * axisUnitFactors
 
-  private def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder3D): Fox[Vec3Double] =
-    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.z)))
+  private def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
+    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback)))
 
   private def n5MagFromDataset(n5Dataset: N5MultiscalesDataset,
                                layerPath: VaultPath,

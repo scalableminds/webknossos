@@ -22,7 +22,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           credentialIdentifier: Option[String],
                           credentialSecret: Option[String],
                           userId: ObjectId,
-                          organizationId: ObjectId)(implicit ec: ExecutionContext): Option[DataVaultCredential] =
+                          organizationId: ObjectId): Option[DataVaultCredential] =
     uri.getScheme match {
       case DataVaultService.schemeHttps | DataVaultService.schemeHttp =>
         credentialIdentifier.map(

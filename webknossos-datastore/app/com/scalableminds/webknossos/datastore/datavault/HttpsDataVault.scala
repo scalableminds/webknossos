@@ -96,12 +96,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 
   private def updateRangeRequestsSupportedForResponse(response: WSResponse): Unit =
     if (supportsRangeRequests.isEmpty) {
-      if (response.header("Content-Range").isDefined) {
-        logger.info("Range requests are supported for this data vault via Content-Range header")
-        supportsRangeRequests = Some(true)
-      } else {
-        supportsRangeRequests = Some(false)
-      }
+      supportsRangeRequests = Some(response.header("Content-Range").isDefined)
     }
 
   private def buildRequest(uri: URI) = {

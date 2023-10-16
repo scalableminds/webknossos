@@ -153,7 +153,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
   private def isPowerOfTwo(x: Double): Boolean = {
     val epsilon = 0.0001
-    val l = (math.log(x) / math.log(2))
+    val l = math.log(x) / math.log(2)
     math.abs(l - l.round.toDouble) < epsilon
   }
 
@@ -295,7 +295,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {
-      bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist")
+      bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist"
     } else Fox.successful(())
 
   private def removeHeaderFileNamesFromUriSuffix(uri: String): String =

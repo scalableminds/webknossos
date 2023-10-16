@@ -177,7 +177,7 @@ class DataSourceService @Inject()(
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
 
-  def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
+  private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
     val propertiesFile = dataSourcePath.resolve(propertiesFileName)
     val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
       val previousContentSource = Source.fromFile(propertiesFile.toString)
@@ -252,8 +252,11 @@ class DataSourceService @Inject()(
           case _                       => None
         }
         removedEntriesCount = magsOpt match {
-          case Some(mags) => mags.map(mag => remoteSourceDescriptorService.removeVaultFromCache(mag)); mags.length
-          case None       => 0
+          case Some(mags) =>
+            mags.map(mag =>
+              remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+            mags.length
+          case None => 0
         }
       } yield removedEntriesCount
     } yield removedEntriesList.sum

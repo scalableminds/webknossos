@@ -22,7 +22,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           credentialIdentifier: Option[String],
                           credentialSecret: Option[String],
                           userId: ObjectId,
-                          organizationId: ObjectId): Option[DataVaultCredential] =
+                          organizationId: ObjectId)(implicit ec: ExecutionContext): Option[DataVaultCredential] =
     uri.getScheme match {
       case DataVaultService.schemeHttps | DataVaultService.schemeHttp =>
         credentialIdentifier.map(
@@ -43,6 +43,8 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
           secret <- credentialSecret
           secretJson <- tryo(Json.parse(secret)).toOption
         } yield GoogleServiceAccountCredential(uri.toString, secretJson, userId.toString, organizationId.toString)
+      case _ =>
+        None
     }
 
   def insertOne(credential: DataVaultCredential)(implicit ec: ExecutionContext): Fox[ObjectId] = {

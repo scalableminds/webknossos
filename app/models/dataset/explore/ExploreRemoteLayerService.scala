@@ -265,7 +265,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       reportMutable: ListBuffer[String],
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
-      uri <- tryo(new URI(normalizeUri(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
@@ -290,7 +291,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       )
     } yield layersWithVoxelSizes
 
-  private def normalizeUri(uri: String): String =
+  private def removeHeaderFileNamesFromUriSuffix(uri: String): String =
     if (uri.endsWith(N5Header.FILENAME_ATTRIBUTES_JSON)) uri.dropRight(N5Header.FILENAME_ATTRIBUTES_JSON.length)
     else if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
     else if (uri.endsWith(NgffMetadata.FILENAME_DOT_ZATTRS)) uri.dropRight(NgffMetadata.FILENAME_DOT_ZATTRS.length)

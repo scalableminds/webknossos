@@ -36,23 +36,29 @@ class N5BucketProvider(layer: N5Layer,
     extends BucketProvider
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[N5CubeHandle] = {
-    val n5MagOpt: Option[MagLocator] =
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    n5MagOpt match {
+    magLocatorOpt match {
       case None => Fox.empty
-      case Some(n5Mag) =>
+      case Some(magLocator) =>
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- if (n5Mag.isRemote) {
-                remoteSourceDescriptorService.vaultPathFor(n5Mag)
-              } else localPathFrom(readInstruction, n5Mag.pathWithFallback)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- N5Array
-                .open(magPath, dataSourceId, layer.name, n5Mag.axisOrder, n5Mag.channelIndex, chunkContentsCache)
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
+                      chunkContentsCache)
                 .map(new N5CubeHandle(_))
             } yield cubeHandle
           case None => Empty

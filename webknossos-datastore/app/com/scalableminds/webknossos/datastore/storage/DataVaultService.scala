@@ -4,15 +4,18 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
+  FileSystemDataVault,
   GoogleCloudDataVault,
   HttpsDataVault,
   S3DataVault,
   VaultPath
 }
+import com.scalableminds.webknossos.datastore.storage.DataVaultService.schemeFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.ws.WSClient
 
+import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -21,8 +24,9 @@ object DataVaultService {
   val schemeHttps: String = "https"
   val schemeHttp: String = "http"
   val schemeGS: String = "gs"
+  val schemeFile: String = "file"
 
-  def isSupportedRemoteScheme(uriScheme: String): Boolean =
+  def isRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 }
 
@@ -48,6 +52,8 @@ class DataVaultService @Inject()(ws: WSClient) extends LazyLogging {
         S3DataVault.create(remoteSource)
       } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
         HttpsDataVault.create(remoteSource, ws)
+      } else if (scheme == DataVaultService.schemeFile) {
+        FileSystemDataVault.create
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")
       }

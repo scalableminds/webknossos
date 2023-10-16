@@ -1,6 +1,19 @@
 import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
-import { Modal, Select, Button, Form, Input, Slider, Row, Space, Radio, Card, Tooltip } from "antd";
+import {
+  Modal,
+  Select,
+  Button,
+  Form,
+  Input,
+  Slider,
+  Row,
+  Space,
+  Radio,
+  Card,
+  Tooltip,
+  Alert,
+} from "antd";
 import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
@@ -20,7 +33,7 @@ import {
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
-import { Unicode, type Vector3 } from "oxalis/constants";
+import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
 import { Model, Store } from "oxalis/singletons";
 import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -241,9 +254,14 @@ function BoundingBoxSelectionFormItem({
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const isInDatasetViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
   const colorLayer = getColorLayers(dataset)[0];
   const mag1 = colorLayer.resolutions[0];
-
+  const howToCreateBoundingBoxText = isInDatasetViewMode
+    ? "To process only a part of the dataset, please create an annotation and create a bounding box in it using the bounding box tool in the toolbar at the top."
+    : "You can create a new bounding box for the desired volume with the bounding box tool in the toolbar at the top. The created bounding boxes will be listed below.";
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
       <Form.Item
@@ -252,10 +270,7 @@ function BoundingBoxSelectionFormItem({
             <Space>
               Bounding Box
               <Tooltip
-                title="Please select the bounding box for which the segmentation should be computed. Note that
-        large bounding boxes can take very long. You can create a new bounding box for the desired
-        volume with the bounding box tool in the toolbar at the top. The created bounding boxes will
-        be listed below."
+                title={`Please select the bounding box which should be processed. Note that large bounding boxes can take very long. ${howToCreateBoundingBoxText}`}
               >
                 <InfoCircleOutlined />
               </Tooltip>
@@ -385,7 +400,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
       title={
         <>
           <i className="fas fa-magic" />
-          Automated analysis with WEBKNOSSOS
+          AI Analysis
         </>
       }
       onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
@@ -401,7 +416,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           >
             <Card bordered={false}>
               <Space direction="vertical" size="small">
-                <Row>Neuron segmentation</Row>
+                <Row className="ai-job-title">Neuron segmentation</Row>
                 <Row>
                   <img
                     src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
@@ -421,11 +436,11 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
-                  <Row>Nuclei detection</Row>
+                  <Row className="ai-job-title">Nuclei detection</Row>
                   <Row>
                     <img
                       src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                      alt={"Nuclei inferral example"}
+                      alt={"Nuclei detection example"}
                       style={centerImageStyle}
                     />
                   </Row>
@@ -442,7 +457,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
-                  <Row>Mitochondria detection</Row>
+                  <Row className="ai-job-title">Mitochondria detection</Row>
                   <Row>
                     <img
                       src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
@@ -456,7 +471,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           </Tooltip>
         </Space>
         {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
-        {aIJobModalState === "nuclei_inferral" ? <NucleiSegmentationForm /> : null}
+        {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
       </Space>
     </Modal>
   ) : null;
@@ -598,12 +613,12 @@ function StartJobForm(props: StartJobFormProps) {
   );
 }
 
-export function NucleiSegmentationForm() {
+export function NucleiDetectionForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartJobForm
       handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
-      buttonLabel="Start AI neuron segmentation"
+      buttonLabel="Start AI nuclei detection"
       jobName={"nuclei_inferral"}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
@@ -667,29 +682,12 @@ export function NeuronSegmentationForm() {
               will create a copy of this dataset containing the new neuron segmentation.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
-              <div
-                style={{
-                  gridColumnStart: 1,
-                  gridColumnEnd: 2,
-                  gridRowStart: 1,
-                  gridRowEnd: 3,
-                  margin: "auto",
-                }}
-              >
-                <ExclamationCircleOutlined style={{ color: "#ffda33", fontSize: 22 }} />
-              </div>
-              <div
-                style={{
-                  gridColumnStart: 2,
-                  gridColumnEnd: 3,
-                  gridRowStart: 1,
-                  gridRowEnd: 3,
-                  marginLeft: 4,
-                }}
-              >
-                Please note that this feature is experimental and currently only works with electron
-                microscopy data.
-              </div>
+              <Alert
+                message="Please note that this feature is experimental and currently only works with electron
+                microscopy data."
+                type="warning"
+                showIcon
+              />
             </Row>
           </Space>
         </>
@@ -763,7 +761,7 @@ export function MaterializeVolumeAnnotationModal({
       open
       width={700}
       footer={null}
-      title="Start Materializing this Volume Annotation"
+      title="Volume Annotation Materialization"
     >
       <StartJobForm
         handleClose={handleClose}

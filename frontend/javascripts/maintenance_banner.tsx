@@ -6,7 +6,7 @@ import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { sleep } from "libs/utils";
-import { navbarHeight } from "navbar";
+import constants from "oxalis/constants";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
@@ -20,7 +20,7 @@ const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000;
 export function MaintenanceBanner() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { isInAnnotationView } = useSelector((state: OxalisState) => state.uiInformation);
-  const topPaddingForNavbar = navbarHeight;
+  const topPaddingForNavbar = constants.NAVBAR_HEIGHT;
   const statusBarHeight = 20;
   const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
     Array<MaintenanceInfo>

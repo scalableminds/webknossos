@@ -42,7 +42,7 @@ import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { ExclamationCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { ThinSpace } = Unicode;
 
@@ -162,7 +162,7 @@ function LayerSelectionFormItem({
   const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item
-      label={layerType}
+      label="Layer"
       name="layerName"
       rules={[
         {

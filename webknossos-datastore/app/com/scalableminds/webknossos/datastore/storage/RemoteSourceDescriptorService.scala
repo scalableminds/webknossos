@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -17,6 +18,7 @@ import scala.concurrent.ExecutionContext
 case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredential])
 
 class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+                                              dataStoreConfig: DataStoreConfig,
                                               dataVaultService: DataVaultService) {
 
   def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
@@ -57,8 +59,14 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemote
           uri
         } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
           val localPath = Paths.get(uri.getPath)
-          if (localPath.isAbsolute) uri
-          else {
+          if (localPath.isAbsolute) {
+            if (dataStoreConfig.Datastore.pathWhitelist.contains(whitelistEntry =>
+                  localPath.toString.startsWith(whitelistEntry)))
+              uri
+            else
+              throw new Exception(
+                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist")
+          } else { // relative local path, resolve in dataset dir
             val magPathRelativeToDataset = localDatasetDir.resolve(localPath)
             val magPathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)
             if (magPathRelativeToDataset.toFile.exists) {

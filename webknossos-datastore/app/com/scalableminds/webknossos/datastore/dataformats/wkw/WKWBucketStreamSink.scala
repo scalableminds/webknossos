@@ -16,13 +16,15 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper with
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
     val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
-    bucketStream.map {
+    bucketStream.flatMap {
       case (bucket, data) if !isAllZero(data) =>
         val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength)).toString
-        NamedFunctionStream(
-          filePath,
-          os => Future.successful(WKWFile.write(os, header, Array(data).iterator))
-        )
+        Some(
+          NamedFunctionStream(
+            filePath,
+            os => Future.successful(WKWFile.write(os, header, Array(data).iterator))
+          ))
+      case _ => None
     } ++ mags.map { mag =>
       NamedFunctionStream(wkwHeaderFilePath(mag).toString,
                           os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))

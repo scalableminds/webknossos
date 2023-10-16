@@ -12,6 +12,7 @@ type InputComponentState = {
  * - fixes cursor-jumping bugs by keeping a local copy of the input's value
  *   within state.currentValue. Without it, editing the name of trees or
  *   comments would always move the cursor to the input's end after each key press.
+ *   The fix is inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
  * - maintains the cursor position / selection even when mutating the input value
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */

@@ -457,6 +457,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed broken creation of tasks using base NMLs. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 - Fixed that the precomputation of meshes didn't take the active mapping into account. [#6651](https://github.com/scalableminds/webknossos/pull/6651)
 - Fixed false-positive warning about an outdated annotation version. [#6656](https://github.com/scalableminds/webknossos/pull/6656)
+- Fixed that segment statistics seemed to be available but broken for segments without index. [#7377](https://github.com/scalableminds/webknossos/pull/7377)
 
 ## [22.11.2](https://github.com/scalableminds/webknossos/releases/tag/22.11.2) - 2022-11-10
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...22.11.2)

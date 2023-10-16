@@ -36,23 +36,29 @@ class Zarr3BucketProvider(layer: Zarr3Layer,
     extends BucketProvider
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[ZarrCubeHandle] = {
-    val zarrMagOpt: Option[MagLocator] =
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    zarrMagOpt match {
+    magLocatorOpt match {
       case None => Fox.empty
-      case Some(zarrMag) =>
+      case Some(magLocator) =>
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- if (zarrMag.isRemote) {
-                remoteSourceDescriptorService.vaultPathFor(zarrMag)
-              } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- Zarr3Array
-                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache)
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
+                      chunkContentsCache)
                 .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty

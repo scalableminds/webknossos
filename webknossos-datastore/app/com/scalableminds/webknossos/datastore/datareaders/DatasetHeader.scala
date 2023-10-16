@@ -8,9 +8,10 @@ import ArrayDataType.{ArrayDataType, bytesPerElementFor}
 import java.nio.ByteOrder
 
 trait DatasetHeader {
-  def datasetShape: Array[Int] // shape of the entire array
 
-  def chunkSize: Array[Int] // shape of each chunk
+  // Note that in DatasetArray, datasetShape and chunkSize are adapted for 2d datasets
+  def datasetShape: Array[Int] // shape of the entire array
+  def chunkSize: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator
 
@@ -52,6 +53,7 @@ trait DatasetHeader {
 
     }
 
+  // Note that in DatasetArray, this is adapted for 2d datasets
   lazy val rank: Int = datasetShape.length
 
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize

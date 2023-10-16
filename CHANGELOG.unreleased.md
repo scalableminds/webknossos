@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 - Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)
 - Remote datasets with a datasource-properties.json can now also be imported without the need for OME metadata. [#7372](https://github.com/scalableminds/webknossos/pull/7372)
+- Occurrences of isosurface were renamed to ad-hoc mesh. This also applies to configuration files. [#7350](https://github.com/scalableminds/webknossos/pull/7350)
 
 ### Fixed
 - Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)

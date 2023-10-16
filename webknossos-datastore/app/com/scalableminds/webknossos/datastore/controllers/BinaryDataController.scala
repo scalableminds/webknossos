@@ -47,7 +47,7 @@ class BinaryDataController @Inject()(
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
   adHocMeshingServiceHolder.dataStoreAdHocMeshingConfig =
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
-  val adHocMeshingService: AdHocMeshingService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
+  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
 
   @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
@@ -257,8 +257,8 @@ class BinaryDataController @Inject()(
   def requestAdHocMesh(token: Option[String],
                        organizationName: String,
                        dataSetName: String,
-                       dataLayerName: String): Action[WebKnossosAdHocMeshRequest] =
-    Action.async(validateJson[WebKnossosAdHocMeshRequest]) { implicit request =>
+                       dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
+    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {

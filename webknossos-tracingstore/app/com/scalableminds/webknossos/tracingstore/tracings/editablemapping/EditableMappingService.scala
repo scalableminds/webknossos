@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
   AdHocMeshRequest,
-  AdHocMeshingService,
+  AdHocMeshService,
   AdHocMeshingServiceHolder
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -88,7 +88,7 @@ class EditableMappingService @Inject()(
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
   adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  private val adHocMeshingService: AdHocMeshingService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -506,7 +506,7 @@ class EditableMappingService @Inject()(
 
   def createAdHocMesh(tracing: VolumeTracing,
                       tracingId: String,
-                      request: WebKnossosAdHocMeshRequest,
+                      request: WebknossosAdHocMeshRequest,
                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox

@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -81,7 +81,7 @@ class VolumeTracingService @Inject()(
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
 
   adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  val adHocMeshingService: AdHocMeshingService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -468,7 +468,7 @@ class VolumeTracingService @Inject()(
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
   def createAdHocMesh(tracingId: String,
-                      request: WebKnossosAdHocMeshRequest,
+                      request: WebknossosAdHocMeshRequest,
                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"

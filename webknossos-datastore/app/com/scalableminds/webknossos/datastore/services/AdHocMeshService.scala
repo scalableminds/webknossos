@@ -39,7 +39,7 @@ case class DataTypeFunctors[T, B](
     fromLong: Long => T
 )
 
-class AdHocMeshingActor(val service: AdHocMeshingService, val timeout: FiniteDuration) extends Actor {
+class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration) extends Actor {
 
   def receive: Receive = {
     case request: AdHocMeshRequest =>
@@ -49,18 +49,18 @@ class AdHocMeshingActor(val service: AdHocMeshingService, val timeout: FiniteDur
   }
 }
 
-class AdHocMeshingService(binaryDataService: BinaryDataService,
-                          mappingService: MappingService,
-                          actorSystem: ActorSystem,
-                          adHocMeshingTimeout: FiniteDuration,
-                          adHocMeshingActorPoolSize: Int)(implicit ec: ExecutionContext)
+class AdHocMeshService(binaryDataService: BinaryDataService,
+                       mappingService: MappingService,
+                       actorSystem: ActorSystem,
+                       adHocMeshTimeout: FiniteDuration,
+                       adHocMeshActorPoolSize: Int)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
-  implicit val timeout: Timeout = Timeout(adHocMeshingTimeout)
+  implicit val timeout: Timeout = Timeout(adHocMeshTimeout)
 
-  private val actor: ActorRef = actorSystem.actorOf(
-    RoundRobinPool(adHocMeshingActorPoolSize).props(Props(new AdHocMeshingActor(this, timeout.duration))))
+  private val actor: ActorRef =
+    actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
   def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
     actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {

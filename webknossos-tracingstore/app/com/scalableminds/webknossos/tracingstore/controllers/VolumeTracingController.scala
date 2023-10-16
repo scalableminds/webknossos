@@ -229,6 +229,9 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
             currentVersion <- tracingService.currentVersion(tracingId)
             before = Instant.now
+            _ = logger.info("Sleeping...")
+            _ = Thread.sleep(3000)
+            _ = logger.info("Sleeping done")
             processedBucketCount <- tracingService.addSegmentIndex(
               tracingId,
               tracing,

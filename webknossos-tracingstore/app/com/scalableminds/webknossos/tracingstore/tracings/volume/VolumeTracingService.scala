@@ -304,6 +304,7 @@ class VolumeTracingService @Inject()(
       } else
         for {
           _ <- unzipResult.toFox
+          _ = logger.info(s"saved total of $doneCount buckets")
           _ <- segmentIndexBuffer.flush()
         } yield savedResolutions.toSet
     }

@@ -1,5 +1,6 @@
 package controllers
 
+import akka.actor.ActorSystem
 import akka.util.Timeout
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -72,6 +73,7 @@ class AnnotationController @Inject()(
     analyticsService: AnalyticsService,
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
+    akkaActorSystem: ActorSystem,
     conf: WkConf,
     rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -379,6 +381,8 @@ class AnnotationController @Inject()(
   def addSegmentIndicesToAll(startOffset: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
+        implicit val ec: ExecutionContext =
+          akkaActorSystem.dispatchers.lookup("akka.actor.segmentIndexMigrationThreadPool")
         var processedCount: Int = 0
         for {
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
@@ -389,12 +393,16 @@ class AnnotationController @Inject()(
           annotationLayers <- annotationLayerDAO.findAllVolumeLayers(currentOffset, pageSize)
           tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
           client = new WKRemoteTracingStoreClient(tracingStore, null, rpc)
-          _ <- Fox.serialSequenceBox(annotationLayers) { annotationLayer =>
-            processedCount += 1
-            logger.info(
-              f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $toProcessCount (${percent(processedCount, toProcessCount)})...")
-            client.addSegmentIndex(annotationLayer.tracingId) ?~> "annotation.addSegmentIndex.failed"
-          }
+          before = Instant.now
+          _ <- Fox
+            .combined(annotationLayers.map { annotationLayer =>
+              processedCount += 1
+              logger.info(
+                f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $toProcessCount (${percent(processedCount, toProcessCount)})...")
+              client.addSegmentIndex(annotationLayer.tracingId) ?~> "annotation.addSegmentIndex.failed"
+            })
+            .toFox
+          _ = logger.info(s"All done! took ${Instant.since(before)}")
         } yield JsonOk(s"Processed $processedCount volume annotation layers")
       }
     }

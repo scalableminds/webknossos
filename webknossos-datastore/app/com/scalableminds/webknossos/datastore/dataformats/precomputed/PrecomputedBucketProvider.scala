@@ -36,27 +36,28 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
     extends BucketProvider
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[PrecomputedCubeHandle] = {
-    val precomputedMagOpt: Option[MagLocator] =
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    precomputedMagOpt match {
+    magLocatorOpt match {
       case None => Fox.empty
-      case Some(precomputedMag) =>
+      case Some(magLocator) =>
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- if (precomputedMag.isRemote) {
-                remoteSourceDescriptorService.vaultPathFor(precomputedMag)
-              } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- PrecomputedArray
                 .open(magPath,
                       dataSourceId,
                       layer.name,
-                      precomputedMag.axisOrder,
-                      precomputedMag.channelIndex,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
                       chunkContentsCache)
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle

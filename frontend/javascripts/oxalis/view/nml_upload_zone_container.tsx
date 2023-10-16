@@ -5,12 +5,11 @@ import Dropzone, { DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
-import { navbarHeight } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
 import { trackAction } from "oxalis/model/helpers/analytics";
-
+import constants from "oxalis/constants";
 type State = {
   files: Array<File>;
   dropzoneActive: boolean;
@@ -272,7 +271,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              height: `calc(100vh - ${navbarHeight}px)`,
+              height: `calc(100vh - ${constants.NAVBAR_HEIGHT}px)`,
             }}
             className="flex-column"
           >

@@ -56,7 +56,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
-import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
@@ -488,7 +488,7 @@ function* clearProofreadingByproducts() {
   const layerName = volumeTracingLayer.tracingId;
 
   for (const segmentId of coarselyLoadedSegmentIds) {
-    yield* put(removeIsosurfaceAction(layerName, segmentId));
+    yield* put(removeMeshAction(layerName, segmentId));
   }
   coarselyLoadedSegmentIds = [];
 }
@@ -730,9 +730,9 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
 ) {
   if (proofreadUsingMeshes()) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    yield* put(removeIsosurfaceAction(layerName, sourceAgglomerateId));
+    yield* put(removeMeshAction(layerName, sourceAgglomerateId));
     if (targetAgglomerateId !== sourceAgglomerateId) {
-      yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
+      yield* put(removeMeshAction(layerName, targetAgglomerateId));
     }
 
     // Segmentations with more than 3 dimensions are currently not compatible

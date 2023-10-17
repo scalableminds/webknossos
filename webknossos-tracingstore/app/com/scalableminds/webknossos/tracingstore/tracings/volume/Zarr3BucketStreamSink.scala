@@ -86,7 +86,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
     val rank = additionalAxes.map(_.length).getOrElse(0) + 4
     val magLocators = layer.tracing.resolutions.map { mag =>
       MagLocator(mag = vec3IntToProto(mag),
-                 axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = rank - 1)))
+                 axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))))
     }
     GenericDataSource(
       id = DataSourceId("", ""),

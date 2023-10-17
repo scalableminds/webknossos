@@ -88,7 +88,7 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
-      renderAnimationMenuItem,
+      activeUser?.isSuperUser ? renderAnimationMenuItem : null,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
@@ -115,7 +115,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
-      {renderAnimationModal}
+      {activeUser?.isSuperUser ? renderAnimationModal : null}
       {isAISegmentationEnabled ? AISegmentationModals : null}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent

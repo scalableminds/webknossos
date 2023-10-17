@@ -31,9 +31,9 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { Model } from "oxalis/singletons";
 
 type Props = {
   isOpen: boolean;
@@ -166,18 +166,24 @@ function CreateAnimationModal(props: Props) {
     let meshFileName = "meshfile.hdf5";
     let segmentationLayerName = "segmentatation";
 
-    const volumeLayer = getActiveSegmentationTracingLayer(state);
+    const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
 
-    if (volumeLayer) {
-      const availableMeshes = state.localSegmentationData[volumeLayer.name].isosurfaces;
+    if (visibleSegmentationLayer) {
+      const availableMeshes =
+        state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces;
       meshSegmentIds = Object.values(availableMeshes)
         .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
         .map((mesh) => mesh.segmentId);
 
-      const currenMeshFile = state.localSegmentationData[volumeLayer.name].currentMeshFile;
+      const currenMeshFile =
+        state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile;
       meshFileName = currenMeshFile?.meshFileName || meshFileName;
 
-      // segmentationLayerName = volumeLayer.name # TODO backend?
+      if (visibleSegmentationLayer.fallbackLayerInfo) {
+        segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;
+      } else {
+        segmentationLayerName = visibleSegmentationLayer.name;
+      }
     }
 
     // Submit the configured min/max intensity info to support float datasets

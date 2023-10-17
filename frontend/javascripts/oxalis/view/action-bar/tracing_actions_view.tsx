@@ -690,14 +690,17 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     menuItems.push(screenshotMenuItem);
-    menuItems.push(renderAnimationMenuItem);
-    modals.push(
-      <CreateAnimationModal
-        key="render-animation-modal"
-        isOpen={this.props.isRenderAnimationModalOpen}
-        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
-      />,
-    );
+
+    if (activeUser?.isSuperUser) {
+      menuItems.push(renderAnimationMenuItem);
+      modals.push(
+        <CreateAnimationModal
+          key="render-animation-modal"
+          isOpen={this.props.isRenderAnimationModalOpen}
+          onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+        />,
+      );
+    }
 
     menuItems.push({
       key: "user-scripts-button",

@@ -110,9 +110,9 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateCurrentMeshFileAction,
-  refreshIsosurfacesAction,
-  updateIsosurfaceVisibilityAction,
-  removeIsosurfaceAction,
+  refreshMeshesAction,
+  updateMeshVisibilityAction,
+  removeMeshAction,
   dispatchMaybeFetchMeshFilesAsync,
 } from "oxalis/model/actions/annotation_actions";
 import {
@@ -1590,8 +1590,8 @@ class DataApi {
     );
   }
 
-  refreshIsosurfaces() {
-    Store.dispatch(refreshIsosurfacesAction());
+  refreshMeshes() {
+    Store.dispatch(refreshMeshesAction());
   }
 
   /**
@@ -2257,8 +2257,8 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
-      Store.dispatch(updateIsosurfaceVisibilityAction(effectiveLayerName, segmentId, isVisible));
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+      Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     }
   }
 
@@ -2275,8 +2275,8 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
-      Store.dispatch(removeIsosurfaceAction(effectiveLayerName, segmentId));
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+      Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     }
   }
 
@@ -2293,11 +2293,11 @@ class DataApi {
       layerName,
     ).name;
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].isosurfaces,
+      Store.getState().localSegmentationData[effectiveLayerName].meshes,
     );
 
     for (const segmentId of segmentIds) {
-      Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
+      Store.dispatch(removeMeshAction(effectiveLayerName, Number(segmentId)));
     }
   }
 

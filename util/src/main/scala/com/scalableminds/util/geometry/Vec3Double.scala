@@ -66,7 +66,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def toTuple: (Double, Double, Double) = (x, y, z)
 
-  def toList = List(x, y, z)
+  def toList: List[Double] = List(x, y, z)
 
   def isStrictlyPositive: Boolean = x > 0 && y > 0 && z > 0
 
@@ -101,8 +101,7 @@ object Vec3Double {
       case _: NumberFormatException => None
     }
 
-  def fromVec3Int(v: Vec3Int) =
-    Vec3Double(v.x, v.y, v.z)
+  def ones: Vec3Double = Vec3Double(1.0, 1.0, 1.0)
 
   implicit object Vector3DReads extends Format[Vec3Double] {
     def reads(json: JsValue): JsResult[Vec3Double] = json match {

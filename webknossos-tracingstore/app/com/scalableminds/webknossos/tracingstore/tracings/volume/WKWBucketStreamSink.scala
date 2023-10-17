@@ -1,12 +1,13 @@
-package com.scalableminds.webknossos.datastore.dataformats.wkw
+package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.io.DataOutputStream
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.wrap.{BlockType, WKWFile, WKWHeader}
 
+import java.io.DataOutputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {

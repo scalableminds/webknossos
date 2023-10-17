@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.{Path, Paths}
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
@@ -13,7 +12,7 @@ trait WKWDataFormatHelper {
   val dataFileExtension: String = "wkw"
   val headerFileName: String = s"header.$dataFileExtension"
 
-  def wkwFilePath(
+  protected def wkwFilePath(
       cube: CubePosition,
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
@@ -37,7 +36,7 @@ trait WKWDataFormatHelper {
       if (resolution.isIsotropic) resolution.maxDim.toString else s"${resolution.x}-${resolution.y}-${resolution.z}"
     }
 
-  def wkwHeaderFilePath(
+  protected def wkwHeaderFilePath(
       resolution: Vec3Int,
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
@@ -50,7 +49,7 @@ trait WKWDataFormatHelper {
       .resolve(formatResolution(resolution))
       .resolve(s"header.$dataFileExtension")
 
-  def parseWKWFilePath(path: String): Option[BucketPosition] = {
+  protected def parseWKWFilePath(path: String): Option[BucketPosition] = {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
       case CubeRx(_, resolutionStr, z, y, x) =>
@@ -63,15 +62,6 @@ trait WKWDataFormatHelper {
         }
       case _ =>
         None
-    }
-  }
-
-  def getMagFromWKWHeaderFilePath(path: String): Option[Vec3Int] = {
-    val headerRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
-    path match {
-      case headerRx(_, resolutionStr) =>
-        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
-      case _ => None
     }
   }
 

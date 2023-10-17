@@ -21,8 +21,8 @@ object Zarr3Array extends LazyLogging {
            channelIndex: Option[Int],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
     for {
-      headerBytes <- (path / Zarr3ArrayHeader.ZARR_JSON)
-        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.ZARR_JSON}"
+      headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
     } yield
       new Zarr3Array(path,
@@ -60,12 +60,12 @@ class Zarr3Array(vaultPath: VaultPath,
       super.getChunkFilename(chunkIndex)
     }
 
-  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) = initializeCodecs(
-    header.codecs)
+  lazy val (shardingCodec: Option[ShardingCodec], codecs: Seq[Codec], indexCodecs: Seq[Codec]) =
+    initializeCodecs(header.codecs)
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
-      case EndianCodecConfiguration(endian)   => new EndianCodec(endian)
+      case BytesCodecConfiguration(endian)    => new BytesCodec(endian)
       case TransposeCodecConfiguration(order) => new TransposeCodec(order)
       case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
         new BloscCodec(cname, clevel, shuffle, typesize, blocksize)

@@ -1035,21 +1035,33 @@ export async function downloadAnnotation(
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
+  downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const possibleVersionString = Object.entries(versions)
-    .map(([key, val]) => `${key}Version=${val}`)
-    .join("&");
+  const searchParams = new URLSearchParams();
+  Object.entries(versions).forEach(([key, val]) => {
+    if (val != null) {
+      searchParams.append(`${key}Version`, val.toString());
+    }
+  });
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
       timeout: 12000,
     });
   }
-  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
-  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
+  if (!includeVolumeData) {
+    searchParams.append("skipVolumeData", "true");
+  } else {
+    if (downloadFileFormat === "nml") {
+      throw new Error(
+        "Cannot download annotation with nml-only format while includeVolumeData is true",
+      );
+    }
+    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+  }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
   await downloadWithFilename(downloadUrl);
 }
 

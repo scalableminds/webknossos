@@ -6,7 +6,7 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, FallbackDataHelper}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -303,17 +304,31 @@ class VolumeTracingService @Inject()(
         } yield savedResolutions.toSet
     }
 
-  def allDataFile(tracingId: String, tracing: VolumeTracing): Fox[Files.TemporaryFile] = {
+  def allDataZip(tracingId: String,
+                 tracing: VolumeTracing,
+                 volumeDataZipFormat: VolumeDataZipFormat,
+                 voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
-    allDataToOutputStream(tracingId, tracing, os).map(_ => zipped)
+    allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
   }
 
-  private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Fox[Unit] = {
+  private def allDataToOutputStream(tracingId: String,
+                                    tracing: VolumeTracing,
+                                    volumeDataZipFormmat: VolumeDataZipFormat,
+                                    voxelSize: Option[Vec3Double],
+                                    os: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
+    val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
+      case VolumeDataZipFormat.wkw =>
+        new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                           tracing.resolutions.map(mag => vec3IntFromProto(mag)))
+      case VolumeDataZipFormat.zarr3 =>
+        new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                             tracing.resolutions.map(mag => vec3IntFromProto(mag)),
+                                             tracing.additionalAxes,
+                                             voxelSize)
+    }
 
     val before = Instant.now
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)

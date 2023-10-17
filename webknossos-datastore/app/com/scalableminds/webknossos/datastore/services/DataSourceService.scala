@@ -47,7 +47,7 @@ class DataSourceService @Inject()(
 
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
-  private val propertiesFileName = Paths.get("datasource-properties.json")
+  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0

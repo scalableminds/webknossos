@@ -1,4 +1,5 @@
-@( conf: utils.WkConf, selectedTheme: String, openGraphTitle: Option[String], openGraphDescription: Option[String], openGraphImage: Option[String] )
+@( conf: utils.WkConf, selectedTheme: String, openGraphTitle: Option[String], openGraphDescription:
+Option[String], openGraphImage: Option[String] )
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -9,10 +10,13 @@
     <meta name="google-analytics-tracking-id" content="@(conf.GoogleAnalytics.trackingId)" />
     }
     <title>@(conf.WebKnossos.tabTitle)</title>
-    @openGraphTitle.map { ogt =><meta property="og:title" content="@ogt" /> }
-    @openGraphDescription.map { ogd =><meta property="og:description" content="@ogd" /> }
-    @openGraphImage.map { ogi =><meta property="og:image" content="@ogi" /> }
-    @if(conf.Features.isWkorgInstance){
+    @openGraphTitle.map { ogt =>
+    <meta property="og:title" content="@ogt" />
+    } @openGraphDescription.map { ogd =>
+    <meta property="og:description" content="@ogd" />
+    } @openGraphImage.map { ogi =>
+    <meta property="og:image" content="@ogi" />
+    } @if(conf.Features.isWkorgInstance){
     <meta
       name="description"
       content="Annotate and explore large 3D datasets with WEBKNOSSOS. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."

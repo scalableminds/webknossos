@@ -8,6 +8,7 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.explore.ExploreLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -17,6 +18,7 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(uploadId: String,
@@ -59,7 +61,8 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
-                              runningUploadMetadataStore: DataStoreRedisStore)(implicit ec: ExecutionContext)
+                              runningUploadMetadataStore: DataStoreRedisStore,
+                              exploreLayerService: ExploreLayerService)(implicit ec: ExecutionContext)
     extends LazyLogging
     with DataSetDeleter
     with DirectoryConstants
@@ -225,11 +228,21 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     else {
       for {
         isZarr <- looksLikeZarr(unpackToDir).toFox
-        _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
-        _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
+
+        _ <- Fox.runIf(isZarr)(exploreLocalDatasource(unpackToDir, dataSourceId)) // TODO: This creates absolute path, which can not be used later
+        _ <- Fox.runIf(!isZarr)(addLayerAndResolutionDirIfMissing(unpackToDir).toFox)
+        _ <- Fox.runIf(!isZarr)(addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty)))
+        _ <- Fox.runIf(!isZarr)(
+          addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty)))
       } yield ()
     }
+
+  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
+    for {
+      explored <- exploreLayerService.exploreLocalDatasource(path, dataSourceId)
+      properties = Json.toJson(explored).toString().getBytes(StandardCharsets.UTF_8)
+      _ <- tryo(Files.write(path.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties))
+    } yield ()
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
@@ -329,7 +342,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
                                                          maxDepth = 2,
                                                          silent = false,
-                                                         filters = p => p.getFileName.toString == ".zattrs")
+                                                         filters = p => p.getFileName.toString == ".zarray")
     } yield listing.nonEmpty
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Box[Unit] =

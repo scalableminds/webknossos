@@ -16,14 +16,31 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataLayer
+  DataLayer,
+  DataSource,
+  DataSourceId,
+  GenericDataSource
 }
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class ExploreLayerService @Inject() extends FoxImplicits {
+class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends FoxImplicits {
+
+  def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId)(implicit ec: ExecutionContext): Fox[DataSource] =
+    for {
+      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(path.toUri, None))
+      vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
+      layersWithVoxelSizes <- (new ZarrArrayExplorer).explore(vaultPath, None)
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, None)
+      rescaledLayers = rescaledLayersAndVoxelSize._1
+      voxelSize = rescaledLayersAndVoxelSize._2
+      renamedLayers = makeLayerNamesUnique(rescaledLayers)
+      dataSource = GenericDataSource[DataLayer](dataSourceId, renamedLayers, voxelSize)
+    } yield dataSource
 
   def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()

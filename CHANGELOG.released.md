@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [23.10.2](https://github.com/scalableminds/webknossos/releases/tag/23.10.2) - 2023-09-26
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...23.10.2)
+
+### Fixed
+- Fixed that segment statistics were requested in the wrong resolution and without properly considering the dataset scale. [#7355](https://github.com/scalableminds/webknossos/pull/7355)
+
 ## [23.10.1](https://github.com/scalableminds/webknossos/releases/tag/23.10.1) - 2023-09-22
 [Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...23.10.1)
 
@@ -451,6 +457,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed broken creation of tasks using base NMLs. [#6634](https://github.com/scalableminds/webknossos/pull/6634)
 - Fixed that the precomputation of meshes didn't take the active mapping into account. [#6651](https://github.com/scalableminds/webknossos/pull/6651)
 - Fixed false-positive warning about an outdated annotation version. [#6656](https://github.com/scalableminds/webknossos/pull/6656)
+- Fixed that segment statistics seemed to be available but broken for segments without index. [#7377](https://github.com/scalableminds/webknossos/pull/7377)
 
 ## [22.11.2](https://github.com/scalableminds/webknossos/releases/tag/22.11.2) - 2022-11-10
 [Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...22.11.2)

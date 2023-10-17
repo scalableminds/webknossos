@@ -20,7 +20,7 @@ import scala.util.Random
   */
 class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
 
-  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webKnossosTempFiles")
+  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webknossosTempFiles")
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Long)]()
 

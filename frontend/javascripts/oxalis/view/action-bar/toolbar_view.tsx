@@ -62,6 +62,7 @@ import {
   InterpolationModeEnum,
   InterpolationMode,
   Unicode,
+  MeasurementTools,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { BrushPresets, OxalisState } from "oxalis/store";
@@ -183,7 +184,7 @@ function RadioButtonWithTooltip({
   onClick,
   ...props
 }: {
-  title: string;
+  title: string | React.ReactNode;
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
@@ -818,6 +819,8 @@ const TOOL_NAMES = {
   QUICK_SELECT: "Quick Select Tool",
   BOUNDING_BOX: "Bounding Box Tool",
   PROOFREAD: "Proofreading Tool",
+  LINE_MEASUREMENT: "Measurement Tool",
+  AREA_MEASUREMENT: "Area Measurement Tool",
 };
 
 export default function ToolbarView() {
@@ -1146,6 +1149,21 @@ export default function ToolbarView() {
             />
           </ToolRadioButton>
         ) : null}
+        <ToolRadioButton
+          name={TOOL_NAMES.LINE_MEASUREMENT}
+          description="Use to measure distances or areas."
+          disabledExplanation=""
+          disabled={false}
+          style={NARROW_BUTTON_STYLE}
+          value={AnnotationToolEnum.LINE_MEASUREMENT}
+        >
+          <i
+            style={{
+              paddingLeft: 4,
+            }}
+            className="fas fa-ruler"
+          />
+        </ToolRadioButton>
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -1272,6 +1290,10 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+
+      {MeasurementTools.includes(adaptedActiveTool) ? (
+        <MeasurementToolSwitch activeTool={adaptedActiveTool} />
+      ) : null}
     </>
   );
 }
@@ -1363,5 +1385,43 @@ function ProofReadingComponents() {
         <i className="fas fa-dice-d20" />
       </ButtonComponent>
     </>
+  );
+}
+
+function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
+  const dispatch = useDispatch();
+
+  const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
+    dispatch(setToolAction(evt.target.value));
+  };
+  return (
+    <Radio.Group
+      value={activeTool}
+      onChange={handleSetMeasurementTool}
+      style={{
+        marginLeft: 10,
+      }}
+    >
+      <RadioButtonWithTooltip
+        title="Measure distances with connected lines by using Left Click."
+        style={NARROW_BUTTON_STYLE}
+        value={AnnotationToolEnum.LINE_MEASUREMENT}
+      >
+        <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
+      </RadioButtonWithTooltip>
+      <RadioButtonWithTooltip
+        title={
+          <>
+            Measure areas by using Left Drag.
+            <br />
+            Avoid self-crossing polygon structure for accurate results.
+          </>
+        }
+        style={NARROW_BUTTON_STYLE}
+        value={AnnotationToolEnum.AREA_MEASUREMENT}
+      >
+        <img src="/assets/images/area-measurement.svg" alt="Measurement Tool Icon" />
+      </RadioButtonWithTooltip>
+    </Radio.Group>
   );
 }

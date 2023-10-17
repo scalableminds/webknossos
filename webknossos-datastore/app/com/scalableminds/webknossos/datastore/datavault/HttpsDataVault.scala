@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -22,6 +22,9 @@ import scala.concurrent.ExecutionContext
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) extends DataVault with LazyLogging {
 
   private val readTimeout = 10 minutes
+
+  // This will be set after the first completed range request by looking at the response headers of a HEAD request and the response headers of a GET request
+  private var supportsRangeRequests: Option[Boolean] = None
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
@@ -58,12 +61,14 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get()
+      _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
   private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get()
+      _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
   private def getComplete(uri: URI)(implicit ec: ExecutionContext): Fox[WSResponse] =
@@ -71,9 +76,28 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      headerInfos <- getHeaderInformation(uri)
-      _ <- bool2Fox(headerInfos._1) ?~> s"Range requests not supported for ${uri.toString}"
+      supported <- supportsRangeRequests match {
+        case Some(supports) => Fox.successful(supports)
+        case None =>
+          for {
+            headerInfos <- getHeaderInformation(uri)
+          } yield {
+            if (!headerInfos._1) {
+              // Head is not conclusive, do the range request and check the response afterwards (see updateRangeRequestsSupportedForResponse)
+              true
+            } else {
+              supportsRangeRequests = Some(true)
+              true
+            }
+          }
+      }
+      _ <- Fox.bool2Fox(supported) ?~> s"Range requests are not supported for this data vault at $uri"
     } yield ()
+
+  private def updateRangeRequestsSupportedForResponse(response: WSResponse): Unit =
+    if (supportsRangeRequests.isEmpty) {
+      supportsRangeRequests = Some(response.header("Content-Range").isDefined)
+    }
 
   private def buildRequest(uri: URI) = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)

@@ -1035,21 +1035,33 @@ export async function downloadAnnotation(
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
+  downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const possibleVersionString = Object.entries(versions)
-    .map(([key, val]) => `${key}Version=${val}`)
-    .join("&");
+  const searchParams = new URLSearchParams();
+  Object.entries(versions).forEach(([key, val]) => {
+    if (val != null) {
+      searchParams.append(`${key}Version`, val.toString());
+    }
+  });
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
       timeout: 12000,
     });
   }
-  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
-  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
+  if (!includeVolumeData) {
+    searchParams.append("skipVolumeData", "true");
+  } else {
+    if (downloadFileFormat === "nml") {
+      throw new Error(
+        "Cannot download annotation with nml-only format while includeVolumeData is true",
+      );
+    }
+    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+  }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
   await downloadWithFilename(downloadUrl);
 }
 
@@ -2130,9 +2142,9 @@ window.setMaintenance = setMaintenance;
 
 // Meshes
 
-// These parameters are bundled into an object to avoid that the computeIsosurface function
+// These parameters are bundled into an object to avoid that the computeAdHocMesh function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type IsosurfaceRequest = {
+type MeshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
@@ -2146,9 +2158,9 @@ type IsosurfaceRequest = {
   findNeighbors: boolean;
 };
 
-export function computeIsosurface(
+export function computeAdHocMesh(
   requestUrl: string,
-  isosurfaceRequest: IsosurfaceRequest,
+  meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
@@ -2160,14 +2172,14 @@ export function computeIsosurface(
     subsamplingStrides,
 
     ...rest
-  } = isosurfaceRequest;
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.append("token", token);
 
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/isosurface?${params}`,
+      `${requestUrl}/adHocMesh?${params}`,
       {
         data: {
           // The back-end needs a small padding at the border of the

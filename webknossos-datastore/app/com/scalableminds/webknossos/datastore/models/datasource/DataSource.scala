@@ -57,6 +57,8 @@ package object datasource {
     @nowarn // Suppress unused warning. The passed Format[T] is expanded to more than what is really used. It can not be omitted, though.
     implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] =
       Json.format[GenericDataSource[T]]
+
+    val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
   }
 
   type DataSource = GenericDataSource[DataLayer]

@@ -48,6 +48,8 @@ import {
   BoundingBoxTool,
   QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
+  AreaMeasurementTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
   ShowContextMenuFunction,
@@ -334,6 +336,8 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.showContextMenuAt,
     );
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
+    const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
+    const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
@@ -345,6 +349,8 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(boundingBoxControls),
       Object.keys(quickSelectControls),
       Object.keys(proofreadControls),
+      Object.keys(lineMeasurementControls),
+      Object.keys(areaMeasurementControls),
     );
 
     const controls: Record<string, any> = {};
@@ -363,6 +369,8 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
         [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
+        [AnnotationToolEnum.LINE_MEASUREMENT]: lineMeasurementControls[controlKey],
+        [AnnotationToolEnum.AREA_MEASUREMENT]: areaMeasurementControls[controlKey],
       });
     }
 

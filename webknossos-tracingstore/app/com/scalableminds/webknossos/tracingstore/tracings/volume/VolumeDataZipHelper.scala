@@ -1,25 +1,23 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.{File, FileOutputStream, InputStream}
+
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.wrap.WKWFile
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.io.IOUtils
 
 import scala.collection.mutable
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with LazyLogging {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
 
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] = {
-    var count = 0
     val unzipResult = ZipIO.withUnziped(zipFile) {
       case (fileName, is) =>
-        count += 1
         WKWFile.read(is) {
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
@@ -34,7 +32,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with LazyLo
             }
         }
     }
-    unzipResult.map(_ => logger.info(s"looked at $count buckts"))
+    unzipResult.map(_ => ())
   }
 
   protected def resolutionSetFromZipfile(zipFile: File): Set[Vec3Int] = {

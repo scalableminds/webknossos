@@ -235,7 +235,7 @@ class VolumeTracingController @Inject()(
               currentVersion,
               urlOrHeaderToken(token, request)) ?~> "addSegmentIndex.failed"
             currentVersionNew <- tracingService.currentVersion(tracingId)
-            _ <- bool2Fox(processedBucketCount == -1 || currentVersionNew == currentVersion + 1L) ?~> "version increment failed?"
+            _ <- bool2Fox(processedBucketCount == -1 || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime."
             duration = Instant.since(before)
             _ = if (processedBucketCount != -1)
               logger.info(

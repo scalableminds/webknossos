@@ -397,9 +397,15 @@ class AnnotationController @Inject()(
           results: Seq[List[Box[Unit]]] <- Fox.combined(batches.zipWithIndex.map {
             case (batch, index) => addSegmentIndicesToBatch(batch, index)
           })
-          failureCount: Int = results.map(_.count(_.isEmpty)).sum
+          failures = results.flatMap(_.filter(_.isEmpty))
+          failureCount: Int = failures.length
           successCount: Int = results.map(_.count(_.isDefined)).sum
           msg = s"All done! Processed $totalCount tracings in ${batches.length} batches. Took ${Instant.since(before)}. $failureCount failures, $successCount successes."
+          _ = if (failures.nonEmpty) {
+            failures.foreach { failedBox =>
+              logger.info(f"Failed: $failedBox")
+            }
+          }
           _ = logger.info(msg)
         } yield JsonOk(msg)
       }
@@ -416,7 +422,7 @@ class AnnotationController @Inject()(
         processedCount += 1
         logger.info(
           f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $batchCount in batch $batchIndex (${percent(processedCount, batchCount)})...")
-        client.addSegmentIndex(annotationLayer.tracingId) ?~> "annotation.addSegmentIndex.failed"
+        client.addSegmentIndex(annotationLayer.tracingId) ?~> s"add segment index failed for ${annotationLayer.tracingId}"
       }
       _ = logger.info(f"Batch $batchIndex is done. Processed ${annotationLayerBatch.length} tracings.")
     } yield results

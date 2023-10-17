@@ -1,4 +1,4 @@
-import { Alert, Popover, Tooltip } from "antd";
+import { Alert, Popover } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
@@ -30,6 +30,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfoForSupportedLayer,
   getUnifiedAdditionalCoordinates,
+  getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
@@ -198,16 +199,17 @@ class ActionBarView extends React.PureComponent<Props, State> {
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
-  renderStartAIJobButton(): React.ReactNode {
+  renderStartAIJobButton(disabled: boolean): React.ReactNode {
+    const tooltipText = disabled ? "The dataset needs to have a color layer to start AI processing jobs." : "Start a processing job using AI" // TODO maybe hint how to create one? 
     return (
       <ButtonComponent
         key="ai-job-button"
         onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
-        style={{ marginLeft: 12 }}
+        style={{ marginLeft: 12, pointerEvents: "auto" }}
+        disabled={disabled}
+        title={tooltipText}
       >
-        <Tooltip title="Start a processing job using AI">
           <i className="fas fa-magic" /> AI Analysis
-        </Tooltip>
       </ButtonComponent>
     );
   }
@@ -233,6 +235,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
+      dataset,
       is2d,
       isReadOnly,
       showVersionRestore,
@@ -264,6 +267,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
+    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+
     return (
       <React.Fragment>
         <div className="action-bar">
@@ -276,7 +281,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisEnabled() ? this.renderStartAIJobButton() : null}
+          {isAIAnalysisEnabled() ? this.renderStartAIJobButton(!datasetHasColorLayer) : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
@@ -289,7 +294,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
+        <StartAIJobModal aIJobModalState={this.props.aiJobModalState}/>
       </React.Fragment>
     );
   }

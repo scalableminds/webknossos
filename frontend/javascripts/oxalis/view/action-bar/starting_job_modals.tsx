@@ -35,7 +35,12 @@ import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
 import { Model, Store } from "oxalis/singletons";
-import { clamp, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
+import {
+  clamp,
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  rgbToHex,
+} from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
@@ -482,7 +487,7 @@ function StartJobForm(props: StartJobFormProps) {
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
   const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
   const [form] = Form.useForm();
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
+  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
   const dataset = useSelector((state: OxalisState) => state.dataset);
@@ -490,6 +495,17 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const allLayers = getDataLayers(dataset);
+  const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
+    return {
+      id: -1 * index,
+      name: `Full ${layer.name} layer`,
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
+      color: [255, 255, 255],
+      isVisible: true,
+    };
+  });
+  const userBoundingBoxes =
+    rawUserBoundingBoxes?.length === 0 ? defaultBBForLayers : rawUserBoundingBoxes;
 
   const startJob = async ({
     layerName,

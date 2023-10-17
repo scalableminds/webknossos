@@ -1,6 +1,6 @@
-import { CopyOutlined, PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
+import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
+import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
 import { connect } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useState } from "react";
 import type {
@@ -221,6 +221,7 @@ function positionToString(
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
   const lineColor = "var(--ant-text-secondary)";
+  const mouseIconStyle = { margin: 0, marginLeft: -2, height: 18 };
 
   const mapNameToShortcutIcon = (name: string) => {
     switch (name) {
@@ -230,9 +231,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-left.svg"
             alt="Mouse Left Click"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -243,9 +242,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right Click"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -256,9 +253,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -803,6 +798,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
   };
 
+  const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
+    Modal.info({
+      title: null,
+      content: (
+        <>
+          {errorMessage} {entity} are created as part of our automated segmentation services.{" "}
+          <a
+            target="_blank"
+            href="https://webknossos.org/services/automated-segmentation"
+            rel="noreferrer noopener"
+          >
+            Learn more.
+          </a>
+        </>
+      ),
+      onOk() {},
+    });
+
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions: ItemType[] =
@@ -830,8 +843,14 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           },
           {
             key: "load-agglomerate-skeleton",
-            disabled: !isAgglomerateMappingEnabled.value,
-            onClick: () => loadAgglomerateSkeletonAtPosition(globalPosition),
+            // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
+            onClick: () =>
+              isAgglomerateMappingEnabled.value
+                ? loadAgglomerateSkeletonAtPosition(globalPosition)
+                : showAutomatedSegmentationServicesModal(
+                    isAgglomerateMappingEnabled.reason,
+                    "Agglomerate files",
+                  ),
             label: (
               <Tooltip
                 title={
@@ -843,7 +862,13 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   }
                 }}
               >
-                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
+                <span>
+                  Import Agglomerate Skeleton{" "}
+                  {!isAgglomerateMappingEnabled.value ? (
+                    <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+                  ) : null}{" "}
+                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                </span>
               </Tooltip>
             ),
           },
@@ -894,18 +919,29 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     const loadSynapsesItem: MenuItemType = {
       className: "node-context-menu-item",
       key: "load-synapses",
-      disabled: !isConnectomeMappingEnabled.value,
-      onClick: withMappingActivationConfirmation(
-        () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
-        connectomeFileMappingName,
-        "connectome file",
-        segmentationLayerName,
-        mappingInfo,
-      ),
+      // Do not disable menu entry, but show modal advertising automated segmentation services if no connectome file is activated
+      onClick: isConnectomeMappingEnabled.value
+        ? withMappingActivationConfirmation(
+            () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
+            connectomeFileMappingName,
+            "connectome file",
+            segmentationLayerName,
+            mappingInfo,
+          )
+        : () =>
+            showAutomatedSegmentationServicesModal(
+              isConnectomeMappingEnabled.reason,
+              "Connectome files",
+            ),
       label: isConnectomeMappingEnabled.value ? (
         "Import Agglomerate and Synapses"
       ) : (
-        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
+        <Tooltip title={isConnectomeMappingEnabled.reason}>
+          Import Agglomerate and Synapses{" "}
+          {!isConnectomeMappingEnabled.value ? (
+            <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+          ) : null}{" "}
+        </Tooltip>
       ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action

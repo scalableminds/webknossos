@@ -123,7 +123,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .silent
       .post()
-      .map(_ => logger.info(s"Done adding segment index. Thread: ${Thread.currentThread().getId}"))
+      .map(_ => ())
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

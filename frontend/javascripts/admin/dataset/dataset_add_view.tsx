@@ -1,7 +1,7 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout } from "antd";
-import { DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
@@ -12,6 +12,7 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
+import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
@@ -19,6 +20,7 @@ const { Content, Sider } = Layout;
 enum DatasetAddViewTabs {
   UPLOAD = "upload",
   REMOTE = "remote",
+  COMPOSE = "compose",
 }
 
 function DatasetAddView({ history }: RouteComponentProps) {
@@ -105,7 +107,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
     defaultActiveTabFromHash as DatasetAddViewTabs,
   )
     ? (defaultActiveTabFromHash as DatasetAddViewTabs)
-    : DatasetAddViewTabs.UPLOAD;
+    : // todo: revert
+      DatasetAddViewTabs.COMPOSE;
 
   return (
     <React.Fragment>
@@ -133,6 +136,17 @@ function DatasetAddView({ history }: RouteComponentProps) {
               key={DatasetAddViewTabs.REMOTE}
             >
               <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />
+            </TabPane>
+            <TabPane
+              tab={
+                <span>
+                  <CopyOutlined />
+                  Compose from existing datasets
+                </span>
+              }
+              key={DatasetAddViewTabs.COMPOSE}
+            >
+              <DatasetAddComposeView onAdded={handleDatasetAdded} />
             </TabPane>
           </Tabs>
         </Content>

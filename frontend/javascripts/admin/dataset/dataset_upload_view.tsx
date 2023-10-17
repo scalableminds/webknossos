@@ -34,6 +34,7 @@ import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Zip from "libs/zipjs_wrapper";
 import {
+  AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
@@ -155,7 +156,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
-  formRef = React.createRef<FormInstance>();
+  formRef: React.RefObject<FormInstance<any>> = React.createRef<FormInstance>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -670,54 +671,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItemWithInfo
-                  name="initialTeams"
-                  label="Teams allowed to access this dataset"
-                  info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
-                  hasFeedback
-                >
-                  <TeamSelectionComponent
-                    mode="multiple"
-                    value={this.state.selectedTeams}
-                    allowNonEditableTeams={isDatasetManagerOrAdmin}
-                    onChange={(selectedTeams) => {
-                      if (this.formRef.current == null) return;
-
-                      if (!Array.isArray(selectedTeams)) {
-                        // Making sure that we always have an array even when only one team is selected.
-                        selectedTeams = [selectedTeams];
-                      }
-
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: selectedTeams,
-                      });
-                      this.setState({
-                        selectedTeams,
-                      });
-                    }}
-                    afterFetchedTeams={(fetchedTeams) => {
-                      if (!features().isWkorgInstance) {
-                        return;
-                      }
-
-                      const teamOfOrganization = fetchedTeams.find(
-                        (team) => team.name === team.organization,
-                      );
-
-                      if (teamOfOrganization == null) {
-                        return;
-                      }
-
-                      if (this.formRef.current == null) return;
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: [teamOfOrganization],
-                      });
-                      this.setState({
-                        selectedTeams: [teamOfOrganization],
-                      });
-                    }}
-                  />
-                </FormItemWithInfo>
+                <AllowedTeamsFormItem
+                  isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
+                  selectedTeams={this.state.selectedTeams}
+                  setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
+                  formRef={this.formRef}
+                />
               </Col>
             </Row>
 

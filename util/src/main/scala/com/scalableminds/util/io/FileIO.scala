@@ -1,12 +1,12 @@
 package com.scalableminds.util.io
 
-import com.scalableminds.util.tools.Fox
-
 import java.io._
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
 
+import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
 trait NamedStream {
@@ -23,7 +23,13 @@ trait NamedStream {
   def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit]
 }
 
-case class FunctionStream(writer: OutputStream => Fox[Unit])
+object NamedFunctionStream {
+  def fromBytes(name: String, bytes: Array[Byte])(implicit ec: ExecutionContext): NamedFunctionStream =
+    NamedFunctionStream(name, os => Fox.successful(os.write(bytes)))
+
+  def fromString(name: String, str: String)(implicit ec: ExecutionContext): NamedFunctionStream =
+    fromBytes(name, str.getBytes(Charset.forName("UTF-8")))
+}
 
 case class NamedFunctionStream(name: String, writer: OutputStream => Fox[Unit]) extends NamedStream {
   def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = writer(out)

@@ -1,4 +1,4 @@
-import type { AnnotationTool } from "oxalis/constants";
+import type { AnnotationTool, Vector3 } from "oxalis/constants";
 import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
 import { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
@@ -21,6 +21,9 @@ export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
+type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
+type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
+type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -41,7 +44,10 @@ export type UiAction =
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
-  | ShowQuickSelectSettingsAction;
+  | ShowQuickSelectSettingsAction
+  | HideMeasurementTooltipAction
+  | SetLastMeasuredPositionAction
+  | SetIsMeasuringAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -140,4 +146,18 @@ export const showQuickSelectSettingsAction = (isOpen: boolean) =>
   ({
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
     isOpen,
+  } as const);
+export const hideMeasurementTooltipAction = () =>
+  ({
+    type: "HIDE_MEASUREMENT_TOOLTIP",
+  } as const);
+export const setLastMeasuredPositionAction = (position: Vector3) =>
+  ({
+    type: "SET_LAST_MEASURED_POSITION",
+    position,
+  } as const);
+export const setIsMeasuringAction = (isMeasuring: boolean) =>
+  ({
+    type: "SET_IS_MEASURING",
+    isMeasuring,
   } as const);

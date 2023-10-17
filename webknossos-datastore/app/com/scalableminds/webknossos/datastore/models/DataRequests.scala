@@ -45,7 +45,7 @@ object WebKnossosDataRequest {
   implicit val jsonFormat: OFormat[WebKnossosDataRequest] = Json.format[WebKnossosDataRequest]
 }
 
-case class WebKnossosIsosurfaceRequest(
+case class WebknossosAdHocMeshRequest(
     position: Vec3Int,
     mag: Vec3Int,
     cubeSize: Vec3Int,
@@ -60,8 +60,8 @@ case class WebKnossosIsosurfaceRequest(
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 }
 
-object WebKnossosIsosurfaceRequest {
-  implicit val jsonFormat: OFormat[WebKnossosIsosurfaceRequest] = Json.format[WebKnossosIsosurfaceRequest]
+object WebknossosAdHocMeshRequest {
+  implicit val jsonFormat: OFormat[WebknossosAdHocMeshRequest] = Json.format[WebknossosAdHocMeshRequest]
 }
 
 case class RawCuboidRequest(

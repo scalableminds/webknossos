@@ -245,6 +245,10 @@ const defaultState: OxalisState = {
     },
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    measurementToolInfo: {
+      lastMeasuredPosition: null,
+      isMeasuring: false,
+    },
   },
   localSegmentationData: {},
 };

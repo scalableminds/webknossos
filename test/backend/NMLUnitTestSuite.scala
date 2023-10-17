@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.{Box, Full}
@@ -38,7 +39,9 @@ class NMLUnitTestSuite extends PlaySpec {
                                                                             "http://wk.test",
                                                                             "dummy_dataset",
                                                                             None,
-                                                                            None)
+                                                                            None,
+                                                                            volumeDataZipFormat =
+                                                                              VolumeDataZipFormat.wkw)
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray

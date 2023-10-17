@@ -23,7 +23,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayer
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  VolumeDataZipFormat,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import io.swagger.annotations._
 
@@ -71,6 +76,8 @@ class AnnotationIOController @Inject()(
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
+
+  private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
 
   @ApiOperation(
     value =
@@ -323,11 +330,13 @@ Expects:
       id: String,
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],
-      skipVolumeData: Option[Boolean]): Action[AnyContent] =
+      skipVolumeData: Option[Boolean],
+      volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
+        volumeDataZipFormatParsed = volumeDataZipFormat.flatMap(VolumeDataZipFormat.fromString)
         _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
@@ -336,12 +345,14 @@ Expects:
           case AnnotationType.CompoundTaskType =>
             downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
           case _ =>
-            downloadExplorational(id,
-                                  typ,
-                                  request.identity,
-                                  skeletonVersion,
-                                  volumeVersion,
-                                  skipVolumeData.getOrElse(false)) ?~> "annotation.download.failed"
+            downloadExplorational(
+              id,
+              typ,
+              request.identity,
+              skeletonVersion,
+              volumeVersion,
+              skipVolumeData.getOrElse(false),
+              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> "annotation.download.failed"
         }
       } yield result
     }
@@ -357,11 +368,17 @@ Expects:
                           id: String,
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
-                          skipVolumeData: Option[Boolean]): Action[AnyContent] =
+                          skipVolumeData: Option[Boolean],
+                          volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity)
-        result <- download(annotation.typ.toString, id, skeletonVersion, volumeVersion, skipVolumeData)(request)
+        result <- download(annotation.typ.toString,
+                           id,
+                           skeletonVersion,
+                           volumeVersion,
+                           skipVolumeData,
+                           volumeDataZipFormat)(request)
       } yield result
     }
 
@@ -370,7 +387,8 @@ Expects:
                                     issuingUser: Option[User],
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
-                                    skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
+                                    skipVolumeData: Boolean,
+                                    volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -383,16 +401,20 @@ Expects:
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlStream = nmlWriter.toNmlStream("temp",
-                                          fetchedAnnotationLayers,
-                                          Some(annotation),
-                                          dataset.scale,
-                                          None,
-                                          organizationName,
-                                          conf.Http.uri,
-                                          dataset.name,
-                                          Some(user),
-                                          taskOpt)
+        nmlStream = nmlWriter.toNmlStream(
+          "temp",
+          fetchedAnnotationLayers,
+          Some(annotation),
+          dataset.scale,
+          None,
+          organizationName,
+          conf.Http.uri,
+          dataset.name,
+          Some(user),
+          taskOpt,
+          skipVolumeData,
+          volumeDataZipFormat
+        )
         nmlTemporaryFile = temporaryFileCreator.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
         _ <- nmlStream.writeTo(temporaryFileStream)
@@ -407,7 +429,11 @@ Expects:
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
+                                                volumeVersion,
+                                                skipVolumeData,
+                                                volumeDataZipFormat,
+                                                dataset.scale)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
@@ -426,7 +452,8 @@ Expects:
           dataset.name,
           Some(user),
           taskOpt,
-          skipVolumeData
+          skipVolumeData,
+          volumeDataZipFormat
         )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
@@ -491,7 +518,10 @@ Expects:
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
-      zip <- annotationService.zipAnnotations(annotations, project.name, skipVolumeData)
+      zip <- annotationService.zipAnnotations(annotations,
+                                              project.name,
+                                              skipVolumeData,
+                                              volumeDataZipFormatForCompoundAnnotations)
     } yield {
       val file = new File(zip.path.toString)
       Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
@@ -503,7 +533,8 @@ Expects:
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
       annotations =>
         val finished = annotations.filter(_.state == Finished)
-        annotationService.zipAnnotations(finished, task._id.toString, skipVolumeData)
+        annotationService
+          .zipAnnotations(finished, task._id.toString, skipVolumeData, volumeDataZipFormatForCompoundAnnotations)
     }
 
     for {
@@ -529,7 +560,10 @@ Expects:
           .map(_.flatten)
           .toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
-        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary, skipVolumeData)
+        zip <- annotationService.zipAnnotations(finishedAnnotations,
+                                                taskType.summary,
+                                                skipVolumeData,
+                                                volumeDataZipFormatForCompoundAnnotations)
       } yield zip
 
     for {

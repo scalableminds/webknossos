@@ -1,4 +1,16 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Radio, Alert } from "antd";
+import {
+  Divider,
+  Modal,
+  Checkbox,
+  Row,
+  Col,
+  Tabs,
+  Typography,
+  Button,
+  Radio,
+  Alert,
+  Tooltip,
+} from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
@@ -14,7 +26,6 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
-import { CheckboxValueType } from "antd/lib/checkbox/Group";
 import {
   LayerSelection,
   BoundingBoxSelection,
@@ -42,7 +53,6 @@ import {
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
 
@@ -268,10 +278,15 @@ function _DownloadModalView({
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
+  const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
+  const hasVolumes = hasVolumeTracings(tracing);
+  const initialFileFormatToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
-  const [includeVolumeData, setIncludeVolumeData] = useState(true);
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
+  const [fileFormatToDownload, setFileFormatToDownload] = useState<"zarr3" | "wkw" | "nml">(
+    initialFileFormatToDownload,
+  );
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
@@ -323,12 +338,14 @@ function _DownloadModalView({
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
+      const includeVolumeData = fileFormatToDownload === "wkw" || fileFormatToDownload === "zarr3";
       downloadAnnotation(
         tracing.annotationId,
         tracing.annotationType,
         hasVolumeFallback,
         {},
-        includeVolumeData && !isVolumeNDimensional,
+        fileFormatToDownload,
+        includeVolumeData,
       );
       onClose();
     } else if (activeTabKey === "export" && startJob != null) {
@@ -406,10 +423,6 @@ function _DownloadModalView({
     setActiveTabKey(key as TabKeys);
   };
 
-  const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
-    setIncludeVolumeData(checkedValues.includes("Volume"));
-  };
-
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);
   };
@@ -452,9 +465,8 @@ function _DownloadModalView({
     </Row>
   );
 
-  const checkboxStyle = {
-    height: "30px",
-    lineHeight: "30px",
+  const radioButtonStyle = {
+    marginBottom: 24,
   };
 
   const authToken = useFetch(
@@ -480,7 +492,6 @@ function _DownloadModalView({
     }
   };
 
-  const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
 
   const okText = okTextForTab.get(activeTabKey);
@@ -493,7 +504,6 @@ function _DownloadModalView({
     (!isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled);
 
   // Will be false if no volumes exist.
-  const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
 
   return (
     <Modal
@@ -547,46 +557,42 @@ function _DownloadModalView({
                 }}
               >
                 Select the data you would like to download.
+                <Hint style={{ marginTop: 12 }}>
+                  An NML file will always be included with any download.
+                </Hint>
               </Col>
               <Col span={15}>
-                <CheckboxGroup
-                  onChange={handleCheckboxChange}
-                  defaultValue={["Volume", "Skeleton"]}
+                <Radio.Group
+                  defaultValue={initialFileFormatToDownload}
+                  value={fileFormatToDownload}
+                  onChange={(e) => setFileFormatToDownload(e.target.value)}
+                  style={{ marginLeft: 16 }}
                 >
                   {hasVolumes ? (
-                    <div>
-                      <Checkbox
-                        style={checkboxStyle}
-                        value="Volume"
-                        // If no skeleton is available, volume is always selected
-                        checked={(!hasSkeleton || includeVolumeData) && !isVolumeNDimensional}
-                        disabled={!hasSkeleton || isVolumeNDimensional}
+                    <>
+                      <Tooltip
+                        title={
+                          isVolumeNDimensional
+                            ? "WKW is not supported for n-dimensional volumes."
+                            : null
+                        }
                       >
-                        Volume annotations as WKW
-                      </Checkbox>
-                      <Hint
-                        style={{
-                          marginLeft: 24,
-                          marginBottom: 12,
-                        }}
-                      >
-                        Download a zip folder containing WKW files.
-                      </Hint>
-                    </div>
+                        <Radio value="wkw" disabled={isVolumeNDimensional} style={radioButtonStyle}>
+                          Include volume annotations as WKW
+                          <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
+                        </Radio>
+                      </Tooltip>
+                      <Radio value="zarr3" style={radioButtonStyle}>
+                        Include volume annotations as Zarr
+                        <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
+                      </Radio>
+                    </>
                   ) : null}
-
-                  <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
-                    {hasSkeleton ? "Skeleton annotations" : "Meta data"} as NML
-                  </Checkbox>
-                  <Hint
-                    style={{
-                      marginLeft: 24,
-                      marginBottom: 12,
-                    }}
-                  >
-                    An NML file will always be included with any download.
-                  </Hint>
-                </CheckboxGroup>
+                  <Radio value="nml" style={radioButtonStyle}>
+                    {hasSkeleton ? "Skeleton annotations" : "Meta data"} {hasVolumes ? "only " : ""}
+                    as NML
+                  </Radio>
+                </Radio.Group>
               </Col>
             </Row>
             <Divider

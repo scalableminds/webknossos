@@ -139,6 +139,11 @@ class ErrorHandling {
       });
     });
 
+    // Report Content-Security-Policy (CSP) errors
+    document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
+      this.notify(e);
+    });
+
     window.onerror = (
       message: Event | string,
       _file?: string,

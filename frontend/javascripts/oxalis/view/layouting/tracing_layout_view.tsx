@@ -210,7 +210,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     boundingBoxId: number | null | undefined,
     globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
-    isosurfaceId?: number | null | undefined,
+    meshId?: number | null | undefined,
     meshIntersectionPosition?: Vector3 | null | undefined,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
@@ -225,7 +225,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           clickedBoundingBoxId: boundingBoxId,
           contextMenuGlobalPosition: globalPosition,
           contextMenuViewport: viewport,
-          contextMenuMeshId: isosurfaceId,
+          contextMenuMeshId: meshId,
           contextMenuMeshIntersectionPosition: meshIntersectionPosition,
         }),
       0,

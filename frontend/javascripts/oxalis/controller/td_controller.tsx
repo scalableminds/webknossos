@@ -34,7 +34,7 @@ import type { CameraData, Flycam, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
@@ -204,12 +204,12 @@ class TDController extends React.PureComponent<Props> {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        // Avoid isosurface hit test when rotating or moving the 3d view for performance reasons
+        // Avoid mesh hit test when rotating or moving the 3d view for performance reasons
         if (this.props.planeView == null || event.buttons !== 0) {
           return;
         }
 
-        this.props.planeView.throttledPerformIsosurfaceHitTest([position.x, position.y]);
+        this.props.planeView.throttledPerformMeshHitTest([position.x, position.y]);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
@@ -225,7 +225,7 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const intersection = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
 
         if (!intersection) {
           return;
@@ -245,12 +245,12 @@ class TDController extends React.PureComponent<Props> {
             return;
           }
 
-          Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredSegmentId));
+          Store.dispatch(removeMeshAction(segmentationLayer.name, hoveredSegmentId));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
-        const intersection = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
         // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
         const meshId = intersection ? intersection.object.parent?.cellId : null;
         const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;

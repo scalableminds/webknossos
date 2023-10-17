@@ -23,6 +23,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
   SegmentStatisticsParameters,
   UpdateMappingNameAction,
+  VolumeDataZipFormat,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
   VolumeTracingService
@@ -127,13 +128,19 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def allDataBlocking(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def allDataZip(token: Option[String],
+                 tracingId: String,
+                 volumeDataZipFormat: String,
+                 version: Option[Long],
+                 voxelSize: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            data <- tracingService.allDataFile(tracingId, tracing)
+            volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
+            voxelSizeParsed <- Fox.runOptional(voxelSize)(vs => Vec3Double.fromUriLiteral(vs))
+            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed, voxelSizeParsed)
           } yield Ok.sendFile(data)
         }
       }

@@ -224,6 +224,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
+        isZarr <- looksLikeZarr(unpackToDir).toFox
         _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
@@ -323,6 +324,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield layerRenamed
   }
 
+  private def looksLikeZarr(dataSourceDir: Path): Box[Boolean] =
+    for {
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
+                                                         maxDepth = 2,
+                                                         silent = false,
+                                                         filters = p => p.getFileName.toString == ".zattrs")
+    } yield listing.nonEmpty
+
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
@@ -367,7 +376,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             new File(file.toString),
             unpackToDir,
             includeHiddenFiles = false,
-            hiddenFilesWhitelist = List(".zarray"),
+            hiddenFilesWhitelist = List(".zarray", ".zattrs"),
             truncateCommonPrefix = true,
             Some(excludeFromPrefix)
           )

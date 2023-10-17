@@ -497,7 +497,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
           );
           const needsConversion = wkwFile == null;
-          this.handleNeedsConversionInfo(needsConversion);
+          //this.handleNeedsConversionInfo(needsConversion);
 
           const nmlFile = entries.find((entry) =>
             Utils.isFileExtensionEqualTo(entry.filename, "nml"),
@@ -514,7 +514,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             content: messages["dataset.upload_invalid_zip"],
           });
           const form = this.formRef.current;
-
+          needsConversion = false;
+          console.log("Uploading zip anyway.");
+          /*
           if (!form) {
             return;
           }
@@ -522,6 +524,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           form.setFieldsValue({
             zipFile: [],
           });
+          */
         }
         // We return here since not more than 1 zip archive is supported anyway.
         return;

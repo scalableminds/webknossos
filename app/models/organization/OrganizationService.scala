@@ -57,13 +57,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(
+  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
-        organizationNameOpt match {
-          case Some(organizationName) => organizationDAO.findOneByName(organizationName)
+        organizationIdOpt match {
+          case Some(organizationId) => organizationDAO.findOne(organizationId)
           case None =>
             for {
               allOrganizations <- organizationDAO.findAll
@@ -90,7 +90,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedDisplayName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOneByName(organizationId)(GlobalAccessContext).futureBox
+      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
@@ -114,10 +114,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- initialDataService.insertLocalDataStoreIfEnabled()
     } yield organization
 
-  def createOrganizationFolder(organizationName: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationFolder(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .addQueryString("token" -> dataStoreToken, "organizationName" -> organizationName)
+        .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
         .post()
         .futureBox
 

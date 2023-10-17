@@ -128,7 +128,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
+  def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
@@ -153,7 +153,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllIdsByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllIdsByOrganization(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

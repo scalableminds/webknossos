@@ -97,10 +97,9 @@ class AuthenticationController @Inject()(
               for {
                 _ <- Fox.successful(())
                 inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
-                organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
-                organization <- organizationService.findOneByInviteByNameOrDefault(
-                  inviteBox.toOption,
-                  organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
+                organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
+                  GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 _ <- organizationService
                   .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -545,7 +544,7 @@ class AuthenticationController @Inject()(
           loginUser(loginInfo)
         case Empty =>
           for {
-            organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None, None)(
+            organization: Organization <- organizationService.findOneByInviteByIdOrDefault(None, None)(
               GlobalAccessContext)
             user <- createUser(
               organization,
@@ -619,7 +618,7 @@ class AuthenticationController @Inject()(
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationFolder(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
@@ -721,7 +720,7 @@ object InviteParameters {
 
 trait AuthForms {
 
-  val passwordMinLength = 8
+  private val passwordMinLength = 8
 
   // Sign up
   case class SignUpData(organization: String,

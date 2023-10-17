@@ -103,7 +103,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
+        _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getThumbnailWithCache(organizationName, dataSetName, dataLayerName, w, h, mappingName)
       } yield {
@@ -171,10 +171,10 @@ class DatasetController @Inject()(userService: UserService,
           "[DEPRECATED use organizationId instead (same value)] Optional filtering: List only datasets of the organization specified by its url-safe name (id)",
         example = "sample_organization, f8f15a641a2f79c0"
       )
-      organizationName: Option[String],
+      organizationId: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its id",
                 example = "sample_organization, f8f15a641a2f79c0")
-      organizationId: Option[String],
+      organizationName: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
       onlyMyOrganization: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
@@ -237,7 +237,7 @@ class DatasetController @Inject()(userService: UserService,
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService.teamManagerMembershipsFor(user._id))
       groupedByOrga = datasets.groupBy(_._organization).toList
-      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[Dataset]) =>
+      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
           organization <- organizationDAO.findOne(byOrgaTuple._1)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
@@ -311,18 +311,18 @@ class DatasetController @Inject()(userService: UserService,
     }
 
   @ApiOperation(hidden = true, value = "")
-  def health(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
+  def health(organizationId: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId)(ctx) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
         dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
-          .flatMap(_.findPositionWithData(organizationName, dataset, datalayer.name).flatMap(posWithData =>
+          .flatMap(_.findPositionWithData(organizationId, dataset, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
       } yield Ok("Ok")
     }
@@ -350,7 +350,7 @@ Expects:
                            required = true,
                            dataTypeClass = classOf[JsObject],
                            paramType = "body")))
-  def updatePartial(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+  def updatePartial(@ApiParam(value = "The url-safe name/id of the organization owning the dataset",
                               example = "sample_organization") organizationName: String,
                     @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
@@ -376,7 +376,7 @@ Expects:
   - tags (list of string)
   - folderId (optional string)
  - As GET parameters:
-  - organizationName (string): url-safe name of the organization owning the dataset
+  - organizationName (string): url-safe name/id of the organization owning the dataset
   - dataSetName (string): name of the dataset
 """,
     nickname = "datasetUpdate"
@@ -433,7 +433,7 @@ Expects:
                   @ApiParam(value = "The name of the dataset") dataSetName: String): Action[List[ObjectId]] =
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+        dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
@@ -499,9 +499,9 @@ Expects:
   def getOrganizationForDataset(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
-        organizationId <- datasetDAO.getOrganizationForDataset(dataSetName)
+        organizationId <- datasetDAO.getOrganizationIdForDataset(dataSetName)
         organization <- organizationDAO.findOne(organizationId)
-      } yield Ok(Json.obj("organizationName" -> organization.name))
+      } yield Ok(Json.obj("organizationName" -> organization._id)) // TODO API
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -522,7 +522,7 @@ Expects:
         for {
           _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
           _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
-          dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+          dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationName) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
           usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"

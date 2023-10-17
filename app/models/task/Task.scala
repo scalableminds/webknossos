@@ -247,7 +247,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     } yield parsed
   }
 
-  def countAllPendingInstancesForOrganization(organizationId: ObjectId): Fox[Long] =
+  def countAllPendingInstancesForOrganization(organizationId: String): Fox[Long] =
     for {
       result <- run(q"""SELECT SUM(t.pendingInstances)
             FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON t._project = p._id
@@ -271,7 +271,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
                          group by _project""".as[(String, Long, Option[Long])])
     } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
 
-  def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =
+  def listExperienceDomains(organizationId: String): Fox[List[String]] =
     for {
       rowsRaw <- run(
         q"select domain from webknossos.experienceDomains where _organization = $organizationId".as[String])

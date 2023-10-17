@@ -56,7 +56,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
     } yield ()
 
-  def assertNewDatasetName(name: String, organizationId: ObjectId): Fox[Unit] =
+  def assertNewDatasetName(name: String, organizationId: String): Fox[Unit] =
     datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createPreliminaryDataset(datasetName: String, organizationName: String, dataStore: DataStore): Fox[Dataset] = {
@@ -211,7 +211,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(existingDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
     datasetDAO.deactivateUnreported(existingDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
-  def getSharingToken(datasetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
+  def getSharingToken(datasetName: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[String] = {
 
     def createAndSaveSharingToken(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
@@ -231,7 +231,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.name, organization.name)
+      dataSourceId = DataSourceId(dataset.name, organization._id)
     } yield {
       if (dataset.isUsable)
         for {
@@ -336,7 +336,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "name" -> dataset.name,
         "dataSource" -> dataSource,
         "dataStore" -> dataStoreJs,
-        "owningOrganization" -> organization.name,
+        "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,
         "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isActive" -> dataset.isUsable,

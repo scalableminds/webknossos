@@ -187,7 +187,7 @@ class AnnotationService @Inject()(
 
   def addAnnotationLayer(
       annotation: Annotation,
-      organizationName: String,
+      organizationId: String,
       annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
@@ -195,7 +195,7 @@ class AnnotationService @Inject()(
       newAnnotationLayers <- createTracingsForExplorational(dataSet,
                                                             dataSource,
                                                             List(annotationLayerParameters),
-                                                            organizationName,
+                                                            organizationId,
                                                             annotation.annotationLayers)
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
@@ -383,7 +383,7 @@ class AnnotationService @Inject()(
       annotation
     }
 
-  def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
+  def makeAnnotationHybrid(annotation: Annotation, organizationId: String, fallbackLayerName: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       newAnnotationLayerType <- annotation.tracingType match {
@@ -401,7 +401,7 @@ class AnnotationService @Inject()(
         Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType)),
         None
       )
-      _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
+      _ <- addAnnotationLayer(annotation, organizationId, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
@@ -906,7 +906,7 @@ class AnnotationService @Inject()(
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
+        "organization" -> organization._id,
         "dataStore" -> dataStoreJs,
         "tracingStore" -> tracingStoreJs,
         "visibility" -> annotation.visibility,
@@ -951,7 +951,7 @@ class AnnotationService @Inject()(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
         dataSetName = dataSet.name,
-        organizationName = organization.name,
+        organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,
         accessViaPrivateLink = accessViaPrivateLink,
@@ -995,7 +995,7 @@ class AnnotationService @Inject()(
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> annotation.annotationLayers,
         "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
+        "organization" -> organization._id,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
         "teams" -> teamsJson,

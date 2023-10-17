@@ -68,7 +68,6 @@ Samplecountry
   private val organizationTeamId = ObjectId.generate
   private val defaultOrganization =
     Organization(
-      ObjectId.generate,
       "sample_organization",
       additionalInformation,
       "/assets/images/logo.svg",
@@ -217,7 +216,7 @@ Samplecountry
 
   private def insertOrganization(): Fox[Unit] =
     organizationDAO
-      .findOneByName(defaultOrganization.name)
+      .findOneByName(defaultOrganization._id)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())

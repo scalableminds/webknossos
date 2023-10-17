@@ -10,4 +10,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 The `datastore/isosurface` configuration key was renamed to `datastore/adHocMesh.
 
+ - config key renamed: `braintracing.organizationName` → `braintracing.organizationId`
+
 ### Postgres Evolutions:

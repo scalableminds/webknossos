@@ -457,17 +457,16 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createOrganizationDirectory(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
+  def createOrganizationDirectory(token: Option[String], organizationId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      accessTokenService
-        .validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName), token) {
-          val newOrganizationFolder = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
-          newOrganizationFolder.mkdirs()
-          if (newOrganizationFolder.isDirectory)
-            Ok
-          else
-            BadRequest
-        }
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationId), token) {
+        val newOrganizationFolder = new File(f"${dataSourceService.dataBaseDir}/$organizationId")
+        newOrganizationFolder.mkdirs()
+        if (newOrganizationFolder.isDirectory)
+          Ok
+        else
+          BadRequest
+      }
   }
 
   @ApiOperation(hidden = true, value = "")

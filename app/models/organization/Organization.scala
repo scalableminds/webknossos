@@ -218,7 +218,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   // While organizationId is not a valid ObjectId, we wrap it here to pass it to the generic assertUpdateAccess.
   // There, no properties of the ObjectId are used other than its string content.
-  private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext) =
+  private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     assertUpdateAccess(ObjectId(organizationId))
 
 }

@@ -37,7 +37,7 @@ import scala.concurrent.ExecutionContext
 case class Dataset(
     _id: ObjectId,
     _dataStore: String,
-    _organization: ObjectId,
+    _organization: String,
     _publication: Option[ObjectId],
     _uploader: Option[ObjectId],
     _folder: ObjectId,
@@ -114,7 +114,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       Dataset(
         ObjectId(r._Id),
         r._Datastore.trim,
-        ObjectId(r._Organization),
+        r._Organization.trim,
         r._Publication.map(ObjectId(_)),
         r._Uploader.map(ObjectId(_)),
         ObjectId(r._Folder),
@@ -350,7 +350,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       firstRow <- r.headOption
     } yield firstRow == 0
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       rList <- run(q"select count(_id) from $existingCollectionName where _organization = $organizationId".as[Int])
       r <- rList.headOption
@@ -370,7 +370,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
-  def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId)(
+  def findAllByNamesAndOrganization(names: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
@@ -393,15 +393,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
-  def getOrganizationForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  def getOrganizationIdForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(
         q"select _organization from $existingCollectionName where name = $datasetName and $accessQuery order by created asc"
           .as[String])
       r <- rList.headOption.toFox
-      parsed <- ObjectId.fromString(r)
-    } yield parsed
+    } yield r
 
   def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
@@ -410,8 +409,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def getSharingTokenByName(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Option[String]] =
+  def getSharingTokenByName(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Option[String]] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(
@@ -420,7 +418,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def updateSharingTokenByName(name: String, organizationId: ObjectId, sharingToken: Option[String])(
+  def updateSharingTokenByName(name: String, organizationId: String, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery

@@ -211,7 +211,7 @@ export default function DatasetAddComposeView(props: Props) {
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <FormItem
             name="landmarks"
-            label={<React.Fragment>Big Warp Landmarks (CSV)</React.Fragment>}
+            label={<React.Fragment>Landmark files (NML pairs or CSV)</React.Fragment>}
             hasFeedback
           >
             <Upload.Dragger
@@ -230,9 +230,7 @@ export default function DatasetAddComposeView(props: Props) {
                   }}
                 />
               </p>
-              <p className="ant-upload-text">
-                Click or Drag your Big Warp Landmarks to this Area to Upload
-              </p>
+              <p className="ant-upload-text">Drag your landmark files to this area</p>
               <p className="ant-upload-text-hint">...</p>
             </Upload.Dragger>
           </FormItem>

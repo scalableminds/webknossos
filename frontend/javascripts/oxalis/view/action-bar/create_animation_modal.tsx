@@ -169,8 +169,7 @@ function CreateAnimationModal(props: Props) {
     const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
 
     if (visibleSegmentationLayer) {
-      const availableMeshes =
-        state.localSegmentationData[visibleSegmentationLayer.name].meshes;
+      const availableMeshes = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
       meshSegmentIds = Object.values(availableMeshes)
         .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
         .map((mesh) => mesh.segmentId);

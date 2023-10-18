@@ -228,7 +228,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def addSegmentIndex(token: Option[String], tracingId: String): Action[AnyContent] =
+  def addSegmentIndex(token: Option[String], tracingId: String, dryRun: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
@@ -236,17 +236,19 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
             currentVersion <- tracingService.currentVersion(tracingId)
             before = Instant.now
-            processedBucketCount <- tracingService.addSegmentIndex(
-              tracingId,
-              tracing,
-              currentVersion,
-              urlOrHeaderToken(token, request)) ?~> "addSegmentIndex.failed"
+            processedBucketCountOpt <- tracingService.addSegmentIndex(tracingId,
+                                                                      tracing,
+                                                                      currentVersion,
+                                                                      urlOrHeaderToken(token, request),
+                                                                      dryRun) ?~> "addSegmentIndex.failed"
             currentVersionNew <- tracingService.currentVersion(tracingId)
-            _ <- bool2Fox(processedBucketCount == -1 || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime."
+            _ <- Fox.runIf(!dryRun)(bool2Fox(
+              processedBucketCountOpt.isEmpty || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime.")
             duration = Instant.since(before)
-            _ = if (processedBucketCount != -1)
+            _ = processedBucketCountOpt.foreach { processedBucketCount =>
               logger.info(
-                s"Added segment index for tracing $tracingId. Took $duration for $processedBucketCount buckets")
+                s"Added segment index (dryRun=$dryRun) for tracing $tracingId. Took $duration for $processedBucketCount buckets")
+            }
           } yield Ok
         }
       }

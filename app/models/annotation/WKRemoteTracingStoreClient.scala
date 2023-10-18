@@ -112,9 +112,10 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
-  def addSegmentIndex(volumeTracingId: String): Fox[Unit] =
+  def addSegmentIndex(volumeTracingId: String, dryRun: Boolean): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/addSegmentIndex").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("dryRun" -> dryRun.toString)
       .silent
       .post()
       .map(_ => ())

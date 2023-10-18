@@ -377,7 +377,9 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def addSegmentIndicesToAll(parallelBatchCount: Int, skipTracings: Option[String]): Action[AnyContent] =
+  def addSegmentIndicesToAll(parallelBatchCount: Int,
+                             dryRun: Boolean,
+                             skipTracings: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
         for {
@@ -395,12 +397,13 @@ class AnnotationController @Inject()(
           _ = logger.info(f"Processing $totalCount tracings in ${batches.length} batches")
           before = Instant.now
           results: Seq[List[Box[Unit]]] <- Fox.combined(batches.zipWithIndex.map {
-            case (batch, index) => addSegmentIndicesToBatch(batch, index)
+            case (batch, index) => addSegmentIndicesToBatch(batch, index, dryRun)
           })
           failures = results.flatMap(_.filter(_.isEmpty))
           failureCount: Int = failures.length
           successCount: Int = results.map(_.count(_.isDefined)).sum
-          msg = s"All done! Processed $totalCount tracings in ${batches.length} batches. Took ${Instant.since(before)}. $failureCount failures, $successCount successes."
+          msg = s"All done (dryRun=$dryRun)! Processed $totalCount tracings in ${batches.length} batches. Took ${Instant
+            .since(before)}. $failureCount failures, $successCount successes."
           _ = if (failures.nonEmpty) {
             failures.foreach { failedBox =>
               logger.info(f"Failed: $failedBox")
@@ -411,7 +414,7 @@ class AnnotationController @Inject()(
       }
     }
 
-  private def addSegmentIndicesToBatch(annotationLayerBatch: List[AnnotationLayer], batchIndex: Int)(
+  private def addSegmentIndicesToBatch(annotationLayerBatch: List[AnnotationLayer], batchIndex: Int, dryRun: Boolean)(
       implicit ec: ExecutionContext) = {
     var processedCount = 0
     for {
@@ -422,7 +425,7 @@ class AnnotationController @Inject()(
         processedCount += 1
         logger.info(
           f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $batchCount in batch $batchIndex (${percent(processedCount, batchCount)})...")
-        client.addSegmentIndex(annotationLayer.tracingId) ?~> s"add segment index failed for ${annotationLayer.tracingId}"
+        client.addSegmentIndex(annotationLayer.tracingId, dryRun) ?~> s"add segment index failed for ${annotationLayer.tracingId}"
       }
       _ = logger.info(f"Batch $batchIndex is done. Processed ${annotationLayerBatch.length} tracings.")
     } yield results

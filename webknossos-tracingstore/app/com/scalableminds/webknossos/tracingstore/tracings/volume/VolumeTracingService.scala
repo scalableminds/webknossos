@@ -667,13 +667,14 @@ class VolumeTracingService @Inject()(
   def addSegmentIndex(tracingId: String,
                       tracing: VolumeTracing,
                       currentVersion: Long,
-                      userToken: Option[String]): Fox[Int] =
+                      userToken: Option[String],
+                      dryRun: Boolean): Fox[Option[Int]] =
     if (tracing.hasSegmentIndex.getOrElse(false)) {
       // tracing has a segment index already, do nothing
-      Fox.successful(-1)
+      Fox.successful(None)
     } else if (!VolumeSegmentIndexService.canHaveSegmentIndex(tracing.fallbackLayer)) {
       // tracing is not eligible for segment index, do nothing
-      Fox.successful(-1)
+      Fox.successful(None)
     } else {
       var processedBucketCount = 0
       for {
@@ -686,7 +687,7 @@ class VolumeTracingService @Inject()(
             processedBucketCount += 1
             updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, tracing.elementClass)
         }
-        _ <- segmentIndexBuffer.flush()
+        _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
         updateGroup = UpdateActionGroup[VolumeTracing](
           tracing.version + 1L,
           System.currentTimeMillis(),
@@ -698,8 +699,8 @@ class VolumeTracingService @Inject()(
           1,
           0
         )
-        _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
-      } yield processedBucketCount
+        _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
+      } yield Some(processedBucketCount)
     }
 
   def importVolumeData(tracingId: String,

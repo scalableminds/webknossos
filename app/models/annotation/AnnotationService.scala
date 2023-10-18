@@ -422,7 +422,7 @@ class AnnotationService @Inject()(
       dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
       _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.segmentIndex.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
-      _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId)
+      _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId, dryRun = false)
     } yield ()
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation

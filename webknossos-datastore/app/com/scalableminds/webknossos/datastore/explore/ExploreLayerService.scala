@@ -23,24 +23,37 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.Try
 
 class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends FoxImplicits {
 
-  def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId)(implicit ec: ExecutionContext): Fox[DataSource] =
+  def exploreLocalZarrArray(path: Path, dataSourceId: DataSourceId)(implicit ec: ExecutionContext): Fox[DataSource] =
     for {
-      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(path.toUri, None))
-      vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
-      layersWithVoxelSizes <- (new ZarrArrayExplorer).explore(vaultPath, None)
-      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, None)
+      _ <- Fox.successful(())
+      magDirectories = Files.list(path.resolve("color")).iterator().asScala.toList
+      layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
+        for {
+          remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
+          mag <- Fox
+            .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
+          vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
+          layersWithVoxelSizes <- (new ZarrArrayExplorer(mag, ec)).explore(vaultPath, None)
+
+        } yield layersWithVoxelSizes))
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes.flatten, None)
       rescaledLayers = rescaledLayersAndVoxelSize._1
       voxelSize = rescaledLayersAndVoxelSize._2
-      renamedLayers = makeLayerNamesUnique(rescaledLayers)
-      dataSource = GenericDataSource[DataLayer](dataSourceId, renamedLayers, voxelSize)
+      renamedLayers = makeLayerNamesUnique(rescaledLayers).map(_.asInstanceOf[ZarrDataLayer])
+      relativeLayers = makePathsRelative(renamedLayers).toList
+      dataSource = GenericDataSource[DataLayer](dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
+
+  def makePathsRelative(layers: Seq[ZarrDataLayer]): Seq[DataLayer] =
+    layers.map(l => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").takeRight(2).mkString("/"))))))
 
   def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()

@@ -1,7 +1,7 @@
 package models.dataset.explore
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.explore.{
@@ -132,7 +132,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
         credentialId.map(_.toString),
         reportMutable,
         List(
-          new ZarrArrayExplorer,
+          new ZarrArrayExplorer(Vec3Int.ones, ec),
           new NgffExplorer,
           new WebknossosZarrExplorer,
           new N5ArrayExplorer,

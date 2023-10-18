@@ -8,6 +8,7 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -239,7 +240,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
     for {
-      explored <- exploreLayerService.exploreLocalDatasource(path, dataSourceId)
+      _ <- Fox.successful(())
+      // TODO: Check for .zattrs and .zgroup to detect NGFF
+
+      _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
+      explored <- exploreLayerService.exploreLocalZarrArray(path, dataSourceId)
       properties = Json.toJson(explored).toString().getBytes(StandardCharsets.UTF_8)
       _ <- tryo(Files.write(path.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties))
     } yield ()
@@ -345,13 +350,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                          filters = p => p.getFileName.toString == ".zarray")
     } yield listing.nonEmpty
 
-  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Box[Unit] =
+  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,
+                                                headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
                                                            maxDepth = 2,
                                                            silent = false,
-                                                           filters = p => p.getFileName.toString == FILENAME_HEADER_WKW)
+                                                           filters = p => p.getFileName.toString == headerFile)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
         _ <- if (looksLikeMagDir(listingRelative)) {
           val targetDir = dataSourceDir.resolve("color").resolve("1")

@@ -9,7 +9,7 @@ import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 
 import {
   getColorLayers,
-  getDefaultValueRangeOfLayer,
+  getEffectiveIntensityRange,
   getLayerByName,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -184,11 +184,11 @@ function CreateAnimationModal(props: Props) {
     }
 
     // Submit the configured min/max intensity info to support float datasets
-    const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);
-    const layerConfiguration = state.datasetConfiguration.layers[selectedColorLayer.name];
-    const { intensityRange } = layerConfiguration;
-    const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, selectedColorLayer.name);
-    const [intensityMin, intensityMax] = intensityRange || defaultIntensityRange;
+    const [intensityMin, intensityMax] = getEffectiveIntensityRange(
+      dataset,
+      selectedColorLayerName,
+      state.datasetConfiguration,
+    );
 
     const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
 

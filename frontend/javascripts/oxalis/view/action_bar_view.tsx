@@ -200,7 +200,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartAIJobButton(disabled: boolean): React.ReactNode {
-    const tooltipText = disabled ? "The dataset needs to have a color layer to start AI processing jobs." : "Start a processing job using AI" // TODO maybe hint how to create one? 
+    const tooltipText = disabled
+      ? "The dataset needs to have a color layer to start AI processing jobs."
+      : "Start a processing job using AI";
     return (
       <ButtonComponent
         key="ai-job-button"
@@ -209,7 +211,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         disabled={disabled}
         title={tooltipText}
       >
-          <i className="fas fa-magic" /> AI Analysis
+        <i className="fas fa-magic" /> AI Analysis
       </ButtonComponent>
     );
   }
@@ -294,7 +296,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <StartAIJobModal aIJobModalState={this.props.aiJobModalState}/>
+        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }

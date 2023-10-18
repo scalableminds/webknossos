@@ -44,6 +44,8 @@ object AxisOrder {
 
   def xyz(x: Int, y: Int, z: Int): AxisOrder = AxisOrder(x, y, Some(z))
 
+  def xyz: AxisOrder = AxisOrder(0, 1, Some(2))
+
   // assumes that the last three elements of the shape are (c),x,y,z (which is what WEBKNOSSOS sends to the frontend)
   def asCxyzFromRank(rank: Int): AxisOrder =
     if (rank == 3)

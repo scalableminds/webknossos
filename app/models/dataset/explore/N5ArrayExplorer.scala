@@ -31,6 +31,6 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
-    } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
+    } yield List((layer, Vec3Double.ones))
 
 }

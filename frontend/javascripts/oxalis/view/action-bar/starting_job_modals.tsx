@@ -495,15 +495,18 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const allLayers = getDataLayers(dataset);
-  const defaultBBForLayers: UserBoundingBox[] = rawUserBoundingBoxes?.length === 0? layers.map((layer, index) => {
-    return {
-      id: -1 * index,
-      name: `Full ${layer.name} layer`,
-      boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
-      color: [255, 255, 255],
-      isVisible: true,
-    };
-  }) : [];
+  const defaultBBForLayers: UserBoundingBox[] =
+    rawUserBoundingBoxes?.length === 0
+      ? layers.map((layer, index) => {
+          return {
+            id: -1 * index,
+            name: `Full ${layer.name} layer`,
+            boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
+            color: [255, 255, 255],
+            isVisible: true,
+          };
+        })
+      : [];
   const userBoundingBoxes =
     rawUserBoundingBoxes?.length === 0 ? defaultBBForLayers : rawUserBoundingBoxes;
 

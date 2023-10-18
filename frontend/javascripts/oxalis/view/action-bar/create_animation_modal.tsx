@@ -47,7 +47,7 @@ function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
   boundingBox: BoundingBoxType,
 ): [Vector3, number] {
-  // Utility method to determine the best mag in relation to the dataset size to create the textures from in the worker job
+  // Utility method to determine the best mag in relation to the dataset size to create the textures in the worker job
   // We aim to create textures with a rough length/height of 2000px (aka target_video_frame_size)
   const colorLayerBB = new BoundingBox(
     computeBoundingBoxFromBoundingBoxObject(colorLayer.boundingBox),

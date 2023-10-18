@@ -37,9 +37,9 @@ import {
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   maybeFetchMeshFilesAction,
-  removeIsosurfaceAction,
-  updateIsosurfaceVisibilityAction,
-  refreshIsosurfaceAction,
+  removeMeshAction,
+  updateMeshVisibilityAction,
+  refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -1111,17 +1111,23 @@ function ContextMenuInner(propsWithInputRef: Props) {
     datasetScale,
     globalPosition,
     maybeViewport,
+    visibleSegmentationLayer,
+    volumeTracing,
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const { visibleSegmentationLayer, volumeTracing } = props;
   const hasNoFallbackLayer =
     visibleSegmentationLayer != null &&
     "fallbackLayer" in visibleSegmentationLayer &&
     visibleSegmentationLayer.fallbackLayer == null;
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
-      if (contextMenuPosition == null || volumeTracing == null || !hasNoFallbackLayer) {
+      if (
+        contextMenuPosition == null ||
+        volumeTracing == null ||
+        !hasNoFallbackLayer ||
+        !volumeTracing.hasSegmentIndex
+      ) {
         return [];
       } else {
         const tracingId = volumeTracing.tracingId;
@@ -1163,6 +1169,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1252,7 +1264,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  if (hasNoFallbackLayer) {
+  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
@@ -1266,7 +1278,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (hasNoFallbackLayer) {
+  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
@@ -1287,20 +1299,18 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "distanceInfo",
-        <>
-          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
-          {maybeClickedNodeId != null ? "Node" : "Position"}
-          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </>,
+        <Tooltip title="Distance to the active Node of the active Tree">
+          <>
+            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
+            this {maybeClickedNodeId != null ? "Node" : "Position"}
+            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+          </>
+        </Tooltip>,
       ),
     );
   }
 
-  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-  // Thus the segment id is always unambiguous / clearly defined.
-  if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
+  if (isHoveredSegmentOrMesh) {
     const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
     infoRows.push(
       getInfoMenuItem(
@@ -1469,16 +1479,16 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(performMinCutAction(treeId, boundingBoxId));
   },
   removeMesh(layerName: string, meshId: number) {
-    dispatch(removeIsosurfaceAction(layerName, meshId));
+    dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, meshId, false));
+    dispatch(updateMeshVisibilityAction(layerName, meshId, false));
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
   },
   refreshMesh(layerName: string, segmentId: number) {
-    dispatch(refreshIsosurfaceAction(layerName, segmentId));
+    dispatch(refreshMeshAction(layerName, segmentId));
   },
 });
 

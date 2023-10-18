@@ -191,6 +191,8 @@ export enum AnnotationToolEnum {
   QUICK_SELECT = "QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
+  LINE_MEASUREMENT = "LINE_MEASUREMENT",
+  AREA_MEASUREMENT = "AREA_MEASUREMENT",
 }
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
@@ -212,6 +214,11 @@ export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationTo
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.QUICK_SELECT,
+];
+
+export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.LINE_MEASUREMENT,
+  AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
@@ -303,6 +310,7 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
+  NAVBAR_HEIGHT: 48,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done

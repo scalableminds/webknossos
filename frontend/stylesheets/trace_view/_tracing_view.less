@@ -177,6 +177,27 @@
   }
 }
 
+.measurement-tooltip {
+  position: absolute;
+  width: fit-content;
+  pointer-events: all;
+  border-radius: 6px 6px 6px 0px;
+  padding: 2px 4px;
+  font-size: 14;
+  overflow: hidden;
+
+  :after {
+    content: "";
+    position: absolute;
+    top: 48px;
+    left: -6px;
+    height: 12px;
+    width: 12px;
+    transform: rotate(45deg);
+    background-color: var(--ant-text);
+  }
+}
+
 #version-restore-sider {
   box-shadow: @box-shadow-base;
   border-left: 1px solid @border-color-base;
@@ -542,6 +563,7 @@ img.keyboard-mouse-icon:first-child {
   display: inline-block;
   background-image: url("/assets/images/cell.svg");
   background-size: contain;
+  opacity: 0.65;
 }
 
 .hide-tree-edges-icon {

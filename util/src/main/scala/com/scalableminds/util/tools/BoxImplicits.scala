@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 trait BoxImplicits {
@@ -16,6 +16,8 @@ trait BoxImplicits {
     case JsSuccess(value, _) => Full(value)
     case JsError(e)          => Failure(s"Invalid json: $e")
   }
+
+  def bool2Box(in: Boolean): Box[Unit] = if (in) Full(()) else Empty
 }
 
 object BoxImplicits extends BoxImplicits

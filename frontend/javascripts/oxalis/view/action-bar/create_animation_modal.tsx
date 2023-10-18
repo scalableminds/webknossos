@@ -42,6 +42,7 @@ type Props = {
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
+const MAX_MESHES_PER_ANIMATION = 30; // arbitrary limit to not overload the server when rendering many large STL files
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
@@ -122,12 +123,9 @@ function CreateAnimationModal(props: Props) {
     const state = Store.getState();
     const errorMessages: string[] = [];
 
-    const [_, estimated_texture_size] = selectMagForTextureCreation(
-      colorLayer,
-      selectedBoundingBox,
-    );
+    const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, selectedBoundingBox);
 
-    const hasEnoughMags = estimated_texture_size < 1.5 * TARGET_TEXTURE_SIZE;
+    const hasEnoughMags = estimatedTextureSize < 1.5 * TARGET_TEXTURE_SIZE;
     if (hasEnoughMags)
       errorMessages.push(
         "The selected bounding box is too large to create an animation. Either shrink the bounding box or consider downsampling the dataset to coarser magnifications.",
@@ -141,10 +139,10 @@ function CreateAnimationModal(props: Props) {
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
     if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
-    const isTooManyMeshes = meshSegmentIds.length > 30;
+    const isTooManyMeshes = meshSegmentIds.length > MAX_MESHES_PER_ANIMATION;
     if (isTooManyMeshes)
       errorMessages.push(
-        "You selected too many meshes for the animation. Please keep the number of meshes below 30 to create an animation.",
+        `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
       );
 
     const validationStatus = hasEnoughMags && isDtypeSupported && isDataset3D && !isTooManyMeshes;
@@ -164,7 +162,7 @@ function CreateAnimationModal(props: Props) {
     // Submit currently visible pre-computed meshes
     let meshSegmentIds: number[] = [];
     let meshFileName = "meshfile.hdf5";
-    let segmentationLayerName = "segmentatation";
+    let segmentationLayerName = "segmentation";
 
     const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -174,9 +172,9 @@ function CreateAnimationModal(props: Props) {
         .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
         .map((mesh) => mesh.segmentId);
 
-      const currenMeshFile =
+      const currentMeshFile =
         state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile;
-      meshFileName = currenMeshFile?.meshFileName || meshFileName;
+      meshFileName = currentMeshFile?.meshFileName || meshFileName;
 
       if (visibleSegmentationLayer.fallbackLayerInfo) {
         segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;
@@ -247,7 +245,8 @@ function CreateAnimationModal(props: Props) {
             <p>
               Create a short, engaging animation of your data. Watch as the block of volumetric
               image data shrinks to reveal segmented objects. Choose from three perspective options
-              and select the color layer and meshes you want to render.
+              and select the color layer and meshes you want to render. The resulting video file can
+              be used for presentations, publications, or your website.
             </p>
             <p>
               For custom animations, please{" "}

@@ -162,7 +162,7 @@ function CreateAnimationModal(props: Props) {
     )!.boundingBox;
 
     // Submit currently visible pre-computed meshes
-    let meshSegmentIds = [] as number[];
+    let meshSegmentIds: number[] = [];
     let meshFileName = "meshfile.hdf5";
     let segmentationLayerName = "segmentatation";
 

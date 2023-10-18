@@ -62,9 +62,9 @@ const jobNameToImagePath: Record<
   StartAIJobModalState | "materialize_volume_annotation",
   string | null
 > = {
-  neuron_inferral: "neuron_inferral_example.png",
-  nuclei_inferral: "nuclei_inferral_example.png",
-  mitochondria_inferral: "mito_inferral_example.png",
+  neuron_inferral: "neuron_inferral_example.jpg",
+  nuclei_inferral: "nuclei_inferral_example.jpg",
+  mitochondria_inferral: "mito_inferral_example.jpg",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
 };

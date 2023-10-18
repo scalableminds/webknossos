@@ -220,7 +220,7 @@ Expects:
              } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+        datasetDAO.getOrganizationIdForDataset(datasetName)(GlobalAccessContext)
       } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
       dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
@@ -472,11 +472,11 @@ Expects:
     def annotationToTemporaryFile(dataset: Dataset,
                                   annotation: Annotation,
                                   name: String,
-                                  organizationName: String): Fox[TemporaryFile] =
+                                  organizationId: String): Fox[TemporaryFile] =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToTemporaryFile(dataset, annotation, organizationName) ?~> "annotation.download.skeletonToFile.failed"
+        skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> "annotation.download.skeletonToFile.failed"
       else
-        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationName) ?~> "annotation.download.hybridToFile.failed"
+        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationId) ?~> "annotation.download.hybridToFile.failed"
 
     def exportExtensionForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
@@ -500,7 +500,7 @@ Expects:
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
-      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
+      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"
     } yield {
       Ok.sendFile(temporaryFile, inline = false)
         .as(mimeType)

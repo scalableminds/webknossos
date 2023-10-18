@@ -187,7 +187,7 @@ class AnnotationService @Inject()(
 
   def addAnnotationLayer(
       annotation: Annotation,
-      organizationName: String,
+      organizationId: String,
       annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
@@ -195,7 +195,7 @@ class AnnotationService @Inject()(
       newAnnotationLayers <- createTracingsForExplorational(dataSet,
                                                             dataSource,
                                                             List(annotationLayerParameters),
-                                                            organizationName,
+                                                            organizationId,
                                                             annotation.annotationLayers)
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
@@ -208,7 +208,7 @@ class AnnotationService @Inject()(
   private def createTracingsForExplorational(dataSet: Dataset,
                                              dataSource: DataSource,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
-                                             datasetOrganizationName: String,
+                                             datasetOrganizationId: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
@@ -243,7 +243,7 @@ class AnnotationService @Inject()(
             val skeleton = SkeletonTracingDefaults.createInstance.copy(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
-              organizationName = Some(datasetOrganizationName),
+              organizationName = Some(datasetOrganizationId),
               additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
@@ -268,7 +268,7 @@ class AnnotationService @Inject()(
               fallbackLayer <- Fox.runOptional(fallbackLayerName)(getFallbackLayer)
               volumeTracing <- createVolumeTracing(
                 dataSource,
-                datasetOrganizationName,
+                datasetOrganizationId,
                 fallbackLayer,
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
@@ -375,7 +375,7 @@ class AnnotationService @Inject()(
       annotationLayers <- createTracingsForExplorational(dataSet,
                                                          usableDataSource,
                                                          annotationLayerParameters,
-                                                         datasetOrganization.name)
+                                                         datasetOrganization._id)
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, _dataSet, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
@@ -383,7 +383,7 @@ class AnnotationService @Inject()(
       annotation
     }
 
-  def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
+  def makeAnnotationHybrid(annotation: Annotation, organizationId: String, fallbackLayerName: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       newAnnotationLayerType <- annotation.tracingType match {
@@ -401,7 +401,7 @@ class AnnotationService @Inject()(
         Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType)),
         None
       )
-      _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
+      _ <- addAnnotationLayer(annotation, organizationId, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
@@ -541,7 +541,7 @@ class AnnotationService @Inject()(
   }
 
   def createVolumeTracingBase(dataSetName: String,
-                              organizationId: ObjectId,
+                              organizationId: String,
                               boundingBox: Option[BoundingBox],
                               startPosition: Vec3Int,
                               startRotation: Vec3Double,
@@ -564,7 +564,7 @@ class AnnotationService @Inject()(
 
       volumeTracing <- createVolumeTracing(
         dataSource,
-        organization.name,
+        organization._id,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)
@@ -902,7 +902,7 @@ class AnnotationService @Inject()(
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
+        "organization" -> organization._id,
         "dataStore" -> dataStoreJs,
         "tracingStore" -> tracingStoreJs,
         "visibility" -> annotation.visibility,
@@ -947,7 +947,7 @@ class AnnotationService @Inject()(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
         dataSetName = dataSet.name,
-        organizationName = organization.name,
+        organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,
         accessViaPrivateLink = accessViaPrivateLink,
@@ -991,7 +991,7 @@ class AnnotationService @Inject()(
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> annotation.annotationLayers,
         "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
+        "organization" -> organization._id,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
         "teams" -> teamsJson,

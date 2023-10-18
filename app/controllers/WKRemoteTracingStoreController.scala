@@ -91,25 +91,22 @@ class WKRemoteTracingStoreController @Inject()(
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataSet <- datasetDAO.findOne(annotation._dataSet)
           organization <- organizationDAO.findOne(dataSet._organization)
-        } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))
+        } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization._id)))
       }
     }
 
   def dataStoreUriForDataSet(name: String,
                              key: String,
-                             organizationName: Option[String],
+                             organizationId: Option[String],
                              dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          organizationIdOpt <- Fox.runOptional(organizationName) {
-            organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
-          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
-          organizationId <- Fox.fillOption(organizationIdOpt) {
-            datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
+          organizationIdWithFallback <- Fox.fillOption(organizationId) {
+            datasetDAO.getOrganizationIdForDataset(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationIdWithFallback) ?~> Messages(
             "dataset.noAccess",
             dataSetName) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataSet)

@@ -27,7 +27,7 @@ object User {
 case class User(
     _id: ObjectId,
     _multiUser: ObjectId,
-    _organization: ObjectId,
+    _organization: String,
     firstName: String,
     lastName: String,
     lastActivity: Instant = Instant.now,
@@ -52,8 +52,8 @@ case class User(
   val abbreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def isAdminOf(_organization: ObjectId): Boolean =
-    isAdmin && _organization == this._organization
+  def isAdminOf(organizationId: String): Boolean =
+    isAdmin && organizationId == this._organization
 
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
@@ -74,7 +74,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       User(
         ObjectId(r._Id),
         ObjectId(r._Multiuser),
-        ObjectId(r._Organization),
+        r._Organization,
         r.firstname,
         r.lastname,
         Instant.fromSql(r.lastactivity),
@@ -192,7 +192,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAdminsAndDatasetManagersByOrg(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""select $columns
@@ -205,7 +205,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOwnerByOrg(organizationId: ObjectId): Fox[User] =
+  def findOwnerByOrg(organizationId: String): Fox[User] =
     for {
       r <- run(q"""select $columns
                    from $existingCollectionName
@@ -217,7 +217,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
-  def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
+  def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
@@ -251,7 +251,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(result)
     } yield parsed
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"select count(*) from $existingCollectionName where _organization = $organizationId and not isDeactivated and not isUnlisted"
@@ -259,7 +259,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAdminsForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"select count(*) from $existingCollectionName where _organization = $organizationId and isAdmin and not isUnlisted"
@@ -267,7 +267,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countOwnersForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countOwnersForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"select count(*) from $existingCollectionName where _organization = $organizationId and isOrganizationOwner and not isUnlisted"
@@ -335,7 +335,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   // use with care!
-  def deleteAllWithOrganization(organizationId: ObjectId): Fox[Unit] =
+  def deleteAllWithOrganization(organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""update webknossos.users set isDeleted = true where _organization = $organizationId""".asUpdate)
     } yield ()
@@ -418,7 +418,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
     } yield ()
   }
 
-  def insertExperienceToListing(experienceDomain: String, organizationId: ObjectId): Fox[Unit] =
+  def insertExperienceToListing(experienceDomain: String, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.experienceDomains(domain, _organization)
               values($experienceDomain, $organizationId) ON CONFLICT DO NOTHING""".asUpdate)

@@ -223,7 +223,7 @@ class AnnotationController @Inject()(
         newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
         _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
         organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
+        _ <- annotationService.addAnnotationLayer(annotation, organization._id, request.body)
         updated <- provider.provideAnnotation(typ, id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
@@ -265,12 +265,12 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(organizationId: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+        organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
-          organizationName) ~> NOT_FOUND
+          organizationId) ~> NOT_FOUND
         dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataset.notFound",
           dataSetName) ~> NOT_FOUND
@@ -286,16 +286,16 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSandbox(organizationName: String,
+  def getSandbox(organization: String,
                  dataSetName: String,
                  typ: String,
                  sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+        organization <- organizationDAO.findOne(organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
-          organizationName) ~> NOT_FOUND
+          organization) ~> NOT_FOUND
         dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
           "dataset.notFound",
           dataSetName) ~> NOT_FOUND
@@ -323,7 +323,7 @@ class AnnotationController @Inject()(
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
+        _ <- annotationService.makeAnnotationHybrid(annotation, organization._id, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
         updated <- provider.provideAnnotation(typ, id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)

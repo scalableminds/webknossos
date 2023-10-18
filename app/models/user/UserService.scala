@@ -71,13 +71,13 @@ class UserService @Inject()(conf: WkConf,
       case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
 
-  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+  def findOneByEmailAndOrganization(email: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       multiUser <- multiUserDAO.findOneByEmail(email)
       user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
     } yield user
 
-  def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId): Fox[Unit] =
+  def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
       userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
@@ -92,7 +92,7 @@ class UserService @Inject()(conf: WkConf,
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
-  def insert(organizationId: ObjectId,
+  def insert(organizationId: String,
              email: String,
              firstName: String,
              lastName: String,
@@ -138,7 +138,7 @@ class UserService @Inject()(conf: WkConf,
     } yield user
   }
 
-  def fillSuperUserIdentity(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def fillSuperUserIdentity(originalUser: User, organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
       existingIdentity: Box[User] <- userDAO
@@ -150,7 +150,7 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def joinOrganization(originalUser: User,
-                       organizationId: ObjectId,
+                       organizationId: String,
                        autoActivate: Boolean,
                        isAdmin: Boolean = false,
                        isUnlisted: Boolean = false,
@@ -315,16 +315,16 @@ class UserService @Inject()(conf: WkConf,
     } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
 
   private def isTeamManagerInOrg(user: User,
-                                 _organization: ObjectId,
+                                 organizationId: String,
                                  teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
       teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
-    } yield teamManagerMemberships.nonEmpty && _organization == user._organization
+    } yield teamManagerMemberships.nonEmpty && organizationId == user._organization
 
-  def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+  def isTeamManagerOrAdminOfOrg(user: User, organizationId: String): Fox[Boolean] =
     for {
-      isTeamManager <- isTeamManagerInOrg(user, _organization)
-    } yield isTeamManager || user.isAdminOf(_organization)
+      isTeamManager <- isTeamManagerInOrg(user, organizationId)
+    } yield isTeamManager || user.isAdminOf(organizationId)
 
   def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
     for {
@@ -357,7 +357,7 @@ class UserService @Inject()(conf: WkConf,
         "lastActivity" -> user.lastActivity,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
-        "organization" -> organization.name,
+        "organization" -> organization._id,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,

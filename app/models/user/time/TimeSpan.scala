@@ -137,7 +137,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] = {
+  def findAll(start: Option[Instant], end: Option[Instant], organizationId: String): Fox[List[TimeSpan]] = {
     val startOrZero = start.getOrElse(Instant.zero)
     val endOrMax = end.getOrElse(Instant.max)
     for {

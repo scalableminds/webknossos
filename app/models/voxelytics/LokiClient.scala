@@ -79,7 +79,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   }
 
   def queryLogsBatched(runName: String,
-                       organizationId: ObjectId,
+                       organizationId: String,
                        taskName: Option[String],
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
@@ -137,7 +137,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   }
 
   private def queryLogs(runName: String,
-                        organizationId: ObjectId,
+                        organizationId: String,
                         taskName: Option[String],
                         minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
@@ -178,12 +178,12 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       } yield logEntries
     } else Fox.successful(List())
 
-  def bulkInsertBatched(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+  def bulkInsertBatched(logEntries: List[JsValue], organizationId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationId))
     } yield ()
 
-  private def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(
+  private def bulkInsert(logEntries: List[JsValue], organizationId: String)(
       implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {

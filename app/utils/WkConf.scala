@@ -194,7 +194,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Braintracing {
     val enabled: Boolean = get[Boolean]("braintracing.enabled")
-    val organizationName: String = get[String]("braintracing.organizationName")
+    val organizationId: String = get[String]("braintracing.organizationId")
     val uri: String = get[String]("braintracing.uri")
     val createUserScript: String = get[String]("braintracing.createUserScript")
     val user: String = get[String]("braintracing.user")

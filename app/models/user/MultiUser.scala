@@ -125,7 +125,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    where _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def removeLastLoggedInIdentitiesWithOrga(organizationId: ObjectId): Fox[Unit] =
+  def removeLastLoggedInIdentitiesWithOrga(organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""
         update webknossos.multiusers set _lastLoggedInIdentity = null

@@ -114,7 +114,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
+  def findOneByNameAndOrganization(name: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
@@ -141,7 +141,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   // write operations
 
-  def insertOne(p: Project, organizationId: ObjectId): Fox[Unit] =
+  def insertOne(p: Project, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""insert into webknossos.projects(
                                      _id, _organization, _team, _owner, name, priority,

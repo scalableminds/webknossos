@@ -70,13 +70,13 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def addDataSource(organizationName: String,
+  def addDataSource(organizationId: String,
                     datasetName: String,
                     dataSource: GenericDataSource[DataLayer],
                     folderId: Option[ObjectId],
                     userToken: String): Fox[Unit] =
     for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
+      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
         .addQueryString("token" -> userToken)
         .addQueryStringOptional("folderId", folderId.map(_.toString))
         .put(dataSource)

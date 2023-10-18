@@ -99,7 +99,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug("Called to duplicate VolumeTracing." + baseInfo)
+    logger.debug(s"Called to duplicate volume tracing $volumeTracingId. $baseInfo")
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("fromTask" -> isFromTask.toString)
@@ -111,6 +111,14 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .addQueryString("downsample" -> downsample.toString)
       .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
+
+  def addSegmentIndex(volumeTracingId: String, dryRun: Boolean): Fox[Unit] =
+    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/addSegmentIndex").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("dryRun" -> dryRun.toString)
+      .silent
+      .post()
+      .map(_ => ())
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

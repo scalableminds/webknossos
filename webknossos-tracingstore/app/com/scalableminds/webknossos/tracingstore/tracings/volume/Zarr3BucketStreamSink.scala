@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
+import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
@@ -21,7 +22,10 @@ import play.api.libs.json.Json
 import scala.concurrent.{ExecutionContext, Future}
 
 // Creates data zip from volume tracings
-class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging with ProtoGeometryImplicits {
+class Zarr3BucketStreamSink(val layer: VolumeTracingLayer)
+    extends LazyLogging
+    with ProtoGeometryImplicits
+    with ByteUtils {
 
   private lazy val defaultLayerName = "volumeAnnotationData"
   private lazy val dimensionSeparator = "."
@@ -64,13 +68,15 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer) extends LazyLogging w
       storage_transformers = None,
       dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )
-    bucketStream.map {
-      case (bucket, data) =>
+    bucketStream.flatMap {
+      case (bucket, data) if !isAllZero(data) =>
         val filePath = zarrChunkFilePath(defaultLayerName, bucket)
-        NamedFunctionStream(
-          filePath,
-          os => Future.successful(os.write(compressor.compress(data)))
-        )
+        Some(
+          NamedFunctionStream(
+            filePath,
+            os => Future.successful(os.write(compressor.compress(data)))
+          ))
+      case _ => None
     } ++ mags.map { mag =>
       NamedFunctionStream.fromString(zarrHeaderFilePath(defaultLayerName, mag), Json.prettyPrint(Json.toJson(header)))
     } ++ Seq(

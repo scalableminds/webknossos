@@ -495,9 +495,7 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const allLayers = getDataLayers(dataset);
-  const defaultBBForLayers: UserBoundingBox[] =
-    rawUserBoundingBoxes?.length === 0
-      ? layers.map((layer, index) => {
+  const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
           return {
             id: -1 * index,
             name: `Full ${layer.name} layer`,
@@ -505,10 +503,8 @@ function StartJobForm(props: StartJobFormProps) {
             color: [255, 255, 255],
             isVisible: true,
           };
-        })
-      : [];
-  const userBoundingBoxes =
-    rawUserBoundingBoxes?.length === 0 ? defaultBBForLayers : rawUserBoundingBoxes;
+        });
+  const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
 
   const startJob = async ({
     layerName,

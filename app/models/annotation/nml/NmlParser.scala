@@ -100,7 +100,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 organizationName,
                 segments = v.segments,
                 segmentGroups = v.segmentGroups,
-                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName),
+                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndexOpt(v.fallbackLayerName),
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               ),

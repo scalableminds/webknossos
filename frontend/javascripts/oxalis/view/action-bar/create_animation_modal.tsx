@@ -161,8 +161,8 @@ function CreateAnimationModal(props: Props) {
 
     // Submit currently visible pre-computed meshes
     let meshSegmentIds: number[] = [];
-    let meshFileName = "meshfile.hdf5";
-    let segmentationLayerName = "segmentation";
+    let meshFileName: string | undefined;
+    let segmentationLayerName: string | undefined;
 
     const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -174,7 +174,7 @@ function CreateAnimationModal(props: Props) {
 
       const currentMeshFile =
         state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile;
-      meshFileName = currentMeshFile?.meshFileName || meshFileName;
+      meshFileName = currentMeshFile?.meshFileName;
 
       if (visibleSegmentationLayer.fallbackLayerInfo) {
         segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;

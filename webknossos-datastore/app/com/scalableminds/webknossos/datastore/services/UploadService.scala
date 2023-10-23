@@ -230,19 +230,23 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       for {
         isZarr <- looksLikeZarr(unpackToDir).toFox
 
-        _ <- Fox.runIf(isZarr)(exploreLocalDatasource(unpackToDir, dataSourceId)) // TODO: This creates absolute path, which can not be used later
-        _ <- Fox.runIf(!isZarr)(addLayerAndResolutionDirIfMissing(unpackToDir).toFox)
-        _ <- Fox.runIf(!isZarr)(addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty)))
-        _ <- Fox.runIf(!isZarr)(
-          addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty)))
+        _ <- Fox.runIf(isZarr)(exploreLocalDatasource(unpackToDir, dataSourceId))
+        _ <- Fox.runIf(!isZarr)(postProcessUploadedWKWDataSource(unpackToDir, dataSourceId, layersToLink))
       } yield ()
     }
 
+  private def postProcessUploadedWKWDataSource(unpackToDir: Path,
+                                               dataSourceId: DataSourceId,
+                                               layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
+    for {
+      _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+      _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+      _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
+    } yield ()
+
   private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      // TODO: Check for .zattrs and .zgroup to detect NGFF
-
+      // TODO: Check for .zattrs and .zgroup to detect NGFF, TODO: Upload multiple layers
       _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
       explored <- exploreLayerService.exploreLocalZarrArray(path, dataSourceId)
       properties = Json.toJson(explored).toString().getBytes(StandardCharsets.UTF_8)

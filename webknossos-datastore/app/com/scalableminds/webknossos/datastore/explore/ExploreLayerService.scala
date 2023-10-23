@@ -42,20 +42,30 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
             .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
           layersWithVoxelSizes <- (new ZarrArrayExplorer(mag, ec)).explore(vaultPath, None)
-
         } yield layersWithVoxelSizes))
-      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes.flatten, None)
-      rescaledLayers = rescaledLayersAndVoxelSize._1
-      voxelSize = rescaledLayersAndVoxelSize._2
-      renamedLayers = makeLayerNamesUnique(rescaledLayers).map(_.asInstanceOf[ZarrDataLayer])
-      relativeLayers = makePathsRelative(renamedLayers).toList
+      (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
+      zarrLayers = layers.map(_.asInstanceOf[ZarrDataLayer])
+      relativeLayers = makePathsRelative(zarrLayers).toList
       dataSource = GenericDataSource[DataLayer](dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
-  def makePathsRelative(layers: Seq[ZarrDataLayer]): Seq[DataLayer] =
+  def adaptLayersAndVoxelSize(
+      layersWithVoxelSizes: List[(DataLayer, Vec3Double)],
+      preferredVoxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] =
+    for {
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
+      rescaledLayers = rescaledLayersAndVoxelSize._1
+      voxelSize = rescaledLayersAndVoxelSize._2
+      renamedLayers = makeLayerNamesUnique(rescaledLayers)
+      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(renamedLayers,
+                                                                                 preferredVoxelSize,
+                                                                                 voxelSize)
+    } yield (layersWithCoordinateTransformations, voxelSize)
+
+  private def makePathsRelative(layers: Seq[ZarrDataLayer]): Seq[DataLayer] =
     layers.map(l => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").takeRight(2).mkString("/"))))))
 
-  def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
+  private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
     layers.map { layer: DataLayer =>
       var nameCandidate = layer.name
@@ -78,9 +88,9 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
     }
   }
 
-  def addCoordinateTransformationsToLayers(layers: List[DataLayer],
-                                           preferredVoxelSize: Option[Vec3Double],
-                                           voxelSize: Vec3Double): List[DataLayer] =
+  private def addCoordinateTransformationsToLayers(layers: List[DataLayer],
+                                                   preferredVoxelSize: Option[Vec3Double],
+                                                   voxelSize: Vec3Double): List[DataLayer] =
     layers.map(l => {
       val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
       l match {
@@ -105,7 +115,8 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
     math.abs(l - l.round.toDouble) < epsilon
   }
 
-  def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(implicit ec: ExecutionContext): Fox[Vec3Int] = {
+  private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
+      implicit ec: ExecutionContext): Fox[Vec3Int] = {
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
@@ -113,12 +124,12 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
     } yield mag
   }
 
-  def checkForDuplicateMags(magGroup: List[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] =
+  private def checkForDuplicateMags(magGroup: List[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
 
-  def findBaseVoxelSize(minVoxelSize: Vec3Double, preferredVoxelSizeOpt: Option[Vec3Double]): Vec3Double =
+  private def findBaseVoxelSize(minVoxelSize: Vec3Double, preferredVoxelSizeOpt: Option[Vec3Double]): Vec3Double =
     preferredVoxelSizeOpt match {
       case Some(preferredVoxelSize) =>
         val baseMag = minVoxelSize / preferredVoxelSize
@@ -130,7 +141,7 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
       case None => minVoxelSize
     }
 
-  def coordinateTransformationForVoxelSize(
+  private def coordinateTransformationForVoxelSize(
       foundVoxelSize: Vec3Double,
       preferredVoxelSize: Option[Vec3Double]): Option[List[CoordinateTransformation]] =
     preferredVoxelSize match {
@@ -153,7 +164,7 @@ class ExploreLayerService @Inject()(dataVaultService: DataVaultService) extends 
         }
     }
 
-  def rescaleLayersByCommonVoxelSize(
+  private def rescaleLayersByCommonVoxelSize(
       layersWithVoxelSizes: List[(DataLayer, Vec3Double)],
       preferredVoxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
     val allVoxelSizes = layersWithVoxelSizes

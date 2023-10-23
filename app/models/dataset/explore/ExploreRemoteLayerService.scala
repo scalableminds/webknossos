@@ -79,18 +79,10 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      rescaledLayersAndVoxelSize <- exploreLayerService.rescaleLayersByCommonVoxelSize(
-        layersWithVoxelSizes,
-        preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
-      rescaledLayers = rescaledLayersAndVoxelSize._1
-      voxelSize = rescaledLayersAndVoxelSize._2
-      renamedLayers = exploreLayerService.makeLayerNamesUnique(rescaledLayers)
-      layersWithCoordinateTransformations = exploreLayerService.addCoordinateTransformationsToLayers(renamedLayers,
-                                                                                                     preferredVoxelSize,
-                                                                                                     voxelSize)
+      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
-        layersWithCoordinateTransformations,
+        layers,
         voxelSize
       )
     } yield dataSource

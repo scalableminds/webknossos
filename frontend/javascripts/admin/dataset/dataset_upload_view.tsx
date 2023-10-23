@@ -497,6 +497,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
           );
           const needsConversion = wkwFile == null;
+
+          console.log(needsConversion);
           //this.handleNeedsConversionInfo(needsConversion);
 
           const nmlFile = entries.find((entry) =>
@@ -516,6 +518,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           const form = this.formRef.current;
           needsConversion = false;
           console.log("Uploading zip anyway.");
+          console.log(form);
           /*
           if (!form) {
             return;

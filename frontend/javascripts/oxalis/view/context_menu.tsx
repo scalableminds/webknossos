@@ -800,7 +800,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
     Modal.info({
-      title: null,
+      title: "Get More out of WEBKNOSSOS",
       content: (
         <>
           {errorMessage} {entity} are created as part of our automated segmentation services.{" "}
@@ -865,7 +865,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 <span>
                   Import Agglomerate Skeleton{" "}
                   {!isAgglomerateMappingEnabled.value ? (
-                    <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+                    <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
                   ) : null}{" "}
                   {shortcutBuilder(["SHIFT", "middleMouse"])}
                 </span>
@@ -939,7 +939,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         <Tooltip title={isConnectomeMappingEnabled.reason}>
           Import Agglomerate and Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
-            <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+            <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
           ) : null}{" "}
         </Tooltip>
       ),

@@ -20,7 +20,6 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
-import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(uploadId: String,
@@ -251,7 +250,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
-      _ <- writeLocalDatasourceProperties(explored, path)
+      _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
 
   private def tryExploringMultipleZarrLayers(path: Path, dataSourceId: DataSourceId): Fox[Option[Path]] =
@@ -262,19 +261,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           .map(layerDir =>
             for {
               _ <- addLayerAndResolutionDirIfMissing(layerDir).toFox
-              explored: DataSource <- exploreLocalLayerService.exploreLocal(layerDir, dataSourceId)
+              explored: DataSource <- exploreLocalLayerService.exploreLocal(path,
+                                                                            dataSourceId,
+                                                                            layerDir.getFileName.toString)
             } yield explored)
           .toList)
-      combinedLayers = dataSources.flatMap(_.dataLayers)
+      combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
       dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, dataSources.head.scale)
-      path <- Fox.runIf(combinedLayers.nonEmpty)(writeLocalDatasourceProperties(dataSource, path))
+      path <- Fox.runIf(combinedLayers.nonEmpty)(
+        exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
-
-  private def writeLocalDatasourceProperties(dataSource: DataSource, path: Path): Fox[Path] =
-    tryo {
-      val properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
-      Files.write(path.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
-    }.toFox
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
@@ -380,7 +376,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {
-      _ <- Fox.bool2Fox(looksLikeZarrArray(dataSourceDir).isEmpty)
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
       layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p).isDefined)
     } yield layerDirs

@@ -36,7 +36,7 @@ class ExploreLayerService extends FoxImplicits {
                                                                                  voxelSize)
     } yield (layersWithCoordinateTransformations, voxelSize)
 
-  private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
+  def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
     layers.map { layer: DataLayer =>
       var nameCandidate = layer.name

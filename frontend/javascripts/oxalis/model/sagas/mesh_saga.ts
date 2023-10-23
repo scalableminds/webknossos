@@ -235,15 +235,14 @@ function* loadAdHocMesh(
   if (segmentId === 0 || layer == null) {
     return;
   }
-
   if (_.size(layer.cube.additionalAxes) > 0) {
     // Also see https://github.com/scalableminds/webknossos/issues/7229
     Toast.warning(
       "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
-    );
-  }
-
-  yield* call([Model, Model.ensureSavedState]);
+      );
+    }
+    
+    yield* call([Model, Model.ensureSavedState]);
 
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
@@ -288,6 +287,7 @@ function* loadFullAdHocMesh(
   let isInitialRequest = true;
   const { mappingName, mappingType } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
+  console.log(additionalCoordinates)
   yield* put(
     addAdHocMeshAction(
       layer.name,
@@ -566,8 +566,7 @@ function* _refreshMeshWithMap(
   let shouldBeRemoved = true;
 
   // Meshing for N-D segmentations is not yet supported.
-  // See https://github.com/scalableminds/webknossos/issues/7229
-  const seedAdditionalCoordinates = undefined;
+  // See https://github.com/scalableminds/webknossos/issues/7229 //TODO
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.

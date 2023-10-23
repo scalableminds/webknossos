@@ -222,17 +222,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_AD_HOC_ISOSURFACE": {
-      const { layerName, segmentId, seedPosition, mappingName, mappingType } = action;
+      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, mappingName, mappingType } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
+        seedAdditionalCoordinates,
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
         mappingName,
         mappingType,
       };
-      return updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
+      const updatedKey = updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
+      console.log(updatedKey)
+      return updatedKey;
     }
 
     case "ADD_PRECOMPUTED_ISOSURFACE": {

@@ -827,3 +827,14 @@ export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector
 export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
   return M4x4.transpose(M4x4.inverse(mat));
 });
+
+export function getEffectiveIntensityRange(
+  dataset: APIDataset,
+  layerName: string,
+  datasetConfiguration: DatasetConfiguration,
+): [number, number] {
+  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
+  const layerConfiguration = datasetConfiguration.layers[layerName];
+
+  return layerConfiguration.intensityRange || defaultIntensityRange;
+}

@@ -13,7 +13,6 @@ import {
   getLayerByName,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
-import { BoundingBoxSelection, LayerSelection } from "../right-border-tabs/starting_job_modals";
 import {
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
@@ -34,6 +33,7 @@ import {
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { Model } from "oxalis/singletons";
+import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
 
 type Props = {
   isOpen: boolean;

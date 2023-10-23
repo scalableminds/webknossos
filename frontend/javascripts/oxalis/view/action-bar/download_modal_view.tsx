@@ -31,7 +31,7 @@ import {
   BoundingBoxSelection,
   getReadableNameOfVolumeLayer,
   MagSlider,
-} from "oxalis/view/right-border-tabs/starting_job_modals";
+} from "oxalis/view/action-bar/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getVolumeTracingById,

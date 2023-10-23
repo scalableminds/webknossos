@@ -191,6 +191,26 @@ object ImportVolumeData {
   implicit val jsonFormat: OFormat[ImportVolumeData] = Json.format[ImportVolumeData]
 }
 
+case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
+                           actionAuthorId: Option[String] = None,
+                           info: Option[String] = None)
+    extends ApplyableVolumeAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("addSegmentIndex", actionTimestamp, actionAuthorId, Json.obj())
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(hasSegmentIndex = Some(true))
+}
+
+object AddSegmentIndex {
+  implicit val jsonFormat: OFormat[AddSegmentIndex] = Json.format[AddSegmentIndex]
+}
+
 case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
                           actionAuthorId: Option[String] = None,
                           info: Option[String] = None)

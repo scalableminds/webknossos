@@ -54,7 +54,7 @@ case class Job(
       s <- started
     } yield (e - s).millis
 
-  def effectiveState: JobState = manualState.getOrElse(state)
+  private def effectiveState: JobState = manualState.getOrElse(state)
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
@@ -70,7 +70,7 @@ case class Job(
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case JobCommand.export_tiff =>
+        case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>

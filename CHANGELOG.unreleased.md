@@ -18,11 +18,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Higher-dimension coordinates (e.g., for the t axis) are now encoded in the URL, too, so that reloading the page will keep you at your current position. Only relevant for 4D datasets. [#7328](https://github.com/scalableminds/webknossos/pull/7328)
 - WEBKNOSSOS can now also explore datasets on the local file system if enabled in the new config key `datastore.localFolderWhitelist`. [#7389](https://github.com/scalableminds/webknossos/pull/7389)
 - It is now possible to download volume annotations as zarr- rather than wkw-based zip. This case also supports annotations on timerseries (ND) datasets. [#7288](https://github.com/scalableminds/webknossos/pull/7288)
+- Added a feature to create an engaging animation of a dataset and its meshes processed in Blender with a WK worker job. [#7348](https://github.com/scalableminds/webknossos/pull/7348)
 
 ### Changed
 - Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)
 - Remote datasets with a datasource-properties.json can now also be imported without the need for OME metadata. [#7372](https://github.com/scalableminds/webknossos/pull/7372)
 - Occurrences of isosurface were renamed to ad-hoc mesh. This also applies to configuration files. [#7350](https://github.com/scalableminds/webknossos/pull/7350)
+- Improved user interface to start automatic AI analysis. [#7368](https://github.com/scalableminds/webknossos/pull/7368)
 
 ### Fixed
 - Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)

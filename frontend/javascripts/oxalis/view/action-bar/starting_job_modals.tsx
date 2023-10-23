@@ -227,9 +227,6 @@ export function BoundingBoxSelection({
   style?: React.CSSProperties;
   value: number | null;
 }): JSX.Element {
-  const onSelect = setSelectedBoundingBoxId
-    ? (boundingBoxId: number) => setSelectedBoundingBoxId(boundingBoxId)
-    : undefined;
   return (
     <Select
       placeholder="Select a bounding box"
@@ -239,7 +236,7 @@ export function BoundingBoxSelection({
         option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
       }
       disabled={userBoundingBoxes.length < 1}
-      onSelect={onSelect}
+      onSelect={setSelectedBoundingBoxId}
       style={style}
       value={value}
     >

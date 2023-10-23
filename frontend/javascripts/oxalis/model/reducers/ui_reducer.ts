@@ -102,6 +102,12 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showRenderAnimationModal: action.visible,
+      });
+    }
+
     case "SET_BUSY_BLOCKING_INFO_ACTION": {
       if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
         throw new Error(

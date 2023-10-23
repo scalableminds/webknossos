@@ -4,6 +4,7 @@ import { Dropdown, MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,
+  VideoCameraOutlined,
   CameraOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
@@ -13,10 +14,13 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import {
   setPythonClientModalVisibilityAction,
   setShareModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
+import CreateAnimationModal from "./create_animation_modal";
+
 type Props = {
   layoutMenu: SubMenuType;
 };
@@ -27,10 +31,23 @@ export const screenshotMenuItem: MenuItemType = {
   label: "Screenshot (Q)",
 };
 
+export const renderAnimationMenuItem: MenuItemType = {
+  key: "create-animation-button",
+  label: "Create Animation",
+  icon: <VideoCameraOutlined />,
+  onClick: () => {
+    Store.dispatch(setRenderAnimationModalVisibilityAction(true));
+  },
+};
+
 export default function ViewDatasetActionsView(props: Props) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
+  );
+  const isRenderAnimationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
   );
 
   const shareDatasetModal = (
@@ -56,6 +73,7 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
+      activeUser?.isSuperUser ? renderAnimationMenuItem : null,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
@@ -66,6 +84,13 @@ export default function ViewDatasetActionsView(props: Props) {
     ],
   };
 
+  const renderAnimationModal = (
+    <CreateAnimationModal
+      isOpen={isRenderAnimationModalOpen}
+      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+    />
+  );
+
   return (
     <div
       style={{
@@ -74,6 +99,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
+      {activeUser?.isSuperUser ? renderAnimationModal : null}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

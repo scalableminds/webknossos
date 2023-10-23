@@ -621,6 +621,7 @@ export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILU
 export enum APIJobType {
   "CONVERT_TO_WKW" = "convert_to_wkw",
   "EXPORT_TIFF" = "export_tiff",
+  "RENDER_ANIMATION" = "render_animation",
   "COMPUTE_MESH_FILE" = "compute_mesh_file",
   "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
   "INFER_NUCLEI" = "infer_nuclei",
@@ -1048,4 +1049,29 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+};
+
+export enum CAMERA_POSITIONS {
+  MOVING = "MOVING",
+  STATIC_XZ = "STATIC_XZ",
+  STATIC_YZ = "STATIC_YZ",
+}
+
+export enum MOVIE_RESOLUTIONS {
+  SD = "SD",
+  HD = "HD",
+}
+
+export type RenderAnimationOptions = {
+  layerName: string;
+  segmentationLayerName?: string;
+  meshFileName?: string;
+  meshSegmentIds: number[];
+  boundingBox: BoundingBoxObject;
+  includeWatermark: boolean;
+  intensityMin: number;
+  intensityMax: number;
+  magForTextures: Vector3;
+  movieResolution: MOVIE_RESOLUTIONS;
+  cameraPosition: CAMERA_POSITIONS;
 };

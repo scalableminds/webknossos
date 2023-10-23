@@ -230,6 +230,7 @@ const defaultState: OxalisState = {
     showDownloadModal: false,
     showPythonClientModal: false,
     aIJobModalState: "invisible",
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,

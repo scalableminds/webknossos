@@ -513,6 +513,7 @@ type UiInformation = {
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
   readonly aIJobModalState: StartAIJobModalState;
+  readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;

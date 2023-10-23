@@ -18,6 +18,26 @@ import ucar.ma2.{Array => MultiArray}
 
 import java.util.zip.CRC32C
 
+sealed trait TransposeSetting
+final case class StringTransposeSetting(order: String) extends TransposeSetting
+final case class IntArrayTransposeSetting(order: Array[Int]) extends TransposeSetting
+
+object TransposeSetting {
+  implicit object TransposeSettingFormat extends Format[TransposeSetting] {
+
+    override def reads(json: JsValue): JsResult[TransposeSetting] =
+      json.validate[String].map(StringTransposeSetting).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting))
+
+    override def writes(transposeSetting: TransposeSetting): JsValue =
+      transposeSetting match {
+        case StringTransposeSetting(x)   => Json.toJson(x)
+        case IntArrayTransposeSetting(x) => Json.toJson(x)
+      }
+  }
+
+  def fOrderFromRank(rank: Int): IntArrayTransposeSetting = IntArrayTransposeSetting(Array.range(rank - 1, -1, -1))
+}
+
 trait Codec
 
 /*
@@ -39,7 +59,7 @@ trait BytesToBytesCodec extends Codec {
   def decode(bytes: Array[Byte]): Array[Byte]
 }
 
-class EndianCodec(val endian: Option[String]) extends ArrayToBytesCodec {
+class BytesCodec(val endian: Option[String]) extends ArrayToBytesCodec {
 
   /*
   https://zarr-specs.readthedocs.io/en/latest/v3/codecs/endian/v1.0.html
@@ -57,7 +77,7 @@ class EndianCodec(val endian: Option[String]) extends ArrayToBytesCodec {
   override def decode(bytes: Array[Byte]): MultiArray = ???
 }
 
-class TransposeCodec(order: String) extends ArrayToArrayCodec {
+class TransposeCodec(order: TransposeSetting) extends ArrayToArrayCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/v1.0.html
   // encode, decode currently not implemented because the flipping is done by the header
@@ -159,16 +179,30 @@ class ShardingCodec(val chunk_shape: Array[Int],
   override def decode(bytes: Array[Byte]): MultiArray = ???
 }
 
-sealed trait CodecConfiguration
+sealed trait CodecConfiguration {
+  def name: String
+  def includeConfiguration: Boolean = true
+}
 
-final case class EndianCodecConfiguration(endian: Option[String]) extends CodecConfiguration
+final case class BytesCodecConfiguration(endian: Option[String]) extends CodecConfiguration {
+  override def name: String = BytesCodecConfiguration.name
+}
 
-object EndianCodecConfiguration {
-  implicit val jsonFormat: OFormat[EndianCodecConfiguration] = Json.format[EndianCodecConfiguration]
+object BytesCodecConfiguration {
+  implicit val jsonReads: Reads[BytesCodecConfiguration] = Json.reads[BytesCodecConfiguration]
+
+  implicit object BytesCodecConfigurationWrites extends Writes[BytesCodecConfiguration] {
+    override def writes(o: BytesCodecConfiguration): JsValue =
+      o.endian.map(e => Json.obj("endian" -> e)).getOrElse(Json.obj())
+  }
+
   val legacyName = "endian"
   val name = "bytes"
 }
-final case class TransposeCodecConfiguration(order: String) extends CodecConfiguration // Should also support other parameters
+
+final case class TransposeCodecConfiguration(order: TransposeSetting) extends CodecConfiguration {
+  override def name: String = TransposeCodecConfiguration.name
+}
 
 object TransposeCodecConfiguration {
   implicit val jsonFormat: OFormat[TransposeCodecConfiguration] =
@@ -180,33 +214,47 @@ final case class BloscCodecConfiguration(cname: String,
                                          shuffle: CompressionSetting,
                                          typesize: Option[Int],
                                          blocksize: Int)
-    extends CodecConfiguration
+    extends CodecConfiguration {
+  override def name: String = BloscCodecConfiguration.name
+}
 
 object BloscCodecConfiguration {
   implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
+
+  def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
+    case 0 => "noshuffle"
+    case 1 => "shuffle"
+    case 2 => "bitshuffle"
+    case _ => ???
+  }
 }
 
-final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration
+final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {
+  override def name: String = GzipCodecConfiguration.name
+}
 object GzipCodecConfiguration {
   implicit val jsonFormat: OFormat[GzipCodecConfiguration] = Json.format[GzipCodecConfiguration]
   val name = "gzip"
 }
 
-final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration
+final case class ZstdCodecConfiguration(level: Int, checksum: Boolean) extends CodecConfiguration {
+  override def name: String = ZstdCodecConfiguration.name
+}
 object ZstdCodecConfiguration {
   implicit val jsonFormat: OFormat[ZstdCodecConfiguration] = Json.format[ZstdCodecConfiguration]
   val name = "zstd"
 }
 
 case object Crc32CCodecConfiguration extends CodecConfiguration {
+  override val includeConfiguration: Boolean = false
   val name = "crc32c"
 
-  implicit object Crc32CodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
+  implicit object Crc32CCodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
     override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
   }
 
-  implicit object Crc32CodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
+  implicit object Crc32CCodecConfigurationWrites extends Writes[Crc32CCodecConfiguration.type] {
     override def writes(o: Crc32CCodecConfiguration.type): JsValue = JsObject(Seq())
   }
 }
@@ -229,7 +277,9 @@ object CodecSpecification {
 final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             codecs: Seq[CodecConfiguration],
                                             index_codecs: Seq[CodecConfiguration])
-    extends CodecConfiguration
+    extends CodecConfiguration {
+  override def name: String = ShardingCodecConfiguration.name
+}
 
 object ShardingCodecConfiguration {
   implicit val jsonFormat: OFormat[ShardingCodecConfiguration] =
@@ -239,14 +289,14 @@ object ShardingCodecConfiguration {
 
 object CodecTreeExplorer {
 
-  def find(condition: Function[CodecConfiguration, Boolean])(
+  def findOne(condition: Function[CodecConfiguration, Boolean])(
       codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
     val results: Seq[Option[CodecConfiguration]] = codecs.map {
       case s: ShardingCodecConfiguration => {
         if (condition(s)) {
           Some(s)
         } else {
-          find(condition)(s.codecs)
+          findOne(condition)(s.codecs)
         }
       }
       case c: CodecConfiguration => Some(c).filter(condition)

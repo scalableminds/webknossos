@@ -29,6 +29,10 @@ type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipActi
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 
+type SetRenderAnimationModalVisibilityAction = ReturnType<
+  typeof setRenderAnimationModalVisibilityAction
+>;
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
@@ -45,6 +49,7 @@ export type UiAction =
   | SetShareModalVisibilityAction
   | SetAINucleiSegmentationModalVisibilityAction
   | SetAINeuronSegmentationModalVisibilityAction
+  | SetRenderAnimationModalVisibilityAction
   | SetBusyBlockingInfoAction
   | EnterAction
   | EscapeAction
@@ -122,6 +127,11 @@ export const setAINucleiSegmentationModalVisibilityAction = (visible: boolean) =
 export const setAINeuronSegmentationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY",
+    visible,
+  } as const);
+export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_CREATE_ANIMATION_MODAL_VISIBILITY",
     visible,
   } as const);
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

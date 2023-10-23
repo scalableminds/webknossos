@@ -496,14 +496,14 @@ function StartJobForm(props: StartJobFormProps) {
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const allLayers = getDataLayers(dataset);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
-          return {
-            id: -1 * index,
-            name: `Full ${layer.name} layer`,
-            boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
-            color: [255, 255, 255],
-            isVisible: true,
-          };
-        });
+    return {
+      id: -1 * index,
+      name: `Full ${layer.name} layer`,
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
+      color: [255, 255, 255],
+      isVisible: true,
+    };
+  });
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
 
   const startJob = async ({

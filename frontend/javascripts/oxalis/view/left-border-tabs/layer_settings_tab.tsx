@@ -110,7 +110,7 @@ import {
   settings,
   settingsTooltips,
 } from "messages";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";

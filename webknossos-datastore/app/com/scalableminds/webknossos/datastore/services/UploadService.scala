@@ -8,8 +8,9 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
-import com.scalableminds.webknossos.datastore.explore.ExploreLayerService
+import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -63,7 +64,7 @@ object CancelUploadInformation {
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              exploreLayerService: ExploreLayerService)(implicit ec: ExecutionContext)
+                              exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
     extends LazyLogging
     with DataSetDeleter
     with DirectoryConstants
@@ -228,7 +229,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
-        isZarr <- looksLikeZarr(unpackToDir).toFox
+        isZarr <- looksLikeZarrArray(unpackToDir).toFox
 
         _ <- Fox.runIf(isZarr)(exploreLocalDatasource(unpackToDir, dataSourceId))
         _ <- Fox.runIf(!isZarr)(postProcessUploadedWKWDataSource(unpackToDir, dataSourceId, layersToLink))
@@ -246,9 +247,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
     for {
-      // TODO: Check for .zattrs and .zgroup to detect NGFF, TODO: Upload multiple layers
+      // TODO: Upload multiple layers
       _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
-      explored <- exploreLayerService.exploreLocalZarrArray(path, dataSourceId)
+      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       properties = Json.toJson(explored).toString().getBytes(StandardCharsets.UTF_8)
       _ <- tryo(Files.write(path.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties))
     } yield ()
@@ -346,12 +347,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield layerRenamed
   }
 
-  private def looksLikeZarr(dataSourceDir: Path): Box[Boolean] =
+  private def looksLikeZarrArray(dataSourceDir: Path): Box[Boolean] =
     for {
-      listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
-                                                         maxDepth = 2,
-                                                         silent = false,
-                                                         filters = p => p.getFileName.toString == ".zarray")
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(
+        dataSourceDir,
+        maxDepth = 2,
+        silent = false,
+        filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
     } yield listing.nonEmpty
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,

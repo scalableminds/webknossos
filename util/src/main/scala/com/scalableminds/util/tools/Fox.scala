@@ -242,6 +242,23 @@ object Fox extends FoxImplicits {
 
     failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
+
+  def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
+    def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
+      remainingFoxes match {
+        case head :: tail =>
+          for {
+            resultOption <- head.toFutureOption
+            nextResult <- resultOption match {
+              case Some(v) => Fox.successful(v)
+              case _       => runNext(tail)
+            }
+          } yield nextResult
+        case Nil =>
+          Fox.empty
+      }
+    runNext(foxes)
+  }
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

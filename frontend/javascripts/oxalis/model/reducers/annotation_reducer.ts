@@ -222,7 +222,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_AD_HOC_ISOSURFACE": {
-      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, mappingName, mappingType } = action;
+      const {
+        layerName,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        mappingName,
+        mappingType,
+      } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
@@ -233,8 +240,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         mappingName,
         mappingType,
       };
-      const updatedKey = updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
-      console.log(updatedKey)
+      const updatedKey = updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "meshes",
+        segmentId,
+        meshInfo,
+      );
+      console.log(updatedKey);
       return updatedKey;
     }
 

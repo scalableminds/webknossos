@@ -14,7 +14,10 @@ export default class SegmentMeshController {
   // meshesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   meshesLODRootGroup: CustomLOD;
-  meshesGroupsPerSegmentationId: Record<string, Record<number, Record<number, THREE.Group>>> = {};
+  meshesGroupsPerSegmentationId: Record<
+    string,
+    Record<string, Record<number, Record<number, THREE.Group>>>
+  > = {};
 
   constructor() {
     this.meshesLODRootGroup = new CustomLOD();
@@ -22,7 +25,15 @@ export default class SegmentMeshController {
   }
 
   hasMesh(id: number, layerName: string): boolean {
-    const segments = this.meshesGroupsPerSegmentationId[layerName];
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
+    }
+
+    const segments = this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName];
     if (!segments) {
       return false;
     }
@@ -85,15 +96,35 @@ export default class SegmentMeshController {
     lod: number,
     layerName: string,
   ): void {
-    if (this.meshesGroupsPerSegmentationId[layerName] == null) {
-      this.meshesGroupsPerSegmentationId[layerName] = {};
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
     }
-    if (this.meshesGroupsPerSegmentationId[layerName][segmentationId] == null) {
-      this.meshesGroupsPerSegmentationId[layerName][segmentationId] = {};
+
+    console.log("segemnt mesh controller");
+    console.log(additionalCoordinates);
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
+      this.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
     }
-    if (this.meshesGroupsPerSegmentationId[layerName][segmentationId][lod] == null) {
+
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] = {};
+    }
+    if (
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
+    ) {
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] = {};
+    }
+    if (
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] ==
+      null
+    ) {
       const newGroup = new THREE.Group();
-      this.meshesGroupsPerSegmentationId[layerName][segmentationId][lod] = newGroup;
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] =
+        newGroup;
       if (lod === NO_LOD_MESH_INDEX) {
         this.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
@@ -111,8 +142,10 @@ export default class SegmentMeshController {
       mesh.translateY(offset[1]);
       mesh.translateZ(offset[2]);
     }
-
-    this.meshesGroupsPerSegmentationId[layerName][segmentationId][lod].add(mesh);
+    debugger;
+    this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod].add(
+      mesh,
+    );
   }
 
   removeMeshById(segmentationId: number, layerName: string): void {
@@ -134,18 +167,37 @@ export default class SegmentMeshController {
   }
 
   getMeshGeometryInBestLOD(segmentId: number, layerName: string): THREE.Group {
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
+    }
+
     const bestLod = Math.min(
       ...Object.keys(this.meshesGroupsPerSegmentationId[layerName][segmentId]).map((lodVal) =>
         parseInt(lodVal),
       ),
     );
-    return this.meshesGroupsPerSegmentationId[layerName][segmentId][bestLod];
+    return this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
   }
 
   setMeshVisibility(id: number, visibility: boolean, layerName: string): void {
-    _.forEach(this.meshesGroupsPerSegmentationId[layerName][id], (meshGroup) => {
-      meshGroup.visible = visibility;
-    });
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
+    }
+
+    _.forEach(
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
+      (meshGroup) => {
+        meshGroup.visible = visibility;
+      },
+    );
   }
 
   setMeshColor(id: number, layerName: string): void {

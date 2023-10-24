@@ -211,8 +211,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     seedPosition: Vector3,
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
   ) {
-    console.log("segments view")
-    console.log(seedAdditionalCoordinates)
+    console.log("segments view");
+    console.log(seedAdditionalCoordinates);
     dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
   },
 
@@ -244,8 +244,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
-    console.log("setAdditionalCoordinates")
-    console.log(additionalCoordinates)
+    console.log("setAdditionalCoordinates");
+    console.log(additionalCoordinates);
     dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
   },
 

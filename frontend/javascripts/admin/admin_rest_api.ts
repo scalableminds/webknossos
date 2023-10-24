@@ -2147,6 +2147,7 @@ window.setMaintenance = setMaintenance;
 type MeshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
+  additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
   subsamplingStrides: Vector3;
@@ -2167,6 +2168,7 @@ export function computeAdHocMesh(
 }> {
   const {
     position,
+    additionalCoordinates,
     cubeSize,
     mappingName,
     subsamplingStrides,
@@ -2186,6 +2188,7 @@ export function computeAdHocMesh(
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          additionalCoordinates: additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,

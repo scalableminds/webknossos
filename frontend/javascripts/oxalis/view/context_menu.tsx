@@ -1370,7 +1370,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
           }),
   };
 
-  console.log(menu)
   if (inputRef == null || inputRef.current == null) return null;
   const refContent = inputRef.current;
 

@@ -94,9 +94,9 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
-// Maps from layerName and segmentId to a ThreeDMap that stores for each chunk
+// Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
-const adhocMeshesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
+const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   return (window as any).__marchingCubeSizeInMag1 != null
     ? (window as any).__marchingCubeSizeInMag1
@@ -112,8 +112,19 @@ export function isMeshSTL(buffer: ArrayBuffer): boolean {
 }
 
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  adhocMeshesMapByLayer[layerName] = adhocMeshesMapByLayer[layerName] || new Map();
-  const meshesMap = adhocMeshesMapByLayer[layerName];
+  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+  let additionalCoordinates = "";
+  if (additionalCoordinatesObject != null) {
+    additionalCoordinates = additionalCoordinatesObject
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
+  }
+
+  adhocMeshesMapByLayer[additionalCoordinates] =
+    adhocMeshesMapByLayer[additionalCoordinates] || new Map();
+  adhocMeshesMapByLayer[additionalCoordinates][layerName] =
+    adhocMeshesMapByLayer[additionalCoordinates][layerName] || new Map();
+  const meshesMap = adhocMeshesMapByLayer[additionalCoordinates][layerName];
   const maybeMap = meshesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -239,10 +250,10 @@ function* loadAdHocMesh(
     // Also see https://github.com/scalableminds/webknossos/issues/7229
     Toast.warning(
       "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
-      );
-    }
-    
-    yield* call([Model, Model.ensureSavedState]);
+    );
+  }
+
+  yield* call([Model, Model.ensureSavedState]);
 
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
@@ -287,7 +298,7 @@ function* loadFullAdHocMesh(
   let isInitialRequest = true;
   const { mappingName, mappingType } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
-  console.log(additionalCoordinates)
+  console.log(additionalCoordinates);
   yield* put(
     addAdHocMeshAction(
       layer.name,
@@ -400,6 +411,8 @@ function* maybeLoadMeshChunk(
   useDataStore: boolean,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
+
+  const additionalCoordinates = Store.getState().flycam.additionalCoordinates || undefined;
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
   if (threeDMap.get(clippedPosition)) {
@@ -451,6 +464,7 @@ function* maybeLoadMeshChunk(
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
+          additionalCoordinates,
           mag,
           segmentId,
           subsamplingStrides,
@@ -494,15 +508,24 @@ function* refreshMeshes(): Saga<void> {
   // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
+
+  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+  let additionalCoordinates = "";
+  if (additionalCoordinatesObject != null) {
+    additionalCoordinates = additionalCoordinatesObject
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
+  }
+
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
   if (!segmentationLayer) {
     return;
   }
 
-  adhocMeshesMapByLayer[segmentationLayer.name] =
-    adhocMeshesMapByLayer[segmentationLayer.name] || new Map();
-  const meshesMapForLayer = adhocMeshesMapByLayer[segmentationLayer.name];
+  adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name] =
+    adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name] || new Map();
+  const meshesMapForLayer = adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name];
 
   for (const [segmentId, threeDMap] of Array.from(meshesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(segmentId)) {
@@ -514,6 +537,14 @@ function* refreshMeshes(): Saga<void> {
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
+  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+  let additionalCoordinates = "";
+  if (additionalCoordinatesObject != null) {
+    additionalCoordinates = additionalCoordinatesObject
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
+  }
+
   const { segmentId, layerName } = action;
 
   const meshInfo = yield* select(
@@ -532,7 +563,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       ),
     );
   } else {
-    const threeDMap = adhocMeshesMapByLayer[action.layerName].get(segmentId);
+    const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
     if (threeDMap == null) return;
     yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName);
   }

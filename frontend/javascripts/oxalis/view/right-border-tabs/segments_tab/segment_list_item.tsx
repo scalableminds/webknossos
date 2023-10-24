@@ -129,8 +129,8 @@ const getComputeMeshAdHocMenuItem = (
         andCloseContextMenu();
         return;
       }
-      console.log("segment list item")
-      console.log(segment) // TODO addCoor empty if newly created
+      console.log("segment list item");
+      console.log(segment); // TODO addCoor empty if newly created
       andCloseContextMenu(
         loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       );

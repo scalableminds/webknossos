@@ -666,6 +666,10 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onSelectSegment = (segment: Segment) => {
+    this.setState({
+      selectedIds: { segments: [segment.id], group: null },
+    });
+
     if (!segment.somePosition) {
       Toast.info(
         <React.Fragment>

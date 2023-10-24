@@ -477,12 +477,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
-    let needsConversion = true;
     const fileExtensions = [];
+    const fileNames = [];
 
     for (const file of files) {
-      const filenameParts = file.name.split(".");
-      const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+      fileNames.push(file.name);
+      const fileExtension = Utils.getFileExtension(file.name);
       fileExtensions.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
@@ -493,21 +493,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           const reader = new Zip.ZipReader(new Zip.BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
-          const wkwFile = entries.find((entry) =>
-            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-          );
-          const needsConversion = wkwFile == null;
-
-          console.log(needsConversion);
-          //this.handleNeedsConversionInfo(needsConversion);
-
-          const nmlFile = entries.find((entry) =>
-            Utils.isFileExtensionEqualTo(entry.filename, "nml"),
-          );
-          if (nmlFile) {
-            Modal.error({
-              content: messages["dataset.upload_zip_with_nml"],
-            });
+          for (const entry of entries) {
+            fileNames.push(entry.filename);
+            fileExtensions.push(Utils.getFileExtension(entry.filename));
           }
         } catch (e) {
           console.error(e);
@@ -516,10 +504,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             content: messages["dataset.upload_invalid_zip"],
           });
           const form = this.formRef.current;
-          needsConversion = false;
-          console.log("Uploading zip anyway.");
-          console.log(form);
-          /*
           if (!form) {
             return;
           }
@@ -527,17 +511,31 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           form.setFieldsValue({
             zipFile: [],
           });
-          */
         }
-        // We return here since not more than 1 zip archive is supported anyway.
+        // We return here since not more than 1 zip archive is supported anyway. This is guarded
+        // against via form validation.
         return;
-      } else if (fileExtension === "wkw") {
-        needsConversion = false;
       }
     }
 
     const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
+    if (containsExtension("nml")) {
+      Modal.error({
+        content: messages["dataset.upload_zip_with_nml"],
+      });
+    }
+
+    let needsConversion = true;
+    if (
+      containsExtension("wkw") ||
+      containsExtension("zarray") ||
+      fileNames.includes("datasource-properties.json") ||
+      fileNames.includes("zarr.json")
+    ) {
+      needsConversion = false;
+    }
     Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
@@ -565,8 +563,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       Modal.info({
         content: (
           <div>
-            The selected dataset does not seem to be in the WKW format. Please convert the dataset
-            using{" "}
+            The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
+            dataset using{" "}
             <a
               target="_blank"
               href="https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber#webknossos-cuber-wkcuber"

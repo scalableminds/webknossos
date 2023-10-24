@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Searching the segments in the sidebar will highlight newly focussed segments properly now. [#7406](https://github.com/scalableminds/webknossos/pull/7406)
 
 ### Removed
 

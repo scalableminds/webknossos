@@ -6,11 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [23.11.0](https://github.com/scalableminds/webknossos/releases/tag/23.11.0) - 2023-10-24
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.2...23.11.0)
+
+- The `datastore/isosurface` configuration key was renamed to `datastore/adHocMesh.
+- In order to enable segment statistics for existing volume annotations (without fallback segmentation), a user with superuser rights can call a migration route during a downtime. This will transform all volume annotation layers that qualify (cross organization). This will take some time, results will be logged by WEBKNOSSOS to stdout. The trigger route is `curl -X PATCH "<domain>/api/annotations/addSegmentIndicesToAll?parallelBatchCount=16" -H 'X-Auth-Token: <token>'` with the `parallelBatchCount` parameter controlling the parallelity of the migration (e.g. number of cpu cores of the tracingstore server). This action is designed to be idempotent.
+
 ## [23.10.2](https://github.com/scalableminds/webknossos/releases/tag/23.10.2) - 2023-09-26
 [Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...23.10.2)
-
-### Postgres Evolutions:
-
 
 ## [23.10.1](https://github.com/scalableminds/webknossos/releases/tag/23.10.1) - 2023-09-22
 [Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...23.10.1)

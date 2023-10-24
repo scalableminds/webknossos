@@ -440,7 +440,7 @@ class SegmentsView extends React.Component<Props, State> {
         Modal.confirm({
           title: "Do you really want to select this group?",
           content: `You have ${selectedIdsForCaseDistinction.segments.length} selected segments. Do you really want to select this group?
-        This will deselect all selected trees.`,
+        This will deselect all selected segments.`,
           onOk: () => {
             this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
           },

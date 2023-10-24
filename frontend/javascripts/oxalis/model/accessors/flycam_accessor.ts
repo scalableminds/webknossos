@@ -2,13 +2,12 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import { Matrix4x4, V3 } from "libs/mjs";
+import { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getColorLayers,
   getDataLayers,
-  getDenseResolutionsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
@@ -388,8 +387,7 @@ function getValidZoomRangeForResolution(
   resolutionIdentifier: number,
 ): Vector2 | [null, null] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  const resolutions = getDenseResolutionsForLayerName(state.dataset, layerName);
-  // The above lists are densely defined for all resolutions starting from resolution 1,1,1.
+  // maximumZoomSteps is densely defined for all resolutions starting from resolution 1,1,1.
   // Therefore, we can use log2 as an index.
   const targetResolutionIndex = Math.log2(resolutionIdentifier);
 

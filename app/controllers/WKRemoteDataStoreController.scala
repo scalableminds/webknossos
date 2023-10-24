@@ -11,23 +11,23 @@ import com.scalableminds.webknossos.datastore.services.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
+import mail.{MailchimpClient, MailchimpTag}
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
-import models.binary._
-import models.binary.credential.CredentialDAO
+import models.dataset._
+import models.dataset.credential.CredentialDAO
 import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import net.liftweb.common.Full
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}

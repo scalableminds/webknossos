@@ -1,10 +1,13 @@
-@( conf: utils.WkConf, selectedTheme: String )
+@( conf: utils.WkConf, selectedTheme: String, openGraphTitle: Option[String], openGraphDescription: Option[String], openGraphImage: Option[String] )
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <title>@(conf.WebKnossos.tabTitle)</title>
+    @openGraphTitle.map { ogt =><meta property="og:title" content="@ogt" /> }
+    @openGraphDescription.map { ogd =><meta property="og:description" content="@ogd" /> }
+    @openGraphImage.map { ogi =><meta property="og:image" content="@ogi" /> }
     @if(conf.Features.isWkorgInstance){
     <meta
       name="description"

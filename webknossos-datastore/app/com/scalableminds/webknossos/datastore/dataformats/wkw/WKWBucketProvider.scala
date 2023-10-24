@@ -37,7 +37,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
 
   override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[WKWCubeHandle] = {
     val wkwFile = wkwFilePath(
       readInstruction.cube,

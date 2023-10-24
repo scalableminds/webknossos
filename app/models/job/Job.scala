@@ -8,18 +8,18 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.binary.{DatasetDAO, DataStoreDAO}
+import models.dataset.{DatasetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import oxalis.telemetry.SlackNotificationService
-import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.{ObjectId, WkConf}
 
@@ -54,7 +54,7 @@ case class Job(
       s <- started
     } yield (e - s).millis
 
-  def effectiveState: JobState = manualState.getOrElse(state)
+  private def effectiveState: JobState = manualState.getOrElse(state)
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
@@ -70,7 +70,7 @@ case class Job(
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case JobCommand.export_tiff =>
+        case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>

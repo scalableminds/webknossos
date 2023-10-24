@@ -4,12 +4,13 @@ import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.{Box, Full}
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
-import play.api.libs.iteratee.Iteratee
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
@@ -28,8 +29,9 @@ class NMLUnitTestSuite extends PlaySpec {
                              AnnotationLayer.defaultSkeletonLayerName,
                              Left(skeletonTracing),
                              None))
-    val nmlEnumerator =
-      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(annotationLayers,
+    val nmlFunctionStream =
+      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream("",
+                                                                            annotationLayers,
                                                                             None,
                                                                             None,
                                                                             None,
@@ -37,9 +39,12 @@ class NMLUnitTestSuite extends PlaySpec {
                                                                             "http://wk.test",
                                                                             "dummy_dataset",
                                                                             None,
-                                                                            None)
-    val arrayFuture = Iteratee.flatten(nmlEnumerator |>> Iteratee.consume[Array[Byte]]()).run
-    val array = Await.result(arrayFuture, Duration.Inf)
+                                                                            None,
+                                                                            volumeDataZipFormat =
+                                                                              VolumeDataZipFormat.wkw)
+    val os = new ByteArrayOutputStream()
+    Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
+    val array = os.toByteArray
     NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
   }
 

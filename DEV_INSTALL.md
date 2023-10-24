@@ -2,7 +2,7 @@
 
 ## Docker
 
-This is only recommended for local testing. Docker 19.03.0+ and Docker Compose 2.+ are required.
+This is only recommended for local testing (not for development). Docker 19.03.0+ and Docker Compose 2.+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -42,7 +42,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli
+brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -89,7 +89,7 @@ sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 # Clone the git repo to the current directory
-git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
+git clone git@github.com:scalableminds/webknossos.git
 ```
 
 If you already have a different Java version installed, set the default version to Java 11:

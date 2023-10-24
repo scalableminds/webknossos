@@ -36,7 +36,7 @@ class BinaryDataController @Inject()(
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
-    isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -45,9 +45,9 @@ class BinaryDataController @Inject()(
   override def allowRemoteOrigin: Boolean = true
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
-    (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
-  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
+  adHocMeshingServiceHolder.dataStoreAdHocMeshingConfig =
+    (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
+  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
 
   @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
@@ -251,14 +251,14 @@ class BinaryDataController @Inject()(
   }
 
   /**
-    * Handles isosurface requests.
+    * Handles ad-hoc mesh requests.
     */
   @ApiOperation(hidden = true, value = "")
-  def requestIsosurface(token: Option[String],
-                        organizationName: String,
-                        dataSetName: String,
-                        dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
-    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+  def requestAdHocMesh(token: Option[String],
+                       organizationName: String,
+                       dataSetName: String,
+                       dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
+    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
@@ -266,7 +266,7 @@ class BinaryDataController @Inject()(
                                                                                     dataSetName,
                                                                                     dataLayerName) ~> NOT_FOUND
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
-          isosurfaceRequest = IsosurfaceRequest(
+          adHocMeshRequest = AdHocMeshRequest(
             Some(dataSource),
             segmentationLayer,
             request.body.cuboid(dataLayer),
@@ -277,10 +277,10 @@ class BinaryDataController @Inject()(
             request.body.mappingType,
             request.body.findNeighbors
           )
-          // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+          (vertices, neighbors) <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

@@ -103,7 +103,7 @@ object Fox extends FoxImplicits {
     })
 
   def combined[T](l: Array[Fox[T]])(implicit ec: ExecutionContext,
-                                    ev: Array[Future[Box[T]]] => Traversable[Future[Box[T]]],
+                                    ev: Array[Future[Box[T]]] => Iterable[Future[Box[T]]],
                                     ct: ClassTag[T]): Fox[Array[T]] = {
     val x = Future.sequence(ev(l.map(_.futureBox)))
     val r: Future[Box[Array[T]]] = x.map { results =>
@@ -125,7 +125,7 @@ object Fox extends FoxImplicits {
 
   // Run serially, fail on the first failure
   def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
-    serialCombined(l.toIterator)(f)
+    serialCombined(l.iterator)(f)
 
   // Run serially, fail on the first failure
   def serialCombined[A, B](it: Iterator[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
@@ -143,7 +143,7 @@ object Fox extends FoxImplicits {
   }
 
   // run in sequence, drop everything that isn’t full
-  def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
+  def sequenceOfFulls[T](seq: Seq[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map { results =>
       results.foldRight(List.empty[T]) {
         case (_: Failure, l) => l

@@ -229,8 +229,8 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    showAINucleiSegmentationModal: false,
-    showAINeuronSegmentationModal: false,
+    aIJobModalState: "invisible",
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
@@ -246,6 +246,10 @@ const defaultState: OxalisState = {
     },
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    measurementToolInfo: {
+      lastMeasuredPosition: null,
+      isMeasuring: false,
+    },
   },
   localSegmentationData: {},
 };

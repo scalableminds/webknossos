@@ -43,6 +43,8 @@ case class Annotation(
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
+  def nameOpt: Option[String] = if (name.isEmpty) None else Some(name)
+
   lazy val id: String = _id.toString
 
   def tracingType: TracingType.Value = {
@@ -122,6 +124,14 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       rList <- run(q"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
       head: String <- rList.headOption.toFox
       parsed <- ObjectId.fromString(head)
+    } yield parsed
+
+  def findAllVolumeLayers: Fox[List[AnnotationLayer]] =
+    for {
+      rows <- run(
+        q"select _annotation, tracingId, typ, name from webknossos.annotation_layers where typ = 'Volume'"
+          .as[AnnotationLayersRow])
+      parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed
 
   def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =

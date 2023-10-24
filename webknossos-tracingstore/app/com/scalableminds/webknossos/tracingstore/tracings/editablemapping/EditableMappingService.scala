@@ -17,9 +17,9 @@ import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
+  AdHocMeshRequest,
+  AdHocMeshService,
+  AdHocMeshingServiceHolder
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -39,7 +39,7 @@ import java.util
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.jdk.CollectionConverters.asScalaSetConverter
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
@@ -72,7 +72,7 @@ object EdgeWithPositions {
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient
 )(implicit ec: ExecutionContext)
@@ -87,8 +87,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
-  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
-  private val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
+  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
+  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -504,14 +504,14 @@ class EditableMappingService @Inject()(
       editableMappingService = this
     )
 
-  def createIsosurface(tracing: VolumeTracing,
-                       tracingId: String,
-                       request: WebKnossosIsosurfaceRequest,
-                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
+  def createAdHocMesh(tracing: VolumeTracing,
+                      tracingId: String,
+                      request: WebknossosAdHocMeshRequest,
+                      userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox
       segmentationLayer = editableMappingLayer(mappingName, tracing, tracingId, userToken)
-      isosurfaceRequest = IsosurfaceRequest(
+      adHocMeshRequest = AdHocMeshRequest(
         dataSource = None,
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
@@ -522,7 +522,7 @@ class EditableMappingService @Inject()(
         mappingType = None,
         findNeighbors = request.findNeighbors
       )
-      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =

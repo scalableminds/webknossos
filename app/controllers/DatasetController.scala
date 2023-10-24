@@ -8,8 +8,8 @@ import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass, GenericDataSource}
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
-import models.binary._
-import models.binary.explore.{
+import models.dataset._
+import models.dataset.explore.{
   ExploreAndAddRemoteDatasetParameters,
   ExploreRemoteDatasetParameters,
   ExploreRemoteLayerService
@@ -18,8 +18,6 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -30,7 +28,9 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import mail.{MailchimpClient, MailchimpTag}
 import models.folder.FolderService
+import security.{URLSharing, WkEnv}
 
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
@@ -78,12 +78,12 @@ class DatasetController @Inject()(userService: UserService,
     extends Controller {
 
   private val datasetPublicReads =
-    ((__ \ 'description).readNullable[String] and
-      (__ \ 'displayName).readNullable[String] and
-      (__ \ 'sortingKey).readNullable[Instant] and
-      (__ \ 'isPublic).read[Boolean] and
-      (__ \ 'tags).read[List[String]] and
-      (__ \ 'folderId).readNullable[ObjectId]).tupled
+    ((__ \ "description").readNullable[String] and
+      (__ \ "displayName").readNullable[String] and
+      (__ \ "sortingKey").readNullable[Instant] and
+      (__ \ "isPublic").read[Boolean] and
+      (__ \ "tags").read[List[String]] and
+      (__ \ "folderId").readNullable[ObjectId]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -98,10 +98,13 @@ class DatasetController @Inject()(userService: UserService,
                 dataLayerName: String,
                 w: Option[Int],
                 h: Option[Int],
-                mappingName: Option[String]): Action[AnyContent] =
+                mappingName: Option[String],
+                sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND // To check Access Rights
+        _ <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
+          dataSetName) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getThumbnailWithCache(organizationName, dataSetName, dataLayerName, w, h, mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")

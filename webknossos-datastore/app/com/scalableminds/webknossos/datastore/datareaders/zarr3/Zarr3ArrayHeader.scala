@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.BoxImplicits
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -15,11 +14,11 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
-import scala.concurrent.ExecutionContext
 
 case class Zarr3ArrayHeader(
     zarr_format: Int, // must be 3
@@ -33,7 +32,8 @@ case class Zarr3ArrayHeader(
     codecs: Seq[CodecConfiguration],
     storage_transformers: Option[Seq[StorageTransformerSpecification]],
     dimension_names: Option[Array[String]]
-) extends DatasetHeader {
+) extends DatasetHeader
+    with BoxImplicits {
 
   override def datasetShape: Array[Int] = shape
 
@@ -61,11 +61,11 @@ case class Zarr3ArrayHeader(
       case _                             => false
     }
 
-  def assertValid(implicit ec: ExecutionContext): Fox[Unit] =
+  def assertValid: Box[Unit] =
     for {
-      _ <- bool2Fox(zarr_format == 3) ?~> s"Expected zarr_format 3, got $zarr_format"
-      _ <- bool2Fox(node_type == "array") ?~> s"Expected node_type 'array', got $node_type"
-      _ <- Fox.box2Fox(tryo(resolvedDataType)) ?~> "Data type is not supported"
+      _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
+      _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
+      _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
     } yield ()
 
   def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
@@ -83,12 +83,15 @@ case class Zarr3ArrayHeader(
     shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
   }
 
-  // Note: this currently works only for F and C as transformation inputs
+  // Note: this currently works if only a single transpose codec is present,
+  // and if it is either "F", "C" or an array value equivalent to "F" or "C"
   // compare https://github.com/scalableminds/webknossos/issues/7116
   private def getOrder: ArrayOrder.Value =
-    CodecTreeExplorer.find {
-      case TransposeCodecConfiguration(order) => order == "F"
-      case _                                  => false
+    CodecTreeExplorer.findOne {
+      case TransposeCodecConfiguration(StringTransposeSetting(order)) => order == "F"
+      case TransposeCodecConfiguration(IntArrayTransposeSetting(order)) =>
+        order.sameElements(TransposeSetting.fOrderFromRank(rank).order)
+      case _ => false
     }(codecs).map(_ => ArrayOrder.F).getOrElse(ArrayOrder.C)
 
   private def getDimensionSeparator =
@@ -157,7 +160,7 @@ object StorageTransformerSpecification {
 
 object Zarr3ArrayHeader extends JsonImplicits {
 
-  def ZARR_JSON = "zarr.json"
+  def FILENAME_ZARR_JSON = "zarr.json"
   implicit object Zarr3ArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
     override def reads(json: JsValue): JsResult[Zarr3ArrayHeader] =
       for {
@@ -196,19 +199,19 @@ object Zarr3ArrayHeader extends JsonImplicits {
 
     private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
       val rawCodecSpecs: Seq[JsValue] = value match {
-        case JsArray(arr) => arr
+        case JsArray(arr) => arr.toSeq
         case _            => Seq()
       }
       val configurationKey = "configuration"
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
           spec: CodecConfiguration <- c("name") match {
-            case JsString(EndianCodecConfiguration.name)       => c(configurationKey).validate[EndianCodecConfiguration]
-            case JsString(EndianCodecConfiguration.legacyName) => c(configurationKey).validate[EndianCodecConfiguration]
-            case JsString(TransposeCodecConfiguration.name)    => c(configurationKey).validate[TransposeCodecConfiguration]
-            case JsString(GzipCodecConfiguration.name)         => c(configurationKey).validate[GzipCodecConfiguration]
-            case JsString(BloscCodecConfiguration.name)        => c(configurationKey).validate[BloscCodecConfiguration]
-            case JsString(ZstdCodecConfiguration.name)         => c(configurationKey).validate[ZstdCodecConfiguration]
+            case JsString(BytesCodecConfiguration.name)       => c(configurationKey).validate[BytesCodecConfiguration]
+            case JsString(BytesCodecConfiguration.legacyName) => c(configurationKey).validate[BytesCodecConfiguration]
+            case JsString(TransposeCodecConfiguration.name)   => c(configurationKey).validate[TransposeCodecConfiguration]
+            case JsString(GzipCodecConfiguration.name)        => c(configurationKey).validate[GzipCodecConfiguration]
+            case JsString(BloscCodecConfiguration.name)       => c(configurationKey).validate[BloscCodecConfiguration]
+            case JsString(ZstdCodecConfiguration.name)        => c(configurationKey).validate[ZstdCodecConfiguration]
             case JsString(Crc32CCodecConfiguration.name) =>
               JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))
@@ -235,7 +238,10 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(Map("" -> ""))),
-        "codecs" -> zarrArrayHeader.codecs,
+        "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
+          val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
+          Json.obj("name" -> codec.name) ++ configurationJson
+        },
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )

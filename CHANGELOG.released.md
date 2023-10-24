@@ -12,7 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Highlights
 - Added a new tool that allows either measuring the distance of a path or a non-self-crossing area. [#7258](https://github.com/scalableminds/webknossos/pull/7258)
-- Added a feature to create an engaging animation of a dataset and its meshes processed in Blender with a WK worker job. [#7348](https://github.com/scalableminds/webknossos/pull/7348)
+- For setups with webknossos-worker: Added a feature to create an engaging animation video of a dataset and its meshes processed in Blender. [#7348](https://github.com/scalableminds/webknossos/pull/7348)
 
 ### Added
 - Added social media link previews for links to datasets and annotations (only if they are public or if the links contain sharing tokens). [#7331](https://github.com/scalableminds/webknossos/pull/7331)

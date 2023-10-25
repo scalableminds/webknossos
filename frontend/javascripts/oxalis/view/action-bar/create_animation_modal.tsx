@@ -74,6 +74,16 @@ function selectMagForTextureCreation(
   return [bestMag, bestDifference];
 }
 
+export function CreateAnimationModalWrapper(props: Props) {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+
+  // early stop if no color layer exists
+  const colorLayers = getColorLayers(dataset);
+  if (colorLayers.length === 0) return null;
+
+  return <CreateAnimationModal {...props} />;
+}
+
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
@@ -81,6 +91,7 @@ function CreateAnimationModal(props: Props) {
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const colorLayers = getColorLayers(dataset);
+
   const colorLayer = colorLayers[0];
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
   const selectedColorLayer = getLayerByName(dataset, selectedColorLayerName);

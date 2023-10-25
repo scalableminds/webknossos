@@ -579,21 +579,6 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-// Currently, only used for valid task range
-function _keyResolutionsByMax(dataset: APIDataset, layerName: string): Record<number, Vector3> {
-  const resolutions = getDenseResolutionsForLayerName(dataset, layerName);
-  return _.keyBy(resolutions, (res) => Math.max(...res));
-}
-
-const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
-export function getResolutionByMax(
-  dataset: APIDataset,
-  layerName: string,
-  maxDim: number,
-): Vector3 {
-  const keyedResolutionsByMax = keyResolutionsByMax(dataset, layerName);
-  return keyedResolutionsByMax[maxDim];
-}
 export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,

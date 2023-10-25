@@ -456,6 +456,7 @@ class VolumeTracingController @Inject()(
             volumeSegmentStatisticsService.getSegmentVolume(tracingId,
                                                             segmentId,
                                                             request.body.mag,
+                                                            request.body.additionalCoordinates,
                                                             urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentVolumes))
@@ -470,6 +471,7 @@ class VolumeTracingController @Inject()(
             volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
                                                                  segmentId,
                                                                  request.body.mag,
+                                                                 request.body.additionalCoordinates,
                                                                  urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
@@ -487,7 +489,7 @@ class VolumeTracingController @Inject()(
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
           cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed)
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed, None, None) // TODO: Support additional coordinates on this route? How to do GET parameters?
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets

@@ -5,15 +5,22 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebKnossosDataRequest
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long])
+case class SegmentStatisticsParameters(mag: Vec3Int,
+                                       segmentIds: List[Long],
+                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
@@ -24,24 +31,38 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     extends ProtoGeometryImplicits {
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Long] =
+  def getSegmentVolume(tracingId: String,
+                       segmentId: Long,
+                       mag: Vec3Int,
+                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                       userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId,
+                                                               segmentId,
+                                                               mag,
+                                                               additionalCoordinates,
+                                                               AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
       volumeData <- getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions, userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
 
   // Returns the bounding box in voxels in the target mag
-  def getSegmentBoundingBox(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(tracingId: String,
+                            segmentId: Long,
+                            mag: Vec3Int,
+                            additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                            userToken: Option[String])(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId,
+                                                               segmentId,
+                                                               mag,
+                                                               additionalCoordinates,
+                                                               AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
       relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,

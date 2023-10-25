@@ -11,26 +11,14 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait SegmentIndexKeyHelper {
-
-  protected def additionalCoordinatesKeyPart(additionalCoordinates: Seq[AdditionalCoordinate],
-                                             additionalAxes: Seq[AdditionalAxis]): String = {
-    // TODO: Remove duplicate
-    val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
-    val sortedValues = additionalAxes.sortBy(_.index).map(a => valueMap(a.name))
-    if (sortedValues.nonEmpty) {
-      f"/${sortedValues.map(_.toString).mkString(",")}"
-    } else {
-      ""
-    }
-  }
+trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
   protected def segmentIndexKey(tracingId: String,
                                 segmentId: Long,
                                 mag: Vec3Int,
                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                 axes: Option[Seq[AdditionalAxis]]) =
-    s"$tracingId/$segmentId/${mag.toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()),
-                                                                                axes.getOrElse(Seq()))}"
+    s"$tracingId/$segmentId/${mag
+      .toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
 }
 
 // To introduce buffering for updating the segment-to-bucket index for a volume tracing

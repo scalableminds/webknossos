@@ -30,9 +30,7 @@ object AdditionalAxis {
     )
 
   def fromProtoAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
-    val axes = additionalAxisProtos.map(
-      p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
-    )
+    val axes = fromProto(additionalAxisProtos)
     if (axes.nonEmpty) {
       Some(axes)
     } else {

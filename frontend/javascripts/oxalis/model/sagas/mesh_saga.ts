@@ -137,11 +137,19 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 }
 
 function removeMapForSegment(layerName: string, segmentId: number): void {
-  if (adhocMeshesMapByLayer[layerName] == null) {
+  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+  let additionalCoordinates = "";
+  if (additionalCoordinatesObject != null) {
+    additionalCoordinates = additionalCoordinatesObject
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
+  }
+  
+  if (adhocMeshesMapByLayer[additionalCoordinates][layerName] == null) {
     return;
   }
 
-  adhocMeshesMapByLayer[layerName].delete(segmentId);
+  adhocMeshesMapByLayer[additionalCoordinates][layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -504,6 +512,7 @@ function* markEditedCellAsDirty(): Saga<void> {
 
 function* refreshMeshes(): Saga<void> {
   yield* put(saveNowAction());
+  console.log("refresh")
   // We reload all cells that got modified till the start of reloading.
   // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
@@ -537,6 +546,7 @@ function* refreshMeshes(): Saga<void> {
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
+  console.log("refresh mesh")
   const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
   let additionalCoordinates = "";
   if (additionalCoordinatesObject != null) {
@@ -563,6 +573,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       ),
     );
   } else {
+    if(adhocMeshesMapByLayer[additionalCoordinates] == null) return
     const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
     if (threeDMap == null) return;
     yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName);
@@ -598,13 +609,22 @@ function* _refreshMeshWithMap(
 
   // Meshing for N-D segmentations is not yet supported.
   // See https://github.com/scalableminds/webknossos/issues/7229 //TODO
+
+  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+  let additionalCoordinates = "";
+  if (additionalCoordinatesObject != null) {
+    additionalCoordinates = additionalCoordinatesObject
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
+  }
+
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.
     yield* call(
       loadAdHocMesh,
       position,
-      seedAdditionalCoordinates,
+      additionalCoordinatesObject,
       segmentId,
       shouldBeRemoved,
       layerName,

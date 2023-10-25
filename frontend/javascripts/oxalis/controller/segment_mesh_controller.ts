@@ -149,13 +149,26 @@ export default class SegmentMeshController {
   }
 
   removeMeshById(segmentationId: number, layerName: string): void {
-    if (this.meshesGroupsPerSegmentationId[layerName] == null) {
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
+    }
+
+    // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
+    // but if they are removed they should be removed for all timestamps
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
       return;
     }
-    if (this.meshesGroupsPerSegmentationId[layerName][segmentationId] == null) {
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
       return;
     }
-    _.forEach(this.meshesGroupsPerSegmentationId[layerName][segmentationId], (meshGroup, lod) => {
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null) {
+      return;
+    }
+    _.forEach(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId], (meshGroup, lod) => {
       const lodNumber = parseInt(lod);
       if (lodNumber !== NO_LOD_MESH_INDEX) {
         this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
@@ -163,7 +176,7 @@ export default class SegmentMeshController {
         this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
       }
     });
-    delete this.meshesGroupsPerSegmentationId[layerName][segmentationId];
+    delete this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId];
   }
 
   getMeshGeometryInBestLOD(segmentId: number, layerName: string): THREE.Group {
@@ -201,8 +214,15 @@ export default class SegmentMeshController {
   }
 
   setMeshColor(id: number, layerName: string): void {
+    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b)) as string;
+    }
     const color = this.getColorObjectForSegment(id);
-    _.forEach(this.meshesGroupsPerSegmentationId[layerName][id], (meshGroup) => {
+    _.forEach(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id], (meshGroup) => {
       if (meshGroup) {
         for (const child of meshGroup.children) {
           // @ts-ignore

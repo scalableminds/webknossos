@@ -107,11 +107,13 @@ class VolumeTracingService @Inject()(
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
-      segmentIndexBuffer <- Fox.successful(new VolumeSegmentIndexBuffer(tracingId,
-                                                                        volumeSegmentIndexClient,
-                                                                        updateGroup.version,
-                                                                        None)) // TODO: How to get additional axes here?
-      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      segmentIndexBuffer <- Fox.successful(
+        new VolumeSegmentIndexBuffer(tracingId,
+                                     volumeSegmentIndexClient,
+                                     updateGroup.version,
+                                     AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes)))
+      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(Fox.successful(tracing)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
             action match {

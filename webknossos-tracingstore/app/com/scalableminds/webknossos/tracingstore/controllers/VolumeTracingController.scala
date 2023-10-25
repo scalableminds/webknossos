@@ -9,8 +9,12 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  WebKnossosDataRequest,
+  WebknossosAdHocMeshRequest
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -39,7 +43,7 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
@@ -478,18 +482,22 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentIndex(token: Option[String],
-                      tracingId: String,
-                      segmentId: Long,
-                      mag: String,
-                      cubeSize: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def getSegmentIndex(token: Option[String], tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
+    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          magParsed <- Vec3Int.fromMagLiteral(request.body.mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
+          cubeSizeParsed <- Vec3Int
+            .fromUriLiteral(request.body.cubeSize)
+            .toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed, None, None) // TODO: Support additional coordinates on this route? How to do GET parameters?
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              tracingId,
+              segmentId,
+              magParsed,
+              request.body.additionalCoordinates,
+              AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
@@ -500,4 +508,14 @@ class VolumeTracingController @Inject()(
       }
     }
 
+}
+
+case class GetSegmentIndexParameters(
+    mag: String,
+    cubeSize: String,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+)
+
+object GetSegmentIndexParameters {
+  implicit val jsonFormat: OFormat[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
 }

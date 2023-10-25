@@ -71,6 +71,25 @@ case class Annotation(
 
 }
 
+case class AnnotationCompactInfo(id: ObjectId,
+                                 typ: AnnotationType.Value,
+                                 name: String,
+                                 description: String,
+                                 ownerId: ObjectId,
+                                 ownerFirstName: String,
+                                 ownerLastName: String,
+                                 othersMayEdit: Boolean,
+                                 teamId: ObjectId,
+                                 teamName: String,
+                                 teamOrganizationId: ObjectId,
+                                 modified: Instant,
+                                 statistics: JsObject,
+                                 dataSetName: String)
+
+object AnnotationCompactInfo {
+  implicit val jsonFormat: Format[AnnotationCompactInfo] = Json.format[AnnotationCompactInfo]
+}
+
 class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(SQLClient) {
 
@@ -193,14 +212,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   override protected def anonymousReadAccessQ(sharingToken: Option[String]) =
     q"visibility = ${AnnotationVisibility.Public}"
 
-  private def listAccessQ(requestingUserId: ObjectId): SqlToken =
+  private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
     q"""
         (
           _user = $requestingUserId
           or (
-            (visibility = ${AnnotationVisibility.Public} or visibility = ${AnnotationVisibility.Internal})
+            (${prefix}visibility = ${AnnotationVisibility.Public} or ${prefix}visibility = ${AnnotationVisibility.Internal})
             and (
-              _id in (
+              ${prefix}_id in (
                 select distinct a._annotation
                 from webknossos.annotation_sharedTeams a
                 join webknossos.user_team_roles t
@@ -208,7 +227,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                 where t._user = $requestingUserId
               )
               or
-              _id in (
+              ${prefix}_id in (
                 select _annotation from webknossos.annotation_contributors
                 where _user = $requestingUserId
               )
@@ -216,6 +235,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           )
         )
        """
+
+  private def baseListAccessQ(implicit ctx: DBAccessContext): Fox[SqlToken] =
+    accessQueryFromAccessQWithPrefix(listAccessQ, q"")(ctx)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(
@@ -272,7 +294,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
     val stateQuery = getStateQuery(isFinished)
     for {
-      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      accessQuery <- baseListAccessQ
       r <- run(q"""select $columns from $existingCollectionName
                    where typ = ${AnnotationType.Explorational} and $stateQuery and $accessQuery
                    order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
@@ -280,10 +302,77 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
+  def findAllListableExplorationalsCompact(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
+      implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
+    for {
+      accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      stateQuery = getStateQuery(isFinished)
+
+      query = q"""
+          SELECT
+               a._id,
+               a.name,
+               a.description,
+               a._user,
+               u.firstname,
+               u.lastname,
+               a.othersmayedit,
+               a._team,
+               t.name,
+               t._organization,
+               a.modified,
+               a.statistics,
+               d.name
+        FROM webknossos.annotations as a
+        LEFT JOIN webknossos.users_ u
+               ON u._id = a._user
+        LEFT JOIN webknossos.teams t
+               ON t._id = a._team
+        LEFT JOIN webknossos.datasets d
+               ON d._id = a._dataset
+        WHERE $stateQuery AND $accessQuery
+        ORDER BY a._id DESC LIMIT $limit OFFSET ${pageNumber * limit}
+         """
+      rows <- run(
+        query.as[
+          (ObjectId,
+           String,
+           String,
+           ObjectId,
+           String,
+           String,
+           Boolean,
+           ObjectId,
+           String,
+           ObjectId,
+           Instant,
+           String,
+           String)])
+    } yield
+      rows.toList.map(
+        r =>
+          AnnotationCompactInfo(
+            id = r._1,
+            typ = AnnotationType.Explorational,
+            name = r._2,
+            description = r._3,
+            ownerId = r._4,
+            ownerFirstName = r._5,
+            ownerLastName = r._6,
+            othersMayEdit = r._7,
+            teamId = r._8,
+            teamName = r._9,
+            teamOrganizationId = r._10,
+            modified = r._11,
+            statistics = Json.parse(r._12).validate[JsObject].getOrElse(Json.obj()),
+            dataSetName = r._13
+        )
+      )
+
   def countAllListableExplorationals(isFinished: Option[Boolean])(implicit ctx: DBAccessContext): Fox[Long] = {
     val stateQuery = getStateQuery(isFinished)
     for {
-      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      accessQuery <- baseListAccessQ
       rows <- run(q"""select count(_id) from $existingCollectionName
                    where typ = ${AnnotationType.Explorational} and ($stateQuery) and ($accessQuery)""".as[Long])
       count <- rows.headOption.toFox

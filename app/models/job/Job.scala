@@ -360,6 +360,12 @@ class JobService @Inject()(wkConf: WkConf,
               "Mesh Generation",
               "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
             ))
+        case JobCommand.render_animation =>
+          Some(
+            genericEmailTemplate(
+              "Dataset Animation",
+              "Your animation of a WEBKNOSSOS dataset has been sucessfully created and is ready for download."
+            ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"
       // some jobs, e.g. "find largest segment ideas", do not require an email notification

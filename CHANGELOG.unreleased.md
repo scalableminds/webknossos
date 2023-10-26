@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - WEBKNOSSOS can now also explore datasets on the local file system if enabled in the new config key `datastore.localFolderWhitelist`. [#7389](https://github.com/scalableminds/webknossos/pull/7389)
 - It is now possible to download volume annotations as zarr- rather than wkw-based zip. This case also supports annotations on timerseries (ND) datasets. [#7288](https://github.com/scalableminds/webknossos/pull/7288)
 - Added a feature to create an engaging animation of a dataset and its meshes processed in Blender with a WK worker job. [#7348](https://github.com/scalableminds/webknossos/pull/7348)
+- Added support for reading uint24 rgb layers in datasets with zarr2/zarr3/n5/neuroglancerPrecomputed format, as used for voxelytics predictions. [#7413](https://github.com/scalableminds/webknossos/pull/7413)
 
 ### Changed
 - Updated backend code to Scala 2.13, with upgraded Dependencies for optimized performance. [#7327](https://github.com/scalableminds/webknossos/pull/7327)

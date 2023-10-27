@@ -52,6 +52,8 @@ import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
+import constants from "oxalis/constants";
+import { MaintenanceBanner } from "maintenance_banner";
 
 const { Header } = Layout;
 
@@ -536,7 +538,7 @@ function LoggedInAvatar({
     <Menu
       mode="horizontal"
       style={{
-        lineHeight: "48px",
+        lineHeight: constants.NAVBAR_HEIGHT,
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -808,12 +810,13 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <MaintenanceBanner />
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          lineHeight: "48px",
+          lineHeight: constants.NAVBAR_HEIGHT,
         }}
         theme="dark"
         subMenuCloseDelay={subMenuCloseDelay}

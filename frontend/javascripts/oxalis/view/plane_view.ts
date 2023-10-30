@@ -15,6 +15,7 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const createDirLight = (
   position: Vector3,
@@ -248,6 +249,11 @@ class PlaneView {
     this.resize();
     this.animate();
     window.addEventListener("resize", this.resizeThrottled);
+    listenToStoreProperty(
+      (storeState) => storeState.uiInformation.navbarHeight,
+      () => this.resizeThrottled(),
+      true,
+    )
   }
 }
 

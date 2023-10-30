@@ -69,6 +69,7 @@ type StateProps = {
   othersMayEdit: boolean;
   allowUpdate: boolean;
   blockedByUser: APIUserCompact | null | undefined;
+  navbarHeight: number
 };
 type Props = OwnProps & StateProps;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
@@ -425,7 +426,7 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
+function NotificationIcon({ activeUser,navbarHeight }: { activeUser: APIUser, navbarHeight: number }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
@@ -446,6 +447,7 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
         position: "relative",
         display: "flex",
         marginRight: 12,
+        paddingTop:  navbarHeight> constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT: 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
@@ -479,7 +481,8 @@ export const switchTo = async (org: APIOrganization) => {
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-}: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void } & SubMenuProps) {
+  navbarHeight
+}: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void, navbarHeight: number } & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
@@ -538,7 +541,8 @@ function LoggedInAvatar({
     <Menu
       mode="horizontal"
       style={{
-        lineHeight: constants.NAVBAR_HEIGHT,
+        paddingTop:  navbarHeight> constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT: 0,
+        lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -704,6 +708,7 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  navbarHeight
 }: Props) {
   const history = useHistory();
 
@@ -775,12 +780,13 @@ function Navbar({
         />,
       );
     }
-    trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);
+    trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} navbarHeight={navbarHeight}/>);
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
+        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -816,7 +822,8 @@ function Navbar({
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          lineHeight: constants.NAVBAR_HEIGHT,
+          paddingTop:  navbarHeight> constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT: 0,
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
         subMenuCloseDelay={subMenuCloseDelay}
@@ -838,6 +845,7 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
+          paddingTop:  navbarHeight> constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT: 0,
         }}
       />
 
@@ -861,6 +869,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const connector = connect(mapStateToProps);

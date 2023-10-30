@@ -6,6 +6,7 @@ import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
 import { useInterval } from "libs/react_helpers";
 import constants from "oxalis/constants";
+import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
@@ -20,7 +21,7 @@ const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
   top: 0,
   left: 0,
-  height: 38,
+  height: constants.MAINTENANCE_BANNER_HEIGHT,
 };
 
 function UpcomingMaintenanceBanner({ maintenanceInfo }: {maintenanceInfo:MaintenanceInfo}) {
@@ -70,18 +71,22 @@ export function MaintenanceBanner() {
     MaintenanceInfo[]
   >([]);
 
-  function setNavbarHeight() {
-    const newNavbarHeight = 48 + 38;
-    constants.NAVBAR_HEIGHT = newNavbarHeight; // TODO
+  function setNavbarHeight(newNavbarHeight: number) {
+    Store.dispatch(setNavbarHeightAction(newNavbarHeight))
     document.documentElement.style.setProperty("--navbar-height", `${newNavbarHeight}px`);
   }
 
   async function pollMaintenances() {
-    const scheduledMaintenances = await listCurrentAndUpcomingMaintenances();
-    setCurrentAndUpcomingMaintenances(scheduledMaintenances);
+    const newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
+    setCurrentAndUpcomingMaintenances(newScheduledMaintenances);
+    
+    if ((currentAndUpcomingMaintenances.length !== newScheduledMaintenances.length) && newScheduledMaintenances.length === 0) {
+      // Reset Navbar Height if maintenance is over
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+    }
 
-    if (scheduledMaintenances.length > 0) {
-      setNavbarHeight();
+    if (newScheduledMaintenances.length > 0) {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.MAINTENANCE_BANNER_HEIGHT);
     }
   }
 

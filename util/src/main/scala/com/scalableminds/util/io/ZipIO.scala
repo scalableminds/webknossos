@@ -109,11 +109,12 @@ object ZipIO extends LazyLogging {
     try {
       val buffer = new Array[Byte](1024)
       var len = 0
-      do {
+      while ({
         len = source.read(buffer)
         if (len > 0)
           gout.write(buffer, 0, len)
-      } while (len > 0)
+        len > 0
+      }) ()
     } finally {
       source.close()
       gout.close()
@@ -126,11 +127,12 @@ object ZipIO extends LazyLogging {
     try {
       val buffer = new Array[Byte](1024)
       var len = 0
-      do {
+      while ({
         len = is.read(buffer)
         if (len > 0)
           os.write(buffer, 0, len)
-      } while (len > 0)
+        len > 0
+      }) ()
       os.toByteArray
     } finally {
       is.close()

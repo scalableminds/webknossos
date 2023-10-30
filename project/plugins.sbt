@@ -11,7 +11,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.2")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.2")
 
 // scala linter
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.1")
+// addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.1")
 
 // check dependencies against published vulnerabilities with sbt dependencyCheck
 addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "5.1.0")

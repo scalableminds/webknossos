@@ -9,6 +9,7 @@ import CustomLOD from "oxalis/controller/custom_lod";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export default class SegmentMeshController {
   // meshesLODRootGroup holds lights and one group per segmentation id.
@@ -106,6 +107,7 @@ export default class SegmentMeshController {
 
     console.log("segemnt mesh controller");
     console.log(additionalCoordinates);
+    console.log(segmentationId)
     if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
       this.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
     }
@@ -211,6 +213,29 @@ export default class SegmentMeshController {
         meshGroup.visible = visibility;
       },
     );
+  }
+
+  updateMeshVisibility(newAadditionalCoordinatesObject: AdditionalCoordinate[]){
+    if(newAadditionalCoordinatesObject == null || newAadditionalCoordinatesObject.length === 0 ) return
+    const newAdditionalCoordinates = newAadditionalCoordinatesObject
+    ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+    .reduce((a: string, b: string) => a.concat(b)) as string;
+
+    debugger
+
+    Object.keys(this.meshesGroupsPerSegmentationId).forEach((additionalCoordinates) => {
+      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
+      Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates]).forEach((layerName) => {
+          Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName]).forEach(meshGroup => {
+            _.forEach(
+              this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][parseInt(meshGroup)],
+              (meshGroup) => {
+                meshGroup.visible = shouldBeVisible;
+              },
+            );
+          });
+        });
+      });
   }
 
   setMeshColor(id: number, layerName: string): void {

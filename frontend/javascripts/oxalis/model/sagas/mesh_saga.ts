@@ -74,6 +74,7 @@ import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetraci
 import { ResolutionInfo } from "../helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
+import { FlycamAction } from "../actions/flycam_actions";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -1146,7 +1147,15 @@ function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName } = action;
   const { segmentMeshController } = yield* call(getSceneController);
+  //
   segmentMeshController.setMeshVisibility(id, visibility, layerName);
+}
+
+function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
+  const { values } = action;
+  const { segmentMeshController } = yield* call(getSceneController);
+  //
+  segmentMeshController.updateMeshVisibility(values);
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
@@ -1179,4 +1188,5 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
+  yield* takeEvery("SET_ADDITIONAL_COORDINATES", handleAdditionalCoordinateUpdate);
 }

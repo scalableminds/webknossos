@@ -38,6 +38,7 @@ import {
   finishedLoadingMeshAction,
   startedLoadingMeshAction,
   TriggerMeshesDownloadAction,
+  updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -1155,7 +1156,31 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
   const { values } = action;
   const { segmentMeshController } = yield* call(getSceneController);
   //
-  segmentMeshController.updateMeshVisibility(values);
+  const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+
+  if(values == null || values.length === 0 ) return
+    const newAdditionalCoordinates = values
+    ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
+    .reduce((a: string, b: string) => a.concat(b)) as string;
+
+    let updateVisibilityActions: any = [];
+    Object.keys(meshRecords).forEach((additionalCoordinates) => {
+      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
+      Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
+          Object.keys(meshRecords[additionalCoordinates][layerName]).forEach(meshGroup => {
+            const meshId = parseInt(meshGroup);
+            _.forEach(
+              meshRecords[additionalCoordinates][layerName][meshId],
+              _ => {
+                updateVisibilityActions.push(updateMeshVisibilityAction(layerName, meshId, shouldBeVisible))
+                segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName);
+              },
+            );
+          });
+        });
+      });
+      console.log(updateVisibilityActions)
+      yield* all(updateVisibilityActions.map(e=>put(e)));
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {

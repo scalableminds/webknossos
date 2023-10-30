@@ -144,7 +144,6 @@ export default class SegmentMeshController {
       mesh.translateY(offset[1]);
       mesh.translateZ(offset[2]);
     }
-    debugger;
     this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod].add(
       mesh,
     );
@@ -207,35 +206,14 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
+    if(this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) return
+
     _.forEach(
       this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
       (meshGroup) => {
         meshGroup.visible = visibility;
       },
     );
-  }
-
-  updateMeshVisibility(newAadditionalCoordinatesObject: AdditionalCoordinate[]){
-    if(newAadditionalCoordinatesObject == null || newAadditionalCoordinatesObject.length === 0 ) return
-    const newAdditionalCoordinates = newAadditionalCoordinatesObject
-    ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-    .reduce((a: string, b: string) => a.concat(b)) as string;
-
-    debugger
-
-    Object.keys(this.meshesGroupsPerSegmentationId).forEach((additionalCoordinates) => {
-      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
-      Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates]).forEach((layerName) => {
-          Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName]).forEach(meshGroup => {
-            _.forEach(
-              this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][parseInt(meshGroup)],
-              (meshGroup) => {
-                meshGroup.visible = shouldBeVisible;
-              },
-            );
-          });
-        });
-      });
   }
 
   setMeshColor(id: number, layerName: string): void {

@@ -107,7 +107,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
     } yield ()
 
-  private def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
+  def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
     layers.map { layer: DataLayer =>
       var nameCandidate = layer.name
@@ -288,7 +288,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
           new N5ArrayExplorer,
           new N5MultiscalesExplorer,
           new PrecomputedExplorer,
-          new Zarr3ArrayExplorer
+          new Zarr3ArrayExplorer,
+          new NeuroglancerUriExplorer(dataVaultService, this, ec)
         )
       )
     } yield layersWithVoxelSizes

@@ -249,7 +249,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         segmentId,
         meshInfo,
       );
-      console.log(updatedKey);
       return updatedKey;
     }
 

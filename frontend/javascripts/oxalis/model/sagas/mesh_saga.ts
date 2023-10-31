@@ -1149,7 +1149,7 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   const { id, visibility, layerName } = action;
   const { segmentMeshController } = yield* call(getSceneController);
   //
-  segmentMeshController.setMeshVisibility(id, visibility, layerName);
+  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
@@ -1175,7 +1175,7 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
           updateVisibilityActions.push(
             updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
           );
-          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName);
+          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [addCoordObject]);
         });
       });
     });

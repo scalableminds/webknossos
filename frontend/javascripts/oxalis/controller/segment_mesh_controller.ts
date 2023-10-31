@@ -205,35 +205,20 @@ export default class SegmentMeshController {
     return this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
   }
 
-  setMeshVisibility(id: number, visibility: boolean, layerName: string, additionalCoordinates?: AdditionalCoordinate[] | undefined): void {
-    //set all visibilities for not current add coor to false and the one 
-    debugger;
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
+  setMeshVisibility(id: number, visibility: boolean, layerName: string, additionalCoordinates?: AdditionalCoordinate[] | null): void {
+    let additionalCoordinatesString = "";
+    if (additionalCoordinates != null) {
+      additionalCoordinatesString = additionalCoordinates
         ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
-      Object.keys(this.meshesGroupsPerSegmentationId).forEach((additionalCoordinatesIter) => {
-        Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinatesIter]).forEach(
-          (layerNameIter) => {
-            _.forEach(
-              this.meshesGroupsPerSegmentationId[additionalCoordinatesIter][layerNameIter][id],
-              (meshGroup) => {
-                meshGroup.visible = false;
-              },
-            );
-          },
-        );
-      });
-      return;
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
+      return; //TODO think about 3D only
     }
 
     _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
+      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][id],
       (meshGroup) => {
         meshGroup.visible = visibility;
       },

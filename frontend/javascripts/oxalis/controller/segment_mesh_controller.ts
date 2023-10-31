@@ -34,6 +34,8 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
+    if(this.meshesGroupsPerSegmentationId[additionalCoordinates] == null || this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) return false;
+
     const segments = this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName];
     if (!segments) {
       return false;
@@ -190,7 +192,7 @@ export default class SegmentMeshController {
     }
 
     const bestLod = Math.min(
-      ...Object.keys(this.meshesGroupsPerSegmentationId[layerName][segmentId]).map((lodVal) =>
+      ...Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId]).map((lodVal) =>
         parseInt(lodVal),
       ),
     );

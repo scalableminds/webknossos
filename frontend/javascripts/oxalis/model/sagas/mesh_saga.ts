@@ -71,7 +71,7 @@ import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
+import { BatchUpdateGroupsAndSegmentsAction, RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
@@ -1188,10 +1188,15 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   if (
     "color" in action.segment &&
     segmentMeshController.hasMesh(action.segmentId, action.layerName)
-  ) {
-    segmentMeshController.setMeshColor(action.segmentId, action.layerName);
+    ) {
+      segmentMeshController.setMeshColor(action.segmentId, action.layerName);
+    }
   }
-}
+  
+function* handleBatchSegmentColorChange(batchAction: BatchUpdateGroupsAndSegmentsAction): Saga<void>{
+  const updateSegmentActions = batchAction.payload.filter(action => action.type === "UPDATE_SEGMENT").map(action => call(handleSegmentColorChange, action))
+    yield* all(updateSegmentActions);
+  }
 
 export default function* meshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
@@ -1213,5 +1218,6 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
+  yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
   yield* takeEvery("SET_ADDITIONAL_COORDINATES", handleAdditionalCoordinateUpdate);
 }

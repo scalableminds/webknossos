@@ -2258,7 +2258,7 @@ class DataApi {
     ).name;
 
     if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
-      Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
+      Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible, undefined));
     }
   }
 

@@ -1,5 +1,5 @@
 import { saveAs } from "file-saver";
-import _ from "lodash";
+import _, { add } from "lodash";
 import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
@@ -71,7 +71,11 @@ import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { BatchUpdateGroupsAndSegmentsAction, RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
+import {
+  BatchUpdateGroupsAndSegmentsAction,
+  RemoveSegmentAction,
+  UpdateSegmentAction,
+} from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
@@ -146,7 +150,7 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
       ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
       .reduce((a: string, b: string) => a.concat(b)) as string;
   }
-  
+
   if (adhocMeshesMapByLayer[additionalCoordinates][layerName] == null) {
     return;
   }
@@ -308,7 +312,6 @@ function* loadFullAdHocMesh(
   let isInitialRequest = true;
   const { mappingName, mappingType } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
-  console.log(additionalCoordinates);
   yield* put(
     addAdHocMeshAction(
       layer.name,
@@ -421,7 +424,6 @@ function* maybeLoadMeshChunk(
   useDataStore: boolean,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
-
   const additionalCoordinates = Store.getState().flycam.additionalCoordinates || undefined;
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
@@ -514,7 +516,6 @@ function* markEditedCellAsDirty(): Saga<void> {
 
 function* refreshMeshes(): Saga<void> {
   yield* put(saveNowAction());
-  console.log("refresh")
   // We reload all cells that got modified till the start of reloading.
   // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
@@ -548,7 +549,6 @@ function* refreshMeshes(): Saga<void> {
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
-  console.log("refresh mesh")
   const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
   let additionalCoordinates = "";
   if (additionalCoordinatesObject != null) {
@@ -575,7 +575,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       ),
     );
   } else {
-    if(adhocMeshesMapByLayer[additionalCoordinates] == null) return
+    if (adhocMeshesMapByLayer[additionalCoordinates] == null) return;
     const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
     if (threeDMap == null) return;
     yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName);
@@ -1155,32 +1155,33 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
   const { values } = action;
   const { segmentMeshController } = yield* call(getSceneController);
-  //
   const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
 
-  if(values == null || values.length === 0 ) return
-    const newAdditionalCoordinates = values
+  if (values == null || values.length === 0) return;
+  const newAdditionalCoordinates = values
     ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
     .reduce((a: string, b: string) => a.concat(b)) as string;
 
-    let updateVisibilityActions: any = [];
-    Object.keys(meshRecords).forEach((additionalCoordinates) => {
-      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
-      Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
-          Object.keys(meshRecords[additionalCoordinates][layerName]).forEach(meshGroup => {
-            const meshId = parseInt(meshGroup);
-            _.forEach(
-              meshRecords[additionalCoordinates][layerName][meshId],
-              _ => {
-                updateVisibilityActions.push(updateMeshVisibilityAction(layerName, meshId, shouldBeVisible))
-                segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName);
-              },
-            );
-          });
+  let updateVisibilityActions: any = [];
+  Object.keys(meshRecords).forEach((additionalCoordinates) => {
+    const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
+    Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
+      Object.keys(meshRecords[additionalCoordinates][layerName]).forEach((meshGroup) => {
+        const meshId = parseInt(meshGroup);
+        _.forEach(meshRecords[additionalCoordinates][layerName][meshId], (_) => {
+          //TODO for multiple dimensions
+          const splitAddCoord = additionalCoordinates.split("=");
+          const addCoordObject = {name: splitAddCoord[0], value: parseInt(splitAddCoord[1])}
+          updateVisibilityActions.push(
+            updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
+          );
+          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName);
         });
       });
-      console.log(updateVisibilityActions)
-      yield* all(updateVisibilityActions.map(e=>put(e)));
+    });
+  });
+  console.log(updateVisibilityActions);
+  yield* all(updateVisibilityActions.map((e) => put(e)));
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
@@ -1188,15 +1189,19 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   if (
     "color" in action.segment &&
     segmentMeshController.hasMesh(action.segmentId, action.layerName)
-    ) {
-      segmentMeshController.setMeshColor(action.segmentId, action.layerName);
-    }
+  ) {
+    segmentMeshController.setMeshColor(action.segmentId, action.layerName);
   }
-  
-function* handleBatchSegmentColorChange(batchAction: BatchUpdateGroupsAndSegmentsAction): Saga<void>{
-  const updateSegmentActions = batchAction.payload.filter(action => action.type === "UPDATE_SEGMENT").map(action => call(handleSegmentColorChange, action))
-    yield* all(updateSegmentActions);
-  }
+}
+
+function* handleBatchSegmentColorChange(
+  batchAction: BatchUpdateGroupsAndSegmentsAction,
+): Saga<void> {
+  const updateSegmentActions = batchAction.payload
+    .filter((action) => action.type === "UPDATE_SEGMENT")
+    .map((action) => call(handleSegmentColorChange, action));
+  yield* all(updateSegmentActions);
+}
 
 export default function* meshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY

@@ -206,9 +206,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
-      const { layerName, id, visibility } = action;
+      const { layerName, id, visibility, additionalCoordinates } = action;
       const meshInfo: Partial<MeshInformation> = {
         isVisible: visibility,
+        seedAdditionalCoordinates: additionalCoordinates
       };
       return updateKey4(state, "localSegmentationData", layerName, "meshes", id, meshInfo);
     }

@@ -34,7 +34,11 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
-    if(this.meshesGroupsPerSegmentationId[additionalCoordinates] == null || this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) return false;
+    if (
+      this.meshesGroupsPerSegmentationId[additionalCoordinates] == null ||
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null
+    )
+      return false;
 
     const segments = this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName];
     if (!segments) {
@@ -107,9 +111,6 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
-    console.log("segemnt mesh controller");
-    console.log(additionalCoordinates);
-    console.log(segmentationId)
     if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
       this.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
     }
@@ -168,17 +169,22 @@ export default class SegmentMeshController {
     if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
       return;
     }
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null) {
+    if (
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
+    ) {
       return;
     }
-    _.forEach(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId], (meshGroup, lod) => {
-      const lodNumber = parseInt(lod);
-      if (lodNumber !== NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-      } else {
-        this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-      }
-    });
+    _.forEach(
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId],
+      (meshGroup, lod) => {
+        const lodNumber = parseInt(lod);
+        if (lodNumber !== NO_LOD_MESH_INDEX) {
+          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+        } else {
+          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+        }
+      },
+    );
     delete this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId];
   }
 
@@ -192,14 +198,16 @@ export default class SegmentMeshController {
     }
 
     const bestLod = Math.min(
-      ...Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId]).map((lodVal) =>
-        parseInt(lodVal),
-      ),
+      ...Object.keys(
+        this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId],
+      ).map((lodVal) => parseInt(lodVal)),
     );
     return this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
   }
 
-  setMeshVisibility(id: number, visibility: boolean, layerName: string): void {
+  setMeshVisibility(id: number, visibility: boolean, layerName: string, additionalCoordinates?: AdditionalCoordinate[] | undefined): void {
+    //set all visibilities for not current add coor to false and the one 
+    debugger;
     const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
     let additionalCoordinates = "";
     if (additionalCoordinatesObject != null) {
@@ -208,7 +216,21 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
 
-    if(this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) return
+    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
+      Object.keys(this.meshesGroupsPerSegmentationId).forEach((additionalCoordinatesIter) => {
+        Object.keys(this.meshesGroupsPerSegmentationId[additionalCoordinatesIter]).forEach(
+          (layerNameIter) => {
+            _.forEach(
+              this.meshesGroupsPerSegmentationId[additionalCoordinatesIter][layerNameIter][id],
+              (meshGroup) => {
+                meshGroup.visible = false;
+              },
+            );
+          },
+        );
+      });
+      return;
+    }
 
     _.forEach(
       this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
@@ -227,14 +249,17 @@ export default class SegmentMeshController {
         .reduce((a: string, b: string) => a.concat(b)) as string;
     }
     const color = this.getColorObjectForSegment(id);
-    _.forEach(this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id], (meshGroup) => {
-      if (meshGroup) {
-        for (const child of meshGroup.children) {
-          // @ts-ignore
-          child.material.color = color;
+    _.forEach(
+      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
+      (meshGroup) => {
+        if (meshGroup) {
+          for (const child of meshGroup.children) {
+            // @ts-ignore
+            child.material.color = color;
+          }
         }
-      }
-    });
+      },
+    );
   }
 
   getColorObjectForSegment(segmentId: number) {

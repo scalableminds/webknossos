@@ -183,12 +183,13 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateMeshVisibilityAction = (layerName: string, id: number, visibility: boolean) =>
+export const updateMeshVisibilityAction = (layerName: string, id: number, visibility: boolean, additionalCoordinates: AdditionalCoordinate[] | undefined) =>
   ({
     type: "UPDATE_ISOSURFACE_VISIBILITY",
     layerName,
     id,
     visibility,
+    additionalCoordinates
   } as const);
 
 export const maybeFetchMeshFilesAction = (

@@ -6,7 +6,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}

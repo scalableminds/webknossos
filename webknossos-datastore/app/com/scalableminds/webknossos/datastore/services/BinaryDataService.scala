@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 import ucar.ma2.{Array => MultiArray}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext

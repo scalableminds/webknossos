@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

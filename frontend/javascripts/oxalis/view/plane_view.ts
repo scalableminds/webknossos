@@ -253,7 +253,7 @@ class PlaneView {
       (storeState) => storeState.uiInformation.navbarHeight,
       () => this.resizeThrottled(),
       true,
-    )
+    );
   }
 }
 

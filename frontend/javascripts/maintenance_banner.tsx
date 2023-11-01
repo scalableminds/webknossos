@@ -5,17 +5,18 @@ import {
 import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
 import { useInterval } from "libs/react_helpers";
+import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { MaintenanceInfo } from "types/api_flow_types";
 
 const INITIAL_DELAY = 5000;
-const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000;
+const INTERVAL_TO_FETCH_MAINTENANCES_MS = 600000; // 10min
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -24,17 +25,32 @@ const BANNER_STYLE: React.CSSProperties = {
   height: constants.MAINTENANCE_BANNER_HEIGHT,
 };
 
-function UpcomingMaintenanceBanner({ maintenanceInfo }: {maintenanceInfo:MaintenanceInfo}) {
-  const {startTime, endTime, message} = maintenanceInfo
-  
+function setNavbarHeight(newNavbarHeight: number) {
+  Store.dispatch(setNavbarHeightAction(newNavbarHeight));
+  document.documentElement.style.setProperty("--navbar-height", `${newNavbarHeight}px`);
+}
+
+function UpcomingMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: MaintenanceInfo }) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const { startTime, endTime, message } = maintenanceInfo;
+
   const startDate = new Date(startTime);
   const endDate = new Date(endTime);
   const endDateFormat = startDate.getDate() === endDate.getDate() ? "HH:mm" : "YYYY-MM-DD HH:mm";
-  
+
+  const saveUserClosedMaintenanceInfo = (closestUpcomingMaintenance: MaintenanceInfo) => {
+    if (activeUser == null) return;
+
+    const [nextMaintenanceAcknowledged] = updateNovelUserExperienceInfos(activeUser, {
+      latestAcknowledgedMaintenanceInfo: closestUpcomingMaintenance.id,
+    });
+    Store.dispatch(setActiveUserAction(nextMaintenanceAcknowledged));
+  };
+
   return (
     <Alert
-    message={
-      <div>
+      message={
+        <div>
           Upcoming maintenance: <FormattedDate timestamp={startTime} /> until{" "}
           <FormattedDate timestamp={endTime} format={endDateFormat} />. {message}
         </div>
@@ -42,13 +58,18 @@ function UpcomingMaintenanceBanner({ maintenanceInfo }: {maintenanceInfo:Mainten
       type="info"
       banner
       style={BANNER_STYLE}
-      />
-      );
-    }
-    
-    function CurrentMaintenanceBanner({ maintenanceInfo }: {maintenanceInfo:MaintenanceInfo}) {
-      const {endTime, message} = maintenanceInfo
-      
+      closable
+      onClose={() => {
+        saveUserClosedMaintenanceInfo(maintenanceInfo);
+        setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+      }}
+    />
+  );
+}
+
+function CurrentMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: MaintenanceInfo }) {
+  const { endTime, message } = maintenanceInfo;
+
   return (
     <Alert
       message={
@@ -67,28 +88,42 @@ function UpcomingMaintenanceBanner({ maintenanceInfo }: {maintenanceInfo:Mainten
 export function MaintenanceBanner() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
-  const [currentAndUpcomingMaintenances, setCurrentAndUpcomingMaintenances] = useState<
-    MaintenanceInfo[]
-  >([]);
-
-  function setNavbarHeight(newNavbarHeight: number) {
-    Store.dispatch(setNavbarHeightAction(newNavbarHeight))
-    document.documentElement.style.setProperty("--navbar-height", `${newNavbarHeight}px`);
-  }
+  const [closestUpcomingMaintenance, setClosestUpcomingMaintenance] = useState<
+    MaintenanceInfo | undefined
+  >(undefined);
+  const [currentMaintenance, setCurrentMaintenance] = useState<MaintenanceInfo | undefined>(
+    undefined,
+  );
 
   async function pollMaintenances() {
     const newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
-    setCurrentAndUpcomingMaintenances(newScheduledMaintenances);
-    
-    if ((currentAndUpcomingMaintenances.length !== newScheduledMaintenances.length) && newScheduledMaintenances.length === 0) {
-      // Reset Navbar Height if maintenance is over
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
-    }
 
-    if (newScheduledMaintenances.length > 0) {
+    const closestUpcomingMaintenance = newScheduledMaintenances
+      .filter((maintenance) => maintenance.startTime > Date.now())
+      .filter(
+        (maintenance) =>
+          maintenance.id !== activeUser?.novelUserExperienceInfos.latestAcknowledgedMaintenanceInfo,
+      )
+      .sort((a, b) => a.startTime - b.startTime);
+
+    const currentMaintenance = newScheduledMaintenances.find(
+      (maintenance) => maintenance.startTime < Date.now(),
+    );
+
+    setCurrentMaintenance(currentMaintenance);
+    setClosestUpcomingMaintenance(_.first(closestUpcomingMaintenance));
+  }
+
+  useEffect(() => {
+    if (currentMaintenance || closestUpcomingMaintenance) {
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.MAINTENANCE_BANNER_HEIGHT);
     }
-  }
+
+    if (currentMaintenance === undefined && closestUpcomingMaintenance === undefined) {
+      // Reset Navbar height if maintenance is over
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+    }
+  }, [currentMaintenance, closestUpcomingMaintenance]);
 
   // Do an initial fetch of the maintenance status so that users are notified
   // quickly in case of ongoing maintenances.
@@ -97,37 +132,13 @@ export function MaintenanceBanner() {
   // Also poll regularly.
   useInterval(pollMaintenances, INTERVAL_TO_FETCH_MAINTENANCES_MS);
 
-  const activeUsersLatestAcknowledgedMaintenance =
-    activeUser?.novelUserExperienceInfos.latestAcknowledgedMaintenanceInfo;
-
-  const saveUserClosedMaintenanceInfo = (closestUpcomingMaintenance: MaintenanceInfo) => {
-    if (activeUser == null) return;
-    const [nextMaintenanceAcknowledged] = updateNovelUserExperienceInfos(activeUser, {
-      latestAcknowledgedMaintenanceInfo: closestUpcomingMaintenance.id,
-    });
-    Store.dispatch(setActiveUserAction(nextMaintenanceAcknowledged));
-  };
-
-  const closestUpcomingMaintenance = currentAndUpcomingMaintenances
-    .filter((maintenance) => maintenance.startTime > Date.now())
-    .sort((a, b) => a.startTime - b.startTime)
-    ;
-
-  const currentMaintenance = currentAndUpcomingMaintenances.find(
-    (maintenance) => maintenance.startTime < Date.now(),
-  );
-
   if (currentMaintenance) {
-    return (
-      <CurrentMaintenanceBanner
-        maintenanceInfo={currentMaintenance}
-      />
-    );
+    return <CurrentMaintenanceBanner maintenanceInfo={currentMaintenance} />;
   }
 
-  if (closestUpcomingMaintenance.length > 0 && activeUser !== null) {
-    return <UpcomingMaintenanceBanner maintenanceInfo={closestUpcomingMaintenance[0]} />;
+  if (closestUpcomingMaintenance && activeUser !== null) {
+    return <UpcomingMaintenanceBanner maintenanceInfo={closestUpcomingMaintenance} />;
   }
 
-  return null
+  return null;
 }

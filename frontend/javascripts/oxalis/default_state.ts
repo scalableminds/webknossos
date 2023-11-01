@@ -251,7 +251,7 @@ const defaultState: OxalisState = {
       lastMeasuredPosition: null,
       isMeasuring: false,
     },
-    navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT
+    navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
   },
   localSegmentationData: {},
 };

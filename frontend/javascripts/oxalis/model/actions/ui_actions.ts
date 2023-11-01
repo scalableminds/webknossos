@@ -178,6 +178,3 @@ export const setNavbarHeightAction = (navbarHeight: number) =>
     type: "SET_NAVBAR_HEIGHT",
     navbarHeight,
   } as const);
-
-
-  

@@ -25,7 +25,7 @@ type OwnProps = {
 type StateProps = {
   showDropzoneModal: boolean;
   hideDropzoneModal: () => void;
-  navbarHeight: number
+  navbarHeight: number;
 };
 type Props = StateProps & OwnProps;
 

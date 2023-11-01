@@ -934,10 +934,10 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
               "Connectome files",
             ),
       label: isConnectomeMappingEnabled.value ? (
-        "Import Agglomerate and Synapses"
+        "Import Synapses"
       ) : (
         <Tooltip title={isConnectomeMappingEnabled.reason}>
-          Import Agglomerate and Synapses{" "}
+          Import Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
             <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
           ) : null}{" "}

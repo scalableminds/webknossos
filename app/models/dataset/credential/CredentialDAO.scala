@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
-import net.liftweb.common.Box.tryo
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId

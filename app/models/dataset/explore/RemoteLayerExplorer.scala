@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
 import java.nio.charset.StandardCharsets

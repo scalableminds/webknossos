@@ -10,7 +10,7 @@ import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
-import net.liftweb.common.Box.tryo
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}

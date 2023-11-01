@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
 import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import net.liftweb.util.Helpers.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util

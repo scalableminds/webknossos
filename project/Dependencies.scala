@@ -2,7 +2,7 @@ import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "7.0.7"
+  private val silhouetteVersion = "8.0.2"
   private val brotliVersion = "1.11.0"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
@@ -93,9 +93,9 @@ object Dependencies {
     "commons-codec" % "commons-codec" % "1.16.0",
     // End-to-end tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test",
-    // Authenticated requests. import com.mohiva.play.silhouette
+    // Authenticated requests. import io.github.honeycombcheesecake.play.silhouette
     "io.github.honeycomb-cheesecake" %% "play-silhouette" % silhouetteVersion,
-    // Signing Cookies. import com.mohiva.play.silhouette.crypto
+    // Signing Cookies. import io.github.honeycombcheesecake.play.silhouette.crypto
     "io.github.honeycomb-cheesecake" %% "play-silhouette-crypto-jca" % silhouetteVersion,
     // End-to-end test specs
     specs2 % Test,

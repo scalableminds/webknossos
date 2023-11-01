@@ -1,7 +1,7 @@
 import com.google.inject.{AbstractModule, Provides, TypeLiteral}
-import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
-import com.mohiva.play.silhouette.api.util.PasswordHasherRegistry
-import com.mohiva.play.silhouette.api.{Environment, Silhouette, SilhouetteProvider}
+import io.github.honeycombcheesecake.play.silhouette.api.repositories.AuthInfoRepository
+import io.github.honeycombcheesecake.play.silhouette.api.util.PasswordHasherRegistry
+import io.github.honeycombcheesecake.play.silhouette.api.{Environment, Silhouette, SilhouetteProvider}
 import security.{PasswordHasher, UserAuthInfoRepository, WkEnv, WkSilhouetteEnvironment}
 
 class SilhouetteModule extends AbstractModule {

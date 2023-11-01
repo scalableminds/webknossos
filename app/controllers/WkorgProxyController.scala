@@ -1,8 +1,8 @@
 package controllers
 
 import com.google.inject.Inject
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.UserAwareRequest
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}

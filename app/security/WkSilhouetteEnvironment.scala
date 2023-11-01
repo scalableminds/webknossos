@@ -1,10 +1,10 @@
 package security
 
-import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentityService}
-import com.mohiva.play.silhouette.api.util.Clock
-import com.mohiva.play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
-import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
-import com.mohiva.play.silhouette.impl.util.DefaultFingerprintGenerator
+import io.github.honeycombcheesecake.play.silhouette.api.services.{AuthenticatorService, IdentityService}
+import io.github.honeycombcheesecake.play.silhouette.api.util.Clock
+import io.github.honeycombcheesecake.play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
+import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
+import io.github.honeycombcheesecake.play.silhouette.impl.util.DefaultFingerprintGenerator
 import models.user.{User, UserService}
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf

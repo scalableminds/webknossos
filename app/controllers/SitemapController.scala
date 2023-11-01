@@ -1,7 +1,7 @@
 package controllers
 
 import com.google.inject.Inject
-import com.mohiva.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import utils.SitemapWriter

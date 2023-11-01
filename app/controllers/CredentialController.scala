@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,

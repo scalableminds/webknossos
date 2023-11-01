@@ -1,12 +1,12 @@
 package controllers
 
 import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
-import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import io.github.honeycombcheesecake.play.silhouette.api.actions.SecuredRequest
+import io.github.honeycombcheesecake.play.silhouette.api.exceptions.ProviderException
+import io.github.honeycombcheesecake.play.silhouette.api.services.AuthenticatorResult
+import io.github.honeycombcheesecake.play.silhouette.api.util.{Credentials, PasswordInfo}
+import io.github.honeycombcheesecake.play.silhouette.api.{LoginInfo, Silhouette}
+import io.github.honeycombcheesecake.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}

@@ -1,6 +1,6 @@
 package controllers
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._

@@ -1,6 +1,6 @@
 package models.user
 
-import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
+import io.github.honeycombcheesecake.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson

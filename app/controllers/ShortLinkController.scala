@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import io.swagger.annotations.{Api, ApiOperation, ApiParam}
 import models.shortlinks.{ShortLink, ShortLinkDAO}

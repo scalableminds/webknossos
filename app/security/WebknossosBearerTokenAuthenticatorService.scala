@@ -1,11 +1,14 @@
 package security
 
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.api.exceptions.{AuthenticatorCreationException, AuthenticatorInitializationException}
-import com.mohiva.play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
-import com.mohiva.play.silhouette.api.util.{Clock, IDGenerator}
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
-import com.mohiva.play.silhouette.impl.authenticators.{
+import io.github.honeycombcheesecake.play.silhouette.api.LoginInfo
+import io.github.honeycombcheesecake.play.silhouette.api.exceptions.{
+  AuthenticatorCreationException,
+  AuthenticatorInitializationException
+}
+import io.github.honeycombcheesecake.play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
+import io.github.honeycombcheesecake.play.silhouette.api.util.{Clock, IDGenerator}
+import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
+import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.{
   BearerTokenAuthenticator,
   BearerTokenAuthenticatorService,
   BearerTokenAuthenticatorSettings
@@ -47,7 +50,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
                                expirationDateTime = now.plus(expiry.toMillis),
                                idleTimeout = settings.authenticatorIdleTimeout)
     }.recover {
-      case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), e)
+      case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
     }
   }
 
@@ -58,7 +61,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
         a.id
       }
       .recover {
-        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)
+        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =

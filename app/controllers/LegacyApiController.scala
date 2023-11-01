@@ -1,7 +1,7 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import io.github.honeycombcheesecake.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions

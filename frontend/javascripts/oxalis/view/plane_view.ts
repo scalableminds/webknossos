@@ -33,7 +33,7 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
-const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -48,7 +48,7 @@ class PlaneView {
   constructor() {
     this.throttledPerformMeshHitTest = _.throttle(
       this.performMeshHitTest,
-      ISOSURFACE_HOVER_THROTTLING_DELAY,
+      MESH_HOVER_THROTTLING_DELAY,
     );
     this.running = false;
     const { scene } = getSceneController();

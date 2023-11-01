@@ -3,7 +3,12 @@ package security
 import io.github.honeycombcheesecake.play.silhouette.api._
 import io.github.honeycombcheesecake.play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import io.github.honeycombcheesecake.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
-import io.github.honeycombcheesecake.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
+import io.github.honeycombcheesecake.play.silhouette.api.util.{
+  Clock,
+  ExtractableRequest,
+  FingerprintGenerator,
+  IDGenerator
+}
 import io.github.honeycombcheesecake.play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
 import io.github.honeycombcheesecake.play.silhouette.impl.authenticators._
 import models.user.UserService

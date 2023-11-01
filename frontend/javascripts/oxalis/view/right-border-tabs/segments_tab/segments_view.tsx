@@ -164,12 +164,14 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
+ // TODO add coord are undefined
+  const meshesForCurrentAdditionalCoordinates = visibleSegmentationLayer != null
+  ? Object.values(state.localSegmentationData[visibleSegmentationLayer.name].meshes).filter(mesh => mesh.seedAdditionalCoordinates === state.flycam.additionalCoordinates)
+  : EMPTY_OBJECT;
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
-    meshes:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].meshes
-        : EMPTY_OBJECT,
+    meshes: meshesForCurrentAdditionalCoordinates,
     dataset: state.dataset,
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",

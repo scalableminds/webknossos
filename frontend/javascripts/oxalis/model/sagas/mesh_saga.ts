@@ -1198,6 +1198,11 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
 function* handleBatchSegmentColorChange(
   batchAction: BatchUpdateGroupsAndSegmentsAction,
 ): Saga<void> {
+// Manually unpack batched actions and handle these.
+// In theory, this could happen automatically. See this issue in the corresponding (rather unmaintained) package: https://github.com/tshelburne/redux-batched-actions/pull/18
+// However, there seem to be some problems with that approach (e.g., too many updates, infinite recursion) and the discussion there didn't really reach a consensus
+// about the correct solution.
+// This is why we stick to the manual unpacking for now.
   const updateSegmentActions = batchAction.payload
     .filter((action) => action.type === "UPDATE_SEGMENT")
     .map((action) => call(handleSegmentColorChange, action));

@@ -24,7 +24,7 @@ import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}

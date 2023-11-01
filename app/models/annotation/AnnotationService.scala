@@ -31,8 +31,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayerLike => SegmentationLayer
 }
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
+  VolumeDataZipFormat,
   VolumeTracingDefaults,
   VolumeTracingDownsampling
 }
@@ -299,7 +301,12 @@ class AnnotationService @Inject()(
           tracingStoreClient <- tracingStoreService.clientFor(dataSet)
           oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
             tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
-          else tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true)
+          else
+            tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
+                                                None,
+                                                skipVolumeData = true,
+                                                volumeDataZipFormat = VolumeDataZipFormat.wkw,
+                                                dataSet.scale)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
@@ -413,13 +420,9 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
-      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.downsample.volumeOnly"
+      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.segmentIndex.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
-      // duplicate in tracingstore will add segment index if possible
-      newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId)
-      _ = logger.info(
-        s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by copy with added segment index $newVolumeTracingId for annotation ${annotation._id}.")
-      _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
+      _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId, dryRun = false)
     } yield ()
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
@@ -634,11 +637,13 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     annotationDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
-      implicit
-      ctx: DBAccessContext): Fox[TemporaryFile] =
+  def zipAnnotations(annotations: List[Annotation],
+                     zipFileName: String,
+                     skipVolumeData: Boolean,
+                     volumeDataZipFormat: VolumeDataZipFormat)(implicit
+                                                               ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
-      downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
+      downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData, volumeDataZipFormat)
       nmlsAndVolumes <- Fox.serialCombined(downloadAnnotations.flatten) {
         case DownloadAnnotation(skeletonTracingIdOpt,
                                 volumeTracingIdOpt,
@@ -667,15 +672,19 @@ class AnnotationService @Inject()(
               conf.Http.uri,
               datasetName,
               Some(user),
-              taskOpt
+              taskOpt,
+              skipVolumeData,
+              volumeDataZipFormat
             )
           } yield (nml, volumeDataOpt)
       }
       zip <- createZip(nmlsAndVolumes, zipFileName)
     } yield zip
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
+  private def getTracingsScalesAndNamesFor(
+      annotations: List[Annotation],
+      skipVolumeData: Boolean,
+      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
 
     def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
       for {
@@ -718,14 +727,22 @@ class AnnotationService @Inject()(
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-    def getVolumeDataObjects(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[Array[Byte]]]] =
+    def getVolumeDataObjects(datasetId: ObjectId,
+                             tracingIds: List[Option[String]],
+                             volumeDataZipFormat: VolumeDataZipFormat): Fox[List[Option[Array[Byte]]]] =
       for {
-        dataSet <- datasetDAO.findOne(dataSetId)
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        dataset <- datasetDAO.findOne(datasetId)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
           case None                      => Fox.successful(None)
           case Some(_) if skipVolumeData => Fox.successful(None)
-          case Some(tracingId)           => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
+          case Some(tracingId) =>
+            tracingStoreClient
+              .getVolumeData(tracingId,
+                             version = None,
+                             volumeDataZipFormat = volumeDataZipFormat,
+                             voxelSize = dataset.scale)
+              .map(Some(_))
         }
       } yield tracingDataObjects
 
@@ -743,7 +760,7 @@ class AnnotationService @Inject()(
           volumeTracingIdOpts <- Fox.serialCombined(annotations)(a => a.volumeTracingId)
           skeletonTracings <- getSkeletonTracings(dataSetId, skeletonTracingIdOpts)
           volumeTracings <- getVolumeTracings(dataSetId, volumeTracingIdOpts)
-          volumeDataObjects <- getVolumeDataObjects(dataSetId, volumeTracingIdOpts)
+          volumeDataObjects <- getVolumeDataObjects(dataSetId, volumeTracingIdOpts, volumeDataZipFormat)
           incompleteDownloadAnnotations <- Fox.serialCombined(annotations)(getSingleDownloadAnnotation(_, scale))
         } yield
           incompleteDownloadAnnotations

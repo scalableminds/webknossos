@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{DatasetService, DataStoreDAO, WKRemoteDataStoreClient}
+import models.dataset.{DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
@@ -27,7 +27,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.{WkEnv, WkSilhouetteEnvironment}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import java.net.URI
 import javax.inject.Inject
@@ -57,7 +57,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                           dataStoreDAO: DataStoreDAO,
                                           datasetService: DatasetService,
                                           wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                          rpc: RPC)
+                                          rpc: RPC,
+                                          wkConf: WkConf)
     extends FoxImplicits
     with LazyLogging {
 
@@ -152,7 +153,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
 
   private def isPowerOfTwo(x: Double): Boolean = {
     val epsilon = 0.0001
-    val l = (math.log(x) / math.log(2))
+    val l = math.log(x) / math.log(2)
     math.abs(l - l.round.toDouble) < epsilon
   }
 
@@ -265,7 +266,9 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       reportMutable: ListBuffer[String],
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     for {
-      uri <- tryo(new URI(normalizeUri(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
+      _ <- assertLocalPathInWhitelist(uri)
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
@@ -290,14 +293,20 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       )
     } yield layersWithVoxelSizes
 
-  private def normalizeUri(uri: String): String =
+  private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (uri.getScheme == DataVaultService.schemeFile) {
+      bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist"
+    } else Fox.successful(())
+
+  private def removeHeaderFileNamesFromUriSuffix(uri: String): String =
     if (uri.endsWith(N5Header.FILENAME_ATTRIBUTES_JSON)) uri.dropRight(N5Header.FILENAME_ATTRIBUTES_JSON.length)
     else if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
     else if (uri.endsWith(NgffMetadata.FILENAME_DOT_ZATTRS)) uri.dropRight(NgffMetadata.FILENAME_DOT_ZATTRS.length)
     else if (uri.endsWith(NgffGroupHeader.FILENAME_DOT_ZGROUP))
       uri.dropRight(NgffGroupHeader.FILENAME_DOT_ZGROUP.length)
     else if (uri.endsWith(PrecomputedHeader.FILENAME_INFO)) uri.dropRight(PrecomputedHeader.FILENAME_INFO.length)
-    else if (uri.endsWith(Zarr3ArrayHeader.ZARR_JSON)) uri.dropRight(Zarr3ArrayHeader.ZARR_JSON.length)
+    else if (uri.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON))
+      uri.dropRight(Zarr3ArrayHeader.FILENAME_ZARR_JSON.length)
     else uri
 
   private def exploreRemoteLayersForRemotePath(

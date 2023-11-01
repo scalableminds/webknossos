@@ -397,7 +397,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               s"$organizationName/$dataSetName",
-              List("datasource-properties.json", ".zgroup") ++ layerNames
+              List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, ".zgroup") ++ layerNames
             ))
       }
     }
@@ -419,7 +419,7 @@ class ZarrStreamingController @Inject()(
           views.html.datastoreZarrDatasourceDir(
             "Combined datastore and tracingstore directory",
             s"$accessToken",
-            List("datasource-properties.json", ".zgroup") ++ layerNames
+            List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, ".zgroup") ++ layerNames
           ))
     }
 

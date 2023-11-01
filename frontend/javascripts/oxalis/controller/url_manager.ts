@@ -7,7 +7,7 @@ import {
   getActiveNode,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState, MappingType, IsosurfaceInformation } from "oxalis/store";
+import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import type { ViewMode, Vector3 } from "oxalis/constants";
@@ -63,20 +63,18 @@ export type UrlStateByLayer = Record<
   }
 >;
 
-function mapIsosurfaceInfoToUrlMeshDescriptor(
-  isosurfaceInfo: IsosurfaceInformation,
-): MeshUrlDescriptor {
-  const { segmentId, seedPosition } = isosurfaceInfo;
+function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescriptor {
+  const { segmentId, seedPosition } = meshInfo;
   const baseUrlDescriptor: BaseMeshUrlDescriptor = {
     segmentId,
     seedPosition: V3.floor(seedPosition),
   };
 
-  if (isosurfaceInfo.isPrecomputed) {
-    const { meshFileName } = isosurfaceInfo;
+  if (meshInfo.isPrecomputed) {
+    const { meshFileName } = meshInfo;
     return { ...baseUrlDescriptor, isPrecomputed: true, meshFileName };
   } else {
-    const { mappingName, mappingType } = isosurfaceInfo;
+    const { mappingName, mappingType } = meshInfo;
     return { ...baseUrlDescriptor, isPrecomputed: false, mappingName, mappingType };
   }
 }
@@ -274,11 +272,11 @@ class UrlManager {
     }
 
     for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { isosurfaces, currentMeshFile } = state.localSegmentationData[layerName];
+      const { meshes: localMeshes, currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
-      const meshes = Utils.values(isosurfaces)
+      const meshes = Utils.values(localMeshes)
         .filter(({ isVisible }) => isVisible)
-        .map(mapIsosurfaceInfoToUrlMeshDescriptor);
+        .map(mapMeshInfoToUrlMeshDescriptor);
 
       if (currentMeshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = {

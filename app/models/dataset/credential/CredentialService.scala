@@ -43,6 +43,8 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
           secret <- credentialSecret
           secretJson <- tryo(Json.parse(secret)).toOption
         } yield GoogleServiceAccountCredential(uri.toString, secretJson, userId.toString, organizationId.toString)
+      case _ =>
+        None
     }
 
   def insertOne(credential: DataVaultCredential)(implicit ec: ExecutionContext): Fox[ObjectId] = {

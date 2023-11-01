@@ -7,8 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -22,7 +21,7 @@ class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCube
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    precomputedArray.readBytesXYZ(shape, offset)
+    precomputedArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
   }
 
   override protected def onFinalize(): Unit = ()
@@ -36,27 +35,28 @@ class PrecomputedBucketProvider(layer: PrecomputedLayer,
     extends BucketProvider
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[PrecomputedCubeHandle] = {
-    val precomputedMagOpt: Option[MagLocator] =
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    precomputedMagOpt match {
+    magLocatorOpt match {
       case None => Fox.empty
-      case Some(precomputedMag) =>
+      case Some(magLocator) =>
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- if (precomputedMag.isRemote) {
-                remoteSourceDescriptorService.vaultPathFor(precomputedMag)
-              } else localPathFrom(readInstruction, precomputedMag.pathWithFallback)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- PrecomputedArray
                 .open(magPath,
                       dataSourceId,
                       layer.name,
-                      precomputedMag.axisOrder,
-                      precomputedMag.channelIndex,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
                       chunkContentsCache)
                 .map(new PrecomputedCubeHandle(_))
             } yield cubeHandle

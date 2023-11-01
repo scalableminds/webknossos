@@ -11,19 +11,19 @@ We would love to integrate analysis solutions for more modalities and use cases.
     Automated analysis is only available on [webknossos.org](https://webknossos.org) at the moment. 
     If you want to set up on-premise automated analysis at your institute/workplace, then [please contact us](mailto:hello@webknossos.org). 
 
-## Nuclei Inferral
-As a first trial, WEBKNOSSOS includes nuclei segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will find and segment all nuclei within the dataset.
+## Neuron Segmentation
+As a first trial, WEBKNOSSOS includes neuron segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will segment all neurons within the dataset.
 
-You can launch the nuclei inferral from the `Menu` dropdown in the action bar at the top. Use the `Start AI analysis` link to start the analysis.
+You can launch the AI analysis modal using the button in the action bar at the top. Use the `Start AI neuron segmentation` button in the modal to start the analysis.
 
-![Nuclei segmentations can be launched from the action bar.](images/process_dataset.jpeg)
+![Neuron segmentations can be launched from the action bar.](images/process_dataset.jpg)
 
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 
 The finished analysis will be available as a new dataset from your dashboard. You can monitor the status and progress of the [analysis job from the `Processing Jobs` section of the `Administration` menu at the top of the screen](./jobs.md).
 
-![Starting a new nuclei segmentation.](images/nuclei_segmentation_start.jpeg)
-![Monitor the nuclei segmentation progress from the Jobs page.](images/nuclei_segmentation_job.jpeg)
+![Starting a new neuron segmentation.](images/neuron_segmentation_start.jpeg)
+![Monitor the segmentation progress from the Jobs page.](images/nuclei_segmentation_job.jpeg)
 
 ## Custom Analysis
 At the moment, WEBKNOSSOS can not be used to train a custom classifier itself. This might be something that we add in the future if there is enough interest in this.

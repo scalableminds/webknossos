@@ -19,7 +19,9 @@ import scala.concurrent.ExecutionContext
 
 object VolumeSegmentIndexService {
   // Currently, segment index is not supported for volume tracings with fallback layer
-  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+  def canHaveSegmentIndexOpt(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+
+  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Boolean = fallbackLayerName.isEmpty
 }
 
 // Segment-to-Bucket index for volume tracings in FossilDB

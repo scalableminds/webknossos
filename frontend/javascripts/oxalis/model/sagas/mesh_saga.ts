@@ -120,7 +120,7 @@ export function isMeshSTL(buffer: ArrayBuffer): boolean {
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
   const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
   let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null) {
+  if (additionalCoordinatesObject != null && additionalCoordinatesObject?.length > 0) {
     additionalCoordinates = additionalCoordinatesObject
       ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
       .reduce((a: string, b: string) => a.concat(b)) as string;
@@ -497,7 +497,7 @@ function* maybeLoadMeshChunk(
     } catch (exception) {
       retryCount++;
       ErrorHandling.notify(exception as Error);
-      console.warn("Retrying mesh generation...");
+      console.warn("Retrying mesh generation due to", exception);
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
   }
@@ -1146,19 +1146,19 @@ function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): 
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
-  const { id, visibility, layerName } = action;
+  const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
   //
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
-  const { values } = action;
+  if(action.type === "SET_ADDITIONAL_COORDINATES"){
   const { segmentMeshController } = yield* call(getSceneController);
   const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
 
-  if (values == null || values.length === 0) return;
-  const newAdditionalCoordinates = values
+  if (action.values == null || action.values.length === 0) return;
+  const newAdditionalCoordinates = action.values
     ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
     .reduce((a: string, b: string) => a.concat(b)) as string;
 
@@ -1182,6 +1182,7 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
   });
   console.log(updateVisibilityActions);
   yield* all(updateVisibilityActions.map((e) => put(e)));
+}
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
@@ -1224,5 +1225,5 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
-  yield* takeEvery("SET_ADDITIONAL_COORDINATES", handleAdditionalCoordinateUpdate);
+  yield* takeEvery("SET_ADDITIONAL_COORDINATES", handleAdditionalCoordinateUpdate); //TODO remove and while true
 }

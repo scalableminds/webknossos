@@ -26,13 +26,7 @@ export default class SegmentMeshController {
   }
 
   hasMesh(id: number, layerName: string): boolean {
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
+    const additionalCoordinates = this.getCoordinateString();
 
     if (
       this.meshesGroupsPerSegmentationId[additionalCoordinates] == null ||
@@ -95,6 +89,17 @@ export default class SegmentMeshController {
     return mesh;
   }
 
+  getCoordinateString(inputAdditionalCoordinates?: AdditionalCoordinate[] | null){
+    const additionalCoordinatesObject = inputAdditionalCoordinates || Store.getState().flycam.additionalCoordinates;
+    let additionalCoordinates = "";
+    if (additionalCoordinatesObject != null && additionalCoordinatesObject.length>0) {
+      additionalCoordinates = additionalCoordinatesObject
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b), "") as string;
+    }
+    return additionalCoordinates;
+  }
+
   addMeshFromGeometry(
     geometry: THREE.BufferGeometry,
     segmentationId: number,
@@ -103,14 +108,7 @@ export default class SegmentMeshController {
     lod: number,
     layerName: string,
   ): void {
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
-
+    const additionalCoordinates = this.getCoordinateString();
     if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
       this.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
     }
@@ -153,13 +151,7 @@ export default class SegmentMeshController {
   }
 
   removeMeshById(segmentationId: number, layerName: string): void {
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
+    const additionalCoordinates = this.getCoordinateString();
 
     // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
     // but if they are removed they should be removed for all timestamps
@@ -189,13 +181,7 @@ export default class SegmentMeshController {
   }
 
   getMeshGeometryInBestLOD(segmentId: number, layerName: string): THREE.Group {
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
+    const additionalCoordinates = this.getCoordinateString();
 
     const bestLod = Math.min(
       ...Object.keys(
@@ -206,12 +192,7 @@ export default class SegmentMeshController {
   }
 
   setMeshVisibility(id: number, visibility: boolean, layerName: string, additionalCoordinates?: AdditionalCoordinate[] | null): void {
-    let additionalCoordinatesString = "";
-    if (additionalCoordinates != null) {
-      additionalCoordinatesString = additionalCoordinates
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
+    const additionalCoordinatesString = this.getCoordinateString(additionalCoordinates);
 
     if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
       return; //TODO think about 3D only
@@ -226,13 +207,7 @@ export default class SegmentMeshController {
   }
 
   setMeshColor(id: number, layerName: string): void {
-    const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b)) as string;
-    }
+    const additionalCoordinates = this.getCoordinateString();
     const color = this.getColorObjectForSegment(id);
     _.forEach(
       this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],

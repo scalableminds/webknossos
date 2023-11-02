@@ -129,7 +129,7 @@ export function MaintenanceBanner() {
     // Do an initial fetch of the maintenance status so that users are notified
     // quickly in case of ongoing maintenances.
     setTimeout(pollMaintenances, INITIAL_DELAY);
-  }, [])
+  }, []);
 
   // Also poll regularly.
   useInterval(pollMaintenances, INTERVAL_TO_FETCH_MAINTENANCES_MS);

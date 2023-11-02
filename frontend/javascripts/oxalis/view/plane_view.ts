@@ -249,11 +249,13 @@ class PlaneView {
     this.resize();
     this.animate();
     window.addEventListener("resize", this.resizeThrottled);
-    this.unsubscribeFunctions.push(listenToStoreProperty(
-      (storeState) => storeState.uiInformation.navbarHeight,
-      () => this.resizeThrottled(),
-      true,
-    ));
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.navbarHeight,
+        () => this.resizeThrottled(),
+        true,
+      ),
+    );
   }
 }
 

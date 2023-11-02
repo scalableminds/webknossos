@@ -32,6 +32,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
         .validate[JsObject]
         .toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- (spec \ "layers").validate[JsArray].toFox
+      _ <- Fox.bool2Fox(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten
@@ -46,7 +47,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       layerType = new URI(source.value).getScheme
       sourceURI = new URI(source.value.substring(f"$layerType://".length))
       name <- (obj \ "name").validate[JsString].toFox
-      remoteSourceDescriptor = RemoteSourceDescriptor(sourceURI, None) // TODO: Credentials (here and passed down to explorers)
+      remoteSourceDescriptor = RemoteSourceDescriptor(sourceURI, None)
       remotePath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)
@@ -55,12 +56,16 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
 
   private def exploreLayer(layerType: String, remotePath: VaultPath, name: String): Fox[List[(DataLayer, Vec3Double)]] =
     layerType match {
-      case "n5"          => new N5ArrayExplorer().explore(remotePath, None) // TODO: Try both N5 explorers
+      case "n5" =>
+        Fox.firstSuccess(
+          Seq(new N5ArrayExplorer().explore(remotePath, None), new N5MultiscalesExplorer().explore(remotePath, None)))
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
-      case "zarr"        => new NgffExplorer().explore(remotePath, None)
-      case "zarr2"       => new ZarrArrayExplorer().explore(remotePath, None)
-      case "zarr3"       => new Zarr3ArrayExplorer().explore(remotePath, None)
-      case _             => Fox.failure(f"Can not explore layer of $layerType type")
+      case "zarr" =>
+        Fox.firstSuccess(
+          Seq(new NgffExplorer().explore(remotePath, None), new ZarrArrayExplorer().explore(remotePath, None)))
+      case "zarr2" => new ZarrArrayExplorer().explore(remotePath, None)
+      case "zarr3" => new Zarr3ArrayExplorer().explore(remotePath, None)
+      case _       => Fox.failure(f"Can not explore layer of $layerType type")
     }
 
   private def getViewConfig(layerSpec: JsObject): LayerViewConfiguration = {

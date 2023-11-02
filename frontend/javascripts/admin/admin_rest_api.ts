@@ -571,10 +571,6 @@ export function getCompactAnnotationsForUser(
   );
 }
 
-export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
-  return Request.receiveJSON("/api/annotations/shared");
-}
-
 export function getReadableAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,

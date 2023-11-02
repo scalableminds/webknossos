@@ -16,7 +16,7 @@ import { useSelector } from "react-redux";
 import { MaintenanceInfo } from "types/api_flow_types";
 
 const INITIAL_DELAY = 5000;
-const INTERVAL_TO_FETCH_MAINTENANCES_MS = 600000; // 10min
+const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",

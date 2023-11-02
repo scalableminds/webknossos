@@ -119,7 +119,7 @@ export function MaintenanceBanner() {
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.MAINTENANCE_BANNER_HEIGHT);
     }
 
-    if (currentMaintenance === undefined && closestUpcomingMaintenance === undefined) {
+    if (currentMaintenance == null && closestUpcomingMaintenance == null) {
       // Reset Navbar height if maintenance is over
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
     }

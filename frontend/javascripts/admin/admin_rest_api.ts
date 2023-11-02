@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIAnnotationWithTask,
@@ -555,7 +555,7 @@ export function deletePrivateLink(linkId: string): Promise<{
 export function getCompactAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -565,7 +565,7 @@ export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -574,7 +574,7 @@ export function getCompactAnnotationsForUser(
 export function getReadableAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );

@@ -242,6 +242,19 @@ object Fox extends FoxImplicits {
 
     failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
+
+  /**
+    * Transforms a Future[T] into a Fox[T] where the Future is transformed into a Fox with a Failure if the Future fails.
+    * Useful for Futures containing exceptions.
+    */
+  def transformFuture[T](future: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    for {
+      fut <- future.transform {
+        case Success(value)        => Try(Fox.successful(value))
+        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+      }
+      f <- fut
+    } yield f
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

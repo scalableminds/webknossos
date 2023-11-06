@@ -5,7 +5,6 @@ import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -899,7 +898,6 @@ class AnnotationService @Inject()(
         "task" -> taskJson,
         "stats" -> annotation.statistics,
         "restrictions" -> restrictionsJs,
-        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
@@ -990,7 +988,6 @@ class AnnotationService @Inject()(
         "description" -> annotation.description,
         "typ" -> annotation.typ,
         "stats" -> annotation.statistics,
-        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> annotation.annotationLayers,
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
@@ -1006,7 +1003,7 @@ class AnnotationService @Inject()(
 
   // 0 SQL Queries
   def writeCompactInfo(annotationInfo: AnnotationCompactInfo): JsObject = {
-    val teamsJson = (0 until annotationInfo.teamNames.length).map(
+    val teamsJson = annotationInfo.teamNames.indices.map(
       idx =>
         Json.obj(
           "id" -> annotationInfo.teamIds(idx),

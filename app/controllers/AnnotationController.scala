@@ -624,15 +624,6 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      userTeams <- userService.teamIdsFor(request.identity._id)
-      sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.writeListItem)
-    } yield Ok(Json.toJson(json))
-  }
-
-  @ApiOperation(hidden = true, value = "")
   def getSharedTeams(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)

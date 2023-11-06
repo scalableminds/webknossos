@@ -1,5 +1,7 @@
+import com.scalableminds.util.mvc.ExtendedController
 import com.typesafe.scalalogging.LazyLogging
-import controllers.{Assets, WkorgProxyController, SitemapController}
+import controllers.{Assets, SitemapController, WkorgProxyController}
+
 import javax.inject.Inject
 import play.api.OptionalDevContext
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
@@ -27,9 +29,24 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       filters
     )
     with InjectedController
+    with ExtendedController
     with LazyLogging {
 
-  override def routeRequest(request: RequestHeader): Option[Handler] =
+  private def CURRENT_API_VERSION = 5
+
+  override def routeRequest(request: RequestHeader): Option[Handler] = {
+    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
+      case Some(m) =>
+        val version = m.group(1)
+        if (version.toInt > CURRENT_API_VERSION) {
+          return Some(Action {
+            JsonNotFound(
+              f"This WEBKNOSSOS instance does not yet support this API version. The requested API version $version is higher than the current API version $CURRENT_API_VERSION.")
+          })
+        }
+      case None =>
+    }
+
     if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
@@ -42,4 +59,5 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(wkorgProxyController.proxyPageOrMainView)
+  }
 }

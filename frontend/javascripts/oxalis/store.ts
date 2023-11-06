@@ -568,7 +568,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string,
     {
-      readonly meshes: Record<number, MeshInformation>;
+      readonly meshes: Record<string, Record<number, MeshInformation>>;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored

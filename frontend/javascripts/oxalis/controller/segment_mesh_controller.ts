@@ -89,10 +89,11 @@ export default class SegmentMeshController {
     return mesh;
   }
 
-  getCoordinateString(inputAdditionalCoordinates?: AdditionalCoordinate[] | null){
-    const additionalCoordinatesObject = inputAdditionalCoordinates || Store.getState().flycam.additionalCoordinates;
+  getCoordinateString(inputAdditionalCoordinates?: AdditionalCoordinate[] | null) {
+    const additionalCoordinatesObject =
+      inputAdditionalCoordinates || Store.getState().flycam.additionalCoordinates;
     let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null && additionalCoordinatesObject.length>0) {
+    if (additionalCoordinatesObject != null && additionalCoordinatesObject.length > 0) {
       additionalCoordinates = additionalCoordinatesObject
         ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
         .reduce((a: string, b: string) => a.concat(b), "") as string;
@@ -191,7 +192,13 @@ export default class SegmentMeshController {
     return this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
   }
 
-  setMeshVisibility(id: number, visibility: boolean, layerName: string, additionalCoordinates?: AdditionalCoordinate[] | null): void {
+  setMeshVisibility(
+    id: number,
+    visibility: boolean,
+    layerName: string,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
+  ): void {
+    console.log("setMeshVis", id, visibility, layerName, additionalCoordinates);
     const additionalCoordinatesString = this.getCoordinateString(additionalCoordinates);
 
     if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {

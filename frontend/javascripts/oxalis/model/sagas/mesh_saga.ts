@@ -1148,41 +1148,50 @@ function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
-  //
-  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
+  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates); //use yield* call
+  console.log(Store.getState().localSegmentationData);
 }
 
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
-  if(action.type === "SET_ADDITIONAL_COORDINATES"){
-  const { segmentMeshController } = yield* call(getSceneController);
-  const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+  if (action.type === "SET_ADDITIONAL_COORDINATES") {
+    const { segmentMeshController } = yield* call(getSceneController);
+    const meshRecords = yield* call({
+      context: segmentMeshController,
+      fn: () => segmentMeshController.meshesGroupsPerSegmentationId,
+    });
 
-  if (action.values == null || action.values.length === 0) return;
-  const newAdditionalCoordinates = action.values
-    ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
-    .reduce((a: string, b: string) => a.concat(b)) as string;
+    if (action.values == null || action.values.length === 0) return;
+    const newAdditionalCoordinates = action.values
+      ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b)) as string;
 
-  let updateVisibilityActions: any = [];
-  Object.keys(meshRecords).forEach((additionalCoordinates) => {
-    const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
-    Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
-      Object.keys(meshRecords[additionalCoordinates][layerName]).forEach((meshGroup) => {
-        const meshId = parseInt(meshGroup);
-        _.forEach(meshRecords[additionalCoordinates][layerName][meshId], (_) => {
-          //TODO for multiple dimensions
-          const splitAddCoord = additionalCoordinates.split("=");
-          const addCoordObject = {name: splitAddCoord[0], value: parseInt(splitAddCoord[1])}
-          updateVisibilityActions.push(
-            updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
+    let updateVisibilityActions: any = [];
+
+    // maybe use for(const i of Object.keys(...))
+    Object.keys(meshRecords).forEach((additionalCoordinates) => {
+      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
+      //TODO put unpacked nested vars into vars and use Object.entries
+      Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
+        Object.keys(meshRecords[additionalCoordinates][layerName]).forEach((meshGroup) => {
+          const meshId = parseInt(meshGroup);
+          Object.entries(meshRecords[additionalCoordinates][layerName][meshId]).forEach(
+            ([key, value]) => {
+              //TODO for multiple dimensions_.forEach(
+              const splitAddCoord = additionalCoordinates.split("=");
+              const addCoordObject = { name: splitAddCoord[0], value: parseInt(splitAddCoord[1]) };
+              updateVisibilityActions.push(
+                updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
+              );
+              segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [
+                addCoordObject,
+              ]);
+            },
           );
-          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [addCoordObject]);
         });
       });
     });
-  });
-  console.log(updateVisibilityActions);
-  yield* all(updateVisibilityActions.map((e) => put(e)));
-}
+    yield* all(updateVisibilityActions.map((e) => put(e)));
+  }
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
@@ -1198,11 +1207,11 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
 function* handleBatchSegmentColorChange(
   batchAction: BatchUpdateGroupsAndSegmentsAction,
 ): Saga<void> {
-// Manually unpack batched actions and handle these.
-// In theory, this could happen automatically. See this issue in the corresponding (rather unmaintained) package: https://github.com/tshelburne/redux-batched-actions/pull/18
-// However, there seem to be some problems with that approach (e.g., too many updates, infinite recursion) and the discussion there didn't really reach a consensus
-// about the correct solution.
-// This is why we stick to the manual unpacking for now.
+  // Manually unpack batched actions and handle these.
+  // In theory, this could happen automatically. See this issue in the corresponding (rather unmaintained) package: https://github.com/tshelburne/redux-batched-actions/pull/18
+  // However, there seem to be some problems with that approach (e.g., too many updates, infinite recursion) and the discussion there didn't really reach a consensus
+  // about the correct solution.
+  // This is why we stick to the manual unpacking for now.
   const updateSegmentActions = batchAction.payload
     .filter((action) => action.type === "UPDATE_SEGMENT")
     .map((action) => call(handleSegmentColorChange, action));

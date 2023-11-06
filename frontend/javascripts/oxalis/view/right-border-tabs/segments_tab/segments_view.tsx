@@ -164,10 +164,23 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
- // TODO add coord are undefined
-  const meshesForCurrentAdditionalCoordinates = visibleSegmentationLayer != null
-  ? Object.values(state.localSegmentationData[visibleSegmentationLayer.name].meshes).filter(mesh => mesh.seedAdditionalCoordinates === state.flycam.additionalCoordinates)
-  : EMPTY_OBJECT;
+  const additionalCoordinates = state.flycam.additionalCoordinates;
+  const addCoordString =
+    additionalCoordinates != null
+      ? `${additionalCoordinates[0].name}=${additionalCoordinates[0].value}`
+      : "";
+
+  // TODO add coord are undefined
+  let meshesForCurrentAdditionalCoordinates = EMPTY_OBJECT;
+  if (visibleSegmentationLayer != null) {
+    const meshRecords = state.localSegmentationData[visibleSegmentationLayer?.name].meshes;
+    meshesForCurrentAdditionalCoordinates =
+      meshRecords != null &&
+      Object.keys(meshRecords).length > 0 &&
+      Object.keys(meshRecords[addCoordString]).length > 0
+        ? Object.values(meshRecords[addCoordString])
+        : EMPTY_OBJECT;
+  }
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
@@ -1301,9 +1314,18 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
+    const state = Store.getState();
+    const additionalCoordinates = state.flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
-      if (Store.getState().localSegmentationData[layerName].meshes[segment.id] != null) {
-        Store.dispatch(updateMeshVisibilityAction(layerName, segment.id, isVisible));
+      if (state.localSegmentationData[layerName].meshes[segment.id] != null) {
+        Store.dispatch(
+          updateMeshVisibilityAction(
+            layerName,
+            segment.id,
+            isVisible,
+            additionalCoordinates || undefined,
+          ),
+        );
       }
     });
   };

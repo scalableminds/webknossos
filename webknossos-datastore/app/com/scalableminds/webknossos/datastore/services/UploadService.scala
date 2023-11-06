@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
 import com.google.inject.Inject
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -12,6 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
@@ -228,12 +230,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
-        isZarr <- looksLikeZarrArray(unpackToDir).toFox
-
-        _ <- Fox.runIf(isZarr)(exploreLocalDatasource(unpackToDir, dataSourceId))
-        p <- Fox.runIf(!isZarr)(tryExploringMultipleZarrLayers(unpackToDir, dataSourceId))
-        _ <- Fox.runIf(!isZarr && p.flatten.isEmpty)(
-          postProcessUploadedWKWDataSource(unpackToDir, dataSourceId, layersToLink))
+        _ <- Fox.successful(())
+        uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
+        _ <- uploadedDataSourceType match {
+          case UploadedDataSourceType.ZARR     => exploreLocalDatasource(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.EXPLORED => Fox.successful(())
+          case UploadedDataSourceType.WKW =>
+            for {
+              p <- tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
+              _ <- Fox.runIf(p.isEmpty)(postProcessUploadedWKWDataSource(unpackToDir, dataSourceId, layersToLink))
+            } yield ()
+        }
       } yield ()
     }
 
@@ -365,6 +372,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield layerRenamed
   }
 
+  private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
+    if (looksLikeZarrArray(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.ZARR
+    } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.EXPLORED
+    } else {
+      UploadedDataSourceType.WKW
+    }
+
   private def looksLikeZarrArray(dataSourceDir: Path): Box[Boolean] =
     for {
       listing: Seq[Path] <- PathUtils.listFilesRecursive(
@@ -372,6 +388,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         maxDepth = 2,
         silent = false,
         filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
+    } yield listing.nonEmpty
+
+  private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
+    for {
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(
+        dataSourceDir,
+        maxDepth = 1,
+        silent = false,
+        filters = p => p.getFileName.toString == FILENAME_DATASOURCE_PROPERTIES_JSON)
     } yield listing.nonEmpty
 
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
@@ -496,4 +521,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       obj <- objectStringOption.toFox.flatMap(o => Json.fromJson[T](Json.parse(o)).asOpt)
     } yield obj
 
+}
+
+object UploadedDataSourceType extends Enumeration {
+  val ZARR, EXPLORED, WKW = Value
 }

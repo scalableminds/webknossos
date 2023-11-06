@@ -5,7 +5,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
-import com.scalableminds.webknossos.datastore.explore.ExploreLayerService
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass, GenericDataSource}
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -75,7 +74,6 @@ class DatasetController @Inject()(userService: UserService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   exploreRemoteLayerService: ExploreRemoteLayerService,
-                                  exploreLayerService: ExploreLayerService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 

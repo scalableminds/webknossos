@@ -687,7 +687,7 @@ function* ensureSegmentExists(
     return;
   }
 
-  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
+  if (action.type === "ADD_AD_HOC_MESH" || action.type === "ADD_PRECOMPUTED_MESH") {
     const { seedPosition, seedAdditionalCoordinates } = action;
     yield* put(
       updateSegmentAction(
@@ -733,7 +733,7 @@ function* ensureSegmentExists(
 
 function* maintainSegmentsMap(): Saga<void> {
   yield* takeEvery(
-    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ["ADD_AD_HOC_MESH", "ADD_PRECOMPUTED_MESH", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
     ensureSegmentExists,
   );
 }

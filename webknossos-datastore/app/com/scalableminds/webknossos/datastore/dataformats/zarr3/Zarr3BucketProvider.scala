@@ -21,7 +21,11 @@ class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogg
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
+    bucket.additionalCoordinates match {
+      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
+        zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
+      case _ => zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
+    }
   }
 
   override protected def onFinalize(): Unit = ()

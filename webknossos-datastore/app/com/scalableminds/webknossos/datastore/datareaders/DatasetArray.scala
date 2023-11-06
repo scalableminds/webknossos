@@ -87,26 +87,32 @@ class DatasetArray(vaultPath: VaultPath,
       this works for now.
      */
 
-    val shapeArray: Array[Int] = Array.fill(dimensionCount)(1)
-    shapeArray(dimensionCount - 3) = shape.x
-    shapeArray(dimensionCount - 2) = shape.y
-    shapeArray(dimensionCount - 1) = shape.z
+    val shapeArray: Array[Int] = Array.fill(rank)(1)
+    shapeArray(rank - 3) = shape.x
+    shapeArray(rank - 2) = shape.y
+    shapeArray(rank - 1) = shape.z
 
-    val offsetArray: Array[Int] = Array.fill(dimensionCount)(0)
-    offsetArray(dimensionCount - 3) = offset.x
-    offsetArray(dimensionCount - 2) = offset.y
-    offsetArray(dimensionCount - 1) = offset.z
+    val offsetArray: Array[Int] = Array.fill(rank)(0)
+    offsetArray(rank - 3) = offset.x
+    offsetArray(rank - 2) = offset.y
+    offsetArray(rank - 1) = offset.z
+
+    // TODO: find out hasZAxis, hasChannelAxis
+    // TODO translate the channelAxis index
 
     channelIndex match {
       case Some(c) => offsetArray(axisOrder.c.getOrElse(axisOrder.x - 1)) = c
-      case None    => ()
+      case None    => () //channel dim (if it exists) stays at offset=0
     }
 
+    // TODO translate the additionalAxis index (fortran vs c)
     for (additionalCoordinate <- additionalCoordinates) {
       val index = additionalAxesMap(additionalCoordinate.name).index
       offsetArray(index) = additionalCoordinate.value
-      // Shape for additional coordinates will always be 1
+      // Shape for additional coordinates is always 1
     }
+    logger.info(
+      s"readBytes with offsetArray ${offsetArray.mkString(",")} (xyz offset is ${offset}), this: ${this.toString}")
     readBytes(shapeArray, offsetArray)
   }
 

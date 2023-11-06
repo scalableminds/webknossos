@@ -35,6 +35,12 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
   def permuteIndicesReverse(indices: Array[Int]): Array[Int] =
     inversePermutation(indices.length).map(indices(_))
 
+  def permuteAxisNames(names: Array[String]): Array[String] =
+    permutation(names.length).map(names(_))
+
+  def permuteAxisNamesReverse(names: Array[String]): Array[String] =
+    inversePermutation(names.length).map(names(_))
+
 }
 
 object AxisOrder {

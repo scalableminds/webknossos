@@ -29,10 +29,10 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     permutationMutable
   }
 
-  def permuteIndices(indices: Array[Int]): Array[Int] =
+  def permuteIndicesOuterToInner(indices: Array[Int]): Array[Int] =
     permutation(indices.length).map(indices(_))
 
-  def permuteIndicesReverse(indices: Array[Int]): Array[Int] =
+  def permuteIndicesInnerToOuter(indices: Array[Int]): Array[Int] =
     inversePermutation(indices.length).map(indices(_))
 
   def permuteAxisNames(names: Array[String]): Array[String] =

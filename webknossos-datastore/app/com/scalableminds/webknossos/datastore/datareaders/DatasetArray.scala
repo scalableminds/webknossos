@@ -97,12 +97,13 @@ class DatasetArray(vaultPath: VaultPath,
     offsetArray(rank - 2) = offset.y
     offsetArray(rank - 1) = offset.z
 
-    // TODO: find out hasZAxis, hasChannelAxis
-    // TODO translate the channelAxis index
-
-    channelIndex match {
-      case Some(c) => offsetArray(axisOrder.c.getOrElse(axisOrder.x - 1)) = c
-      case None    => () //channel dim (if it exists) stays at offset=0
+    // If a channelIndex is requested, and a channel axis is known, add an offset to the channel axis
+    channelIndex.foreach { requestedChannelOffset =>
+      val channelAxisInnerOpt = axisOrder.c
+      channelAxisInnerOpt.foreach { channelAxisInner =>
+        val channelAxisOuter = axisOrder.inversePermutation(rank)(channelAxisInner)
+        offsetArray(channelAxisOuter) = requestedChannelOffset
+      }
     }
 
     // TODO translate the additionalAxis index (fortran vs c)
@@ -111,8 +112,10 @@ class DatasetArray(vaultPath: VaultPath,
       offsetArray(index) = additionalCoordinate.value
       // Shape for additional coordinates is always 1
     }
-    logger.info(
-      s"readBytes with offsetArray ${offsetArray.mkString(",")} (xyz offset is ${offset}), this: ${this.toString}")
+
+    val shapeOuter = axisOrder.permuteIndicesInnerToOuter(datasetShape)
+    logger.info(s"readBytes with offsetArray ${offsetArray
+      .mkString(",")} (xyz offset is ${offset}, shapeOuter=${shapeOuter.mkString(",")}")
     readBytes(shapeArray, offsetArray)
   }
 
@@ -129,14 +132,14 @@ class DatasetArray(vaultPath: VaultPath,
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
-    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(datasetShape),
-                                                      axisOrder.permuteIndicesReverse(chunkSize),
+    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesInnerToOuter(datasetShape),
+                                                      axisOrder.permuteIndicesInnerToOuter(chunkSize),
                                                       shape,
                                                       totalOffset)
     if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex),
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndicesOuterToInner(chunkIndex),
                                                                useSkipTypingShortcut = true)
       } yield sourceChunk
     } else {
@@ -145,7 +148,7 @@ class DatasetArray(vaultPath: VaultPath,
       val targetInCOrder: MultiArray = MultiArrayUtils.orderFlippedView(targetMultiArray)
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndicesOuterToInner(chunkIndex))
           offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
           sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
                                                                              axisOrder,
@@ -219,7 +222,7 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(chunkSize)(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesInnerToOuter(chunkSize)(dim))
     }.toArray
 
   override def toString: String =

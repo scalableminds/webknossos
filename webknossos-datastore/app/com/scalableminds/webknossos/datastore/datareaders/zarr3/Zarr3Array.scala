@@ -146,8 +146,8 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
-      axisOrder.permuteIndicesReverse(header.datasetShape),
-      axisOrder.permuteIndicesReverse(header.outerChunkSize),
+      axisOrder.permuteIndicesInnerToOuter(header.datasetShape),
+      axisOrder.permuteIndicesInnerToOuter(header.outerChunkSize),
       header.chunkSize,
       chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
     )

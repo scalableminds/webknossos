@@ -74,7 +74,7 @@ class UserController @Inject()(userService: UserService,
                                                 pageNumber.getOrElse(0))
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+        jsonList <- Fox.serialCombined(annotations)(a => annotationService.writeListItem(a))
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -186,7 +186,7 @@ class UserController @Inject()(userService: UserService,
                                                 pageNumber.getOrElse(0))
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
-        jsonList <- Fox.serialCombined(annotations)(annotationService.compactWrites)
+        jsonList <- Fox.serialCombined(annotations)(annotationService.writeListItem)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {

@@ -966,7 +966,9 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation): Fox[JsObject] = {
+
+  // 4 SQL Queries
+  def writeListItem(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
@@ -1000,5 +1002,34 @@ class AnnotationService @Inject()(
         "othersMayEdit" -> annotation.othersMayEdit
       )
     }
+  }
+
+  // 0 SQL Queries
+  def writeCompactInfo(annotationInfo: AnnotationCompactInfo): JsObject = {
+    val teamsJson = (0 until annotationInfo.teamNames.length).map(
+      idx =>
+        Json.obj(
+          "id" -> annotationInfo.teamIds(idx),
+          "name" -> annotationInfo.teamNames(idx),
+          "organizationId" -> annotationInfo.teamOrganizationIds(idx)
+      ))
+
+    Json.obj(
+      "id" -> annotationInfo.id,
+      "typ" -> annotationInfo.typ,
+      "name" -> annotationInfo.name,
+      "description" -> annotationInfo.description,
+      "owner" -> Json.obj(
+        "id" -> annotationInfo.ownerId.toString,
+        "firstName" -> annotationInfo.ownerFirstName,
+        "lastName" -> annotationInfo.ownerLastName
+      ),
+      "othersMayEdit" -> annotationInfo.othersMayEdit,
+      "teams" -> teamsJson,
+      "modified" -> annotationInfo.modified,
+      "stats" -> annotationInfo.stats,
+      "tags" -> annotationInfo.tags,
+      "dataSetName" -> annotationInfo.dataSetName
+    )
   }
 }

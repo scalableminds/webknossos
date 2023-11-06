@@ -79,11 +79,13 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  ownerFirstName: String,
                                  ownerLastName: String,
                                  othersMayEdit: Boolean,
-                                 teamId: ObjectId,
-                                 teamName: String,
-                                 teamOrganizationId: ObjectId,
+                                 teamIds: Seq[ObjectId],
+                                 teamNames: Seq[String],
+                                 teamOrganizationIds: Seq[ObjectId],
                                  modified: Instant,
-                                 statistics: JsObject,
+                                 stats: JsObject,
+                                 tags: Set[String],
+                                 state: AnnotationState.Value = Active,
                                  dataSetName: String)
 
 object AnnotationCompactInfo {
@@ -302,6 +304,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
+  private def parseObjectIdArray(objectIdArray: String): Seq[ObjectId] =
+    Option(objectIdArray).map(_.split(",").map(id => ObjectId(id))).getOrElse(Array[ObjectId]()).toSeq
+
   def findAllListableExplorationalsCompact(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
       implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
@@ -317,20 +322,25 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                u.firstname,
                u.lastname,
                a.othersmayedit,
-               a._team,
-               t.name,
-               t._organization,
+               string_agg(t._id, ',') as team_ids,
+               string_agg(t.name, ',') as team_names,
+               string_agg(t._organization, ',') as team_orgs,
                a.modified,
                a.statistics,
+               a.tags,
+               a.state,
                d.name
         FROM webknossos.annotations as a
         LEFT JOIN webknossos.users_ u
                ON u._id = a._user
+        LEFT JOIN webknossos.annotation_sharedteams ast
+               ON ast._annotation = a._id
         LEFT JOIN webknossos.teams t
-               ON t._id = a._team
+               ON ast._team = t._id
         LEFT JOIN webknossos.datasets d
                ON d._id = a._dataset
         WHERE $stateQuery AND $accessQuery
+        GROUP BY a._id, u.firstname, u.lastname, d.name
         ORDER BY a._id DESC LIMIT $limit OFFSET ${pageNumber * limit}
          """
       rows <- run(
@@ -342,15 +352,18 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
            String,
            String,
            Boolean,
-           ObjectId,
            String,
-           ObjectId,
+           String,
+           String,
            Instant,
+           String,
+           String,
            String,
            String)])
     } yield
       rows.toList.map(
-        r =>
+        r => {
+          println(s"teamIds: {${r._8}}");
           AnnotationCompactInfo(
             id = r._1,
             typ = AnnotationType.Explorational,
@@ -360,13 +373,16 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             ownerFirstName = r._5,
             ownerLastName = r._6,
             othersMayEdit = r._7,
-            teamId = r._8,
-            teamName = r._9,
-            teamOrganizationId = r._10,
+            teamIds = parseObjectIdArray(r._8),
+            teamNames = Option(r._9).map(_.split(",")).getOrElse(Array[String]()).toSeq,
+            teamOrganizationIds = parseObjectIdArray(r._10),
             modified = r._11,
-            statistics = Json.parse(r._12).validate[JsObject].getOrElse(Json.obj()),
-            dataSetName = r._13
-        )
+            stats = Json.parse(r._12).validate[JsObject].getOrElse(Json.obj()),
+            tags = parseArrayLiteral(r._13).toSet,
+            state = AnnotationState.fromString(r._14).getOrElse(AnnotationState.Active),
+            dataSetName = r._15
+          )
+        }
       )
 
   def countAllListableExplorationals(isFinished: Option[Boolean])(implicit ctx: DBAccessContext): Fox[Long] = {

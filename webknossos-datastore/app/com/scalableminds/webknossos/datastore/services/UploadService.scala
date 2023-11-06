@@ -238,20 +238,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case UploadedDataSourceType.WKW =>
             for {
               p <- tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
-              _ <- Fox.runIf(p.isEmpty)(postProcessUploadedWKWDataSource(unpackToDir, dataSourceId, layersToLink))
+              _ <- Fox.runIf(p.isEmpty)(addLayerAndResolutionDirIfMissing(unpackToDir))
             } yield ()
         }
+        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+        _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
-
-  private def postProcessUploadedWKWDataSource(unpackToDir: Path,
-                                               dataSourceId: DataSourceId,
-                                               layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
-    for {
-      _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
-      _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
-      _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
-    } yield ()
 
   private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
     for {

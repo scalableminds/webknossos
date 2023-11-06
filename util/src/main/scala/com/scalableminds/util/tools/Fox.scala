@@ -244,8 +244,7 @@ object Fox extends FoxImplicits {
   }
 
   /**
-    * Transforms a Future[T] into a Fox[T] where the Future is transformed into a Fox with a Failure if the Future fails.
-    * Useful for Futures containing exceptions.
+    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
     */
   def transformFuture[T](future: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     for {

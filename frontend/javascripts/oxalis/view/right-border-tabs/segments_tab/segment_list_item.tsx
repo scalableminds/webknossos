@@ -231,9 +231,9 @@ function _MeshInfoItem(props: {
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
   const dispatch = useDispatch();
-
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
-    dispatch(updateMeshVisibilityAction(layerName, id, isVisible));
+    console.log(mesh?.seedAdditionalCoordinates) // todo these are undefined
+    dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
   };
 
   const { segment, isSelectedInList, isHovered, mesh } = props;

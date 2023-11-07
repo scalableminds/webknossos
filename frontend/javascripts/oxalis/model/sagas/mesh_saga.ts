@@ -560,7 +560,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const { segmentId, layerName } = action;
 
   const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[segmentId],
+    (state) => state.localSegmentationData[layerName].meshes[additionalCoordinates][segmentId],
   );
 
   if (meshInfo.isPrecomputed) {

@@ -206,23 +206,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
-      const { layerName, id, visibility } = action;
-      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const { layerName, id, visibility, additionalCoordinates } = action;
       const addCoordString =
         additionalCoordinates != null && additionalCoordinates?.length > 0
           ? `${additionalCoordinates[0].name}=${additionalCoordinates[0].value}`
           : "";
-      if (state.localSegmentationData[layerName].meshes == null) return state;
+      // assumption: set_additional_coordinates action is handled before
       return update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
               [addCoordString]: {
-                  [id]: {
-                      isVisible: {
-                        $set: visibility,
-                      },
+                [id]: {
+                  isVisible: {
+                    $set: visibility,
                   },
+                },
               },
             },
           },
@@ -245,8 +244,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           [layerName]: {
             meshes: {
               [addCoordString]: {
-                  $set: remainingMeshes,
-                },
+                $set: remainingMeshes,
+              },
             },
           },
         },
@@ -282,9 +281,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           [layerName]: {
             meshes: {
               [addCoordString]: {
-                  [segmentId]: {
-                      $set: meshInfo,
-                    },
+                [segmentId]: {
+                  $set: meshInfo,
+                },
               },
             },
           },
@@ -314,8 +313,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             meshes: {
               [addCoordString]: {
                 [segmentId]: {
-                    $set: meshInfo,
-                  },
+                  $set: meshInfo,
+                },
               },
             },
           },
@@ -326,9 +325,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, segmentId } = action;
-      const meshInfo: Partial<MeshInformation> = {
-        isLoading: true,
-      };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const addCoordString =
         additionalCoordinates != null && additionalCoordinates?.length > 0
@@ -340,24 +336,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             meshes: {
               [addCoordString]: {
                 [segmentId]: {
-                  isLoading:{
+                  isLoading: {
                     $set: true,
-                  }
                   },
                 },
+              },
             },
           },
         },
       });
       return updatedKey;
-      //return updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
     }
 
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, segmentId } = action;
-      const meshInfo: Partial<MeshInformation> = {
-        isLoading: false,
-      };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const addCoordString =
         additionalCoordinates != null && additionalCoordinates?.length > 0
@@ -369,11 +361,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             meshes: {
               [addCoordString]: {
                 [segmentId]: {
-                    isLoading: {
-                      $set: false,
-                    },
+                  isLoading: {
+                    $set: false,
                   },
                 },
+              },
             },
           },
         },

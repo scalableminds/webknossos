@@ -1316,6 +1316,7 @@ class SegmentsView extends React.Component<Props, State> {
   ) => {
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
+    console.log("segments view", additionalCoordinates)
     this.handlePerSegment(groupId, (segment) => {
       if (state.localSegmentationData[layerName].meshes[segment.id] != null) {
         Store.dispatch(

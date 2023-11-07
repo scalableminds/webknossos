@@ -12,7 +12,10 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import {
+  getUnifiedAdditionalCoordinates,
+  getVisibleSegmentationLayer,
+} from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -267,11 +270,34 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         return { name, value: fallbackValue };
       });
 
-      return update(state, {
+      const updatedFlycamState = update(state, {
         flycam: {
           additionalCoordinates: { $set: values },
         },
       });
+
+      const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+      const additionalCoordinateString = `${values[0].name}=${values[0].value}`;
+      if (
+        visibleSegmentationLayer == null ||
+        state.localSegmentationData[visibleSegmentationLayer.name].meshes[
+          additionalCoordinateString
+        ] != null
+      ) {
+        return updatedFlycamState;
+      }
+
+      const updatedLocalSegmentationState = update(updatedFlycamState, {
+        localSegmentationData: {
+          [visibleSegmentationLayer.name]: {
+            meshes: {
+              [additionalCoordinateString]: { $set: [] },
+            },
+          },
+        },
+      });
+
+      return updatedLocalSegmentationState;
     }
 
     case "SET_ROTATION": {

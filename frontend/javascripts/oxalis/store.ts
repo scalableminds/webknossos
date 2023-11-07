@@ -528,6 +528,7 @@ type UiInformation = {
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly navbarHeight: number;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;

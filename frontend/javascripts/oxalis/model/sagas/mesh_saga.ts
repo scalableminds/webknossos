@@ -196,6 +196,7 @@ function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vect
 }
 
 function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
+  console.log("load ad hoc mesh from action", action.seedAdditionalCoordinates) //todo undefined
   yield* call(
     loadAdHocMesh,
     action.seedPosition,
@@ -544,7 +545,7 @@ function* refreshMeshes(): Saga<void> {
       continue;
     }
 
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, segmentationLayer.name);
+    yield* call(_refreshMeshWithMap, segmentId, threeDMap, segmentationLayer.name, additionalCoordinates);
   }
 }
 
@@ -578,7 +579,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
     if (adhocMeshesMapByLayer[additionalCoordinates] == null) return;
     const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
     if (threeDMap == null) return;
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName);
+    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
   }
 }
 
@@ -586,9 +587,10 @@ function* _refreshMeshWithMap(
   segmentId: number,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
+  additionalCoordinateString: string, 
 ): Saga<void> {
   const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[segmentId],
+    (state) => state.localSegmentationData[layerName].meshes[additionalCoordinateString][segmentId],
   );
   yield* call(
     [ErrorHandling, ErrorHandling.assert],
@@ -596,7 +598,7 @@ function* _refreshMeshWithMap(
     "_refreshMeshWithMap was called for a precomputed mesh.",
   );
   if (meshInfo.isPrecomputed) return;
-  const { mappingName, mappingType } = meshInfo;
+  const { mappingName, mappingType, seedAdditionalCoordinates } = meshInfo;
   const meshPositions = threeDMap.entries().filter(([value, _position]) => value);
 
   if (meshPositions.length === 0) {

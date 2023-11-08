@@ -232,7 +232,6 @@ function _MeshInfoItem(props: {
 }) {
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
-    console.log(mesh?.seedAdditionalCoordinates) // todo these are undefined
     dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
   };
 

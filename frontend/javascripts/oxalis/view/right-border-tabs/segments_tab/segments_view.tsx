@@ -178,7 +178,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       meshRecords != null &&
       Object.keys(meshRecords).length > 0 &&
       Object.keys(meshRecords[addCoordString]).length > 0
-        ? Object.values(meshRecords[addCoordString])
+        ? meshRecords[addCoordString]
         : EMPTY_OBJECT;
   }
 
@@ -223,12 +223,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   loadAdHocMesh(
     segmentId: number,
-    seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedPosition: Vector3
   ) {
-    console.log("segments view");
-    console.log(seedAdditionalCoordinates);
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition, Store.getState().flycam.additionalCoordinates||undefined));
   },
 
   loadPrecomputedMesh(
@@ -1316,7 +1313,6 @@ class SegmentsView extends React.Component<Props, State> {
   ) => {
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
-    console.log("segments view", additionalCoordinates)
     this.handlePerSegment(groupId, (segment) => {
       if (state.localSegmentationData[layerName].meshes[segment.id] != null) {
         Store.dispatch(
@@ -1334,7 +1330,7 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates);
+      this.props.loadAdHocMesh(segment.id, segment.somePosition);
     });
   };
 

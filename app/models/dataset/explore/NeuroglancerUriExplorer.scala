@@ -60,10 +60,9 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
         Fox.firstSuccess(
           Seq(new N5ArrayExplorer().explore(remotePath, None), new N5MultiscalesExplorer().explore(remotePath, None)))
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
-      case "zarr" =>
+      case "zarr" | "zarr2" =>
         Fox.firstSuccess(
           Seq(new NgffExplorer().explore(remotePath, None), new ZarrArrayExplorer().explore(remotePath, None)))
-      case "zarr2" => new ZarrArrayExplorer().explore(remotePath, None)
       case "zarr3" => new Zarr3ArrayExplorer().explore(remotePath, None)
       case _       => Fox.failure(f"Can not explore layer of $layerType type")
     }

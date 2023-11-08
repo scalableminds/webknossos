@@ -969,10 +969,12 @@ class AnnotationService @Inject()(
   def compactWrites(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      _ <- Fox.successful(())
+      datasetOpt <- datasetDAO.findOne(annotation._dataSet).toFutureOption //?~> "dataset.notFoundForAnnotation"
+      organizationOpt <- Fox.runOptional(datasetOpt)(dataset => organizationDAO.findOne(dataset._organization)) ?~> "organization.notFound"
       teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
-      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
+      teamsJson <- Fox.runOptional(organizationOpt)(organization =>
+        Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization)))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
       user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
       userJson = Json.obj(
         "id" -> user._id.toString,
@@ -990,12 +992,12 @@ class AnnotationService @Inject()(
         "stats" -> annotation.statistics,
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> annotation.annotationLayers,
-        "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
+        "dataSetName" -> datasetOpt.map(_.name).getOrElse("Dataset not available").toString,
+        "organization" -> organizationOpt.map(_.name).getOrElse("Organization not available").toString,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
-        "teams" -> teamsJson,
-        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
+        "teams" -> teamsJson.getOrElse(List()).toList,
+        "tags" -> (annotation.tags ++ Set(annotation.tracingType.toString) ++ datasetOpt.map(_.name).toSet),
         "owner" -> userJson,
         "othersMayEdit" -> annotation.othersMayEdit
       )

@@ -32,22 +32,13 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with ExtendedController
     with LazyLogging {
 
-  private def CURRENT_API_VERSION = 5
-
-  override def routeRequest(request: RequestHeader): Option[Handler] = {
-    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
-      case Some(m) =>
-        val version = m.group(1)
-        if (version.toInt > CURRENT_API_VERSION) {
-          return Some(Action {
-            JsonNotFound(
-              f"This WEBKNOSSOS instance does not yet support this API version. The requested API version $version is higher than the current API version $CURRENT_API_VERSION.")
-          })
-        }
-      case None =>
-    }
-
-    if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
+  override def routeRequest(request: RequestHeader): Option[Handler] =
+    if (apiVersionIsTooNew(request)) {
+      Some(Action {
+        JsonNotFound(
+          f"This WEBKNOSSOS instance does not yet support this API version. The requested API version is higher than the current API version $CURRENT_API_VERSION.")
+      })
+    } else if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")
@@ -59,5 +50,14 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(wkorgProxyController.proxyPageOrMainView)
-  }
+
+  private def CURRENT_API_VERSION = 5
+
+  private def apiVersionIsTooNew(request: RequestHeader): Boolean =
+    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
+      case Some(m) =>
+        val version = m.group(1)
+        version.toInt > CURRENT_API_VERSION
+      case None => false
+    }
 }

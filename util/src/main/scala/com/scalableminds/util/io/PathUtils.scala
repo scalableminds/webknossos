@@ -15,10 +15,10 @@ object PathUtils extends PathUtils
 
 trait PathUtils extends LazyLogging {
 
-  def directoryFilter(path: Path): Boolean =
+  private def directoryFilter(path: Path): Boolean =
     Files.isDirectory(path) && !Files.isHidden(path)
 
-  def fileFilter(path: Path): Boolean =
+  private def fileFilter(path: Path): Boolean =
     !Files.isDirectory(path)
 
   def fileExtensionFilter(ext: String)(path: Path): Boolean =

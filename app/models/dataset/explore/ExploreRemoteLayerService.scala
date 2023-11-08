@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerService,
   N5ArrayExplorer,
   N5MultiscalesExplorer,
+  NeuroglancerUriExplorer,
   NgffExplorer,
   PrecomputedExplorer,
   RemoteLayerExplorer,
@@ -130,7 +131,8 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
           new N5ArrayExplorer,
           new N5MultiscalesExplorer,
           new PrecomputedExplorer,
-          new Zarr3ArrayExplorer
+          new Zarr3ArrayExplorer,
+          new NeuroglancerUriExplorer(dataVaultService, exploreLayerService, ec)
         )
       )
     } yield layersWithVoxelSizes

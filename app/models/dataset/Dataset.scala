@@ -559,14 +559,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def deleteDataset(datasetId: ObjectId): Fox[Unit] = {
+  def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteResolutionsQuery =
       q"delete from webknossos.dataSet_resolutions where _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
       q"delete from webknossos.dataSet_layers where _dataset = $datasetId".asUpdate
     val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
-      q"delete from webknossos.datasets where _id = $datasetId".asUpdate
+      if (onlyMarkAsDeleted)
+        q"update webknossos.datasets set isDeleted = true where _id = $datasetId".asUpdate
+      else
+        q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 
     for {
       _ <- run(

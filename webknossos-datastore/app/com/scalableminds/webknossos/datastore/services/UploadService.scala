@@ -362,11 +362,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
-    if (looksLikeZarrArray(dataSourceDir, 2).openOr(false)) {
+    if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
       UploadedDataSourceType.ZARR
     } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
       UploadedDataSourceType.EXPLORED
-    } else if (looksLikeZarrArray(dataSourceDir, 3).openOr(false)) {
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
     } else {
       UploadedDataSourceType.WKW
@@ -393,7 +393,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, 2).isDefined)
+      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
     } yield layerDirs
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,

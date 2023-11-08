@@ -76,7 +76,7 @@ For those wishing to automate dataset upload or to do it programmatically, check
 ### Uploading through the File System
 -- (Self-Hosted Instances Only)-- 
 
-On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system (WKW-format only):
+On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system (WKW-format or Zarr only):
 
 * Place the dataset at `<WEBKNOSSOS directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)

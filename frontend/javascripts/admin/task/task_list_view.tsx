@@ -429,7 +429,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   value: "pending",
                 },
                 {
-                  text: "Has In Progress Instances",
+                  text: "Has Active Instances",
                   value: "active",
                 },
                 {

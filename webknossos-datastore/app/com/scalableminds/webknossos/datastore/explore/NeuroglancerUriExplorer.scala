@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
@@ -63,7 +63,8 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
       case "zarr" | "zarr2" =>
         Fox.firstSuccess(
-          Seq(new NgffExplorer().explore(remotePath, None), new ZarrArrayExplorer().explore(remotePath, None)))
+          Seq(new NgffExplorer().explore(remotePath, None),
+              new ZarrArrayExplorer(Vec3Int.ones, ec).explore(remotePath, None)))
       case "zarr3" => new Zarr3ArrayExplorer().explore(remotePath, None)
       case _       => Fox.failure(f"Can not explore layer of $layerType type")
     }

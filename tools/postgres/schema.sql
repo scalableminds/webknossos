@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(109);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(110);
 COMMIT TRANSACTION;
 
 
@@ -123,6 +123,7 @@ CREATE TABLE webknossos.dataSets(
   details JSONB,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isRemovedOnDisk BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),

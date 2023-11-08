@@ -57,7 +57,8 @@ case class Dataset(
     details: Option[JsObject] = None,
     tags: Set[String] = Set.empty,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    isRemovedOnDisk: Boolean = false
 ) extends FoxImplicits {
 
   def urlEncodedName: String =
@@ -134,7 +135,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         details,
         parseArrayLiteral(r.tags).toSet,
         Instant.fromSql(r.created),
-        r.isdeleted
+        r.isdeleted,
+        r.isremovedondisk
       )
     }
 
@@ -291,13 +293,15 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             isUnreported = row._10 == unreportedStatus,
         ))
 
-  private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
-                                       isUnreported: Option[Boolean],
-                                       organizationIdOpt: Option[ObjectId],
-                                       folderIdOpt: Option[ObjectId],
-                                       uploaderIdOpt: Option[ObjectId],
-                                       searchQuery: Option[String],
-                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  private def buildSelectionPredicates(
+      isActiveOpt: Option[Boolean],
+      isUnreported: Option[Boolean],
+      organizationIdOpt: Option[ObjectId],
+      folderIdOpt: Option[ObjectId],
+      uploaderIdOpt: Option[ObjectId],
+      searchQuery: Option[String],
+      includeSubfolders: Boolean,
+      excludeRemovedOnDisk: Boolean = true)(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -313,6 +317,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         .getOrElse(q"${true}")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
+      excludeRemovedOnDiskPredicate = if (excludeRemovedOnDisk) q"isRemovedOnDisk != true" else q"${true}"
     } yield q"""
             ($folderPredicate)
         AND ($uploaderPredicate)
@@ -320,6 +325,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         AND ($isActivePredicate)
         AND ($isUnreportedPredicate)
         AND ($organizationPredicate)
+        AND ($excludeRemovedOnDiskPredicate)
         AND $accessQuery
        """
 
@@ -567,7 +573,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"update webknossos.datasets set isDeleted = true where _id = $datasetId".asUpdate
+        q"update webknossos.datasets set isRemovedOnDisk = true where _id = $datasetId".asUpdate
       else
         q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 

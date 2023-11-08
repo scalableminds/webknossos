@@ -71,7 +71,6 @@ object Fox extends FoxImplicits {
         case Nil =>
           Future.successful(results.reverse)
       }
-
     runNext(l, Nil)
   }
 
@@ -87,7 +86,6 @@ object Fox extends FoxImplicits {
         case Nil =>
           Future.successful(results.reverse)
       }
-
     runNext(l, Nil)
   }
 
@@ -225,7 +223,6 @@ object Fox extends FoxImplicits {
         case Nil =>
           Fox.successful(previousResult)
       }
-
     t =>
       runNext(functions, t)
   }

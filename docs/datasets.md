@@ -56,9 +56,12 @@ With other converters, you may need to add the layers separately.
     - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
     - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
-5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
+5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc.) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
   Consider setting the dataset `name` property and double-check all other properties for correctness.
 6. Click `Import` to finish
+
+WEBKNOSSOS can also import URIs from [Neuroglancer](https://github.com/google/neuroglancer). When viewing a dataset on a Neuroglancer instance in the browser,
+copy the URI from the address bar and paste it into the *Add Remote Dataset* tab to view the dataset in WEBKNOSSOS.
 
 WEBKNOSSOS will NOT download or copy datasets in full from these third-party data providers. 
 Rather, any data viewed in WEBKNOSSOS will be streamed read-only from the remote source. 
@@ -82,7 +85,7 @@ On self-hosted instances, large datasets can be efficiently imported by placing 
 * Go to the [dataset view on the dashboard](./dashboard.md)
 * Use the refresh button on the dashboard or wait for WEBKNOSSOS to detect the dataset (up to 10min)
 
-Typically WEBKNOSSOS can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
+Typically, WEBKNOSSOS can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
 
 * On the dashboard, click *Import* for your new dataset
 * Provide the requested properties, such as *scale*. It is also recommended to set the *largestSegmentId*. See the section on [configuring datasets](#configuring-datasets) below for more detailed explanations of these parameters.

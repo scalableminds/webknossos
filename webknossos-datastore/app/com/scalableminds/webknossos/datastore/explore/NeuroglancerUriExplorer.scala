@@ -1,4 +1,5 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
+
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
@@ -9,17 +10,17 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
-import play.api.libs.json.{JsArray, JsNumber, JsObject, JsString, JsValue, Json}
+import play.api.libs.json._
 
 import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
-                                        exploreRemoteLayerService: ExploreRemoteLayerService,
+                                        exploreLayerService: ExploreLayerService,
                                         implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer URI Explorer"
@@ -36,7 +37,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten
-      renamedLayers = exploreRemoteLayerService.makeLayerNamesUnique(layers.map(_._1))
+      renamedLayers = exploreLayerService.makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayer, Vec3Double)]] =

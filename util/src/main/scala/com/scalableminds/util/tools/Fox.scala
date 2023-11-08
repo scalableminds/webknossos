@@ -260,7 +260,6 @@ object Fox extends FoxImplicits {
         case Nil =>
           Fox.empty
       }
-
     runNext(foxes)
   }
 

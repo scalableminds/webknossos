@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
 import com.google.inject.Inject
-import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

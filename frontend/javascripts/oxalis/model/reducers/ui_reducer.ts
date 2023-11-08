@@ -148,6 +148,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         isMeasuring: action.isMeasuring,
       });
     }
+    case "SET_NAVBAR_HEIGHT": {
+      return updateKey(state, "uiInformation", {
+        navbarHeight: action.navbarHeight,
+      });
+    }
 
     default:
       return state;

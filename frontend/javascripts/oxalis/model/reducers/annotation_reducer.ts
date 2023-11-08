@@ -205,7 +205,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_ISOSURFACE_VISIBILITY": {
+    case "UPDATE_MESH_VISIBILITY": {
       const { layerName, id, visibility } = action;
       const meshInfo: Partial<MeshInformation> = {
         isVisible: visibility,
@@ -213,7 +213,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey4(state, "localSegmentationData", layerName, "meshes", id, meshInfo);
     }
 
-    case "REMOVE_ISOSURFACE": {
+    case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
       const { [segmentId]: _, ...remainingMeshes } = state.localSegmentationData[layerName].meshes;
       return updateKey2(state, "localSegmentationData", layerName, {
@@ -221,7 +221,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "ADD_AD_HOC_ISOSURFACE": {
+    case "ADD_AD_HOC_MESH": {
       const { layerName, segmentId, seedPosition, mappingName, mappingType } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -235,7 +235,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
     }
 
-    case "ADD_PRECOMPUTED_ISOSURFACE": {
+    case "ADD_PRECOMPUTED_MESH": {
       const { layerName, segmentId, seedPosition, meshFileName } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -248,7 +248,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
     }
 
-    case "STARTED_LOADING_ISOSURFACE": {
+    case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
       const meshInfo: Partial<MeshInformation> = {
         isLoading: true,
@@ -256,7 +256,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey4(state, "localSegmentationData", layerName, "meshes", segmentId, meshInfo);
     }
 
-    case "FINISHED_LOADING_ISOSURFACE": {
+    case "FINISHED_LOADING_MESH": {
       const { layerName, segmentId } = action;
       const meshInfo: Partial<MeshInformation> = {
         isLoading: false,

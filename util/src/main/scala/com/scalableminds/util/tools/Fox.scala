@@ -263,6 +263,18 @@ object Fox extends FoxImplicits {
 
     runNext(foxes)
   }
+
+  /**
+    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
+    */
+  def transformFuture[T](future: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    for {
+      fut <- future.transform {
+        case Success(value)        => Try(Fox.successful(value))
+        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+      }
+      f <- fut
+    } yield f
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...HEAD)
 
 ### Added
+Added a filter to the Task List->Stats column to quickly filter for tasks with "Prending", "In-Progress" or "Finished" instances. [#7430](https://github.com/scalableminds/webknossos/pull/7430)
 
 ### Changed
 

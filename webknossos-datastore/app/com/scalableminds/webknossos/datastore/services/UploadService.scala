@@ -233,13 +233,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         _ <- Fox.successful(())
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
-          case UploadedDataSourceType.ZARR     => exploreLocalDatasource(unpackToDir, dataSourceId)
-          case UploadedDataSourceType.EXPLORED => Fox.successful(())
-          case UploadedDataSourceType.WKW =>
-            for {
-              p <- tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
-              _ <- Fox.runIf(p.isEmpty)(addLayerAndResolutionDirIfMissing(unpackToDir))
-            } yield ()
+          case UploadedDataSourceType.ZARR            => exploreLocalDatasource(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.EXPLORED        => Fox.successful(())
+          case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
         _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
@@ -366,19 +363,21 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
-    if (looksLikeZarrArray(dataSourceDir).openOr(false)) {
+    if (looksLikeZarrArray(dataSourceDir, 2).openOr(false)) {
       UploadedDataSourceType.ZARR
     } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
       UploadedDataSourceType.EXPLORED
+    } else if (looksLikeZarrArray(dataSourceDir, 3).openOr(false)) {
+      UploadedDataSourceType.ZARR_MULTILAYER
     } else {
       UploadedDataSourceType.WKW
     }
 
-  private def looksLikeZarrArray(dataSourceDir: Path): Box[Boolean] =
+  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     for {
       listing: Seq[Path] <- PathUtils.listFilesRecursive(
         dataSourceDir,
-        maxDepth = 2,
+        maxDepth = maxDepth,
         silent = false,
         filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
     } yield listing.nonEmpty
@@ -395,7 +394,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p).isDefined)
+      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, 2).isDefined)
     } yield layerDirs
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,
@@ -517,5 +516,5 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, WKW = Value
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW = Value
 }

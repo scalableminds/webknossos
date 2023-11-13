@@ -85,22 +85,23 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       content: (
         <div>
           <Typography.Title level={4} type="danger">
-            Attention: You will lose access to all the datasets and annotations uploaded/created as
-            part of this organization!
+            You will lose access to all the datasets and annotations uploaded/created as part of
+            this organization!
           </Typography.Title>
           <Typography.Title level={4} type="danger">
-            Attention: Unless you are part of another WEBKNOSSOS organization, you can NOT login in
-            again with this account and will lose access to WEBKNOSSOS.
+            Unless you are part of another WEBKNOSSOS organization, you can NOT login in again with
+            this account and will lose access to WEBKNOSSOS.
           </Typography.Title>
           <p>
-            Deleting an organization cannot be undone. Are you certain you want to delete the
-            organization {this.props.organization.displayName}?
+            Deleting an organization{" "}
+            <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
+            want to delete the organization {this.props.organization.displayName}?
           </p>
-
-          <p>You will be logged out.</p>
         </div>
       ),
-      okText: "Yes, delete this organization now.",
+      okText: <>Yes, delete this organization now and log me out.</>,
+      okType: "danger",
+      width: 500,
     });
 
     if (isDeleteConfirmed) {

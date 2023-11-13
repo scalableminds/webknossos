@@ -6,28 +6,21 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.{Box, Full}
-import org.apache.commons.codec.digest.MurmurHash3
 
-import java.nio.ByteBuffer
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class SegmentIndexFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext) extends FoxImplicits {
+class SegmentIndexFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with Hdf5Utils {
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val segmentIndexDir = "segment-index"
   private val segmentIndexFileExtension = "hdf5"
 
   private lazy val meshFileCache = new Hdf5FileCache(10)
 
-  private def getHashFunction(name: String): Long => Long = name match {
-    case "identity" => identity
-    case "murmurhash3_x64_128" =>
-      x: Long =>
-        Math.abs(MurmurHash3.hash128x64(ByteBuffer.allocate(8).putLong(x).array())(1))
-  } // TODO: Extract HD5 trait
-
-  def getSegmentIndexFile(organizationName: String, datasetName: String, dataLayerName: String): Box[Path] =
+  private def getSegmentIndexFile(organizationName: String, datasetName: String, dataLayerName: String): Box[Path] =
     for {
       _ <- Full("")
       layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
@@ -60,7 +53,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig)(implicit ec: Ex
       topLeftStart = buckets(bucketLocalOffset)(1)
       topLeftEnd = buckets(bucketLocalOffset)(2)
       topLefts = segmentIndex.reader
-        .uint16()
+        .uint16() // Read datatype from attributes?
         .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
 
     } yield topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt)))

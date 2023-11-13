@@ -89,7 +89,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             this organization!
           </Typography.Title>
           <Typography.Title level={4} type="danger">
-            Unless you are part of another WEBKNOSSOS organization, you can NOT login in again with
+            Unless you are part of another WEBKNOSSOS organization, you can NOT login again with
             this account and will lose access to WEBKNOSSOS.
           </Typography.Title>
           <p>

@@ -420,43 +420,41 @@ export type AnnotationLayerDescriptor = {
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
-export type APIAnnotationInfo = {
-  readonly annotationLayers: Array<AnnotationLayerDescriptor>;
-  readonly dataSetName: string;
-  readonly organization: string;
-  readonly description: string;
-  readonly formattedHash: string;
-  readonly modified: number;
+export type APIAnnotationInfoCompact = {
   readonly id: string;
-  readonly visibility: APIAnnotationVisibility;
-  readonly name: string;
-  readonly state: string;
-  readonly stats: SkeletonTracingStats | {};
-  readonly tags: Array<string>;
-  readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
+  readonly name: string;
+  readonly description: string;
   // The owner can be null (e.g., for a sandbox annotation
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
   readonly othersMayEdit: boolean;
+  readonly modified: number;
+  readonly stats: SkeletonTracingStats | {};
+  readonly dataSetName: string;
+};
+export type APIAnnotationInfo = APIAnnotationInfoCompact & {
+  // needed too?
+  readonly tags: Array<string>;
+  readonly formattedHash: string;
+
+  readonly organization: string;
+  readonly visibility: APIAnnotationVisibility;
+  readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly state: string;
+  readonly tracingTime: number | null | undefined;
 };
 
-export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfoCompact {
   const {
-    annotationLayers,
     dataSetName,
-    organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
-    state,
     stats,
-    tags,
-    tracingTime,
+    // tags,
     typ,
     owner,
     teams,
@@ -464,19 +462,13 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
   } = annotation;
 
   return {
-    annotationLayers,
     dataSetName,
-    organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
-    state,
     stats,
-    tags,
-    tracingTime,
+    // tags,
     typ,
     owner,
     teams,

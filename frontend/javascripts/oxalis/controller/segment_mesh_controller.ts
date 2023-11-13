@@ -8,33 +8,47 @@ import type { Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
-import Store from "oxalis/store";
+import Store, { Flycam, OxalisState } from "oxalis/store";
 import { AdditionalCoordinate } from "types/api_flow_types";
+import { getAdditionalCoordinatesAsString, getAdditionalCoordinatesAsStringFromFC } from "oxalis/model/accessors/flycam_accessor";
+import { connect } from "react-redux";
+import React from "react";
 
-export default class SegmentMeshController {
+type StateProps = {
+  flycam: Flycam;
+}
+
+type State = {
   // meshesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   meshesLODRootGroup: CustomLOD;
   meshesGroupsPerSegmentationId: Record<
     string,
-    Record<string, Record<number, Record<number, THREE.Group>>>
-  > = {};
+    Record<string, Record<number, Record<number, THREE.Group>>>>;
+}
 
-  constructor() {
-    this.meshesLODRootGroup = new CustomLOD();
+class SegmentMeshController extends React.PureComponent<StateProps, State>{
+
+  state: State = {
+    meshesLODRootGroup: new CustomLOD(),
+    meshesGroupsPerSegmentationId: {}
+  };
+
+  componentDidMount(): void {
     this.addLights();
   }
 
+
   hasMesh(id: number, layerName: string): boolean {
-    const additionalCoordinates = this.getCoordinateString();
+    const additionalCoordinates = getAdditionalCoordinatesAsStringFromFC(Store.getState().flycam);
 
     if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinates] == null ||
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates] == null ||
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null
     )
       return false;
 
-    const segments = this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName];
+    const segments = this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName];
     if (!segments) {
       return false;
     }
@@ -89,18 +103,6 @@ export default class SegmentMeshController {
     return mesh;
   }
 
-  getCoordinateString(inputAdditionalCoordinates?: AdditionalCoordinate[] | null) {
-    const additionalCoordinatesObject =
-      inputAdditionalCoordinates || Store.getState().flycam.additionalCoordinates;
-    let additionalCoordinates = "";
-    if (additionalCoordinatesObject != null && additionalCoordinatesObject.length > 0) {
-      additionalCoordinates = additionalCoordinatesObject
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b), "") as string;
-    }
-    return additionalCoordinates;
-  }
-
   addMeshFromGeometry(
     geometry: THREE.BufferGeometry,
     segmentationId: number,
@@ -109,30 +111,30 @@ export default class SegmentMeshController {
     lod: number,
     layerName: string,
   ): void {
-    const additionalCoordinates = this.getCoordinateString();
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
+    const additionalCoordinates = getAdditionalCoordinatesAsStringFromFC(this.props.flycam);
+    if (this.state.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates] = {};
     }
 
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] = {};
+    if (this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] = {};
     }
     if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
     ) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] = {};
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] = {};
     }
     if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] ==
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] ==
       null
     ) {
       const newGroup = new THREE.Group();
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] =
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod] =
         newGroup;
       if (lod === NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
+        this.state.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
       } else {
-        this.meshesLODRootGroup.addLODMesh(newGroup, lod);
+        this.state.meshesLODRootGroup.addLODMesh(newGroup, lod);
       }
       // @ts-ignore
       newGroup.cellId = segmentationId;
@@ -146,50 +148,50 @@ export default class SegmentMeshController {
       mesh.translateY(offset[1]);
       mesh.translateZ(offset[2]);
     }
-    this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod].add(
+    this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId][lod].add(
       mesh,
     );
   }
 
   removeMeshById(segmentationId: number, layerName: string): void {
-    const additionalCoordinates = this.getCoordinateString();
+    const additionalCoordinates = getAdditionalCoordinatesAsStringFromFC(Store.getState().flycam);
 
     // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
     // but if they are removed they should be removed for all timestamps
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
+    if (this.state.meshesGroupsPerSegmentationId[additionalCoordinates] == null) {
       return;
     }
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
+    if (this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName] == null) {
       return;
     }
     if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId] == null
     ) {
       return;
     }
     _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId],
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId],
       (meshGroup, lod) => {
         const lodNumber = parseInt(lod);
         if (lodNumber !== NO_LOD_MESH_INDEX) {
-          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+          this.state.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
         } else {
-          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+          this.state.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
         }
       },
     );
-    delete this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId];
+    delete this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentationId];
   }
 
   getMeshGeometryInBestLOD(segmentId: number, layerName: string): THREE.Group {
-    const additionalCoordinates = this.getCoordinateString();
+    const additionalCoordinates = getAdditionalCoordinatesAsStringFromFC(this.props.flycam);
 
     const bestLod = Math.min(
       ...Object.keys(
-        this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId],
+        this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId],
       ).map((lodVal) => parseInt(lodVal)),
     );
-    return this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
+    return this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][segmentId][bestLod];
   }
 
   setMeshVisibility(
@@ -199,14 +201,14 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
     console.log("setMeshVis", id, visibility, layerName, additionalCoordinates);
-    const additionalCoordinatesString = this.getCoordinateString(additionalCoordinates);
+    const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates||null);
 
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
+    if (this.state.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
       return; //TODO think about 3D only
     }
 
     _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][id],
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][id],
       (meshGroup) => {
         meshGroup.visible = visibility;
       },
@@ -214,10 +216,10 @@ export default class SegmentMeshController {
   }
 
   setMeshColor(id: number, layerName: string): void {
-    const additionalCoordinates = this.getCoordinateString();
+    const additionalCoordinates = getAdditionalCoordinatesAsStringFromFC(this.props.flycam);
     const color = this.getColorObjectForSegment(id);
     _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
+      this.state.meshesGroupsPerSegmentationId[additionalCoordinates][layerName][id],
       (meshGroup) => {
         if (meshGroup) {
           for (const child of meshGroup.children) {
@@ -261,9 +263,19 @@ export default class SegmentMeshController {
     pointLight.position.y = -25;
     pointLight.position.z = 10;
 
-    this.meshesLODRootGroup.add(ambientLight);
-    this.meshesLODRootGroup.add(directionalLight);
-    this.meshesLODRootGroup.add(directionalLight2);
-    this.meshesLODRootGroup.add(pointLight);
+    this.state.meshesLODRootGroup.add(ambientLight);
+    this.state.meshesLODRootGroup.add(directionalLight);
+    this.state.meshesLODRootGroup.add(directionalLight2);
+    this.state.meshesLODRootGroup.add(pointLight);
+  }
+
+}
+
+const mapStateToProps = (state: OxalisState): StateProps=>{
+  return {
+    flycam: state.flycam
   }
 }
+
+const connector = connect(mapStateToProps);
+export default connector(SegmentMeshController);

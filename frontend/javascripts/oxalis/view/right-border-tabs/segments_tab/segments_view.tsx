@@ -36,7 +36,7 @@ import {
 } from "antd";
 import features from "features";
 import Toast from "libs/toast";
-import _, { isNumber } from "lodash";
+import _, { add, isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
@@ -46,7 +46,10 @@ import {
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -257,9 +260,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
-    console.log("setAdditionalCoordinates");
-    console.log(additionalCoordinates);
-    dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
+    if (
+      getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
+      getAdditionalCoordinatesAsString(additionalCoordinates || null)
+    ) {
+      dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
+    }
   },
 
   updateSegments(
@@ -692,8 +698,9 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.props.setPosition(segment.somePosition);
-    if (segment.someAdditionalCoordinates) {
-      this.props.setAdditionalCoordinates(segment.someAdditionalCoordinates);
+    const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
+    if (segmentAdditionalCoordinates != null) {
+      this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
     }
   };
 
@@ -704,7 +711,6 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null = null) => {
     const newActiveSegmentDropdown = isVisible ? segmentId : null;
-    console.log("on show dropdown", this.props.meshes[1]);
     this.setState({ activeDropdownSegmentId: newActiveSegmentDropdown });
   };
 
@@ -1212,7 +1218,6 @@ class SegmentsView extends React.Component<Props, State> {
   areSelectedSegmentsMeshesVisible = () => {
     const selectedSegments = this.getSelectedSegments();
     const meshes = this.props.meshes;
-    console.log("are selected meshes visible", meshes);
     const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
       const segmentMesh = meshes[segment.id];
       return segmentMesh != null && !meshes[segment.id].isVisible;
@@ -1327,7 +1332,11 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition, this.props.flycam.additionalCoordinates || undefined);
+      this.props.loadAdHocMesh(
+        segment.id,
+        segment.somePosition,
+        this.props.flycam.additionalCoordinates || undefined,
+      );
     });
   };
 

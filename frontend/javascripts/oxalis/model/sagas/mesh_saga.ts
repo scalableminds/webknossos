@@ -633,7 +633,7 @@ function* _refreshMeshWithMap(
     yield* call(
       loadAdHocMesh,
       position,
-      additionalCoordinatesObject,
+      additionalCoordinatesObject || undefined,
       segmentId,
       shouldBeRemoved,
       layerName,
@@ -1161,6 +1161,7 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
 
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
   if (action.type === "SET_ADDITIONAL_COORDINATES") {
+    debugger;
     const { segmentMeshController } = yield* call(getSceneController);
     const meshRecords = yield* call({
       context: segmentMeshController,
@@ -1170,9 +1171,9 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
     if (action.values == null || action.values.length === 0) return;
     const newAdditionalCoordinates = action.values
       ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
+      .reduce((a: string, b: string) => a.concat(b, ";")) as string;
 
-    let updateVisibilityActions: any = [];
+    let updateVisibilityActions: UpdateMeshVisibilityAction[] = [];
 
     // maybe use for(const i of Object.keys(...))
     Object.keys(meshRecords).forEach((additionalCoordinates) => {
@@ -1221,7 +1222,7 @@ function* handleBatchSegmentColorChange(
   // This is why we stick to the manual unpacking for now.
   const updateSegmentActions = batchAction.payload
     .filter((action) => action.type === "UPDATE_SEGMENT")
-    .map((action) => call(handleSegmentColorChange, action));
+    .map((action) => call(handleSegmentColorChange, action as UpdateSegmentAction));
   yield* all(updateSegmentActions);
 }
 

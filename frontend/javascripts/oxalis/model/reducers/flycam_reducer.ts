@@ -7,6 +7,7 @@ import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import {
+  getAdditionalCoordinatesAsString,
   getValidZoomRangeForUser,
   ZOOM_STEP_INTERVAL,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -277,7 +278,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       });
 
       const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-      const additionalCoordinateString = `${values[0].name}=${values[0].value}`;
+      const additionalCoordinateString = getAdditionalCoordinatesAsString(values);
       if (
         visibleSegmentationLayer == null ||
         state.localSegmentationData[visibleSegmentationLayer.name].meshes[

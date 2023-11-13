@@ -419,7 +419,6 @@ function getNodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
-  additionalCoordinates,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;

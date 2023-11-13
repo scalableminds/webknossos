@@ -1,5 +1,5 @@
 import { saveAs } from "file-saver";
-import _, { add } from "lodash";
+import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
@@ -80,6 +80,7 @@ import { ResolutionInfo } from "../helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -119,12 +120,7 @@ export function isMeshSTL(buffer: ArrayBuffer): boolean {
 
 function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
   const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null && additionalCoordinatesObject?.length > 0) {
-    additionalCoordinates = additionalCoordinatesObject
-      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
-  }
+  let additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
 
   adhocMeshesMapByLayer[additionalCoordinates] =
     adhocMeshesMapByLayer[additionalCoordinates] || new Map();
@@ -143,13 +139,9 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 }
 
 function removeMapForSegment(layerName: string, segmentId: number): void {
-  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null) {
-    additionalCoordinates = additionalCoordinatesObject
-      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
-  }
+  let additionalCoordinates = getAdditionalCoordinatesAsString(
+    Store.getState().flycam.additionalCoordinates,
+  );
 
   if (adhocMeshesMapByLayer[additionalCoordinates][layerName] == null) {
     return;
@@ -424,7 +416,7 @@ function* maybeLoadMeshChunk(
   useDataStore: boolean,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
-  const additionalCoordinates = Store.getState().flycam.additionalCoordinates || undefined;
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
   if (threeDMap.get(clippedPosition)) {
@@ -476,7 +468,7 @@ function* maybeLoadMeshChunk(
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
-          additionalCoordinates,
+          additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
           subsamplingStrides,
@@ -489,10 +481,15 @@ function* maybeLoadMeshChunk(
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingMesh) {
-        segmentMeshController.removeMeshById(segmentId, layer.name);
+        segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
       }
 
-      segmentMeshController.addMeshFromVertices(vertices, segmentId, layer.name);
+      segmentMeshController.addMeshFromVertices(
+        vertices,
+        segmentId,
+        layer.name,
+        additionalCoordinates || undefined,
+      );
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
@@ -521,14 +518,8 @@ function* refreshMeshes(): Saga<void> {
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
 
-  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null) {
-    additionalCoordinates = additionalCoordinatesObject
-      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
-  }
-
+  const additionalCoordinatesObject = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
   if (!segmentationLayer) {
@@ -549,19 +540,14 @@ function* refreshMeshes(): Saga<void> {
       segmentId,
       threeDMap,
       segmentationLayer.name,
-      additionalCoordinates,
+      additionalCoordinatesObject,
     );
   }
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
-  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null) {
-    additionalCoordinates = additionalCoordinatesObject
-      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
-  }
+  const additionalCoordinatesObject = yield* select((state) => state.flycam.additionalCoordinates);
+  let additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
 
   const { segmentId, layerName } = action;
 
@@ -584,7 +570,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
     if (adhocMeshesMapByLayer[additionalCoordinates] == null) return;
     const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
     if (threeDMap == null) return;
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
+    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinatesObject);
   }
 }
 
@@ -592,8 +578,9 @@ function* _refreshMeshWithMap(
   segmentId: number,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
-  additionalCoordinateString: string,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): Saga<void> {
+  const additionalCoordinateString = getAdditionalCoordinatesAsString(additionalCoordinates);
   const meshInfo = yield* select(
     (state) => state.localSegmentationData[layerName].meshes[additionalCoordinateString][segmentId],
   );
@@ -603,7 +590,7 @@ function* _refreshMeshWithMap(
     "_refreshMeshWithMap was called for a precomputed mesh.",
   );
   if (meshInfo.isPrecomputed) return;
-  const { mappingName, mappingType, seedAdditionalCoordinates } = meshInfo;
+  const { mappingName, mappingType } = meshInfo;
   const meshPositions = threeDMap.entries().filter(([value, _position]) => value);
 
   if (meshPositions.length === 0) {
@@ -619,21 +606,13 @@ function* _refreshMeshWithMap(
   // Meshing for N-D segmentations is not yet supported.
   // See https://github.com/scalableminds/webknossos/issues/7229 //TODO
 
-  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = "";
-  if (additionalCoordinatesObject != null) {
-    additionalCoordinates = additionalCoordinatesObject
-      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b)) as string;
-  }
-
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.
     yield* call(
       loadAdHocMesh,
       position,
-      additionalCoordinatesObject || undefined,
+      additionalCoordinates || undefined,
       segmentId,
       shouldBeRemoved,
       layerName,
@@ -752,6 +731,7 @@ function* loadPrecomputedMeshForSegmentId(
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -800,6 +780,7 @@ function* loadPrecomputedMeshForSegmentId(
     availableChunksMap,
     loadingOrder,
     scale,
+    additionalCoordinates,
   );
 
   try {
@@ -907,6 +888,7 @@ function _getLoadChunksTasks(
   availableChunksMap: ChunksMap,
   loadingOrder: number[],
   scale: Vector3 | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
@@ -991,6 +973,7 @@ function _getLoadChunksTasks(
                     scale,
                     lod,
                     layerName,
+                    additionalCoordinates,
                   );
                 }
 
@@ -1036,6 +1019,7 @@ function _getLoadChunksTasks(
                   null,
                   lod,
                   layerName,
+                  additionalCoordinates,
                 );
               },
           );
@@ -1146,7 +1130,11 @@ function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): 
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().segmentMeshController.removeMeshById(segmentId, layerName);
+    getSceneController().segmentMeshController.removeMeshById(
+      segmentId,
+      layerName,
+      Store.getState().flycam.additionalCoordinates,
+    );
   }
 
   removeMapForSegment(layerName, segmentId);
@@ -1156,7 +1144,6 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates); //use yield* call
-  console.log(Store.getState().localSegmentationData);
 }
 
 function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
@@ -1169,9 +1156,7 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
     });
 
     if (action.values == null || action.values.length === 0) return;
-    const newAdditionalCoordinates = action.values
-      ?.map((coordinate: AdditionalCoordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b, ";")) as string;
+    const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
 
     let updateVisibilityActions: UpdateMeshVisibilityAction[] = [];
 
@@ -1182,19 +1167,15 @@ function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
       Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
         Object.keys(meshRecords[additionalCoordinates][layerName]).forEach((meshGroup) => {
           const meshId = parseInt(meshGroup);
-          Object.entries(meshRecords[additionalCoordinates][layerName][meshId]).forEach(
-            ([key, value]) => {
-              //TODO for multiple dimensions_.forEach(
-              const splitAddCoord = additionalCoordinates.split("=");
-              const addCoordObject = { name: splitAddCoord[0], value: parseInt(splitAddCoord[1]) };
-              updateVisibilityActions.push(
-                updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
-              );
-              segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [
-                addCoordObject,
-              ]);
-            },
+          //TODO for multiple dimensions_.forEach(
+          const splitAddCoord = additionalCoordinates.split("=");
+          const addCoordObject = { name: splitAddCoord[0], value: parseInt(splitAddCoord[1]) };
+          updateVisibilityActions.push(
+            updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
           );
+          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [
+            addCoordObject,
+          ]);
         });
       });
     });

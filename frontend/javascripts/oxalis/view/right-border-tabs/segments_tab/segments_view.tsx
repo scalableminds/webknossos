@@ -36,7 +36,7 @@ import {
 } from "antd";
 import features from "features";
 import Toast from "libs/toast";
-import _, { add, isNumber } from "lodash";
+import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
@@ -167,11 +167,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
-  const additionalCoordinates = state.flycam.additionalCoordinates;
-  const addCoordString =
-    additionalCoordinates != null
-      ? `${additionalCoordinates[0].name}=${additionalCoordinates[0].value}`
-      : "";
+  const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
 
   // TODO add coord are undefined
   let meshesForCurrentAdditionalCoordinates = EMPTY_OBJECT;

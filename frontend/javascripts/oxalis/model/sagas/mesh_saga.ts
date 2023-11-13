@@ -196,7 +196,6 @@ function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vect
 }
 
 function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
-  console.log("load ad hoc mesh from action", action.seedAdditionalCoordinates) //todo undefined
   yield* call(
     loadAdHocMesh,
     action.seedPosition,
@@ -545,7 +544,13 @@ function* refreshMeshes(): Saga<void> {
       continue;
     }
 
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, segmentationLayer.name, additionalCoordinates);
+    yield* call(
+      _refreshMeshWithMap,
+      segmentId,
+      threeDMap,
+      segmentationLayer.name,
+      additionalCoordinates,
+    );
   }
 }
 
@@ -587,7 +592,7 @@ function* _refreshMeshWithMap(
   segmentId: number,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
-  additionalCoordinateString: string, 
+  additionalCoordinateString: string,
 ): Saga<void> {
   const meshInfo = yield* select(
     (state) => state.localSegmentationData[layerName].meshes[additionalCoordinateString][segmentId],

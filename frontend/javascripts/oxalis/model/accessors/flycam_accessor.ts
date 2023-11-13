@@ -38,6 +38,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { SmallerOrHigherInfo } from "../helpers/resolution_info";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -272,6 +273,21 @@ function _getLeft(flycam: Flycam): Vector3 {
 function _getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
+}
+
+export function getAdditionalCoordinatesAsStringFromFC(flycam: Flycam): string {
+  return getAdditionalCoordinatesAsString(flycam.additionalCoordinates);
+}
+
+export function getAdditionalCoordinatesAsString(
+  additionalCoordinates: AdditionalCoordinate[] | null,
+): string {
+  if (additionalCoordinates != null && additionalCoordinates.length > 0) {
+    return additionalCoordinates
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .reduce((a: string, b: string) => a.concat(b, ";"), "") as string;
+  }
+  return "";
 }
 
 function _getFlooredPosition(flycam: Flycam): Vector3 {

@@ -223,9 +223,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   loadAdHocMesh(
     segmentId: number,
-    seedPosition: Vector3
+    seedPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined,
   ) {
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition, Store.getState().flycam.additionalCoordinates||undefined));
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
   },
 
   loadPrecomputedMesh(
@@ -703,6 +704,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null = null) => {
     const newActiveSegmentDropdown = isVisible ? segmentId : null;
+    console.log("on show dropdown", this.props.meshes[1]);
     this.setState({ activeDropdownSegmentId: newActiveSegmentDropdown });
   };
 
@@ -1210,6 +1212,7 @@ class SegmentsView extends React.Component<Props, State> {
   areSelectedSegmentsMeshesVisible = () => {
     const selectedSegments = this.getSelectedSegments();
     const meshes = this.props.meshes;
+    console.log("are selected meshes visible", meshes);
     const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
       const segmentMesh = meshes[segment.id];
       return segmentMesh != null && !meshes[segment.id].isVisible;
@@ -1268,14 +1271,11 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   handleRefreshMeshes = (groupId: number | null) => {
-    const { visibleSegmentationLayer } = this.props;
+    const { visibleSegmentationLayer, meshes } = this.props;
     if (visibleSegmentationLayer == null) return;
 
     this.handlePerSegment(groupId, (segment) => {
-      if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
-        null
-      ) {
+      if (meshes[segment.id] != null) {
         Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1294,13 +1294,10 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
-    const { visibleSegmentationLayer } = this.props;
+    const { visibleSegmentationLayer, meshes } = this.props;
     if (visibleSegmentationLayer == null) return;
     this.handlePerSegment(groupId, (segment) => {
-      if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
-        null
-      ) {
+      if (meshes[segment.id] != null) {
         Store.dispatch(removeMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1311,10 +1308,10 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
-    const state = Store.getState();
-    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const { flycam, meshes } = this.props;
+    const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
-      if (state.localSegmentationData[layerName].meshes[segment.id] != null) {
+      if (meshes[segment.id] != null) {
         Store.dispatch(
           updateMeshVisibilityAction(
             layerName,
@@ -1330,7 +1327,7 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition);
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, this.props.flycam.additionalCoordinates || undefined);
     });
   };
 
@@ -1815,8 +1812,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null || relevantSegments.length === 0) return false;
-    const meshesOfLayer =
-      Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes;
+    const meshesOfLayer = this.props.meshes;
     return relevantSegments.some((segment) => meshesOfLayer[segment.id] != null);
   };
 

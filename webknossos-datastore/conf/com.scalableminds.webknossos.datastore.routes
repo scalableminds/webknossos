@@ -72,6 +72,9 @@ POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/con
 # Ad-Hoc Meshing
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/adHocMesh                                                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestAdHocMesh(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 
+# Segment-Index files
+GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentIndex/:segmentId                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentIndex(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, segmentId: String)
+
 # DataSource management
 POST          /datasets                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.uploadChunk(token: Option[String])
 POST          /datasets/reserveUpload                                                                                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reserveUpload(token: Option[String])

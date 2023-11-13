@@ -32,6 +32,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
+    segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
     uploadService: UploadService
@@ -622,6 +623,23 @@ Expects:
               .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
           synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
         } yield Ok(Json.toJson(synapseTypes))
+      }
+    }
+
+  def getSegmentIndex(token: Option[String],
+                      organizationName: String,
+                      dataSetName: String,
+                      dataLayerName: String,
+                      segmentId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          topLefts <- segmentIndexFileService.readSegmentIndex(organizationName,
+                                                               dataSetName,
+                                                               dataLayerName,
+                                                               segmentId.toLong)
+        } yield Ok(Json.toJson(topLefts))
       }
     }
 

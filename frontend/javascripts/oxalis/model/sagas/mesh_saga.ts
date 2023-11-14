@@ -271,7 +271,7 @@ function* loadAdHocMesh(
   const { zoomStep, resolutionInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
   batchCounterPerSegment[segmentId] = 0;
 
-  // If a REMOVE_ISOSURFACE action is dispatched and consumed
+  // If a REMOVE_MESH action is dispatched and consumed
   // here before loadFullAdHocMesh is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
@@ -289,7 +289,7 @@ function* loadAdHocMesh(
     ),
     cancel: take(
       (action: Action) =>
-        action.type === "REMOVE_ISOSURFACE" &&
+        action.type === "REMOVE_MESH" &&
         action.segmentId === segmentId &&
         action.layerName === layer.name,
     ),
@@ -699,7 +699,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       : getVisibleSegmentationLayer(state),
   );
   if (layer == null) return;
-  // If a REMOVE_ISOSURFACE action is dispatched and consumed
+  // If a REMOVE_MESH action is dispatched and consumed
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
@@ -714,7 +714,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
     ),
     cancel: take(
       (otherAction: Action) =>
-        otherAction.type === "REMOVE_ISOSURFACE" &&
+        otherAction.type === "REMOVE_MESH" &&
         otherAction.segmentId === segmentId &&
         otherAction.layerName === layer.name,
     ),
@@ -1242,13 +1242,13 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
-  yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadMeshCell);
-  yield* takeEvery("TRIGGER_ISOSURFACES_DOWNLOAD", downloadMeshCells);
-  yield* takeEvery("REMOVE_ISOSURFACE", removeMesh);
+  yield* takeEvery("TRIGGER_MESH_DOWNLOAD", downloadMeshCell);
+  yield* takeEvery("TRIGGER_MESHES_DOWNLOAD", downloadMeshCells);
+  yield* takeEvery("REMOVE_MESH", removeMesh);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);
-  yield* takeEvery("REFRESH_ISOSURFACES", refreshMeshes);
-  yield* takeEvery("REFRESH_ISOSURFACE", refreshMesh);
-  yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleMeshVisibilityChange);
+  yield* takeEvery("REFRESH_MESHES", refreshMeshes);
+  yield* takeEvery("REFRESH_MESH", refreshMesh);
+  yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);

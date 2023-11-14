@@ -70,6 +70,7 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
 export type MutableCommentType = {
   content: string;
@@ -511,8 +512,8 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
-  readonly showAINucleiSegmentationModal: boolean;
-  readonly showAINeuronSegmentationModal: boolean;
+  readonly aIJobModalState: StartAIJobModalState;
+  readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
@@ -527,6 +528,7 @@ type UiInformation = {
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly navbarHeight: number;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;

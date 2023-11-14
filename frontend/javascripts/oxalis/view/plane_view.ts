@@ -15,6 +15,7 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const createDirLight = (
   position: Vector3,
@@ -33,7 +34,7 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
-const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -48,7 +49,7 @@ class PlaneView {
   constructor() {
     this.throttledPerformMeshHitTest = _.throttle(
       this.performMeshHitTest,
-      ISOSURFACE_HOVER_THROTTLING_DELAY,
+      MESH_HOVER_THROTTLING_DELAY,
     );
     this.running = false;
     const { scene } = getSceneController();
@@ -248,6 +249,13 @@ class PlaneView {
     this.resize();
     this.animate();
     window.addEventListener("resize", this.resizeThrottled);
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.navbarHeight,
+        () => this.resizeThrottled(),
+        true,
+      ),
+    );
   }
 }
 

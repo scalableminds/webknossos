@@ -206,7 +206,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_ISOSURFACE_VISIBILITY": {
+    case "UPDATE_MESH_VISIBILITY": {
       const { layerName, id, visibility, additionalCoordinates } = action;
       const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
       // assumption: set_additional_coordinates action is handled before
@@ -227,7 +227,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "REMOVE_ISOSURFACE": {
+    case "REMOVE_MESH": {
       //TODO fix me
       const { layerName, segmentId } = action;
       const additionalCoordinates = state.flycam.additionalCoordinates;
@@ -247,7 +247,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "ADD_AD_HOC_ISOSURFACE": {
+    case "ADD_AD_HOC_MESH": {
       const {
         layerName,
         segmentId,
@@ -284,7 +284,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updatedKey;
     }
 
-    case "ADD_PRECOMPUTED_ISOSURFACE": {
+    case "ADD_PRECOMPUTED_MESH": {
       const { layerName, segmentId, seedPosition, meshFileName } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -312,7 +312,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updatedKey;
     }
 
-    case "STARTED_LOADING_ISOSURFACE": {
+    case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -334,7 +334,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updatedKey;
     }
 
-    case "FINISHED_LOADING_ISOSURFACE": {
+    case "FINISHED_LOADING_MESH": {
       const { layerName, segmentId } = action;
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);

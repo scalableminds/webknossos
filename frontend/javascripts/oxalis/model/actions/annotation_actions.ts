@@ -190,7 +190,7 @@ export const updateMeshVisibilityAction = (
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ) =>
   ({
-    type: "UPDATE_ISOSURFACE_VISIBILITY",
+    type: "UPDATE_MESH_VISIBILITY",
     layerName,
     id,
     visibility,
@@ -219,7 +219,7 @@ export const triggerMeshDownloadAction = (
   layerName: string,
 ) =>
   ({
-    type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+    type: "TRIGGER_MESH_DOWNLOAD",
     segmentName,
     segmentId,
     layerName,
@@ -229,32 +229,32 @@ export const triggerMeshesDownloadAction = (
   segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ) =>
   ({
-    type: "TRIGGER_ISOSURFACES_DOWNLOAD",
+    type: "TRIGGER_MESHES_DOWNLOAD",
     segmentsArray,
   } as const);
 
 export const refreshMeshesAction = () =>
   ({
-    type: "REFRESH_ISOSURFACES",
+    type: "REFRESH_MESHES",
   } as const);
 
 export const refreshMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "REFRESH_ISOSURFACE",
+    type: "REFRESH_MESH",
     layerName,
     segmentId,
   } as const);
 
 export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "STARTED_LOADING_ISOSURFACE",
+    type: "STARTED_LOADING_MESH",
     layerName,
     segmentId,
   } as const);
 
 export const finishedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "FINISHED_LOADING_ISOSURFACE",
+    type: "FINISHED_LOADING_MESH",
     layerName,
     segmentId,
   } as const);
@@ -278,7 +278,7 @@ export const updateCurrentMeshFileAction = (
 
 export const removeMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "REMOVE_ISOSURFACE",
+    type: "REMOVE_MESH",
     layerName,
     segmentId,
   } as const);
@@ -292,7 +292,7 @@ export const addAdHocMeshAction = (
   mappingType: MappingType | null | undefined,
 ) =>
   ({
-    type: "ADD_AD_HOC_ISOSURFACE",
+    type: "ADD_AD_HOC_MESH",
     layerName,
     segmentId,
     seedPosition,
@@ -309,7 +309,7 @@ export const addPrecomputedMeshAction = (
   meshFileName: string,
 ) =>
   ({
-    type: "ADD_PRECOMPUTED_ISOSURFACE",
+    type: "ADD_PRECOMPUTED_MESH",
     layerName,
     segmentId,
     seedPosition,

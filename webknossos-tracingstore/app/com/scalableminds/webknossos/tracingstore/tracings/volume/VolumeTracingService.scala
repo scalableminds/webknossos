@@ -374,7 +374,8 @@ class VolumeTracingService @Inject()(
       mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0,
       // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
-      hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(tracingWithResolutionRestrictions.fallbackLayer)
+      hasSegmentIndex =
+        VolumeSegmentIndexService.canHaveSegmentIndexOpt(tracingWithResolutionRestrictions.fallbackLayer)
     )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
@@ -663,6 +664,45 @@ class VolumeTracingService @Inject()(
       } yield mergedVolume.stats(shouldCreateSegmentIndex)
     }
   }
+
+  def addSegmentIndex(tracingId: String,
+                      tracing: VolumeTracing,
+                      currentVersion: Long,
+                      userToken: Option[String],
+                      dryRun: Boolean): Fox[Option[Int]] =
+    if (tracing.hasSegmentIndex.getOrElse(false)) {
+      // tracing has a segment index already, do nothing
+      Fox.successful(None)
+    } else if (!VolumeSegmentIndexService.canHaveSegmentIndex(tracing.fallbackLayer)) {
+      // tracing is not eligible for segment index, do nothing
+      Fox.successful(None)
+    } else {
+      var processedBucketCount = 0
+      for {
+        isTemporaryTracing <- isTemporaryTracing(tracingId)
+        sourceDataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
+        buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
+        segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, currentVersion + 1L)
+        _ <- Fox.serialCombined(buckets) {
+          case (bucketPosition, bucketData) =>
+            processedBucketCount += 1
+            updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, tracing.elementClass)
+        }
+        _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
+        updateGroup = UpdateActionGroup[VolumeTracing](
+          tracing.version + 1L,
+          System.currentTimeMillis(),
+          None,
+          List(AddSegmentIndex()),
+          None,
+          None,
+          "dummyTransactionId",
+          1,
+          0
+        )
+        _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
+      } yield Some(processedBucketCount)
+    }
 
   def importVolumeData(tracingId: String,
                        tracing: VolumeTracing,

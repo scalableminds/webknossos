@@ -9,7 +9,7 @@ import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import constants from "oxalis/constants";
+
 type State = {
   files: Array<File>;
   dropzoneActive: boolean;
@@ -25,6 +25,7 @@ type OwnProps = {
 type StateProps = {
   showDropzoneModal: boolean;
   hideDropzoneModal: () => void;
+  navbarHeight: number;
 };
 type Props = StateProps & OwnProps;
 
@@ -271,7 +272,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              height: `calc(100vh - ${constants.NAVBAR_HEIGHT}px)`,
+              height: `calc(100vh - ${this.props.navbarHeight}px)`,
             }}
             className="flex-column"
           >
@@ -309,6 +310,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

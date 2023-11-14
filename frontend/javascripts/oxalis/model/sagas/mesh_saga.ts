@@ -118,15 +118,18 @@ export function isMeshSTL(buffer: ArrayBuffer): boolean {
   return isMesh;
 }
 
-function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  const additionalCoordinatesObject = Store.getState().flycam.additionalCoordinates;
-  let additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
+function getOrAddMapForSegment(
+  layerName: string,
+  segmentId: number,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+): ThreeDMap<boolean> {
+  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
 
-  adhocMeshesMapByLayer[additionalCoordinates] =
-    adhocMeshesMapByLayer[additionalCoordinates] || new Map();
-  adhocMeshesMapByLayer[additionalCoordinates][layerName] =
-    adhocMeshesMapByLayer[additionalCoordinates][layerName] || new Map();
-  const meshesMap = adhocMeshesMapByLayer[additionalCoordinates][layerName];
+  adhocMeshesMapByLayer[additionalCoordinatesString] =
+    adhocMeshesMapByLayer[additionalCoordinatesString] || new Map();
+  adhocMeshesMapByLayer[additionalCoordinatesString][layerName] =
+    adhocMeshesMapByLayer[additionalCoordinatesString][layerName] || new Map();
+  const meshesMap = adhocMeshesMapByLayer[additionalCoordinatesString][layerName];
   const maybeMap = meshesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -138,16 +141,18 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
   return maybeMap;
 }
 
-function removeMapForSegment(layerName: string, segmentId: number): void {
-  let additionalCoordinates = getAdditionalCoordinatesAsString(
-    Store.getState().flycam.additionalCoordinates,
-  );
+function removeMapForSegment(
+  layerName: string,
+  segmentId: number,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+): void {
+  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
 
-  if (adhocMeshesMapByLayer[additionalCoordinates][layerName] == null) {
+  if (adhocMeshesMapByLayer[additionalCoordinatesString][layerName] == null) {
     return;
   }
 
-  adhocMeshesMapByLayer[additionalCoordinates][layerName].delete(segmentId);
+  adhocMeshesMapByLayer[additionalCoordinatesString][layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -417,7 +422,7 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
+  const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
 
   if (threeDMap.get(clippedPosition)) {
     return [];
@@ -1125,19 +1130,20 @@ function* handleRemoveSegment(action: RemoveSegmentAction) {
   yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
-function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): void {
+function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
   const { layerName } = action;
   const segmentId = action.segmentId;
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   if (removeFromScene) {
     getSceneController().segmentMeshController.removeMeshById(
       segmentId,
       layerName,
-      Store.getState().flycam.additionalCoordinates,
+      additionalCoordinates,
     );
   }
 
-  removeMapForSegment(layerName, segmentId);
+  removeMapForSegment(layerName, segmentId, additionalCoordinates);
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
@@ -1146,40 +1152,58 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates); //use yield* call
 }
 
-function* handleAdditionalCoordinateUpdate(action: FlycamAction): Saga<void> {
-  if (action.type === "SET_ADDITIONAL_COORDINATES") {
-    debugger;
-    const { segmentMeshController } = yield* call(getSceneController);
-    const meshRecords = yield* call({
-      context: segmentMeshController,
-      fn: () => segmentMeshController.meshesGroupsPerSegmentationId,
-    });
+export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+  yield* take("WK_READY");
 
-    if (action.values == null || action.values.length === 0) return;
-    const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
+  let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
-    let updateVisibilityActions: UpdateMeshVisibilityAction[] = [];
-
-    // maybe use for(const i of Object.keys(...))
-    Object.keys(meshRecords).forEach((additionalCoordinates) => {
-      const shouldBeVisible = additionalCoordinates === newAdditionalCoordinates;
-      //TODO put unpacked nested vars into vars and use Object.entries
-      Object.keys(meshRecords[additionalCoordinates]).forEach((layerName) => {
-        Object.keys(meshRecords[additionalCoordinates][layerName]).forEach((meshGroup) => {
-          const meshId = parseInt(meshGroup);
-          //TODO for multiple dimensions_.forEach(
-          const splitAddCoord = additionalCoordinates.split("=");
-          const addCoordObject = { name: splitAddCoord[0], value: parseInt(splitAddCoord[1]) };
-          updateVisibilityActions.push(
-            updateMeshVisibilityAction(layerName, meshId, shouldBeVisible, [addCoordObject]),
-          );
-          segmentMeshController.setMeshVisibility(meshId, shouldBeVisible, layerName, [
-            addCoordObject,
-          ]);
-        });
+  while (true) {
+    const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
+    //satisfy TS
+    if (action.type === "SET_ADDITIONAL_COORDINATES") {
+      const { segmentMeshController } = yield* call(getSceneController);
+      const meshRecords = yield* call({
+        context: segmentMeshController,
+        fn: () => segmentMeshController.meshesGroupsPerSegmentationId,
       });
-    });
-    yield* all(updateVisibilityActions.map((e) => put(e)));
+
+      if (action.values == null || action.values.length === 0) break;
+      const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
+
+      for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
+        const currentAdditionalCoordinatesAsString =
+          getAdditionalCoordinatesAsString(additionalCoordinates);
+        const shouldBeVisible = currentAdditionalCoordinatesAsString === newAdditionalCoordinates;
+        const recordsOfLayers = meshRecords[currentAdditionalCoordinatesAsString];
+        if (recordsOfLayers != null) {
+          for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
+            const segmentIds = Object.keys(recordsForOneLayer);
+            for (const segmentIdAsString of segmentIds) {
+              const segmentId = parseInt(segmentIdAsString);
+              yield* put(
+                updateMeshVisibilityAction(
+                  layerName,
+                  segmentId,
+                  shouldBeVisible,
+                  additionalCoordinates || undefined,
+                ),
+              );
+              yield* call(
+                {
+                  context: segmentMeshController,
+                  fn: segmentMeshController.setMeshVisibility,
+                },
+                segmentId,
+                shouldBeVisible,
+                layerName,
+                additionalCoordinates,
+              );
+            }
+          }
+        }
+      }
+      previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+    }
   }
 }
 
@@ -1228,5 +1252,4 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
-  yield* takeEvery("SET_ADDITIONAL_COORDINATES", handleAdditionalCoordinateUpdate); //TODO remove and while true
 }

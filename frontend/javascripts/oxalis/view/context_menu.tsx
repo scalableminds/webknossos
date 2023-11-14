@@ -1476,7 +1476,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateMeshVisibilityAction(layerName, meshId, false));
+    dispatch(updateMeshVisibilityAction(layerName, meshId, false, Store.getState().flycam.additionalCoordinates||undefined));
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));

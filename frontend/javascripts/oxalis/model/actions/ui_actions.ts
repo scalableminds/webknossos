@@ -24,6 +24,7 @@ type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAc
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
+type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
@@ -52,7 +53,8 @@ export type UiAction =
   | ShowQuickSelectSettingsAction
   | HideMeasurementTooltipAction
   | SetLastMeasuredPositionAction
-  | SetIsMeasuringAction;
+  | SetIsMeasuringAction
+  | SetNavbarHeightAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -170,4 +172,9 @@ export const setIsMeasuringAction = (isMeasuring: boolean) =>
   ({
     type: "SET_IS_MEASURING",
     isMeasuring,
+  } as const);
+export const setNavbarHeightAction = (navbarHeight: number) =>
+  ({
+    type: "SET_NAVBAR_HEIGHT",
+    navbarHeight,
   } as const);

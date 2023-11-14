@@ -601,7 +601,8 @@ class AnnotationController @Inject()(
             isFinished,
             limit.getOrElse(annotationService.DefaultAnnotationListLimit),
             pageNumber.getOrElse(0))
-        } yield Ok(Json.toJson(annotationInfos))
+          annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
+        } yield Ok(Json.toJson(annotationInfosJsons))
       } else {
         for {
           readableAnnotations <- annotationDAO.findAllListableExplorationals(
@@ -610,7 +611,7 @@ class AnnotationController @Inject()(
             pageNumber.getOrElse(0))
           annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
             annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
-          jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
+          jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.writeListItem) ?~> "annotation.compactWrites.failed"
           _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
         } yield {
           val result = Ok(Json.toJson(jsonList))
@@ -621,15 +622,6 @@ class AnnotationController @Inject()(
         }
       }
     }
-
-  @ApiOperation(hidden = true, value = "")
-  def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      userTeams <- userService.teamIdsFor(request.identity._id)
-      sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
-    } yield Ok(Json.toJson(json))
-  }
 
   @ApiOperation(hidden = true, value = "")
   def getSharedTeams(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

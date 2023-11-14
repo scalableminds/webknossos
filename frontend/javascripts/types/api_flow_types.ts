@@ -435,7 +435,6 @@ export type APIAnnotationInfoCompact = {
   readonly tags: Array<string>;
   readonly state: string;
 };
-export type APIAnnotationInfo = APIAnnotationInfoCompact;
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfoCompact {
   const {
@@ -477,7 +476,7 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-type APIAnnotationBase = APIAnnotationInfo & {
+type APIAnnotationBase = APIAnnotationInfoCompact & {
   readonly organization: string;
   readonly visibility: APIAnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;

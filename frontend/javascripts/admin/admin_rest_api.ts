@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
-  APIAnnotationInfo,
+  APIAnnotationInfoCompact,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIAnnotationWithTask,
@@ -66,7 +66,6 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   RenderAnimationOptions,
-  APIAnnotationInfoCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -556,7 +555,7 @@ export function deletePrivateLink(linkId: string): Promise<{
 export function getAnnotationInfos(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationInfo>> {
+): Promise<Array<APIAnnotationInfoCompact>> {
   return Request.receiveJSON(
     `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -566,7 +565,7 @@ export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationInfo>> {
+): Promise<Array<APIAnnotationInfoCompact>> {
   return Request.receiveJSON(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );

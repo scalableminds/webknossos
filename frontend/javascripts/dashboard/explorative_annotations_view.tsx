@@ -32,6 +32,7 @@ import {
   downloadAnnotation,
   getCompactAnnotationsForUser,
   getReadableAnnotations,
+  getAnnotationInformation,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
@@ -267,7 +268,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return null;
     }
 
-    const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
     const { typ, id, state } = tracing;
 
     if (state === "Active") {
@@ -280,7 +280,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
           <AsyncLink
             href="#"
-            onClick={() => downloadAnnotation(id, typ, hasVolumeTracing)}
+            onClick={async () => {
+              const fullAnnotation = await getAnnotationInformation(tracing.id);
+              const hasVolumeTracing = getVolumeDescriptors(fullAnnotation).length > 0;
+
+              return downloadAnnotation(id, typ, hasVolumeTracing);
+            }}
             icon={<DownloadOutlined key="download" />}
           >
             Download

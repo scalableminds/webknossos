@@ -76,13 +76,13 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | APIAnnotationInfo | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
-  annotation: APIAnnotation | APIAnnotationInfo | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
@@ -97,7 +97,7 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  annotation: APIAnnotation | APIAnnotationInfo | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);

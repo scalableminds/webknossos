@@ -66,6 +66,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   RenderAnimationOptions,
+  APIAnnotationInfoCompact,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -552,7 +553,7 @@ export function deletePrivateLink(linkId: string): Promise<{
 }
 
 // ### Annotations
-export function getCompactAnnotations(
+export function getAnnotationInfos(
   isFinished: boolean,
   pageNumber: number = 0,
 ): Promise<Array<APIAnnotationInfo>> {
@@ -574,7 +575,7 @@ export function getCompactAnnotationsForUser(
 export function getReadableAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationInfo>> {
+): Promise<Array<APIAnnotationInfoCompact>> {
   return Request.receiveJSON(
     `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}&compact=true`,
   );

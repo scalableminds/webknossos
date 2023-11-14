@@ -52,7 +52,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { ContextRouter, Link, RouteProps } from "react-router-dom";
@@ -68,6 +68,7 @@ import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { MaintenanceBanner } from "maintenance_banner";
+import { useInterval } from "libs/react_helpers";
 
 const { Content } = Layout;
 
@@ -156,6 +157,27 @@ const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRo
   );
 };
 
+function Matches() {
+  const [match, setMatch] = useState(0);
+
+  useInterval(() => {
+    setMatch((match + 1) % 2);
+  }, 500);
+
+  const images = _.range(0, 10).map((idx) => (
+    <p key={idx}>
+      <img
+        // onMouseEnter={() => setMatch(1)}
+        // onMouseOut={() => setMatch(0)}
+        style={{ border: "1px white solid" }}
+        src={`http://localhost:8000/image?feature=${idx}&match=${match}`}
+      />
+    </p>
+  ));
+
+  return <>{images}</>;
+}
+
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
     const initialMaybeCompoundType =
@@ -216,6 +238,9 @@ class ReactRouter extends React.Component<Props> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
+
+    return <Matches />;
+
     return (
       <Router history={browserHistory}>
         <Layout>

@@ -1025,6 +1025,7 @@ class AnnotationService @Inject()(
       "teams" -> teamsJson,
       "modified" -> annotationInfo.modified,
       "stats" -> annotationInfo.stats,
+      "state" -> annotationInfo.state,
       "tags" -> annotationInfo.tags,
       "dataSetName" -> annotationInfo.dataSetName
     )

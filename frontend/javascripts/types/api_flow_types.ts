@@ -397,7 +397,6 @@ export type APITask = {
   readonly dataSet: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
-  readonly formattedHash: string;
   readonly id: string;
   readonly neededExperience: {
     readonly domain: string;
@@ -433,16 +432,13 @@ export type APIAnnotationInfoCompact = {
   readonly modified: number;
   readonly stats: SkeletonTracingStats | {};
   readonly dataSetName: string;
+  readonly tags: Array<string>;
+  readonly state: string;
 };
 export type APIAnnotationInfo = APIAnnotationInfoCompact & {
-  // needed too?
-  readonly tags: Array<string>;
-  readonly formattedHash: string;
-
   readonly organization: string;
   readonly visibility: APIAnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
-  readonly state: string;
   readonly tracingTime: number | null | undefined;
 };
 
@@ -454,7 +450,8 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     stats,
-    // tags,
+    state,
+    tags,
     typ,
     owner,
     teams,
@@ -468,7 +465,8 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     stats,
-    // tags,
+    state,
+    tags,
     typ,
     owner,
     teams,

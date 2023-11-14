@@ -363,7 +363,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield
       rows.toList.map(
         r => {
-          println(s"teamIds: {${r._8}}");
           AnnotationCompactInfo(
             id = r._1,
             typ = AnnotationType.Explorational,

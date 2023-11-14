@@ -273,8 +273,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeSegmentAction(segmentId, layerName));
   },
 
-  deleteSegmentData(segmentId: number, layerName: string) {
-    dispatch(deleteSegmentDataAction(segmentId, layerName));
+  deleteSegmentData(segmentId: number, layerName: string, callback?: () => void) {
+    dispatch(deleteSegmentDataAction(segmentId, layerName, callback));
   },
 });
 

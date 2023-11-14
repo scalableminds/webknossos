@@ -868,6 +868,9 @@ function* handleDeleteSegmentData(): Saga<void> {
     );
 
     yield* put(setBusyBlockingInfoAction(false));
+    if (action.callback) {
+      action.callback();
+    }
   }
 }
 

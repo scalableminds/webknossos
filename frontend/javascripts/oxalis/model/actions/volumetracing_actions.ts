@@ -237,12 +237,14 @@ export const removeSegmentAction = (
 export const deleteSegmentDataAction = (
   segmentId: number,
   layerName: string,
+  callback?: () => void,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "DELETE_SEGMENT_DATA",
     segmentId,
     layerName,
+    callback,
     timestamp,
   } as const);
 

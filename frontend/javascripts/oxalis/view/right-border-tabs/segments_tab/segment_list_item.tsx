@@ -192,6 +192,7 @@ type Props = {
     createsNewUndoState: boolean,
   ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
+  deleteSegmentData: (arg0: number, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
@@ -373,6 +374,7 @@ function _SegmentListItem({
   allowUpdate,
   updateSegment,
   removeSegment,
+  deleteSegmentData,
   onSelectSegment,
   visibleSegmentationLayer,
   loadAdHocMesh,
@@ -488,6 +490,17 @@ function _SegmentListItem({
           andCloseContextMenu();
         },
         label: "Remove Segment From List",
+      },
+      {
+        key: "deleteSegmentData",
+        onClick: () => {
+          if (visibleSegmentationLayer == null) {
+            return;
+          }
+          deleteSegmentData(segment.id, visibleSegmentationLayer.name);
+          andCloseContextMenu();
+        },
+        label: "Delete Segment Data",
       },
     ],
   });

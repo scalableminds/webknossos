@@ -20,7 +20,7 @@ We are always happy to help you through email or a quick call. In addition, we o
 
 ## How can I run machine learning analysis on my datasets with WEBKNOSSOS?
 Machine learning integration with WEBKNOSSOS is a very interesting topic for us and something that we want to focus more on. 
-At the moment, there is a trial integration of a neural network model for nuclei segmentation in EM brain data. 
+At the moment, there is a trial integration of a neural network model for neuron segmentation in EM brain data. 
 We are looking to expand the model portfolio and integrated analysis. [Read more about automated analysis.](./automated_analysis.md)
 We have years of experience with automated machine learning analysis and [offer commercial automated analysis services](https://webknossos.org/services/automated-segmentation). 
 

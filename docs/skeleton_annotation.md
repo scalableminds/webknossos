@@ -67,7 +67,7 @@ The WEBKNOSSOS toolbar at the top of the screen contains several tools designed 
 When the `Skeleton` tool is active, the following modifiers become available:
 
 - `Create new Tree`: Creates a new tree.
-- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g., for marking nuclei. Also called "Soma-clicking mode".
+- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g., for marking nuclei or vesicles. Also called "Soma-clicking mode".
 - `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons, can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
 
 ![Skeleton Tool modifiers](./images/skeleton_tool_modifiers.jpeg)

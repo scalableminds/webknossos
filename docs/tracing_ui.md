@@ -45,7 +45,7 @@ The toolbar further features all available navigation and annotation tools for q
 - `Erase (Trace/Brush)`: Removes voxels from a volume annotation by drawing over the voxels you would like to erase.
 - `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). Used to fill holes in a volume annotation or to relabel a segment with a different id.
 - `Segment Picker`: Select the volume annotation ID of a segment to make it the active cell id to continue labeling with that ID/color.
-- `Bounding Box`: Creates and resizes any bounding box. See also the BoundingBox panel below.
+- `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](./tracing_ui#Right-Hand Side Panel) below.
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
 
@@ -144,7 +144,7 @@ The right-hand side panel includes a number of tabs with specific information, a
 - `Skeleton`: Lists all available skeleton annotations and offers further interactions with them. [Read more about skeleton annotations.](./skeleton_annotation.md)
 - `Comments`: Lists all comments assigned to individual nodes of a skeleton. [Read more about comments and skeleton annotations.](./skeleton_annotation.md#nodes_and_trees)
 - `Segments`: List all segments created during a volume annotation. It also provides access to mesh generation for indivual segments or the whole dataset, mesh visualization, mesh downloads, and more. [Read more about 3D meshes.](./mesh_visualization.md)
-- `BBoxes`: List all bounding boxes present in the dataset. Create new bounding boxes or adjust existing ones. This provides an alternativ interface for the `BoundingBox` tool.
+- `BBoxes`: List all bounding boxes present in the dataset. Create new bounding boxes or adjust existing ones. This provides an alternativ interface for the `Bounding Box` tool.
 - `AbsTree`: Renders and abstract 2D tree representation of a skeleton annotation when enabled. Might be quite resource intense when working with large skeletons.
 
 ## Status Bar

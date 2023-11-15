@@ -1,4 +1,5 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
+
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator

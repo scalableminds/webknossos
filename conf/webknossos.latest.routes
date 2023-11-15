@@ -152,6 +152,7 @@ POST          /annotations/:id/merge/:mergedTyp/:mergedId                       
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
 PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
+PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                                  controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
@@ -271,6 +272,7 @@ POST          /jobs/run/inferNuclei/:organizationName/:dataSetName              
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                             controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:dataSetName              controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
 POST          /jobs/run/findLargestSegmentId/:organizationName/:dataSetName                     controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, dataSetName: String, layerName: String)
+POST          /jobs/run/renderAnimation/:organizationName/:dataSetName                          controllers.JobsController.runRenderAnimationJob(organizationName: String, dataSetName: String)
 GET           /jobs/:id                                                                         controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                                  controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

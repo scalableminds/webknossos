@@ -143,7 +143,7 @@ object Fox extends FoxImplicits {
   }
 
   // run in sequence, drop everything that isn’t full
-  def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
+  def sequenceOfFulls[T](seq: Seq[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map { results =>
       results.foldRight(List.empty[T]) {
         case (_: Failure, l) => l
@@ -242,6 +242,35 @@ object Fox extends FoxImplicits {
 
     failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
+
+  def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
+    def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
+      remainingFoxes match {
+        case head :: tail =>
+          for {
+            resultOption <- head.toFutureOption
+            nextResult <- resultOption match {
+              case Some(v) => Fox.successful(v)
+              case _       => runNext(tail)
+            }
+          } yield nextResult
+        case Nil =>
+          Fox.empty
+      }
+    runNext(foxes)
+  }
+
+  /**
+    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
+    */
+  def transformFuture[T](future: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    for {
+      fut <- future.transform {
+        case Success(value)        => Try(Fox.successful(value))
+        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+      }
+      f <- fut
+    } yield f
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

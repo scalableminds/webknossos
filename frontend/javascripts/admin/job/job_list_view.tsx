@@ -144,6 +144,19 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === APIJobType.RENDER_ANIMATION &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Animation rendering for layer {job.layerName} of dataset{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>
+        </span>
+      );
+    } else if (
       job.type === APIJobType.COMPUTE_MESH_FILE &&
       job.organizationName &&
       job.datasetName
@@ -252,6 +265,17 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (job.type === APIJobType.EXPORT_TIFF) {
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Download">
+              <DownOutlined />
+              Download
+            </a>
+          )}
+        </span>
+      );
+    } else if (job.type === APIJobType.RENDER_ANIMATION) {
       return (
         <span>
           {job.resultLink && (

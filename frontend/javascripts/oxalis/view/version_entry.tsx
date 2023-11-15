@@ -167,6 +167,10 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Deleted the segment with id ${action.value.id} from the segments list.`,
     icon: <DeleteOutlined />,
   }),
+  addSegmentIndex: (): Description => ({
+    description: "Added segment index to enable segment statistics.",
+    icon: <EditOutlined />,
+  }),
   // This should never be shown since currently this update action can only be triggered
   // by merging or splitting trees which is recognized separately, before this description
   // is accessed.

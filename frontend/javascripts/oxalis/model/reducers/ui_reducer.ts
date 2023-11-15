@@ -96,15 +96,15 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_AI_NUCLEI_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_AI_JOB_MODAL_STATE": {
       return updateKey(state, "uiInformation", {
-        showAINucleiSegmentationModal: action.visible,
+        aIJobModalState: action.state,
       });
     }
 
-    case "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
-        showAINeuronSegmentationModal: action.visible,
+        showRenderAnimationModal: action.visible,
       });
     }
 
@@ -146,6 +146,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_IS_MEASURING": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
         isMeasuring: action.isMeasuring,
+      });
+    }
+    case "SET_NAVBAR_HEIGHT": {
+      return updateKey(state, "uiInformation", {
+        navbarHeight: action.navbarHeight,
       });
     }
 

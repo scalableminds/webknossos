@@ -154,6 +154,7 @@ function _calculateMaybePlaneScreenPos(
   // This is achieved by reversing the calculations in _calculateMaybeGlobalPos.
   let point: Point2;
   planeId = planeId || state.viewModeData.plane.activeViewport;
+  const navbarHeight = state.uiInformation.navbarHeight;
   const curGlobalPos = getPosition(state.flycam);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
   const { width, height, top, left } = getInputCatcherRect(state, planeId);
@@ -187,7 +188,7 @@ function _calculateMaybePlaneScreenPos(
       return null;
   }
   point.x += width / 2 + left;
-  point.y += height / 2 + top + constants.NAVBAR_HEIGHT;
+  point.y += height / 2 + top + navbarHeight;
   point.x = Math.round(point.x);
   point.y = Math.round(point.y);
 

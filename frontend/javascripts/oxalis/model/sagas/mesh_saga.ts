@@ -1149,7 +1149,7 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
-  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates); //use yield* call
+  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
 export function* handleAdditionalCoordinateUpdate(): Saga<void> {
@@ -1209,9 +1209,11 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  debugger;
   if (
     "color" in action.segment &&
-    segmentMeshController.hasMesh(action.segmentId, action.layerName)
+    segmentMeshController.hasMesh(action.segmentId, action.layerName, additionalCoordinates)
   ) {
     segmentMeshController.setMeshColor(action.segmentId, action.layerName);
   }

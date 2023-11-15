@@ -225,6 +225,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     seedPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined,
   ) {
+    //TODO check that segment exists
     dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
   },
 
@@ -260,6 +261,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
       getAdditionalCoordinatesAsString(additionalCoordinates || null)
     ) {
+      //TODO only do this if the segment is present in current add coord.
       dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
     }
   },
@@ -1332,7 +1334,9 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
-      if (segment.somePosition == null) return;
+      debugger
+      const currentAdditionalCoordinates = getAdditionalCoordinatesAsString(this.props.flycam.additionalCoordinates);
+      if (segment.somePosition == null || getAdditionalCoordinatesAsString(segment.someAdditionalCoordinates||null) !== currentAdditionalCoordinates) return;
       this.props.loadAdHocMesh(
         segment.id,
         segment.somePosition,

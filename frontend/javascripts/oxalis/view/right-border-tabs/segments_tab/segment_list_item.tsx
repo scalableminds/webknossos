@@ -31,6 +31,7 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -237,7 +238,7 @@ function _MeshInfoItem(props: {
 
   const { segment, isSelectedInList, isHovered, mesh } = props;
 
-  if (!mesh) {
+  if (!mesh || getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates || null) !== getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates)) {
     if (isSelectedInList) {
       return (
         <div

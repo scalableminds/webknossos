@@ -246,26 +246,18 @@ export default class SegmentMeshController {
     );
   }
 
-  setMeshColor(
-    id: number,
-    layerName: string,
-    additionalCoordinates?: AdditionalCoordinate[] | null,
-  ): void {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(
-      additionalCoordinates || null,
-    );
+  setMeshColor(id: number, layerName: string): void {
     const color = this.getColorObjectForSegment(id);
-    _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][id],
-      (meshGroup) => {
-        if (meshGroup) {
-          for (const child of meshGroup.children) {
-            // @ts-ignore
-            child.material.color = color;
-          }
+    //  if in nd-dataset, set the color for all additional coordinates
+    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentationId)) {
+      const meshDataForOneSegment = recordsOfLayers[layerName][id];
+      if (meshDataForOneSegment != null) {
+        for (const meshGroup of Object.values(meshDataForOneSegment)) {
+          // @ts-ignore
+          meshGroup.children.forEach((child) => (child.material.color = color));
         }
-      },
-    );
+      }
+    }
   }
 
   getColorObjectForSegment(segmentId: number) {

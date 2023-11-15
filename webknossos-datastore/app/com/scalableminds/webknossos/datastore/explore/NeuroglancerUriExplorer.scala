@@ -29,7 +29,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       _ <- Fox.successful(())
-      uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)).toFox
+      uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no fragment part"
       spec <- Json.parse(uriFragment).validate[JsObject].toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- (spec \ "layers").validate[JsArray].toFox
       _ <- Fox.bool2Fox(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"

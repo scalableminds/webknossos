@@ -1,21 +1,22 @@
 ## Volume Annotations & Proof-Reading
 
 In addition to [skeleton annotations](./skeleton_annotation.md), WEBKNOSSOS also supports volume/segmentation annotations.
-With this type of annotation, you can label groups of voxels with efficient drawing tools.
+This annotation type lets you label voxel groups using efficient drawing tools.
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
 
 ### Tools
 
-Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut _W_.
+Choose a drawing tool from the toolbar or press _W_ to switch between them.
 
 - `Move`: Navigate around the dataset.
-- `Trace`: Draw outlines around the voxel you would like to label.
-- `Brush`: Draw over the voxels you would like to label. Adjust the brush size with _SHIFT + Mousewheel_.
-- `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with _SHIFT + Mousewheel_.
-- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill a hole in a segment or to relabel a segment with a different ID/color.
-- `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
-- `Quick Select`: Draw a rectangle over a segment to annotate it automatically. The tool can operate in two different modes. If the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. If the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. If the preview is enabled, the parameters can be fine-tuned while the preview updates instantly.
+- `Trace`: Draw an outline around the voxel you want to label.
+- `Brush`: Paint over the voxels you would like to label. Use _SHIFT + Mousewheel_ to change the brush size.
+- `Erase (Trace/Brush)`: Erase voxels by drawing over them. Use _SHIFT + Mousewheel_ to change the brush size.
+- `Fill Tool`: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color.
+- `Segment Picker`: Click a segment to use its label ID as the active segment ID and keep annotating with that ID.
+- `Quick Select`: Annotate a segment automatically by drawing a rectangular selection over it. The tool operates in two different modes. 
+When the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. When the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. When the preview is enabled, you can fine-tuned the parameters and see the preview update instantly.
 - `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](./proof_reading.md#proofreading-tool).
 
 When using the trace or brush tool, a label can be added with _Left Mouse Drag_.

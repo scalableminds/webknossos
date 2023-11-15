@@ -599,6 +599,8 @@ class AnnotationController @Inject()(
         for {
           annotationInfos <- annotationDAO.findAllListableExplorationalsCompact(
             isFinished,
+            None,
+            AnnotationType.Explorational,
             limit.getOrElse(annotationService.DefaultAnnotationListLimit),
             pageNumber.getOrElse(0))
           annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)

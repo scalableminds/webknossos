@@ -86,7 +86,13 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  stats: JsObject,
                                  tags: Set[String],
                                  state: AnnotationState.Value = Active,
-                                 dataSetName: String)
+                                 dataSetName: String,
+                                 visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
+                                 tracingTime: Option[Long] = None,
+                                 organizationName: String,
+                                 tracingIds: Seq[String],
+                                 annotationLayerNames: Seq[String],
+                                 annotationLayerTypes: Seq[String])
 
 object AnnotationCompactInfo {
   implicit val jsonFormat: Format[AnnotationCompactInfo] = Json.format[AnnotationCompactInfo]
@@ -307,40 +313,57 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   private def parseObjectIdArray(objectIdArray: String): Seq[ObjectId] =
     Option(objectIdArray).map(_.split(",").map(id => ObjectId(id))).getOrElse(Array[ObjectId]()).toSeq
 
-  def findAllListableExplorationalsCompact(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
-      implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
+  def findAllListableExplorationalsCompact(
+      isFinished: Option[Boolean],
+      forUser: Option[ObjectId],
+      typ: AnnotationType,
+      limit: Int,
+      pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
       stateQuery = getStateQuery(isFinished)
+      userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"true")
+      typQuery = q"a.typ = $typ"
 
       query = q"""
           SELECT
-               a._id,
-               a.name,
-               a.description,
-               a._user,
-               u.firstname,
-               u.lastname,
-               a.othersmayedit,
-               string_agg(t._id, ',') as team_ids,
-               string_agg(t.name, ',') as team_names,
-               string_agg(t._organization, ',') as team_orgs,
-               a.modified,
-               a.statistics,
-               a.tags,
-               a.state,
-               d.name
-        FROM webknossos.annotations as a
-        LEFT JOIN webknossos.users_ u
-               ON u._id = a._user
-        LEFT JOIN webknossos.annotation_sharedteams ast
-               ON ast._annotation = a._id
-        LEFT JOIN webknossos.teams t
-               ON ast._team = t._id
-        LEFT JOIN webknossos.datasets d
-               ON d._id = a._dataset
-        WHERE $stateQuery AND $accessQuery
-        GROUP BY a._id, u.firstname, u.lastname, d.name
+          a._id,
+          a.name,
+          a.description,
+          a._user,
+          u.firstname,
+          u.lastname,
+          a.othersmayedit,
+          string_agg(t._id, ',') as team_ids,
+          string_agg(t.name, ',') as team_names,
+          string_agg(t._organization, ',') as team_orgs,
+          a.modified,
+          a.statistics,
+          a.tags,
+          a.state,
+          d.name,
+          a.typ,
+          a.visibility,
+          a.tracingtime,
+          o.name,
+          string_agg(al.tracingid, ',') as tracing_ids,
+          string_agg(al.name, ',') as tracing_names,
+          string_agg(al.typ :: varchar, ',') as tracing_typs
+      FROM webknossos.annotations as a
+               LEFT JOIN webknossos.users_ u
+                         ON u._id = a._user
+               LEFT JOIN webknossos.annotation_sharedteams ast
+                         ON ast._annotation = a._id
+               LEFT JOIN webknossos.teams_ t
+                         ON ast._team = t._id
+               LEFT JOIN webknossos.datasets_ d
+                         ON d._id = a._dataset
+               LEFT JOIN webknossos.organizations_ as o
+                         ON o._id = d._organization
+               LEFT JOIN webknossos.annotation_layers as al
+                         ON al._annotation = a._id
+      WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
+      GROUP BY a._id, u.firstname, u.lastname, d.name, o.name
         ORDER BY a._id DESC LIMIT $limit OFFSET ${pageNumber * limit}
          """
       rows <- run(
@@ -359,13 +382,19 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
            String,
            String,
            String,
+           String,
+           String,
+           String,
+           Long,
+           String,
+           String,
+           String,
            String)])
     } yield
       rows.toList.map(
         r => {
           AnnotationCompactInfo(
             id = r._1,
-            typ = AnnotationType.Explorational,
             name = r._2,
             description = r._3,
             ownerId = r._4,
@@ -379,7 +408,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             stats = Json.parse(r._12).validate[JsObject].getOrElse(Json.obj()),
             tags = parseArrayLiteral(r._13).toSet,
             state = AnnotationState.fromString(r._14).getOrElse(AnnotationState.Active),
-            dataSetName = r._15
+            dataSetName = r._15,
+            typ = AnnotationType.fromString(r._16).getOrElse(AnnotationType.Explorational),
+            visibility = AnnotationVisibility.fromString(r._17).getOrElse(AnnotationVisibility.Internal),
+            tracingTime = Option(r._18),
+            organizationName = r._19,
+            tracingIds = Option(r._20).map(_.split(",")).getOrElse(Array[String]()).toSeq,
+            annotationLayerNames = Option(r._21).map(_.split(",")).getOrElse(Array[String]()).toSeq,
+            annotationLayerTypes = Option(r._22).map(_.split(",")).getOrElse(Array[String]()).toSeq
           )
         }
       )

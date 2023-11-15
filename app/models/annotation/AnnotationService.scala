@@ -965,7 +965,6 @@ class AnnotationService @Inject()(
 
   //for Explorative Annotations list
 
-  // 4 SQL Queries
   def writeListItem(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
@@ -1001,7 +1000,6 @@ class AnnotationService @Inject()(
     }
   }
 
-  // 0 SQL Queries
   def writeCompactInfo(annotationInfo: AnnotationCompactInfo): JsObject = {
     val teamsJson = annotationInfo.teamNames.indices.map(
       idx =>
@@ -1011,23 +1009,46 @@ class AnnotationService @Inject()(
           "organizationId" -> annotationInfo.teamOrganizationIds(idx)
       ))
 
+    val annotationLayerJson = annotationInfo.tracingIds.indices.map(
+      idx =>
+        Json.obj(
+          "tracingId" -> annotationInfo.tracingIds(idx),
+          "typ" -> annotationInfo.annotationLayerTypes(idx),
+          "name" -> annotationInfo.annotationLayerNames(idx)
+      )
+    )
+    val tracingType: String = {
+      val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
+      val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
+      if (skeletonPresent && volumePresent) {
+        "hybrid"
+      } else if (skeletonPresent) {
+        "skeleton"
+      } else {
+        "volume"
+      }
+    }
     Json.obj(
+      "modified" -> annotationInfo.modified,
+      "state" -> annotationInfo.state,
       "id" -> annotationInfo.id,
-      "typ" -> annotationInfo.typ,
       "name" -> annotationInfo.name,
       "description" -> annotationInfo.description,
+      "typ" -> annotationInfo.typ,
+      "stats" -> annotationInfo.stats,
+      "annotationLayers" -> annotationLayerJson,
+      "dataSetName" -> annotationInfo.dataSetName,
+      "organization" -> annotationInfo.organizationName,
+      "visibility" -> annotationInfo.visibility,
+      "tracingTime" -> annotationInfo.tracingTime,
+      "teams" -> teamsJson,
+      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName, tracingType)),
       "owner" -> Json.obj(
         "id" -> annotationInfo.ownerId.toString,
         "firstName" -> annotationInfo.ownerFirstName,
         "lastName" -> annotationInfo.ownerLastName
       ),
       "othersMayEdit" -> annotationInfo.othersMayEdit,
-      "teams" -> teamsJson,
-      "modified" -> annotationInfo.modified,
-      "stats" -> annotationInfo.stats,
-      "state" -> annotationInfo.state,
-      "tags" -> annotationInfo.tags,
-      "dataSetName" -> annotationInfo.dataSetName
     )
   }
 }

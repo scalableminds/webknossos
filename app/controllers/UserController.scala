@@ -67,7 +67,7 @@ class UserController @Inject()(userService: UserService,
                   includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        annotations <- annotationDAO.findAllListableExplorationalsCompact(
+        annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(request.identity._id),
           AnnotationType.Explorational,
@@ -181,7 +181,7 @@ class UserController @Inject()(userService: UserService,
         userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        annotations <- annotationDAO.findAllListableExplorationalsCompact(
+        annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userIdValidated),
           AnnotationType.Explorational,

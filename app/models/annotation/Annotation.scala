@@ -298,22 +298,10 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def findAllListableExplorationals(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
-      implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
-    val stateQuery = getStateQuery(isFinished)
-    for {
-      accessQuery <- baseListAccessQ
-      r <- run(q"""select $columns from $existingCollectionName
-                   where typ = ${AnnotationType.Explorational} and $stateQuery and $accessQuery
-                   order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-  }
-
   private def parseObjectIdArray(objectIdArray: String): Seq[ObjectId] =
     Option(objectIdArray).map(_.split(",").map(id => ObjectId(id))).getOrElse(Array[ObjectId]()).toSeq
 
-  def findAllListableExplorationalsCompact(
+  def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
       typ: AnnotationType,

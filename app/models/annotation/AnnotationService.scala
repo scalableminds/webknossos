@@ -965,41 +965,6 @@ class AnnotationService @Inject()(
 
   //for Explorative Annotations list
 
-  def writeListItem(annotation: Annotation): Fox[JsObject] = {
-    implicit val ctx: DBAccessContext = GlobalAccessContext
-    for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
-      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
-      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
-      user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
-      userJson = Json.obj(
-        "id" -> user._id.toString,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName
-      )
-    } yield {
-      Json.obj(
-        "modified" -> annotation.modified,
-        "state" -> annotation.state,
-        "id" -> annotation._id.toString,
-        "name" -> annotation.name,
-        "description" -> annotation.description,
-        "typ" -> annotation.typ,
-        "stats" -> annotation.statistics,
-        "annotationLayers" -> annotation.annotationLayers,
-        "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
-        "visibility" -> annotation.visibility,
-        "tracingTime" -> annotation.tracingTime,
-        "teams" -> teamsJson,
-        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userJson,
-        "othersMayEdit" -> annotation.othersMayEdit
-      )
-    }
-  }
-
   def writeCompactInfo(annotationInfo: AnnotationCompactInfo): JsObject = {
     val teamsJson = annotationInfo.teamNames.indices.map(
       idx =>

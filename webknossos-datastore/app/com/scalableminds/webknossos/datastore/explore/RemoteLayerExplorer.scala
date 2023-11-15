@@ -1,11 +1,11 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Reads

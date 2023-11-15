@@ -11,9 +11,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...HEAD)
 
 ### Added
+- Zarr datasets can now be directly uploaded to WEBKNOSSOS. [#7397](https://github.com/scalableminds/webknossos/pull/7397)
 - Added support for reading uint24 rgb layers in datasets with zarr2/zarr3/n5/neuroglancerPrecomputed format, as used for voxelytics predictions. [#7413](https://github.com/scalableminds/webknossos/pull/7413)
+- Adding a remote dataset can now be done by providing a Neuroglancer URI. [#7416](https://github.com/scalableminds/webknossos/pull/7416)
+- Added a filter to the Task List->Stats column to quickly filter for tasks with "Prending", "In-Progress" or "Finished" instances. [#7430](https://github.com/scalableminds/webknossos/pull/7430)
 
 ### Changed
+- An appropriate error is returned when requesting an API version that is higher that the current version. [#7424](https://github.com/scalableminds/webknossos/pull/7424)
+- Upgraded FossilDB database used to store annotation data to version 0.1.27. [#7440](https://github.com/scalableminds/webknossos/pull/7440)
 - Updated some dependencies of the backend code (play 2.9, sbt 1.9, minor upgrades for others) for optimized performance. [#7366](https://github.com/scalableminds/webknossos/pull/7366)
 
 ### Fixed

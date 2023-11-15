@@ -1,12 +1,12 @@
 # Annotating with Pen Tablets / Wacom Pens, and iPads
 
-Beyond the mouse and keyboard WEBKNOSSOS is great for annotating datasets with alternative input devices such as pens, styluses, or the Apple pencil. These input devices can significantly boost your annotation speed.
+Beyond the mouse and keyboard WEBKNOSSOS is great for annotating datasets with alternative input devices such as pens, styluses, or the Apple pencil. These input devices can significantly boost your annotation speed and improve the detail of your annotations.
 
 ## Using Wacom/Pen tablets
-Using pen tablet can signifincatly boost your annotation productivity, especially if you set it up correctl with WEBKNOSSOS.
+Using pen tablet can signifincatly boost your annotation productivity, especially if you set it up correctly with WEBKNOSSOS.
 
-### Set up your tablet
-To streamline your workflow, program your tablet and pen buttons to match the WEBKNOSSOS shortcuts. By doing so, you can focus on your pen without the need of a mouse or keyboard. Here’s an example configuration using a Wacom tablet:
+
+To streamline your workflow, program your tablet and pen buttons to match the WEBKNOSSOS shortcuts. By doing so, you can focus on your pen without the need of a mouse or keyboard. Here is an example configuration using a Wacom tablet and the Wacom driver software:
 
 Tablet buttons:
 - Left: Brush (ctrl + K, B)
@@ -18,7 +18,6 @@ Pen buttons:
 - Lower button: Move (ALT)
 
 You can find the full list for keyboard shortcuts in the [documentation](./keyboard_shortcuts.md).
-
 
 // Alt Programming buttons to match the WEBKNOSSOS shortcuts
 

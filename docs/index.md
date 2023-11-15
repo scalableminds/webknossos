@@ -15,7 +15,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 
 ## Features
 
-- Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT
+- Exploration of large 2D, 3D, 4D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT, and light microscopy
 - Fully browser-based user experience. No installation required
 - Efficient 3D data streaming for quick loading speeds
 - Creation/editing of [skeleton (line-segments)](./skeleton_annotation.md) and [3D volumetric annotations](./volume_annotation.md)
@@ -27,6 +27,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data_formats.md) (some formats will be converted on upload)
 - [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
+- Supports Time Series datasets
 - [3D Mesh Visualization](./mesh_visualization.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
 - [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)

@@ -16,7 +16,7 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill a hole in a segment or to relabel a segment with a different ID/color.
 - `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
 - `Quick Select`: Draw a rectangle over a segment to annotate it automatically. The tool can operate in two different modes. If the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. If the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. If the preview is enabled, the parameters can be fine-tuned while the preview updates instantly.
-- `Proof Reading`: Fix merge and split errors in automated segmentation. See [page on proofreading](./proof_reading.md#proofreading-tool) for more.
+- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](./proof_reading.md#proofreading-tool).
 
 When using the trace or brush tool, a label can be added with _Left Mouse Drag_.
 Erasing is possible with the dedicated erase tools or with _CTRL + Shift + Left Mouse Drag_.
@@ -92,7 +92,7 @@ Note that it is recommended to proofread the interpolated slices afterward since
 ### Volume Extrusion
 
 Similar to the above interpolation feature, you can also extrude the currently active segment.
-This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12).
+This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapat the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
 
 ### Volume Flood Fills
@@ -104,6 +104,17 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 
 Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
 For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
+
+### Segment Statistics
+WEBKNOSSOS provides handy statistics about your labelled segments, such as the volume and bounding box of a segment.
+
+There is several ways to access this information: 
+1. Right-click any segment to bring up the context menu. The segment statics are listed at the end of the context menu.
+2. In the `Segments` tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to access a summary table with statistics for a whole group of labelled segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
+
+In cases, where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](./tracing_ui.md#the-toolbar) instead.
+
+// TODO image
 
 ### Mappings / On-Demand Agglomeration
 

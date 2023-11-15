@@ -1,6 +1,6 @@
 # Animations
 
-A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to create eye catching animation of your datasets as a video clip. You can use these short movies as part of a presentation, website, for social media or to promote a publication.
+A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to create eye-catching animation of your datasets as a video clip. You can use these short movies as part of a presentation, website, for social media or to promote a publication.
 
 // animation video
 

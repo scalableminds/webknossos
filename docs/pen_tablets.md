@@ -9,12 +9,14 @@ Using pen tablet can signifincatly boost your annotation productivity, especiall
 To streamline your workflow, program your tablet and pen buttons to match the WEBKNOSSOS shortcuts. By doing so, you can focus on your pen without the need of a mouse or keyboard. Here is an example configuration using a Wacom tablet and the Wacom driver software:
 
 Tablet buttons:
+
 - Left: Brush (ctrl + K, B)
 - Middle left: Eraser (ctrl + K, E)
 - Middle right: Quick-select (ctrl + K, Q)
 - Right: Create new segment (C)
 
 Pen buttons:
+
 - Lower button: Move (ALT)
 
 You can find the full list for keyboard shortcuts in the [documentation](./keyboard_shortcuts.md).

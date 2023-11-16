@@ -33,13 +33,14 @@ export const getRgbaAtIndex: ShaderModule = {
       float finalPosX = mod(idx, textureWidth);
       float finalPosY = div(idx, textureWidth);
 
-      return texture2D(
+      return texelFetch(
           dtexture,
-          vec2(
-            (floor(finalPosX) + 0.5) / textureWidth,
-            (floor(finalPosY) + 0.5) / textureWidth
-          )
-        ).rgba;
+          ivec2(
+            floor(finalPosX),
+            floor(finalPosY)
+          ),
+          0
+      ).rgba;
     }
   `,
 };

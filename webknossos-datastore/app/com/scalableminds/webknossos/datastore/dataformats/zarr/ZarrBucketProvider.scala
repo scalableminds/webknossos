@@ -7,8 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -26,7 +25,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
     bucket.additionalCoordinates match {
       case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
         zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
-      case _ => zarrArray.readBytesXYZ(shape, offset)
+      case _ => zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
     }
   }
 

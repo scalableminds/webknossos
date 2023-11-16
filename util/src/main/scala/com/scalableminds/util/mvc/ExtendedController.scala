@@ -188,6 +188,7 @@ trait MimeTypes {
 trait JsonResults extends JsonResultAttribues {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
+  val JsonNotFound = new JsonResult(NOT_FOUND)
 }
 
 trait JsonResultAttribues {

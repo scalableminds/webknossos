@@ -158,19 +158,19 @@ const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRo
 };
 
 function Matches() {
-  const [match, setMatch] = useState(0);
+  const [partnerIndex, setPartnerIndex] = useState(0);
 
   useInterval(() => {
-    setMatch((match + 1) % 2);
+    setPartnerIndex((partnerIndex + 1) % 2);
   }, 500);
 
   const images = _.range(0, 10).map((idx) => (
     <p key={idx}>
       <img
-        // onMouseEnter={() => setMatch(1)}
-        // onMouseOut={() => setMatch(0)}
+        // onMouseEnter={() => setPartnerIndex(1)}
+        // onMouseOut={() => setPartnerIndex(0)}
         style={{ border: "1px white solid" }}
-        src={`http://localhost:8000/image?feature=${idx}&match=${match}`}
+        src={`http://localhost:8000/image?tile_pair_index=0&feature_index=${idx}&partner_index=${partnerIndex}`}
       />
     </p>
   ));

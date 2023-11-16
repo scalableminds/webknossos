@@ -2,11 +2,18 @@
 
 WEBKNOSSOS works great with [OME Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
 
-The Zarr format is a good alternative to [WKW](./wkw.md) and will likely replace it long term.
+We strongly believe in this community-driven, cloud-native data fromat for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
 
 Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud).
 
-## Example
+## Examples
+
+You can try the OME-Zarr support with the following datasets. Load them in WEBKNOSSOS as a [remote dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud): 
+
+
+- Mouse Cortex Layer 4 EM Cutout over HTTPs
+    - `https://static.webknossos.org/data/l4_sample/`
+    - Source: Dense connectomic reconstruction in layer 4 of the somatosensory cortex. Motta et al. Science 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
 
 ## Zarr Folder Struture
 WEBKNOSSOS expects the following file structure for Zarr datasets:
@@ -60,11 +67,11 @@ See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/latest/index.html#image-
 
 ## Conversion to Zarr
 
-You can easily convert image stacks manually with the WEBKNOSSOS CLI.
+You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
 The CLI tool expects all image files in a single folder with numbered file names.
 After installing, you can convert image stacks to Zarr datasets with the following command:
 
-```
+```shell
 pip install webknossos
 
 webknossos convert-zarr \
@@ -75,6 +82,6 @@ webknossos convert-zarr \
 
 This snippet converts an image stack that is located in directory called `data/source` into a Zarr dataset which will be located at `data/target`.
 It will create a so called `color` layer containing your raw greyscale/color image.
-The supplied `--voxel-size` is specified nanometers.
+The supplied `--voxel-size` is specified in nanometers.
 
 Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).

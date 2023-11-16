@@ -126,8 +126,6 @@ For manual conversion, we provide the following software tools and libraries:
 - The [WEBKNOSSOS Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-See the page on [software tooling](./tooling.md) for more.
-
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 
 
@@ -230,27 +228,7 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 ![youtube-video](https://www.youtube.com/embed/yYauIHZcI_4)
 
-## Sample Datasets
+## Example Datasets
 
 For convenience and testing, we provide a list of sample datasets for WEBKNOSSOS:
 
-- **Sample_e2006_wkw**  
-  Raw SBEM data and segmentation (sample cutout, 120MB).  
-  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
-  Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
-  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
-  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
-
-- **Sample_FD0144_wkw**  
-  Raw SBEM data and segmentation (sample cutout, 316 MB).  
-  [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
-  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  
-  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  
-  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
-
-* **Sample_MPRAGE_250um**  
-  MRI data (250 MB).  
-  [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
-  T1-weighted in vivo human whole brain MRI dataset with an ultra-fine isotropic resolution of 250 μm.
-  F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
-  Scientific Data. 14 March 2017. [https://doi.org/10.1038/sdata.2017.32](https://doi.org/10.1038/sdata.2017.32)

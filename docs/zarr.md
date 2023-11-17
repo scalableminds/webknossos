@@ -74,9 +74,10 @@ After installing, you can convert image stacks to Zarr datasets with the followi
 ```shell
 pip install webknossos
 
-webknossos convert-zarr \
+webknossos convert \
   --voxel-size 11.24,11.24,25 \
   --name my_dataset \
+  --data-format zarr3 \
   data/source data/target
 ```
 
@@ -85,3 +86,44 @@ It will create a so called `color` layer containing your raw greyscale/color ima
 The supplied `--voxel-size` is specified in nanometers.
 
 Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
+
+### Conversion with Python
+
+You can use the free [WEBKNOSSSO Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr or integrate the conversion as part of an existing workflow. 
+
+```python
+from webknossos import Dataset
+from webknossos.dataset import COLOR_CATEGORY
+
+def main() -> None:
+    """Convert a folder of image files to a WEBKNOSSOS dataset."""
+    dataset = Dataset.from_images(
+        input_path=INPUT_DIR,
+        output_path=OUTPUT_DIR,
+        voxel_size=(11, 11, 11),
+        layer_category=COLOR_CATEGORY,
+        compress=True,
+        data_format = Dataformat.Zarr
+    )
+
+    print(f"Saved {dataset.name} at {dataset.path}.")
+
+    # dataset.upload()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Read the full example in the WEBKNOSSOS [Python library documentation](https://docs.webknossos.org/webknossos-py/examples/create_dataset_from_images.html).
+
+## Time-Series and N-Dimensional Datsets
+
+WEBKNOSSOS also supports loading n-dimensional datasets, e.g. 4D = time series of 3D microscopy.
+This feature in currently only supported for Zarr dataset due to their flexbile structure and design for n-dimensional data.
+
+## Performance Considerations
+To get the best streaming performance for Zarr datasets consider the following settings.
+
+- Use chunk sizes of 32 - 128 voxels^3
+- Enable sharding

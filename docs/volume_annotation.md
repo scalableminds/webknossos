@@ -96,6 +96,8 @@ Similar to the above interpolation feature, you can also extrude the currently a
 This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapat the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
 
+![youtube-video](https://www.youtube.com/embed/GucpEA6Wev8)
+
 ### Volume Flood Fills
 
 WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
@@ -115,7 +117,7 @@ There is several ways to access this information:
 
 In cases, where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](./tracing_ui.md#the-toolbar) instead.
 
-// TODO image
+![youtube-video](https://www.youtube.com/embed/PsvC4vNyxJM)
 
 ### Mappings / On-Demand Agglomeration
 

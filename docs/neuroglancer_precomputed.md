@@ -37,3 +37,9 @@ my_dataset.precomputed             # One root folder per dataset
 ```
 
 For details see the [Neuroglancer spec](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed).
+
+## Performance Considerations
+To get the best streaming performance for Neuroglancer Precomputed datasets consider the following settings.
+
+- Use chunk sizes of 32 - 128 voxels^3
+- Enable sharding

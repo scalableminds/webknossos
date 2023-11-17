@@ -31,7 +31,7 @@ import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
-import { Button, Col, Layout, Result, Row } from "antd";
+import { Button, Col, InputNumber, Layout, Result, Row } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
@@ -68,7 +68,7 @@ import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { MaintenanceBanner } from "maintenance_banner";
-import { useInterval } from "libs/react_helpers";
+import { useFetch, useInterval } from "libs/react_helpers";
 
 const { Content } = Layout;
 
@@ -159,23 +159,56 @@ const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRo
 
 function Matches() {
   const [partnerIndex, setPartnerIndex] = useState(0);
+  const [tilePairIndex, setTilePairIndex] = useState(0);
+  const onChange = (value: number) => {
+    setTilePairIndex(value);
+  };
 
   useInterval(() => {
     setPartnerIndex((partnerIndex + 1) % 2);
   }, 500);
 
-  const images = _.range(0, 10).map((idx) => (
-    <p key={idx}>
+  const info = useFetch(
+    async () => {
+      return fetch(`http://localhost:8000/info?tile_pair_index=${tilePairIndex}`).then((res) =>
+        res.json(),
+      );
+    },
+    null,
+    [tilePairIndex],
+  );
+  console.log("info", info);
+  if (info == null) {
+    return null;
+  }
+  const { distances_of_tile_pair } = info;
+
+  const images = _.range(0, Math.min(20, distances_of_tile_pair.length)).map((idx) => (
+    <div key={idx}>
       <img
         // onMouseEnter={() => setPartnerIndex(1)}
         // onMouseOut={() => setPartnerIndex(0)}
         style={{ border: "1px white solid" }}
-        src={`http://localhost:8000/image?tile_pair_index=0&feature_index=${idx}&partner_index=${partnerIndex}`}
+        src={`http://localhost:8000/image?tile_pair_index=${tilePairIndex}&feature_index=${idx}&partner_index=${partnerIndex}`}
       />
-    </p>
+      <div style={{ textAlign: "center" }}>{distances_of_tile_pair[idx]}</div>
+    </div>
   ));
 
-  return <>{images}</>;
+  return (
+    <div>
+      <InputNumber min={tilePairIndex} max={10} defaultValue={0} onChange={onChange} />
+      <div
+        style={{
+          display: "grid",
+          gridGap: "1rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+        }}
+      >
+        {images}
+      </div>
+    </div>
+  );
 }
 
 class ReactRouter extends React.Component<Props> {

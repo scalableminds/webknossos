@@ -505,7 +505,7 @@ function normalizeToUint8(
 }
 
 export function* finalizeQuickSelect(
-  quickSelectGeometry: QuickSelectRectangleGeometry,
+  quickSelectGeometry: QuickSelectRectangleGeometry | null,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,
@@ -518,7 +518,9 @@ export function* finalizeQuickSelect(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
-  quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  if (quickSelectGeometry) {
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  }
   const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,

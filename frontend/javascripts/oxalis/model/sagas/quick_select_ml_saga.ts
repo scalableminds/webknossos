@@ -110,11 +110,12 @@ export async function getInferenceSession() {
   return session;
 }
 
-async function inferFromEmbeddingWithRectangle(
+async function inferFromEmbedding(
   embedding: Float32Array,
   embeddingBoxInTargetMag: BoundingBox,
   userBoxInTargetMag: BoundingBox,
   activeViewport: OrthoView,
+  voxelMap?: VoxelBuffer2D | null,
 ) {
   const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
@@ -147,9 +148,21 @@ async function inferFromEmbeddingWithRectangle(
           bottomRight[firstDim],
           bottomRight[secondDim],
         ]);
+
+  // Fill input mask according to the voxel map.
+  const onnxMaskInput = new Float32Array(256 * 256);
+  if (voxelMap) {
+    for (let i = 0; i < 256; i++) {
+      for (let j = 0; j < 256; j++) {
+        const xInVoxelMap = Math.floor((i / 256) * voxelMap.width);
+        const yInVoxelMap = Math.floor((j / 256) * voxelMap.height);
+        const value = voxelMap.map[voxelMap.linearizeIndex(xInVoxelMap, yInVoxelMap)];
+        onnxMaskInput[i * 256 + j] = value;
+      }
+    }
+  }
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
   const onnxLabel = new Float32Array([2, 3]);
-  const onnxMaskInput = new Float32Array(256 * 256);
   const onnxHasMaskInput = new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
   const ortInputs = {
@@ -231,16 +244,6 @@ async function inferFromEmbeddingWithArea(
           bottomRight[firstDim],
           bottomRight[secondDim],
         ]);
-  // Fill input mask according to the voxel map.
-  const onnxMaskInput = new Float32Array(256 * 256);
-  for (let i = 0; i < 256; i++) {
-    for (let j = 0; j < 256; j++) {
-      const xInVoxelMap = (i / 256) * voxelMap.width;
-      const yInVoxelMap = (j / 256) * voxelMap.height;
-      const value = voxelMap.map[voxelMap.linearizeIndex(xInVoxelMap, yInVoxelMap)];
-      onnxMaskInput[i * 256 + j] = value;
-    }
-  }
 
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
   const onnxLabel = new Float32Array([2, 3]);
@@ -258,6 +261,7 @@ async function inferFromEmbeddingWithArea(
   // Use intersection-over-union estimates to pick the best mask.
   const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
   // @ts-ignore
+  debugger;
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
   // Fill the mask data with a for loop (slicing/mapping would incur additional
@@ -268,7 +272,8 @@ async function inferFromEmbeddingWithArea(
   }
 
   const size = embeddingBoxInTargetMag.getSize();
-  const userSizeInTargetMag = userBoxInTargetMag.getSize();
+  // TODO here!
+  const voxelMapSizeInTargetMag = voxelMapBoundingBox.getSize();
   // Somewhere between the front-end, the back-end and the embedding
   // server, there seems to be a different linearization of the 2D image
   // data which is why the code here deals with the XZ plane as a special
@@ -283,7 +288,7 @@ async function inferFromEmbeddingWithArea(
     // a.lo(x,y) => a[x:, y:]
     .lo(topLeft[firstDim], topLeft[secondDim], 0)
     // a.hi(x,y) => a[:x, :y]
-    .hi(userSizeInTargetMag[firstDim], userSizeInTargetMag[secondDim], 1);
+    .hi(voxelMapSizeInTargetMag[firstDim], voxelMapSizeInTargetMag[secondDim], 1);
   return mask;
 }
 
@@ -417,7 +422,7 @@ export default function* performRectangleQuickSelect(
   }
 
   let mask = yield* call(
-    inferFromEmbeddingWithRectangle,
+    inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,
     userBoxInTargetMag,
@@ -473,12 +478,16 @@ export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction)
     colorLayer,
   } = preparation;
   const { voxelMap } = action;
-  const voxelMapBoundingBox = action.boundingBox;
+  const unalignedVoxelMapBoundingBoxMag1 = action.boundingBox;
   // Reducing the third dimension to a single voxel as the volume layer of the bounding box has additional padding in the third dimension.
   // This is necessary to be within the allowed volume size of the inferral.
-  voxelMapBoundingBox.min[thirdDim] = voxelMap.get3DCoordinate([0, 0])[thirdDim];
-  voxelMapBoundingBox.max[thirdDim] = voxelMapBoundingBox.min[thirdDim] + 1;
-  debugger;
+  unalignedVoxelMapBoundingBoxMag1.min[thirdDim] = voxelMap.get3DCoordinate([0, 0])[thirdDim];
+  unalignedVoxelMapBoundingBoxMag1.max[thirdDim] =
+    unalignedVoxelMapBoundingBoxMag1.min[thirdDim] + 1;
+  const alignedVoxelMapBoundingBoxMag1 = unalignedVoxelMapBoundingBoxMag1.alignWithMag(
+    labeledResolution,
+    "floor",
+  );
 
   const dataset = yield* select((state: OxalisState) => state.dataset);
   const layerConfiguration = yield* select(
@@ -490,7 +499,7 @@ export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction)
     getEmbedding,
     dataset,
     colorLayer.name,
-    voxelMapBoundingBox,
+    alignedVoxelMapBoundingBoxMag1,
     labeledResolution,
     activeViewport,
     additionalCoordinates || [],
@@ -513,13 +522,16 @@ export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction)
     return;
   }
 
+  const alignedVoxelMapBoundingBoxMag =
+    alignedVoxelMapBoundingBoxMag1.fromMag1ToMag(labeledResolution);
+
   let mask = yield* call(
-    inferFromEmbeddingWithArea,
+    inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,
-    voxelMapBoundingBox,
-    voxelMap,
+    alignedVoxelMapBoundingBoxMag,
     activeViewport,
+    voxelMap,
   );
   if (!mask) {
     Toast.error("Could not infer mask. See console for details.");
@@ -530,19 +542,19 @@ export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction)
     (state: OxalisState) => state.userConfiguration.overwriteMode,
   );
 
-  /*sendAnalyticsEvent("used_quick_select_with_ai");
+  sendAnalyticsEvent("used_quick_select_with_ai");
   yield* finalizeQuickSelect(
-    quickSelectGeometry,
+    null,
     volumeTracing,
     activeViewport,
     labeledResolution,
-    alignedUserBoxMag1,
+    alignedVoxelMapBoundingBoxMag1,
     thirdDim,
-    userBoxInTargetMag.getSize(),
+    alignedVoxelMapBoundingBoxMag.getSize(),
     firstDim,
     secondDim,
     mask,
     overwriteMode,
     labeledZoomStep,
-  );*/
+  );
 }

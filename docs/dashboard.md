@@ -12,7 +12,7 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
 What you can do on this screen depends on your user role. 
 If you are a regular user, you can only create or resume annotations and work on tasks. 
-If you are an [Admin or a Team Manager](./users.md#access-rights-roles), you can also perform administrative actions, manage access rights, and change dataset settings.
+If you are [an Admin, a Dataset Manager or a Team Manager](./users.md#access-rights-roles), you can also perform administrative actions, manage access rights, and change dataset settings.
 
 Read more about the organization of datasets [here](./datasets.md#dataset-organization).
 

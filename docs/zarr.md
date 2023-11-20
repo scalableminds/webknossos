@@ -77,7 +77,7 @@ pip install webknossos
 webknossos convert \
   --voxel-size 11.24,11.24,25 \
   --name my_dataset \
-  --data-format zarr3 \
+  --data-format zarr \
   data/source data/target
 ```
 

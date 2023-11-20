@@ -1,6 +1,6 @@
 # Animations
 
-A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to create eye-catching animation of your datasets as a video clip. You can use these short movies as part of a presentation, website, for social media or to promote a publication.
+A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to create eye-catching animations of your datasets as a video clip. You can use these short movies as part of a presentation, website, for social media or to promote a publication.
 
 // animation video
 
@@ -17,3 +17,5 @@ Creating an animation is easy:
 
 
 Either periodically check the [background jobs page](./jobs.md) or wait for a an email confirmation to download the animation video file. Creating an animation may take a while, depending on the selected bounding box size and the number of included 3D meshes.
+
+WEBKNOSSOS Team plans and above have access to high definition (HD) resolution videos and more options.

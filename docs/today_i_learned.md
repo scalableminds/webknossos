@@ -2,7 +2,7 @@
 
 We reguarly publish tips and tricks videos for beginners and pros on YouTube to share new features, highlight efficient workflows, and show you hidden gems.
 
-Subscribe to our YouTube channel [@webknossos](https://www.youtube.com/@webknossos) to stay up-to-date. 
+Subscribe to our YouTube channel [@webknossos](https://www.youtube.com/@webknossos) or [@webknossos](https://twitter.com/webknossos) on Twitter to stay up-to-date. 
 
 ![youtube-video](https://www.youtube.com/playlist?list=PLpizOgyiA4kE6pZRW1u0l49Pmppp-S7V0)
 

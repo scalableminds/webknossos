@@ -13,7 +13,7 @@ Since it is a web app, you can easily [collaborate](./sharing.md), [crowdsource]
 To get started with WEBKNOSOS, sign up for a free account on [webknossos.org](https://webknossos.org).
 Upload your own datasets or explore one of the many community datasets.
 
-You get 10GB of storage for private datasets with the free tier.
+You get 50GB of storage for private datasets with the free tier.
 For more data storage, check out the [pricing page for paid plans](https://webknossos.org/pricing) that covers storage costs and provides support services such as data format conversions.
 
 Please [reach out to us](mailto:sales@webknossos.org) for local, on-premise hosting at your institute or custom solutions.

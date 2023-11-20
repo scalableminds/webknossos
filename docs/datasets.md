@@ -2,7 +2,7 @@
 
 Working with 3D (and 2D) image datasets is at the heart of WEBKNOSSOS. 
 
-- [Import datasets](#importing-datasets) by uploading them directly via the web UI, streaming them from a remove server/the cloud, or by using the file system.
+- [Import datasets](#importing-datasets) by uploading them directly via the web UI, streaming them from a remote server/the cloud, or by using the file system.
 - [Configure the dataset](#configuring-datasets) defaults and permissions to your specification.
 - [Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
 

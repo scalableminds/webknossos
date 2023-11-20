@@ -35,6 +35,7 @@ Option[String], openGraphImage: Option[String] )
       media="screen"
       href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
+    <script src="/assets/bundle/theme.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"

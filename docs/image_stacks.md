@@ -82,22 +82,22 @@ Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli)
 You can use the free [WEBKNOSSSO Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to WKW or integrate the conversion as part of an existing workflow. 
 
 ```python
-from webknossos import Dataset
-from webknossos.dataset import COLOR_CATEGORY
+import webknossos as wk
 
 def main() -> None:
     """Convert a folder of image files to a WEBKNOSSOS dataset."""
-    dataset = Dataset.from_images(
+    dataset = wk.Dataset.from_images(
         input_path=INPUT_DIR,
         output_path=OUTPUT_DIR,
         voxel_size=(11, 11, 11),
-        layer_category=COLOR_CATEGORY,
+        layer_category=wk.COLOR_CATEGORY,
         compress=True,
     )
 
     print(f"Saved {dataset.name} at {dataset.path}.")
 
-    # dataset.upload()
+    with wk.webknossos_context(token="..."):
+        dataset.upload()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Zarr & NGFF
+# OME-Zarr & NGFF
 
 WEBKNOSSOS works great with [OME-Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
 

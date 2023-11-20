@@ -10,6 +10,7 @@ import Constants, {
   InterpolationModeEnum,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import constants from "oxalis/constants";
 const defaultViewportRect = {
   top: 0,
   left: 0,
@@ -229,8 +230,8 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    showAINucleiSegmentationModal: false,
-    showAINeuronSegmentationModal: false,
+    aIJobModalState: "invisible",
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
@@ -250,6 +251,7 @@ const defaultState: OxalisState = {
       lastMeasuredPosition: null,
       isMeasuring: false,
     },
+    navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
   },
   localSegmentationData: {},
 };

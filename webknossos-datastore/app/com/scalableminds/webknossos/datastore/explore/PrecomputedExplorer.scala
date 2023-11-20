@@ -1,4 +1,5 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
+
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -64,7 +65,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
 
       // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
       // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
-      axisOrder = AxisOrder(0, 1, 2)
+      axisOrder = AxisOrder.xyz(0, 1, 2)
     } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 }

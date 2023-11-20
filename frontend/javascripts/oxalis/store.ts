@@ -70,6 +70,7 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
 export type MutableCommentType = {
   content: string;
@@ -511,8 +512,8 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
-  readonly showAINucleiSegmentationModal: boolean;
-  readonly showAINeuronSegmentationModal: boolean;
+  readonly aIJobModalState: StartAIJobModalState;
+  readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
@@ -527,24 +528,25 @@ type UiInformation = {
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly navbarHeight: number;
 };
-type BaseIsosurfaceInformation = {
+type BaseMeshInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };
-export type AdHocIsosurfaceInformation = BaseIsosurfaceInformation & {
+export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;
   readonly mappingName: string | null | undefined;
   readonly mappingType: MappingType | null | undefined;
 };
-export type PrecomputedIsosurfaceInformation = BaseIsosurfaceInformation & {
+export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: true;
   readonly meshFileName: string;
 };
-export type IsosurfaceInformation = AdHocIsosurfaceInformation | PrecomputedIsosurfaceInformation;
+export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
 export type ConnectomeData = {
   readonly availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
   readonly currentConnectomeFile: APIConnectomeFile | null | undefined;
@@ -568,7 +570,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string,
     {
-      readonly isosurfaces: Record<number, IsosurfaceInformation>;
+      readonly meshes: Record<number, MeshInformation>;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored

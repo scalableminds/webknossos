@@ -1,4 +1,5 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
+
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -31,6 +32,6 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
-    } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
+    } yield List((layer, Vec3Double.ones))
 
 }

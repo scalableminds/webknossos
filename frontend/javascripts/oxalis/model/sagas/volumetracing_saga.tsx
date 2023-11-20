@@ -52,8 +52,8 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
-  AddAdHocIsosurfaceAction,
-  AddPrecomputedIsosurfaceAction,
+  AddAdHocMeshAction,
+  AddPrecomputedMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -670,11 +670,7 @@ export function* diffVolumeTracing(
 }
 
 function* ensureSegmentExists(
-  action:
-    | AddAdHocIsosurfaceAction
-    | AddPrecomputedIsosurfaceAction
-    | SetActiveCellAction
-    | ClickSegmentAction,
+  action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
     getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),
@@ -691,7 +687,7 @@ function* ensureSegmentExists(
     return;
   }
 
-  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
+  if (action.type === "ADD_AD_HOC_MESH" || action.type === "ADD_PRECOMPUTED_MESH") {
     const { seedPosition, seedAdditionalCoordinates } = action;
     yield* put(
       updateSegmentAction(
@@ -737,7 +733,7 @@ function* ensureSegmentExists(
 
 function* maintainSegmentsMap(): Saga<void> {
   yield* takeEvery(
-    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ["ADD_AD_HOC_MESH", "ADD_PRECOMPUTED_MESH", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
     ensureSegmentExists,
   );
 }

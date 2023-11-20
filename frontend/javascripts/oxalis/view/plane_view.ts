@@ -15,6 +15,7 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const createDirLight = (
   position: Vector3,
@@ -33,11 +34,11 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
-const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: (
+  throttledPerformMeshHitTest: (
     arg0: [number, number],
   ) => RaycastIntersection<THREE.Object3D> | null | undefined;
 
@@ -46,9 +47,9 @@ class PlaneView {
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.throttledPerformIsosurfaceHitTest = _.throttle(
-      this.performIsosurfaceHitTest,
-      ISOSURFACE_HOVER_THROTTLING_DELAY,
+    this.throttledPerformMeshHitTest = _.throttle(
+      this.performMeshHitTest,
+      MESH_HOVER_THROTTLING_DELAY,
     );
     this.running = false;
     const { scene } = getSceneController();
@@ -128,16 +129,16 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(
+  performMeshHitTest(
     mousePosition: [number, number],
   ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { isosurfacesLODRootGroup } = SceneController.segmentMeshController;
+    const { meshesLODRootGroup } = SceneController.segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
-    // Outside of the 3D viewport, we don't do isosurface hit tests
+    // Outside of the 3D viewport, we don't do mesh hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
       if (hoveredSegmentId !== 0) {
         // Reset hoveredSegmentId if we are outside of the 3D viewport,
@@ -155,7 +156,7 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = isosurfacesLODRootGroup.children;
+    const intersectableObjects = meshesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
@@ -248,6 +249,13 @@ class PlaneView {
     this.resize();
     this.animate();
     window.addEventListener("resize", this.resizeThrottled);
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.navbarHeight,
+        () => this.resizeThrottled(),
+        true,
+      ),
+    );
   }
 }
 

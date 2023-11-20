@@ -1170,3 +1170,9 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     }
   });
 };
+
+export function getFileExtension(fileName: string): string {
+  const filenameParts = fileName.split(".");
+  const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+  return fileExtension;
+}

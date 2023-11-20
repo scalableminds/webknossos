@@ -7,8 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -22,7 +21,7 @@ class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogg
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    zarrArray.readBytesXYZ(shape, offset)
+    zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
   }
 
   override protected def onFinalize(): Unit = ()
@@ -36,23 +35,29 @@ class Zarr3BucketProvider(layer: Zarr3Layer,
     extends BucketProvider
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[ZarrCubeHandle] = {
-    val zarrMagOpt: Option[MagLocator] =
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    zarrMagOpt match {
+    magLocatorOpt match {
       case None => Fox.empty
-      case Some(zarrMag) =>
+      case Some(magLocator) =>
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- if (zarrMag.isRemote) {
-                remoteSourceDescriptorService.vaultPathFor(zarrMag)
-              } else localPathFrom(readInstruction, zarrMag.pathWithFallback)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
               cubeHandle <- Zarr3Array
-                .open(magPath, dataSourceId, layer.name, zarrMag.axisOrder, zarrMag.channelIndex, chunkContentsCache)
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
+                      chunkContentsCache)
                 .map(new ZarrCubeHandle(_))
             } yield cubeHandle
           case None => Empty

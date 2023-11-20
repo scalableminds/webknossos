@@ -1,4 +1,4 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -17,10 +17,10 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
 
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(Zarr3Layer, Vec3Double)]] =
     for {
-      zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.ZARR_JSON)
+      zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrayPath) ?~> s"failed to read zarr v3 header at $zarrayPath"
-      _ <- zarrHeader.assertValid
+      _ <- zarrHeader.assertValid.toFox
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asCxyzFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
@@ -33,6 +33,6 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
       layer: Zarr3Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         Zarr3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else Zarr3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
-    } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
+    } yield List((layer, Vec3Double.ones))
 
 }

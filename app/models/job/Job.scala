@@ -54,7 +54,7 @@ case class Job(
       s <- started
     } yield (e - s).millis
 
-  def effectiveState: JobState = manualState.getOrElse(state)
+  private def effectiveState: JobState = manualState.getOrElse(state)
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
@@ -70,7 +70,7 @@ case class Job(
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case JobCommand.export_tiff =>
+        case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>
@@ -359,6 +359,12 @@ class JobService @Inject()(wkConf: WkConf,
             genericEmailTemplate(
               "Mesh Generation",
               "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+            ))
+        case JobCommand.render_animation =>
+          Some(
+            genericEmailTemplate(
+              "Dataset Animation",
+              "Your animation of a WEBKNOSSOS dataset has been sucessfully created and is ready for download."
             ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"

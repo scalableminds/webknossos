@@ -172,10 +172,17 @@ export function* warnAboutMagRestriction(): Saga<void> {
         Store.dispatch(setZoomStepAction(newZoomValue));
       };
 
+      let constraintString = `between ${min.toFixed(2)} and ${max.toFixed(2)}`;
+      if (min === 0) {
+        constraintString = `lower than ${max.toFixed(2)}`;
+      } else if (max === Infinity) {
+        constraintString = `greater than ${min.toFixed(2)}`;
+      }
+
       const message = (
         <React.Fragment>
           Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
-          it is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
+          it is {constraintString}. Alternatively, click{" "}
           <Button
             type="link"
             onClick={clampZoom}

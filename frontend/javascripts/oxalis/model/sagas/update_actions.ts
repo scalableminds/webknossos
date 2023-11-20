@@ -86,6 +86,10 @@ type ImportVolumeTracingUpdateAction = {
   value: {
     largestSegmentId: number;
   };
+}; // This update action is only created by the backend
+type AddSegmentIndexUpdateAction = {
+  name: "addSegmentIndex";
+  value: {};
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
@@ -100,6 +104,7 @@ export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
   | ImportVolumeTracingUpdateAction
+  | AddSegmentIndexUpdateAction
   | CreateTracingUpdateAction
 >;
 

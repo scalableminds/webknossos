@@ -92,7 +92,7 @@
 }
 
 .tracing-layout {
-  height: calc(100vh - @navbar-height);
+  height: calc(100vh - var(--navbar-height));
   display: flex;
 
   &.ant-layout,
@@ -205,7 +205,7 @@
   position: fixed;
   right: 0;
   z-index: 1000;
-  top: @navbar-height;
+  top: var(--navbar-height);
   bottom: 0;
 
   .version-section {
@@ -319,7 +319,7 @@ img.keyboard-mouse-icon:first-child {
   overflow-x: auto;
   overflow-y: hidden;
   position: fixed;
-  height: @navbar-height;
+  height: var(--navbar-height);
   display: flex;
   align-items: center;
   white-space: nowrap;
@@ -563,6 +563,7 @@ img.keyboard-mouse-icon:first-child {
   display: inline-block;
   background-image: url("/assets/images/cell.svg");
   background-size: contain;
+  opacity: 0.65;
 }
 
 .hide-tree-edges-icon {
@@ -598,7 +599,7 @@ img.keyboard-mouse-icon:first-child {
   /* The navbar and footer have a higher z-value than the context menu and
      should not be covered by the context menu overlay. At the same time
      the overlay serves as the container for the css-sticky context menu. */
-  height: calc(100% - @navbar-height - @footer-height);
+  height: calc(100% - var(--navbar-height) - @footer-height);
   position: absolute;
   /* The context menu needs a higher z-value than flexlayout__tab_button_content.
      Otherwise the tab title covers the context menu. */

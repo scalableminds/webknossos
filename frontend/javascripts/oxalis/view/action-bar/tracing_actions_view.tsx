@@ -41,8 +41,7 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
-  setAINucleiSegmentationModalVisibilityAction,
-  setAINeuronSegmentationModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -63,7 +62,10 @@ import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import { api } from "oxalis/singletons";
 import messages from "messages";
-import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
+import {
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+} from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
@@ -72,10 +74,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import {
-  NeuronSegmentationModal,
-  NucleiSegmentationModal,
-} from "../right-border-tabs/starting_job_modals";
+import { CreateAnimationModalWrapper as CreateAnimationModal } from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -93,8 +92,7 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
-  isAINeuronSegmentationModalOpen: boolean;
-  isAINucleiSegmentationModalOpen: boolean;
+  isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   othersMayEdit: boolean;
@@ -256,43 +254,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       },
     ],
   };
-}
-
-export function getAISegmentationMenu(
-  isAINucleiSegmentationModalOpen: boolean,
-  isAINeuronSegmentationModalOpen: boolean,
-): [SubMenuType, React.ReactNode] {
-  const AISegmentationMenu = {
-    key: "ai-segmentation-menu",
-    icon: <SettingOutlined />,
-    label: "AI Segmentation",
-    children: [
-      // {
-      //   key: "ai-nuclei-segmentation",
-      //   label: "AI Nuclei Segmentation",
-      //   onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
-      // },
-      {
-        key: "ai-neuron-segmentation",
-        label: "AI Neuron Segmentation",
-        onClick: () => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true)),
-      },
-    ],
-  };
-
-  const AISegmentationModals = isAINucleiSegmentationModalOpen ? (
-    <NucleiSegmentationModal
-      key="ai-nuclei-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(false))}
-    />
-  ) : isAINeuronSegmentationModalOpen ? (
-    <NeuronSegmentationModal
-      key="ai-neuron-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
-    />
-  ) : null;
-
-  return [AISegmentationMenu, AISegmentationModals];
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -674,16 +635,19 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
 
-    if (features().jobsEnabled) {
-      const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
-        this.props.isAINucleiSegmentationModalOpen,
-        this.props.isAINeuronSegmentationModalOpen,
+    menuItems.push(screenshotMenuItem);
+
+    if (activeUser?.isSuperUser) {
+      menuItems.push(renderAnimationMenuItem);
+      modals.push(
+        <CreateAnimationModal
+          key="render-animation-modal"
+          isOpen={this.props.isRenderAnimationModalOpen}
+          onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+        />,
       );
-      menuItems.push(AISegmentationMenu);
-      modals.push(AISegmentationModals);
     }
 
-    menuItems.push(screenshotMenuItem);
     menuItems.push({
       key: "user-scripts-button",
       onClick: this.handleUserScriptsOpen,
@@ -765,8 +729,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
-    isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
-    isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
+    isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     othersMayEdit: state.tracing.othersMayEdit,
   };

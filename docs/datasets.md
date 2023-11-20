@@ -23,7 +23,7 @@ The easiest way to get started with working on your datasets is through the WEBK
 4. Click the *Upload* button
 
 
-WEBKNOSSOS uses the [WKW-format](./wkw.md) internally to display your data.
+Internally, WEBKNOSSOS uses the [WKW-format](./wkw.md) by default to display your data.
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
 If your data is not in WKW, you can either:

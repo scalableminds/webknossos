@@ -28,7 +28,7 @@ If your data is already in WKW you can simply drag your folder (or zip archive o
 
 If your data is not in WKW, you can either:
 
-- upload the data in a supported file format and WEBKNOSSOS will automatically convert it ([webknossos.org](https://webknossos.org) only). 
+- upload the data in a supported file format and WEBKNOSSOS will automatically import or convert it ([webknossos.org](https://webknossos.org) only). 
 Depending on the size of the dataset, the conversion will take some time. 
 You can check the progress at the [`Jobs`](./jobs.md) page or the "Datasets" tab in the dashboard.
 WEBKNOSSOS will also send you an email notification.

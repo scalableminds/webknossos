@@ -1,6 +1,6 @@
 # Zarr & NGFF
 
-WEBKNOSSOS works great with [OME Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
+WEBKNOSSOS works great with [OME-Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
 
 We strongly believe in this community-driven, cloud-native data fromat for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
 

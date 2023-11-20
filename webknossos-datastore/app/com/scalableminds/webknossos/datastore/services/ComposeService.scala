@@ -48,14 +48,10 @@ object ComposeLayer {
   implicit val composeLayerFormat: OFormat[ComposeLayer] = Json.format[ComposeLayer]
 }
 
-class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               dataSourceService: DataSourceService,
-                               remoteWebKnossosClient: DSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
-  // TODO: Extract to common trait with UploadService?
-  val dataBaseDir: Path = dataSourceService.dataBaseDir
+class SymlinkHelper(dataSourceService: DataSourceService)(implicit ec: ExecutionContext) extends FoxImplicits {
 
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+  val dataBaseDir: Path = dataSourceService.dataBaseDir
+  def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
     Fox
       .serialCombined(layersToLink) { layerToLink =>
         val layerPath = layerToLink.pathIn(dataBaseDir)
@@ -71,6 +67,13 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       .map { _ =>
         ()
       }
+}
+
+class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
+                               dataSourceService: DataSourceService,
+                               remoteWebKnossosClient: DSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
+    extends SymlinkHelper(dataSourceService)(ec)
+    with FoxImplicits {
 
   private def uploadDirectory(organizationName: String, name: String): Path =
     dataBaseDir.resolve(organizationName).resolve(name)

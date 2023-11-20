@@ -63,9 +63,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     extends LazyLogging
     with DataSetDeleter
     with DirectoryConstants
-    with FoxImplicits {
-
-  val dataBaseDir: Path = dataSourceService.dataBaseDir
+    with FoxImplicits
+    with SymlinkHelper(dataSourceService) {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
@@ -275,23 +274,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
   }
-
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
-    Fox
-      .serialCombined(layersToLink) { layerToLink =>
-        val layerPath = layerToLink.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
-        for {
-          _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
-          _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
-          _ <- tryo {
-            Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
-          } ?~> s"Failed to create symlink at $newLayerPath."
-        } yield ()
-      }
-      .map { _ =>
-        ()
-      }
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationName: String,

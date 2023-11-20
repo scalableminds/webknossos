@@ -8,7 +8,11 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
+import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
@@ -59,7 +63,8 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
-                              runningUploadMetadataStore: DataStoreRedisStore)(implicit ec: ExecutionContext)
+                              runningUploadMetadataStore: DataStoreRedisStore,
+                              exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
     extends LazyLogging
     with DataSetDeleter
     with DirectoryConstants
@@ -224,11 +229,44 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       Fox.successful(())
     else {
       for {
-        _ <- addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+        _ <- Fox.successful(())
+        uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
+        _ <- uploadedDataSourceType match {
+          case UploadedDataSourceType.ZARR            => exploreLocalDatasource(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.EXPLORED        => Fox.successful(())
+          case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+        }
         _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
+
+  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
+    for {
+      _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
+      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
+      _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
+    } yield ()
+
+  private def tryExploringMultipleZarrLayers(path: Path, dataSourceId: DataSourceId): Fox[Option[Path]] =
+    for {
+      layerDirs <- getZarrLayerDirectories(path)
+      dataSources <- Fox.combined(
+        layerDirs
+          .map(layerDir =>
+            for {
+              _ <- addLayerAndResolutionDirIfMissing(layerDir).toFox
+              explored: DataSource <- exploreLocalLayerService.exploreLocal(path,
+                                                                            dataSourceId,
+                                                                            layerDir.getFileName.toString)
+            } yield explored)
+          .toList)
+      combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
+      dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, dataSources.head.scale)
+      path <- Fox.runIf(combinedLayers.nonEmpty)(
+        exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
+    } yield path
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
@@ -323,13 +361,49 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield layerRenamed
   }
 
-  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Box[Unit] =
+  private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
+    if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
+      UploadedDataSourceType.ZARR
+    } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.EXPLORED
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
+      UploadedDataSourceType.ZARR_MULTILAYER
+    } else {
+      UploadedDataSourceType.WKW
+    }
+
+  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    for {
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(
+        dataSourceDir,
+        maxDepth = maxDepth,
+        silent = false,
+        filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
+    } yield listing.nonEmpty
+
+  private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
+    for {
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(
+        dataSourceDir,
+        maxDepth = 1,
+        silent = false,
+        filters = p => p.getFileName.toString == FILENAME_DATASOURCE_PROPERTIES_JSON)
+    } yield listing.nonEmpty
+
+  private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
+    for {
+      potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
+      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
+    } yield layerDirs
+
+  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,
+                                                headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
                                                            maxDepth = 2,
                                                            silent = false,
-                                                           filters = p => p.getFileName.toString == FILENAME_HEADER_WKW)
+                                                           filters = p => p.getFileName.toString == headerFile)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
         _ <- if (looksLikeMagDir(listingRelative)) {
           val targetDir = dataSourceDir.resolve("color").resolve("1")
@@ -367,7 +441,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             new File(file.toString),
             unpackToDir,
             includeHiddenFiles = false,
-            hiddenFilesWhitelist = List(".zarray"),
+            hiddenFilesWhitelist = List(".zarray", ".zattrs"),
             truncateCommonPrefix = true,
             Some(excludeFromPrefix)
           )
@@ -438,4 +512,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       obj <- objectStringOption.toFox.flatMap(o => Json.fromJson[T](Json.parse(o)).asOpt)
     } yield obj
 
+}
+
+object UploadedDataSourceType extends Enumeration {
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW = Value
 }

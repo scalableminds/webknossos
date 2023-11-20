@@ -7,11 +7,17 @@ import type {
   AnnotationTool,
   Vector3,
 } from "oxalis/constants";
-import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
+import {
+  OrthoViews,
+  ContourModeEnum,
+  AnnotationToolEnum,
+  OrthoViewValuesWithoutTDView,
+} from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getContourTracingMode,
+  getRenderableResolutionForSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -19,10 +25,13 @@ import {
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import {
+  addToContour,
+  computeQuickSelectForAreaAction,
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
   maybePrefetchEmbeddingAction,
+  resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -39,7 +48,7 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
+import Store, { VolumeTracing } from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
@@ -57,6 +66,9 @@ import {
   setLastMeasuredPositionAction,
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
+import Dimensions from "oxalis/model/dimensions";
+import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -664,7 +676,7 @@ export class BoundingBoxTool {
   }
 }
 
-export class QuickSelectTool {
+export class RectangleQuickSelectTool {
   static getPlaneMouseControls(
     _planeId: OrthoView,
     planeView: PlaneView,
@@ -674,7 +686,7 @@ export class QuickSelectTool {
     let currentPos: Vector3 | null = null;
     let isDragging = false;
     const SceneController = getSceneController();
-    const { quickSelectGeometry } = SceneController;
+    const { quickSelectRectangleGeometry: quickSelectGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         // Potentially confirm earlier quick select actions. That way, the user
@@ -783,6 +795,139 @@ export class QuickSelectTool {
   }
 
   static onToolDeselected() {}
+}
+
+export class AreaQuickSelectTool {
+  static initialPlane: OrthoView = OrthoViews.PLANE_XY;
+  static isDrawingBounds = false;
+  static volumeTracing: VolumeTracing | null | undefined = null;
+  static volumeLayer: VolumeLayer | null | undefined = null;
+  static getPlaneMouseControls(
+    _planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): any {
+    const SceneController = getSceneController();
+    const { quickSelectAreaGeometry } = SceneController;
+    return {
+      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+        if (plane === OrthoViews.TDView) {
+          return;
+        }
+
+        const state = Store.getState();
+        this.volumeTracing = getActiveSegmentationTracing(state);
+        const maybeResolutionAndZoomStep = getRenderableResolutionForSegmentationTracing(
+          state,
+          this.volumeTracing,
+        );
+        if (!maybeResolutionAndZoomStep || !this.volumeTracing) {
+          return;
+        }
+        this.initialPlane = plane;
+        const position = V3.floor(calculateGlobalPos(state, pos));
+        const thirdDimValue = position[Dimensions.thirdDimensionForPlane(plane)];
+        this.volumeLayer = new VolumeLayer(
+          this.volumeTracing.tracingId,
+          plane,
+          thirdDimValue,
+          maybeResolutionAndZoomStep.resolution,
+        );
+        Store.dispatch(maybePrefetchEmbeddingAction(position));
+      },
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        id: string | null | undefined,
+        evt: MouseEvent,
+      ) => {
+        console.log("leftDownMove");
+        if (evt.altKey) {
+          MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
+          return;
+        }
+        if (id == null || !this.volumeTracing || !this.volumeLayer) {
+          return;
+        }
+        if (!this.isDrawingBounds) {
+          this.initialPlane = id as OrthoView;
+          this.isDrawingBounds = true;
+          quickSelectAreaGeometry.reset();
+          quickSelectAreaGeometry.show();
+          quickSelectAreaGeometry.setViewport(id as OrthoView);
+          Store.dispatch(resetContourAction());
+        }
+        if (id !== this.initialPlane) {
+          return;
+        }
+        const state = Store.getState();
+        const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+        quickSelectAreaGeometry.addEdgePoint(position);
+        Store.dispatch(addToContour(position));
+        this.volumeLayer.addContour(position);
+      },
+      leftMouseUp: () => {
+        const state = Store.getState();
+        if (!this.isDrawingBounds || !this.volumeLayer) {
+          return;
+        }
+        if (
+          quickSelectAreaGeometry.vertexBuffer.getLength() <= 2
+          // || state.uiInformation.quickSelectState === "inactive"
+          // Dont know why this check is here ^
+        ) {
+          // clear contour because user didn't drag
+          // TODO: implement cleanup
+          return;
+        }
+        // Stop drawing area and close the drawn area if still measuring.
+        this.isDrawingBounds = false;
+        const voxelMap = this.volumeLayer.getFillingVoxelBuffer2D(
+          AnnotationToolEnum.AREA_QUICK_SELECT,
+        );
+        const voxelMapBBox =
+          this.volumeLayer.getLabeledBoundingBox() ||
+          new BoundingBox({ min: [0, 0, 0], max: [0, 0, 0] });
+        Store.dispatch(computeQuickSelectForAreaAction(voxelMap, voxelMapBBox));
+        // TODO: performQuickSelect selbst machen bis inferFromEmbedding. Das kann nicht gleich bleiben.
+        // Vorher noch den bereich der VoxelMap als embedding downloaden
+        // => Wahrscheinlich "einfach nur" die voxelMap in den Infer Space umrechnen und dann wars das schon.
+        Store.dispatch(resetContourAction());
+        // TODO: hide contour at the end.
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Drag to measure area",
+      rightClick: "Reset Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { areaMeasurementGeometry } = getSceneController();
+    areaMeasurementGeometry.resetAndHide();
+    Store.dispatch(hideMeasurementTooltipAction());
+    this.isDrawingBounds = false;
+    this.initialPlane = OrthoViews.PLANE_XY;
+  }
 }
 
 function getDoubleClickGuard() {
@@ -1056,7 +1201,8 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
-  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
+  [AnnotationToolEnum.RECTANGLE_QUICK_SELECT]: RectangleQuickSelectTool,
+  [AnnotationToolEnum.AREA_QUICK_SELECT]: AreaQuickSelectTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,

@@ -5,15 +5,18 @@ import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { QuickSelectRectangleGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { VoxelBuffer2D } from "../volumetracing/volumelayer";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
 type AddToLayerAction = ReturnType<typeof addToLayerAction>;
+type AddToContourAction = ReturnType<typeof addToContour>;
 type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
@@ -43,6 +46,7 @@ export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type ComputeQuickSelectForAreaAction = ReturnType<typeof computeQuickSelectForAreaAction>;
 export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
@@ -65,6 +69,7 @@ export type VolumeTracingAction =
   | CreateCellAction
   | StartEditingAction
   | AddToLayerAction
+  | AddToContourAction
   | FloodFillAction
   | PerformMinCutAction
   | FinishEditingAction
@@ -87,6 +92,7 @@ export type VolumeTracingAction =
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
+  | ComputeQuickSelectForAreaAction
   | MaybePrefetchEmbeddingAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
@@ -148,6 +154,12 @@ export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
 export const addToLayerAction = (position: Vector3) =>
   ({
     type: "ADD_TO_LAYER",
+    position,
+  } as const);
+
+export const addToContour = (position: Vector3) =>
+  ({
+    type: "ADD_TO_CONTOUR",
     position,
   } as const);
 
@@ -329,13 +341,23 @@ export const setMappingIsEditableAction = () =>
 export const computeQuickSelectForRectAction = (
   startPosition: Vector3,
   endPosition: Vector3,
-  quickSelectGeometry: QuickSelectGeometry,
+  quickSelectGeometry: QuickSelectRectangleGeometry,
 ) =>
   ({
     type: "COMPUTE_QUICK_SELECT_FOR_RECT",
     startPosition,
     endPosition,
     quickSelectGeometry,
+  } as const);
+
+export const computeQuickSelectForAreaAction = (
+  voxelMap: VoxelBuffer2D,
+  boundingBox: BoundingBox,
+) =>
+  ({
+    type: "COMPUTE_QUICK_SELECT_FOR_AREA",
+    voxelMap,
+    boundingBox,
   } as const);
 
 export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>

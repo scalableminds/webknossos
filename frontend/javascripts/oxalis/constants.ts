@@ -188,7 +188,8 @@ export enum AnnotationToolEnum {
   ERASE_TRACE = "ERASE_TRACE",
   FILL_CELL = "FILL_CELL",
   PICK_CELL = "PICK_CELL",
-  QUICK_SELECT = "QUICK_SELECT",
+  RECTANGLE_QUICK_SELECT = "RECTANGLE_QUICK_SELECT",
+  AREA_QUICK_SELECT = "AREA_QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
   LINE_MEASUREMENT = "LINE_MEASUREMENT",
@@ -201,19 +202,27 @@ export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
-  AnnotationToolEnum.QUICK_SELECT,
+  AnnotationToolEnum.RECTANGLE_QUICK_SELECT,
+  AnnotationToolEnum.AREA_QUICK_SELECT,
 ];
 export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
-  AnnotationToolEnum.QUICK_SELECT,
+  AnnotationToolEnum.RECTANGLE_QUICK_SELECT,
+  AnnotationToolEnum.AREA_QUICK_SELECT,
 ];
 export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
-  AnnotationToolEnum.QUICK_SELECT,
+  AnnotationToolEnum.RECTANGLE_QUICK_SELECT,
+  AnnotationToolEnum.AREA_QUICK_SELECT,
+];
+
+export const QuickSelectTools: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.RECTANGLE_QUICK_SELECT,
+  AnnotationToolEnum.AREA_QUICK_SELECT,
 ];
 
 export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [

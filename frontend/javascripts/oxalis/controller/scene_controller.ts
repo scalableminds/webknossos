@@ -18,7 +18,7 @@ import Cube from "oxalis/geometries/cube";
 import {
   ContourGeometry,
   LineMeasurementGeometry,
-  QuickSelectGeometry,
+  QuickSelectRectangleGeometry,
 } from "oxalis/geometries/helper_geometries";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
@@ -63,7 +63,9 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  quickSelectGeometry: QuickSelectGeometry;
+  quickSelectRectangleGeometry: QuickSelectRectangleGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectAreaGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  quickSelectAreaGeometry: ContourGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lineMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
   lineMeasurementGeometry: LineMeasurementGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'areaMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
@@ -243,8 +245,12 @@ class SceneController {
     this.contour = new ContourGeometry();
     this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
-    this.quickSelectGeometry = new QuickSelectGeometry();
-    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
+    this.quickSelectRectangleGeometry = new QuickSelectRectangleGeometry();
+    this.annotationToolsGeometryGroup.add(this.quickSelectRectangleGeometry.getMeshGroup());
+    this.quickSelectAreaGeometry = new ContourGeometry();
+    this.quickSelectAreaGeometry
+      .getMeshes()
+      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
     this.lineMeasurementGeometry = new LineMeasurementGeometry();
     this.lineMeasurementGeometry
@@ -359,7 +365,7 @@ class SceneController {
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
 
-          this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
+          this.quickSelectRectangleGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }

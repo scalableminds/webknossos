@@ -4,6 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
+  ComputeQuickSelectForAreaAction,
   ComputeQuickSelectForRectAction,
   MaybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -11,9 +12,10 @@ import Toast from "libs/toast";
 import features from "features";
 
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
-import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performQuickSelectML, {
+import performRectangleQuickSelectHeuristic from "./quick_select_heuristic_saga";
+import performRectangleQuickSelectML, {
   getInferenceSession,
+  performAreaQuickSelect,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -26,24 +28,31 @@ function* shouldUseHeuristic() {
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
-    "COMPUTE_QUICK_SELECT_FOR_RECT",
-    function* guard(action: ComputeQuickSelectForRectAction) {
+    ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_AREA"],
+    function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForAreaAction) {
+      const isRectangleSelect = action.type === "COMPUTE_QUICK_SELECT_FOR_RECT";
       try {
         yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
+        if (isRectangleSelect) {
+          if (yield* call(shouldUseHeuristic)) {
+            yield* call(performRectangleQuickSelectHeuristic, action);
+          } else {
+            yield* call(performRectangleQuickSelectML, action);
+          }
+        } else {
+          yield* call(performAreaQuickSelect, action);
+        }
 
         yield* put(setQuickSelectStateAction("active"));
-        if (yield* call(shouldUseHeuristic)) {
-          yield* call(performQuickSelectHeuristic, action);
-        } else {
-          yield* call(performQuickSelectML, action);
-        }
       } catch (ex) {
         Toast.error((ex as Error).toString());
         ErrorHandling.notify(ex as Error);
         console.error(ex);
       } finally {
         yield* put(setBusyBlockingInfoAction(false));
-        action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+        if (isRectangleSelect) {
+          action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+        }
         yield* put(setQuickSelectStateAction("inactive"));
       }
     },
@@ -61,7 +70,9 @@ export default function* listenToQuickSelect(): Saga<void> {
 
   yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], function* guard() {
     const isQuickSelectTool = yield* select(
-      (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
+      (state) =>
+        state.uiInformation.activeTool === AnnotationToolEnum.RECTANGLE_QUICK_SELECT ||
+        state.uiInformation.activeTool === AnnotationToolEnum.AREA_QUICK_SELECT,
     );
     if (isQuickSelectTool && features().segmentAnythingEnabled) {
       // Retrieve the inference session to prefetch it as soon as the tool
@@ -76,7 +87,9 @@ export default function* listenToQuickSelect(): Saga<void> {
       // Escaping the preview mode is handled within the quick select sagas that support
       // preview mode (currently only the non-ml variant).
       yield* put(setQuickSelectStateAction("inactive"));
-      const quickSelectGeometry = yield* call(() => getSceneController().quickSelectGeometry);
+      const quickSelectGeometry = yield* call(
+        () => getSceneController().quickSelectRectangleGeometry,
+      );
       quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     }
   });

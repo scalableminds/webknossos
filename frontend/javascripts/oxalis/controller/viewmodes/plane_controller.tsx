@@ -46,10 +46,11 @@ import {
   PickCellTool,
   FillCellTool,
   BoundingBoxTool,
-  QuickSelectTool,
+  RectangleQuickSelectTool,
   ProofreadTool,
   LineMeasurementTool,
   AreaMeasurementTool,
+  AreaQuickSelectTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
   ShowContextMenuFunction,
@@ -182,7 +183,8 @@ class VolumeKeybindings {
       r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
       f: () => setTool(AnnotationToolEnum.FILL_CELL),
       p: () => setTool(AnnotationToolEnum.PICK_CELL),
-      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+      q: () => setTool(AnnotationToolEnum.RECTANGLE_QUICK_SELECT),
+      a: () => setTool(AnnotationToolEnum.AREA_QUICK_SELECT),
       o: () => setTool(AnnotationToolEnum.PROOFREAD),
     };
   }
@@ -330,7 +332,12 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showContextMenuAt,
     );
-    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
+    const rectangleQuickSelectControls = RectangleQuickSelectTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showContextMenuAt,
+    );
+    const areaQuickSelectControls = AreaQuickSelectTool.getPlaneMouseControls(
       planeId,
       this.planeView,
       this.props.showContextMenuAt,
@@ -347,7 +354,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
-      Object.keys(quickSelectControls),
+      Object.keys(rectangleQuickSelectControls),
       Object.keys(proofreadControls),
       Object.keys(lineMeasurementControls),
       Object.keys(areaMeasurementControls),
@@ -367,7 +374,8 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
-        [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
+        [AnnotationToolEnum.RECTANGLE_QUICK_SELECT]: rectangleQuickSelectControls[controlKey],
+        [AnnotationToolEnum.AREA_QUICK_SELECT]: areaQuickSelectControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
         [AnnotationToolEnum.LINE_MEASUREMENT]: lineMeasurementControls[controlKey],
         [AnnotationToolEnum.AREA_MEASUREMENT]: areaMeasurementControls[controlKey],

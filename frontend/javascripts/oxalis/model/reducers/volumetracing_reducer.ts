@@ -36,6 +36,7 @@ import {
   updateVolumeTracing,
   setMappingNameReducer,
   removeMissingGroupsFromSegments,
+  addPositionToContourReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
@@ -335,6 +336,10 @@ function VolumeTracingReducer(
 
     case "ADD_TO_LAYER": {
       return addToLayerReducer(state, volumeTracing, action.position);
+    }
+
+    case "ADD_TO_CONTOUR": {
+      return addPositionToContourReducer(state, volumeTracing, action.position);
     }
 
     case "RESET_CONTOUR": {

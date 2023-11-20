@@ -272,7 +272,6 @@ class VolumeLayer {
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height, 1);
-
     const setMap = (x: number, y: number, value: number = 1) => {
       x = Math.floor(x);
       y = Math.floor(y);

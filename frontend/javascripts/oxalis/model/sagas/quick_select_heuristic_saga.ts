@@ -22,6 +22,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   CancelQuickSelectAction,
+  ComputeQuickSelectForAreaAction,
   ComputeQuickSelectForRectAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
@@ -41,7 +42,7 @@ import {
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { QuickSelectRectangleGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
 import { APIDataLayer, APIDataset } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
@@ -74,7 +75,10 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  action:
+    | ComputeQuickSelectForRectAction
+    | MaybePrefetchEmbeddingAction
+    | ComputeQuickSelectForAreaAction,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -95,6 +99,7 @@ export function* prepareQuickSelect(
     if ("quickSelectGeometry" in action) {
       const { quickSelectGeometry } = action;
       quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+      // TODO: Reset Area Tool here
     }
     return null;
   }
@@ -448,7 +453,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 function processBinaryMaskInPlaceAndAttach(
   mask: ndarray.NdArray<Uint8Array>,
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
-  quickSelectGeometry: QuickSelectGeometry,
+  quickSelectGeometry: QuickSelectRectangleGeometry,
 ) {
   fillHolesInPlace(mask);
   morphology.close(mask, quickSelectConfig.closeValue);
@@ -500,7 +505,7 @@ function normalizeToUint8(
 }
 
 export function* finalizeQuickSelect(
-  quickSelectGeometry: QuickSelectGeometry,
+  quickSelectGeometry: QuickSelectRectangleGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,

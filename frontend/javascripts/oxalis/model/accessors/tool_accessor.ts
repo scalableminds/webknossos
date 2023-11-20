@@ -100,7 +100,8 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.TRACE]: disabledInfo,
     [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
-    [AnnotationToolEnum.QUICK_SELECT]: disabledInfo,
+    [AnnotationToolEnum.RECTANGLE_QUICK_SELECT]: disabledInfo,
+    [AnnotationToolEnum.AREA_QUICK_SELECT]: disabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
     [AnnotationToolEnum.PROOFREAD]: {
@@ -166,7 +167,11 @@ function _getDisabledInfoFromArgs(
       isDisabled: false,
       explanation: disabledSkeletonExplanation,
     },
-    [AnnotationToolEnum.QUICK_SELECT]: {
+    [AnnotationToolEnum.RECTANGLE_QUICK_SELECT]: {
+      isDisabled: isZoomStepTooHighForFilling,
+      explanation: zoomInToUseToolMessage,
+    },
+    [AnnotationToolEnum.AREA_QUICK_SELECT]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
@@ -290,7 +295,8 @@ export function adaptActiveToolToShortcuts(
     activeTool === AnnotationToolEnum.MOVE ||
     activeTool === AnnotationToolEnum.ERASE_BRUSH ||
     activeTool === AnnotationToolEnum.ERASE_TRACE ||
-    activeTool === AnnotationToolEnum.QUICK_SELECT ||
+    activeTool === AnnotationToolEnum.RECTANGLE_QUICK_SELECT ||
+    activeTool === AnnotationToolEnum.AREA_QUICK_SELECT ||
     activeTool === AnnotationToolEnum.PROOFREAD ||
     activeTool === AnnotationToolEnum.LINE_MEASUREMENT ||
     activeTool === AnnotationToolEnum.AREA_MEASUREMENT

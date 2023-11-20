@@ -98,6 +98,15 @@ export function updateDirectionReducer(
       .slice(0, MAXIMUM_LABEL_ACTIONS_COUNT),
   });
 }
+export function addPositionToContourReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  position: Vector3,
+) {
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    contourList: [...volumeTracing.contourList, position],
+  });
+}
 export function addToLayerReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
@@ -110,9 +119,7 @@ export function addToLayerReducer(
     return state;
   }
 
-  return updateVolumeTracing(state, volumeTracing.tracingId, {
-    contourList: [...volumeTracing.contourList, position],
-  });
+  return addPositionToContourReducer(state, volumeTracing, position);
 }
 export function resetContourReducer(state: OxalisState, volumeTracing: VolumeTracing) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {

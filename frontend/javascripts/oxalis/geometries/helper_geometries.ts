@@ -157,7 +157,7 @@ const rotations = {
   [OrthoViews.TDView]: null,
 };
 
-export class QuickSelectGeometry {
+export class QuickSelectRectangleGeometry {
   color: THREE.Color;
   meshGroup: THREE.Group;
   centerMarkerColor: THREE.Color;

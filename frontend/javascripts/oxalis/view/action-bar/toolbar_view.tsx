@@ -63,6 +63,7 @@ import {
   InterpolationMode,
   Unicode,
   MeasurementTools,
+  QuickSelectTools,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { BrushPresets, OxalisState } from "oxalis/store";
@@ -816,7 +817,8 @@ const TOOL_NAMES = {
   ERASE_TRACE: "Erase",
   FILL_CELL: "Fill Tool",
   PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
+  RECTANGLE_QUICK_SELECT: "Quick Select Tool",
+  AREA_QUICK_SELECT: "Area Quick Select Tool",
   BOUNDING_BOX: "Bounding Box Tool",
   PROOFREAD: "Proofreading Tool",
   LINE_MEASUREMENT: "Measurement Tool",
@@ -1085,12 +1087,14 @@ export default function ToolbarView() {
           </React.Fragment>
         ) : null}
         <ToolRadioButton
-          name={TOOL_NAMES.QUICK_SELECT}
+          name={TOOL_NAMES.RECTANGLE_QUICK_SELECT}
           description="Draw a rectangle around a segment to automatically detect it"
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
+          disabledExplanation={
+            disabledInfosForTools[AnnotationToolEnum.RECTANGLE_QUICK_SELECT].explanation
+          }
+          disabled={disabledInfosForTools[AnnotationToolEnum.RECTANGLE_QUICK_SELECT].isDisabled}
           style={NARROW_BUTTON_STYLE}
-          value={AnnotationToolEnum.QUICK_SELECT}
+          value={AnnotationToolEnum.RECTANGLE_QUICK_SELECT}
         >
           <img
             src="/assets/images/quick-select-tool.svg"
@@ -1099,7 +1103,9 @@ export default function ToolbarView() {
               height: 20,
               width: 20,
               marginTop: -1,
-              opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.RECTANGLE_QUICK_SELECT].isDisabled
+                ? 0.5
+                : 1,
             }}
           />
         </ToolRadioButton>
@@ -1264,7 +1270,7 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {adaptedActiveTool === "QUICK_SELECT" && (
+      {adaptedActiveTool === "RECTANGLE_QUICK_SELECT" && (
         <>
           <ButtonComponent
             style={{
@@ -1282,6 +1288,10 @@ function ToolSpecificSettings({
           {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}
         </>
       )}
+
+      {QuickSelectTools.includes(adaptedActiveTool) ? (
+        <QuickSelectToolSwitch activeTool={adaptedActiveTool} />
+      ) : null}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />
@@ -1421,6 +1431,39 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         value={AnnotationToolEnum.AREA_MEASUREMENT}
       >
         <img src="/assets/images/area-measurement.svg" alt="Measurement Tool Icon" />
+      </RadioButtonWithTooltip>
+    </Radio.Group>
+  );
+}
+
+function QuickSelectToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
+  const dispatch = useDispatch();
+
+  const handleSetQuickSelectTool = (evt: RadioChangeEvent) => {
+    dispatch(setToolAction(evt.target.value));
+  };
+  return (
+    <Radio.Group
+      value={activeTool}
+      onChange={handleSetQuickSelectTool}
+      style={{
+        marginLeft: 10,
+      }}
+    >
+      <RadioButtonWithTooltip
+        // TODO: Other images.
+        title="Draw a rectangle to predict it."
+        style={NARROW_BUTTON_STYLE}
+        value={AnnotationToolEnum.RECTANGLE_QUICK_SELECT}
+      >
+        <img src="/assets/images/line-measurement.svg" alt="Rectangle Quick Selection Tool Icon" />
+      </RadioButtonWithTooltip>
+      <RadioButtonWithTooltip
+        title="Draw an area instead of a rectangle to predict it."
+        style={NARROW_BUTTON_STYLE}
+        value={AnnotationToolEnum.AREA_QUICK_SELECT}
+      >
+        <img src="/assets/images/area-measurement.svg" alt="Area Quick Selection Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

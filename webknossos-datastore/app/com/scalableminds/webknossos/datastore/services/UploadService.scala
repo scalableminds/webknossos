@@ -65,11 +65,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
                               exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
-    extends LazyLogging
+    extends SymlinkHelper(dataSourceService)
     with DataSetDeleter
     with DirectoryConstants
     with FoxImplicits
-    with SymlinkHelper(dataSourceService) {
+    with LazyLogging {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount

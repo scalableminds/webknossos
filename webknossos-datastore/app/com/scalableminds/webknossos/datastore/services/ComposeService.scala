@@ -31,6 +31,7 @@ case class ComposeRequest(
     targetFolderId: String,
     dataStoreHost: String,
     organizationName: String,
+    scale: Vec3Double,
     layers: Seq[ComposeLayer]
 )
 
@@ -81,7 +82,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
+      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
                                                    composeRequest.organizationName,
@@ -89,7 +90,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "reserveUpload.failed"
+      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
       dataSource <- createDatasource(composeRequest, composeRequest.organizationName)
@@ -97,11 +98,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield ()
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeLayer,
-                                       organizationName: String,
-                                       datasetName: String): Fox[DataLayer] =
+  private def getLayerFromComposeLayer(composeLayer: ComposeLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      _ <- Fox.successful(())
       dataSource <- Fox.option2Fox(dataSourceRepository.find(composeLayer.id))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
@@ -115,8 +113,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                     composeLayer.sourceName,
                                                     Some(composeLayer.newName))
       layerIsRemote = isLayerRemote(composeLayer.id, composeLayer.sourceName)
-      _ <- Fox.runIf(!layerIsRemote)(
-        addSymlinksToOtherDatasetLayers(uploadDirectory(organizationName, datasetName), List(linkedLayerIdentifier)))
+      _ <- Fox.runIf(!layerIsRemote)(addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
         case l: PrecomputedDataLayer =>
           l.copy(name = composeLayer.newName,
@@ -151,18 +148,19 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest, organizationName: String): Fox[DataSource] =
+  private def createDatasource(composeRequest: ComposeRequest, organizationName: String): Fox[DataSource] = {
+    val uploadDir = uploadDirectory(organizationName, composeRequest.newDatasetName)
     for {
-      layers <- Fox.serialCombined(composeRequest.layers.toList)(
-        getLayerFromComposeLayer(_, organizationName, composeRequest.newDatasetName))
+      layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
         DataSourceId(composeRequest.newDatasetName, organizationName),
         layers,
-        Vec3Double(1, 1, 1),
+        composeRequest.scale,
         None
       )
 
     } yield dataSource
+  }
 
   private def isLayerRemote(dataSourceId: DataSourceId, layerName: String) = {
     val layerPath = dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name).resolve(layerName)

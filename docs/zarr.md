@@ -16,7 +16,7 @@ You can try the OME-Zarr support with the following datasets. Load them in WEBKN
     - Source: Dense connectomic reconstruction in layer 4 of the somatosensory cortex. Motta et al. Science 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
 
 ## Zarr Folder Struture
-WEBKNOSSOS expects the following file structure for Zarr datasets:
+WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 ```
 .                             # Root folder, potentially in S3,

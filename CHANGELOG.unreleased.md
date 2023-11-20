@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that trees with ids around 1023 were invisible on some systems. [#7443](https://github.com/scalableminds/webknossos/pull/7443)
 - Fixed styling issues with the maintenance banner so that it no longer overlaps other menus, tabs, and buttons. [#7421](https://github.com/scalableminds/webknossos/pull/7421)
 - Exploring HTTP uris of unknown hosts no longer causes an exception error message to be displayed. [#7422](https://github.com/scalableminds/webknossos/pull/7422)
+- Fixed the initialization of the dark theme if it was active during page load. [#7446](https://github.com/scalableminds/webknossos/pull/7446)
 
 ### Removed
 

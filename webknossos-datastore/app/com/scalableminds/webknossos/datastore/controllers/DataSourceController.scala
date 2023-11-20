@@ -533,13 +533,15 @@ Expects:
     }
 
   def compose(token: Option[String]): Action[ComposeRequest] =
-    Action.async(validateJson[ComposeRequest]) { implicit request => // TODO: Validate read access to every included data source
-      //accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
-       //                                 urlOrHeaderToken(token, request)) {
+    Action.async(validateJson[ComposeRequest]) { implicit request =>
+      val userToken = urlOrHeaderToken(token, request)
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
         for {
-          _ <-composeService.composeDataset(request.body, urlOrHeaderToken(token, request))
+          _ <- Fox.serialCombined(request.body.layers.map(_.id).toList)(id =>
+            accessTokenService.assertUserAccess(UserAccessRequest.readDataSources(id), userToken))
+          _ <- composeService.composeDataset(request.body, userToken)
         } yield Ok
-      //}
+      }
     }
 
   @ApiOperation(hidden = true, value = "")

@@ -29,7 +29,6 @@ import scala.concurrent.ExecutionContext
 case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
-    dataStoreHost: String,
     organizationName: String,
     scale: Vec3Double,
     layers: Seq[ComposeLayer]
@@ -83,6 +82,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
+
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
                                                    composeRequest.organizationName,

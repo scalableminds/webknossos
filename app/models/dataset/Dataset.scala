@@ -291,15 +291,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             isUnreported = row._10 == unreportedStatus,
         ))
 
-  private def buildSelectionPredicates(
-      isActiveOpt: Option[Boolean],
-      isUnreported: Option[Boolean],
-      organizationIdOpt: Option[ObjectId],
-      folderIdOpt: Option[ObjectId],
-      uploaderIdOpt: Option[ObjectId],
-      searchQuery: Option[String],
-      includeSubfolders: Boolean,
-      excludeRemovedOnDisk: Boolean = true)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
+                                       isUnreported: Option[Boolean],
+                                       organizationIdOpt: Option[ObjectId],
+                                       folderIdOpt: Option[ObjectId],
+                                       uploaderIdOpt: Option[ObjectId],
+                                       searchQuery: Option[String],
+                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -315,7 +313,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         .getOrElse(q"${true}")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
-      excludeRemovedOnDiskPredicate = if (excludeRemovedOnDisk) q"status != $deletedByUserStatus" else q"${true}"
     } yield q"""
             ($folderPredicate)
         AND ($uploaderPredicate)
@@ -323,7 +320,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         AND ($isActivePredicate)
         AND ($isUnreportedPredicate)
         AND ($organizationPredicate)
-        AND ($excludeRemovedOnDiskPredicate)
         AND $accessQuery
        """
 
@@ -571,7 +567,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"update webknossos.datasets set status = $deletedByUserStatus where _id = $datasetId".asUpdate
+        q"update webknossos.datasets set status = $deletedByUserStatus, isUsable = false, where _id = $datasetId".asUpdate
       else
         q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 

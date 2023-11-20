@@ -195,9 +195,9 @@ class WKRemoteDataStoreController @Inject()(
         _ <- existingDataset.flatMap {
           case Full(dataset) =>
             for {
-              annotations <- annotationDAO.findAllByDataset(dataset._id)(GlobalAccessContext)
+              annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
               _ = datasetDAO
-                .deleteDataset(dataset._id, onlyMarkAsDeleted = annotations.nonEmpty)
+                .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
                 .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
             } yield ()
 

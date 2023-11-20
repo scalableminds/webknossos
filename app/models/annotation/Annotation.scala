@@ -362,15 +362,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllByDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        q"select $columns from $existingCollectionName where _dataset = $datasetId and $accessQuery".as[AnnotationsRow])
-        .map(_.toList)
-      parsed <- parseAll(r)
-    } yield parsed
-
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationId <- annotationLayerDAO.findAnnotationIdByTracingId(tracingId)
@@ -408,6 +399,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       countList <- run(
         q"select count(a._id) from $existingCollectionName a join webknossos.users_ u on a._user = u._id where u._organization = $organizationId"
           .as[Int])
+      count <- countList.headOption
+    } yield count
+
+  def countAllByDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      accessQuery <- readAccessQuery
+      countList <- run(
+        q"select count(*) from $existingCollectionName where _dataset = $datasetId and $accessQuery".as[Int])
       count <- countList.headOption
     } yield count
 

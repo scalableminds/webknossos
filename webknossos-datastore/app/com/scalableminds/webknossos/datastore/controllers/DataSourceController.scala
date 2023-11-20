@@ -34,7 +34,8 @@ class DataSourceController @Inject()(
     connectomeFileService: ConnectomeFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
-    uploadService: UploadService
+    uploadService: UploadService,
+    composeService: ComposeService
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
@@ -529,6 +530,16 @@ Expects:
           _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
         } yield Ok
       }
+    }
+
+  def compose(token: Option[String]): Action[ComposeRequest] =
+    Action.async(validateJson[ComposeRequest]) { implicit request => // TODO: Validate read access to every included data source
+      //accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+       //                                 urlOrHeaderToken(token, request)) {
+        for {
+          _ <-composeService.composeDataset(request.body, urlOrHeaderToken(token, request))
+        } yield Ok
+      //}
     }
 
   @ApiOperation(hidden = true, value = "")

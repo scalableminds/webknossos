@@ -187,7 +187,7 @@ export const updateMeshVisibilityAction = (
   layerName: string,
   id: number,
   visibility: boolean,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates?: AdditionalCoordinate[] | undefined,
 ) =>
   ({
     type: "UPDATE_MESH_VISIBILITY",

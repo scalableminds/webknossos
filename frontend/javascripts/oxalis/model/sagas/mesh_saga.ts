@@ -294,6 +294,12 @@ function* loadAdHocMesh(
         action.layerName === layer.name,
     ),
   });
+
+  const { segmentMeshController } = getSceneController();
+  debugger;
+  if (!segmentMeshController.hasMesh(segmentId, layer.name, seedAdditionalCoordinates)) {
+    yield* put(removeMeshAction(layer.name, segmentId));
+  }
 }
 
 function* loadFullAdHocMesh(
@@ -628,7 +634,12 @@ function* _refreshMeshWithMap(
     );
     shouldBeRemoved = false;
   }
-
+  //let segment mesh controller check for geometries and remove mesh if there are none
+  const { segmentMeshController } = getSceneController();
+  debugger;
+  if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
+    yield* put(removeMeshAction(layerName, meshInfo.segmentId));
+  }
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
 
@@ -1136,11 +1147,7 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   if (removeFromScene) {
-    getSceneController().segmentMeshController.removeMeshById(
-      segmentId,
-      layerName,
-      additionalCoordinates,
-    );
+    getSceneController().segmentMeshController.removeMeshById(segmentId, layerName, null);
   }
 
   removeMapForSegment(layerName, segmentId, additionalCoordinates);
@@ -1210,7 +1217,6 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  debugger;
   if (
     "color" in action.segment &&
     segmentMeshController.hasMesh(action.segmentId, action.layerName, additionalCoordinates)

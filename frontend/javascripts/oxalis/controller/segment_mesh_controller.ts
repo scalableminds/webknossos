@@ -45,6 +45,7 @@ export default class SegmentMeshController {
     if (!segments) {
       return false;
     }
+    debugger;
     return segments[id] != null;
   }
 
@@ -54,6 +55,8 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[],
   ): void {
+    debugger;
+    if (vertices.length === 0) return;
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -111,7 +114,6 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): void {
-    console.log("addmeshfromg", additionalCoordinates);
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(
       additionalCoordinates || null,
     );
@@ -150,6 +152,7 @@ export default class SegmentMeshController {
       }
     }
     const mesh = this.constructMesh(segmentationId, geometry);
+    debugger;
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
@@ -165,36 +168,47 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): void {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
+    // either remove a mesh for specific additional coordinates, or remove all meshes for a segment per default.
+    let additionalCoordinatesToRemoveMeshes;
+    if (additionalCoordinates == null) {
+      additionalCoordinatesToRemoveMeshes = Object.keys(this.meshesGroupsPerSegmentationId);
+    } else {
+      additionalCoordinatesToRemoveMeshes = [
+        getAdditionalCoordinatesAsString(additionalCoordinates),
+      ];
+    }
+    for (const additionalCoordinatesString of additionalCoordinatesToRemoveMeshes) {
+      // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
+      // but if they are removed they should be removed for all timestamps
 
-    // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
-    // but if they are removed they should be removed for all timestamps
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
-      return;
+      if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
+        return;
+      }
+      if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null) {
+        return;
+      }
+      if (
+        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
+          segmentationId
+        ] == null
+      ) {
+        return;
+      }
+      _.forEach(
+        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId],
+        (meshGroup, lod) => {
+          const lodNumber = parseInt(lod);
+          if (lodNumber !== NO_LOD_MESH_INDEX) {
+            this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+          } else {
+            this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+          }
+        },
+      );
+      delete this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
+        segmentationId
+      ];
     }
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null) {
-      return;
-    }
-    if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId] ==
-      null
-    ) {
-      return;
-    }
-    _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId],
-      (meshGroup, lod) => {
-        const lodNumber = parseInt(lod);
-        if (lodNumber !== NO_LOD_MESH_INDEX) {
-          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-        } else {
-          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-        }
-      },
-    );
-    delete this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
-      segmentationId
-    ];
   }
 
   getMeshGeometryInBestLOD(

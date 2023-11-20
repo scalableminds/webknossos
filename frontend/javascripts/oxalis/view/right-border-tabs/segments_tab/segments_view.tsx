@@ -169,7 +169,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
 
-  // TODO add coord are undefined
   let meshesForCurrentAdditionalCoordinates = EMPTY_OBJECT;
   if (visibleSegmentationLayer != null) {
     const meshRecords = state.localSegmentationData[visibleSegmentationLayer?.name].meshes;
@@ -1334,9 +1333,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
-      debugger
-      const currentAdditionalCoordinates = getAdditionalCoordinatesAsString(this.props.flycam.additionalCoordinates);
-      if (segment.somePosition == null || getAdditionalCoordinatesAsString(segment.someAdditionalCoordinates||null) !== currentAdditionalCoordinates) return;
+      if (segment.somePosition == null) return;
       this.props.loadAdHocMesh(
         segment.id,
         segment.somePosition,

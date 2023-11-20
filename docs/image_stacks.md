@@ -3,7 +3,7 @@
 WEBKNOSSOS works with a wide range of modern bio-imaging formats and image stacks:
 
 - [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4 etc)
-- [Multi Layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
+- [Multi layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
 - [Single-file images](#single-file-images) (OME-TIFF, TIFF, PNG, czi, raw, etc)
 
 Image stacks need to be converted to [WKW](./wkw.md) for WEBKNOSSOS. This happens automatically when using the web upload on [webknossos.org](https://webknossos.org) or can be done manually (see below).

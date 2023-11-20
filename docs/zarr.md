@@ -89,7 +89,7 @@ Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli)
 
 ### Conversion with Python
 
-You can use the free [WEBKNOSSSO Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr or integrate the conversion as part of an existing workflow. 
+You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr or integrate the conversion as part of an existing workflow. 
 
 ```python
 from webknossos import Dataset

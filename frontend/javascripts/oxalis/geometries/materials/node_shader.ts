@@ -191,14 +191,15 @@ void main() {
       }
     <% }) %>
 
+    ivec2 treeIdToTextureCoordinate = ivec2(
+      mod(treeId, ${COLOR_TEXTURE_WIDTH_FIXED}),
+      mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
+    );
 
-    vec2 treeIdToTextureCoordinate = vec2(fract(
-      treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
-      treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
-    ));
+    vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
 
-    color = texture(treeColors, treeIdToTextureCoordinate).rgb;
-    float alpha = texture(treeColors, treeIdToTextureCoordinate).a;
+    color = rgba.rgb;
+    float alpha = rgba.a;
     // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
     bool isVisible = alpha == 1.0 || alpha == 0.5 ;
 

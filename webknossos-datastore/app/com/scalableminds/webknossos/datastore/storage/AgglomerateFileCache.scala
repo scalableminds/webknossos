@@ -116,9 +116,8 @@ class BoundingBoxCache(
     val maxReaderRange: Long) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
 
-  // get the segment ID range for one cuboid
+  // get the segment id range for one cuboid
   private def getReaderRange(request: DataServiceDataRequest): (Long, Long) = {
-    // convert cuboid to mag1
     val requestedCuboidMag1 = request.cuboid.toMag1
 
     // get min bounds
@@ -140,10 +139,10 @@ class BoundingBoxCache(
     // step through each bb, but save starting coordinates to reset iteration once the outer bound is reached
     while (x < requestedCuboidBottomRight.voxelXInMag && x < dataLayerBoxBottomRight.x) {
       val nextBBinX = (x + currDimensions._1, y, z)
-      currDimensions = (currDimensions._1, initialValues.dimensions._2, currDimensions._3) // reset dimensions y
+      currDimensions = (currDimensions._1, initialValues.dimensions._2, currDimensions._3) // reset currDimensions y to start next loop at beginning
       while (y < requestedCuboidBottomRight.voxelYInMag && y < dataLayerBoxBottomRight.y) {
         val nextBBinY = (x, y + currDimensions._2, z)
-        currDimensions = (currDimensions._1, currDimensions._2, initialValues.dimensions._3) // reset dimensions z
+        currDimensions = (currDimensions._1, currDimensions._2, initialValues.dimensions._3) // reset currDimensions z to start next loop at beginning
         while (z < requestedCuboidBottomRight.voxelZInMag && z < dataLayerBoxBottomRight.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>

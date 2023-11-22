@@ -7,7 +7,6 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
 import opengraph.OpenGraphService
-import play.api.http.HeaderNames.CONTENT_SECURITY_POLICY
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig

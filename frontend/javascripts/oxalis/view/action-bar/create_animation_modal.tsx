@@ -245,7 +245,7 @@ function CreateAnimationModal(props: Props) {
     >
       <React.Fragment>
         <Row gutter={8}>
-          <Col span={8} style={{ textAlign: "center" }}>
+          <Col span={12} style={{ textAlign: "center" }}>
             <video
               src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
               style={{ width: "100%", display: "inline-block", objectFit: "cover" }}
@@ -254,7 +254,7 @@ function CreateAnimationModal(props: Props) {
               muted={true}
             />
           </Col>
-          <Col span={16}>
+          <Col span={12}>
             <p style={{ paddingLeft: 10 }}>
               Create a short, engaging animation of your data. Watch as the block of volumetric
               image data shrinks to reveal segmented objects. Choose from three perspective options

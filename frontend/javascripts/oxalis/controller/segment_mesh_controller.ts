@@ -16,6 +16,9 @@ export default class SegmentMeshController {
   // meshesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   meshesLODRootGroup: CustomLOD;
+
+  // meshesGroupsPerSegmentationId holds a record for every additionalCoordinatesString, then
+  // (nested) for each layerName, and then at the lowest level a group for each segment ID.
   meshesGroupsPerSegmentationId: Record<
     string,
     Record<string, Record<number, Record<number, THREE.Group>>>
@@ -175,16 +178,9 @@ export default class SegmentMeshController {
       ];
     }
     for (const additionalCoordinatesString of additionalCoordinatesToRemoveMeshes) {
-      // TODO I think it shouldnt be possible to remove meshes that arent visible currently.
-      // but if they are removed they should be removed for all timestamps
-
-      if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
-        return;
-      }
-      if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null) {
-        return;
-      }
       if (
+        this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null ||
+        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null ||
         this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
           segmentationId
         ] == null
@@ -238,7 +234,7 @@ export default class SegmentMeshController {
     );
 
     if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
-      return; //TODO think about 3D only
+      return;
     }
 
     _.forEach(

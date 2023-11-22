@@ -259,7 +259,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
       getAdditionalCoordinatesAsString(additionalCoordinates || null)
     ) {
-      //TODO only do this if the segment is present in current add coord.
       dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
     }
   },

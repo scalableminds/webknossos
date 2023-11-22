@@ -135,7 +135,7 @@ const getComputeMeshAdHocMenuItem = (
           segment.id,
           segment.somePosition,
           Store.getState().flycam.additionalCoordinates || undefined,
-        ), //TODO does this work? some postion?
+        ),
       );
     },
     disabled,

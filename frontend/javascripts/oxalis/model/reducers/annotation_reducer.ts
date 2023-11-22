@@ -267,8 +267,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         mappingName,
         mappingType,
       };
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
@@ -295,8 +294,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isPrecomputed: true,
         meshFileName,
       };
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
@@ -315,8 +313,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
@@ -337,8 +334,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "FINISHED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {

@@ -273,10 +273,6 @@ function _getPosition(flycam: Flycam): Vector3 {
   return [matrix[12], matrix[13], matrix[14]];
 }
 
-export function getAdditionalCoordinatesAsStringFromFC(flycam: Flycam): string {
-  return getAdditionalCoordinatesAsString(flycam.additionalCoordinates);
-}
-
 export function getAdditionalCoordinatesAsString(
   additionalCoordinates: AdditionalCoordinate[] | null,
 ): string {

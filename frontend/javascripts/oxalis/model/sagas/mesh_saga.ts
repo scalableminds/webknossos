@@ -145,8 +145,10 @@ function removeMapForSegment(
   segmentId: number,
   additionalCoordinateString: string,
 ): void {
-  if (adhocMeshesMapByLayer[additionalCoordinateString] == null) return;
-  if (adhocMeshesMapByLayer[additionalCoordinateString][layerName] == null) {
+  if (
+    adhocMeshesMapByLayer[additionalCoordinateString] == null ||
+    adhocMeshesMapByLayer[additionalCoordinateString][layerName] == null
+  ) {
     return;
   }
 
@@ -287,6 +289,8 @@ function* loadAdHocMesh(
     ),
   });
 
+  // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
+  // remove it from the store's state aswell.
   const { segmentMeshController } = getSceneController();
   if (!segmentMeshController.hasMesh(segmentId, layer.name, seedAdditionalCoordinates)) {
     yield* put(removeMeshAction(layer.name, segmentId));
@@ -605,9 +609,6 @@ function* _refreshMeshWithMap(
   // The mesh should only be removed once after re-fetching the mesh first position.
   let shouldBeRemoved = true;
 
-  // Meshing for N-D segmentations is not yet supported.
-  // See https://github.com/scalableminds/webknossos/issues/7229 //TODO
-
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.
@@ -625,7 +626,7 @@ function* _refreshMeshWithMap(
     );
     shouldBeRemoved = false;
   }
-  //let segment mesh controller check for geometries and remove mesh if there are none
+  // see comment in l. 292
   const { segmentMeshController } = getSceneController();
   if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));

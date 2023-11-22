@@ -527,7 +527,6 @@ Expects:
             dataSetName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
           _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
-          _ <- dataSourceService.checkInbox(false)
         } yield Ok
       }
     }

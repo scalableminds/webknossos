@@ -99,7 +99,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               title="Learn How To Create Annotations"
               description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
               icon={<i className="icon-annotate" />}
-              href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
+              href="https://www.youtube.com/watch?v=iw2C7XB6wP4"
             />
             {isUserAdminOrTeamManager(activeUser) ? (
               <WhatsNextAction

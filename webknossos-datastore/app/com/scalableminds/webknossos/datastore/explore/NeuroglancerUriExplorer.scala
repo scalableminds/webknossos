@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
+import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
 import java.net.URI
@@ -28,10 +29,8 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]] =
     for {
       _ <- Fox.successful(())
-      spec <- Json
-        .parse(remotePath.toUri.getFragment.drop(1))
-        .validate[JsObject]
-        .toFox ?~> "Did not find JSON object in URI"
+      uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no matching fragment part"
+      spec <- Json.parse(uriFragment).validate[JsObject].toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- (spec \ "layers").validate[JsArray].toFox
       _ <- Fox.bool2Fox(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList

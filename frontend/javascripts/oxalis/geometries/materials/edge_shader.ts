@@ -89,11 +89,12 @@ void main() {
       }
     <% }) %>
 
-    vec2 treeIdToTextureCoordinate = vec2(fract(
-      treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
-      treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
-    ));
-    bool isVisible = texture(treeColors, treeIdToTextureCoordinate).a == 1.0;
+    ivec2 treeIdToTextureCoordinate = ivec2(
+      mod(treeId, ${COLOR_TEXTURE_WIDTH_FIXED}),
+      mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
+    );
+    vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
+    bool isVisible = rgba.a == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
@@ -101,7 +102,7 @@ void main() {
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    color = texture(treeColors, treeIdToTextureCoordinate).rgb;
+    color = rgba.rgb;
 }`)({ additionalCoordinates });
   }
 

@@ -2,7 +2,7 @@
 
 A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to create eye-catching animations of your datasets as a video clip. You can use these short movies as part of a presentation, website, for social media or to promote a publication.
 
-// animation video
+![type:video](https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4){: autoplay loop muted}
 
 ## Creating an Animation
 

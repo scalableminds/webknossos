@@ -7,8 +7,10 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
 import opengraph.OpenGraphService
+import play.api.http.HeaderNames.CONTENT_SECURITY_POLICY
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Action, AnyContent}
+import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
 
@@ -18,6 +20,7 @@ import scala.util.matching.Regex
 class WkorgProxyController @Inject()(ws: WSClient,
                                      conf: WkConf,
                                      sil: Silhouette[WkEnv],
+                                     cspConfig: CSPConfig,
                                      multiUserDAO: MultiUserDAO,
                                      openGraphService: OpenGraphService)(implicit ec: ExecutionContext)
     extends Controller {
@@ -32,6 +35,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
+        contentSecurityPolicyDirectivesString = cspConfig.directives.map(d => s"${d.name} ${d.value}").mkString("; ")
       } yield
         Ok(
           views.html.main(
@@ -41,7 +45,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
             openGraphTags.description,
             openGraphTags.image
           )
-        )
+        ).withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
     }
   }
 

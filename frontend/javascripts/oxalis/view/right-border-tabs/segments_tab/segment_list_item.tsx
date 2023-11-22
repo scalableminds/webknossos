@@ -21,7 +21,13 @@ import {
   refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { ActiveMappingInfo, MeshInformation, OxalisState, Segment } from "oxalis/store";
+import type {
+  ActiveMappingInfo,
+  MeshInformation,
+  OxalisState,
+  Segment,
+  VolumeTracing,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
@@ -218,6 +224,7 @@ type Props = {
   onRenameStart: () => void;
   onRenameEnd: () => void;
   multiSelectMenu: MenuProps;
+  activeVolumeTracing: VolumeTracing | null | undefined;
 };
 
 function _MeshInfoItem(props: {
@@ -387,6 +394,7 @@ function _SegmentListItem({
   onRenameStart,
   onRenameEnd,
   multiSelectMenu,
+  activeVolumeTracing,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -510,6 +518,11 @@ function _SegmentListItem({
 
           andCloseContextMenu();
         },
+        disabled:
+          activeVolumeTracing == null ||
+          !activeVolumeTracing.hasSegmentIndex ||
+          // Not supported for fallback layers, yet.
+          activeVolumeTracing.fallbackLayer != null,
         label: "Delete Segment's Data",
       },
     ],

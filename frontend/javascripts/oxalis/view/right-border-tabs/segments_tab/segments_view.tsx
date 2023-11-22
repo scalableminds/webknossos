@@ -1604,6 +1604,7 @@ class SegmentsView extends React.Component<Props, State> {
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
                     multiSelectMenu={multiSelectMenu()}
+                    activeVolumeTracing={this.props.activeVolumeTracing}
                   />
                 );
               } else {

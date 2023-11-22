@@ -1301,7 +1301,11 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  const areSegmentStatisticsAvailable = hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh && props.additionalCoordinates == null; // TODO change once statistics are available for nd-datasets
+  const areSegmentStatisticsAvailable =
+    hasNoFallbackLayer &&
+    volumeTracing?.hasSegmentIndex &&
+    isHoveredSegmentOrMesh &&
+    props.additionalCoordinates == null; // TODO change once statistics are available for nd-datasets
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(
@@ -1521,7 +1525,14 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateMeshVisibilityAction(layerName, meshId, false, Store.getState().flycam.additionalCoordinates||undefined));
+    dispatch(
+      updateMeshVisibilityAction(
+        layerName,
+        meshId,
+        false,
+        Store.getState().flycam.additionalCoordinates || undefined,
+      ),
+    );
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));

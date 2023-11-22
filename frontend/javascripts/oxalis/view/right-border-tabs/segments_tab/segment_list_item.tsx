@@ -130,10 +130,12 @@ const getComputeMeshAdHocMenuItem = (
         andCloseContextMenu();
         return;
       }
-      console.log("segment list item");
-      console.log(segment); // TODO addCoor empty if newly created
       andCloseContextMenu(
-        loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+        loadAdHocMesh(
+          segment.id,
+          segment.somePosition,
+          Store.getState().flycam.additionalCoordinates || undefined,
+        ), //TODO does this work? some postion?
       );
     },
     disabled,
@@ -238,7 +240,11 @@ function _MeshInfoItem(props: {
 
   const { segment, isSelectedInList, isHovered, mesh } = props;
 
-  if (!mesh || getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates || null) !== getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates)) {
+  if (
+    !mesh ||
+    getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates || null) !==
+      getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates)
+  ) {
     if (isSelectedInList) {
       return (
         <div

@@ -124,7 +124,6 @@ function getOrAddMapForSegment(
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
   let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
-
   adhocMeshesMapByLayer[additionalCoordinatesString] =
     adhocMeshesMapByLayer[additionalCoordinatesString] || new Map();
   adhocMeshesMapByLayer[additionalCoordinatesString][layerName] =
@@ -144,15 +143,14 @@ function getOrAddMapForSegment(
 function removeMapForSegment(
   layerName: string,
   segmentId: number,
-  additionalCoordinates?: AdditionalCoordinate[] | null,
+  additionalCoordinateString: string,
 ): void {
-  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
-
-  if (adhocMeshesMapByLayer[additionalCoordinatesString][layerName] == null) {
+  if (adhocMeshesMapByLayer[additionalCoordinateString] == null) return;
+  if (adhocMeshesMapByLayer[additionalCoordinateString][layerName] == null) {
     return;
   }
 
-  adhocMeshesMapByLayer[additionalCoordinatesString][layerName].delete(segmentId);
+  adhocMeshesMapByLayer[additionalCoordinateString][layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -257,12 +255,6 @@ function* loadAdHocMesh(
   if (segmentId === 0 || layer == null) {
     return;
   }
-  if (_.size(layer.cube.additionalAxes) > 0) {
-    // Also see https://github.com/scalableminds/webknossos/issues/7229
-    Toast.warning(
-      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
-    );
-  }
 
   yield* call([Model, Model.ensureSavedState]);
 
@@ -296,7 +288,6 @@ function* loadAdHocMesh(
   });
 
   const { segmentMeshController } = getSceneController();
-  debugger;
   if (!segmentMeshController.hasMesh(segmentId, layer.name, seedAdditionalCoordinates)) {
     yield* put(removeMeshAction(layer.name, segmentId));
   }
@@ -636,7 +627,6 @@ function* _refreshMeshWithMap(
   }
   //let segment mesh controller check for geometries and remove mesh if there are none
   const { segmentMeshController } = getSceneController();
-  debugger;
   if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
   }
@@ -1063,7 +1053,12 @@ function sortByDistanceTo(
  */
 function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const geometry = segmentMeshController.getMeshGeometryInBestLOD(segmentId, layerName);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const geometry = segmentMeshController.getMeshGeometryInBestLOD(
+    segmentId,
+    layerName,
+    additionalCoordinates,
+  );
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_mesh_available_to_download"];
@@ -1088,11 +1083,13 @@ function* downloadMeshCellsAsZIP(
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
       const geometry = segmentMeshController.getMeshGeometryInBestLOD(
         element.segmentId,
         element.layerName,
+        additionalCoordinates,
       );
 
       if (geometry == null) {
@@ -1144,13 +1141,14 @@ function* handleRemoveSegment(action: RemoveSegmentAction) {
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
   const { layerName } = action;
   const segmentId = action.segmentId;
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   if (removeFromScene) {
     getSceneController().segmentMeshController.removeMeshById(segmentId, layerName, null);
   }
 
-  removeMapForSegment(layerName, segmentId, additionalCoordinates);
+  for (const addCoordString of Object.keys(adhocMeshesMapByLayer)) {
+    removeMapForSegment(layerName, segmentId, addCoordString);
+  }
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {

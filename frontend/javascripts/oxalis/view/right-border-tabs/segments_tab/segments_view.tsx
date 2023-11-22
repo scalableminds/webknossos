@@ -224,7 +224,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     seedPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined,
   ) {
-    //TODO check that segment exists
     dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
   },
 
@@ -1091,7 +1090,7 @@ class SegmentsView extends React.Component<Props, State> {
       !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
       !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      (this.props.flycam.additionalCoordinates != null) // TODO change once statistics are available for nd-datasets
+      this.props.flycam.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
     ) {
       //in this case there is a fallback layer
       return null;

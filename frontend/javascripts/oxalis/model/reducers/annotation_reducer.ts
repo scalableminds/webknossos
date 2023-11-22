@@ -209,7 +209,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_MESH_VISIBILITY": {
       const { layerName, id, visibility, additionalCoordinates } = action;
       const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
-      // assumption: set_additional_coordinates action is handled before
       return update(state, {
         localSegmentationData: {
           [layerName]: {
@@ -248,6 +247,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh_saga.
     case "ADD_AD_HOC_MESH": {
       const {
         layerName,

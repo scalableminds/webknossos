@@ -45,7 +45,6 @@ export default class SegmentMeshController {
     if (!segments) {
       return false;
     }
-    debugger;
     return segments[id] != null;
   }
 
@@ -55,7 +54,6 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[],
   ): void {
-    debugger;
     if (vertices.length === 0) return;
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
@@ -152,7 +150,6 @@ export default class SegmentMeshController {
       }
     }
     const mesh = this.constructMesh(segmentationId, geometry);
-    debugger;
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
@@ -236,14 +233,6 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
-    console.log(
-      "setMeshVis",
-      id,
-      visibility,
-      layerName,
-      additionalCoordinates,
-      this.meshesGroupsPerSegmentationId,
-    );
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(
       additionalCoordinates || null,
     );

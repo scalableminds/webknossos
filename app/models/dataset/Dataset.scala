@@ -567,7 +567,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"update webknossos.datasets set status = $deletedByUserStatus, isUsable = false, where _id = $datasetId".asUpdate
+        q"update webknossos.datasets set status = $deletedByUserStatus, isUsable = false where _id = $datasetId".asUpdate
       else
         q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 

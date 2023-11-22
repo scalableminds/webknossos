@@ -24,9 +24,6 @@ ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
-// Don't warn about unused imports in REPL
-Compile / console / scalacOptions -= "-Wunused:imports"
-
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 

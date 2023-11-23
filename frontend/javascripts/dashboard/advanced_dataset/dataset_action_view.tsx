@@ -21,6 +21,7 @@ import { MenuProps, Modal, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
   color: "var(--ant-disabled)",
@@ -160,11 +161,7 @@ function DatasetActionView(props: Props) {
       return;
     }
 
-    const datasetId: APIDatasetId = {
-      name: dataset.name,
-      owningOrganization: dataset.owningOrganization,
-    };
-    await deleteDatasetOnDisk(dataset.dataStore.url, datasetId);
+    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
 
     Toast.success(
       messages["dataset.delete_success"]({
@@ -173,9 +170,18 @@ function DatasetActionView(props: Props) {
     );
 
     // Invalidate the dataset list cache to exclude the deleted dataset
-    queryClient.invalidateQueries({
-      queryKey: ["datasetsByFolder", dataset.folderId],
-    });
+    queryClient.setQueryData(
+      ["datasetsByFolder", dataset.folderId],
+      (oldItems: APIDatasetCompact[] | undefined) => {
+        if (oldItems == null) {
+          return oldItems;
+        }
+        return oldItems.filter(
+          (item) =>
+            item.name != dataset.name || item.owningOrganization != dataset.owningOrganization,
+        );
+      },
+    );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
   };
 

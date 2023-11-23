@@ -623,11 +623,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
-          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn more.
+          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a> to create automated workflows.
-          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn more.
+          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a>{" "}
+          to create automated workflows.
+          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
           <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}

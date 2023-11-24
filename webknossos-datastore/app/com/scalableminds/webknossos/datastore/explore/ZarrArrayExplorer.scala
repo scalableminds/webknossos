@@ -1,4 +1,4 @@
-package models.dataset.explore
+package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
 
-class ZarrArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
+class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones, implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 
@@ -23,12 +23,7 @@ class ZarrArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerEx
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      magLocator = MagLocator(Vec3Int.ones,
-                              Some(remotePath.toUri.toString),
-                              None,
-                              Some(guessedAxisOrder),
-                              None,
-                              credentialId)
+      magLocator = MagLocator(mag, Some(remotePath.toUri.toString), None, Some(guessedAxisOrder), None, credentialId)
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
         ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else

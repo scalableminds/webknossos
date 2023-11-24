@@ -67,7 +67,6 @@ import {
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
-import { MaintenanceBanner } from "maintenance_banner";
 import { MatchViewer } from "components/match_viewer";
 
 const { Content } = Layout;
@@ -225,7 +224,6 @@ class ReactRouter extends React.Component<Props> {
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
-          <MaintenanceBanner />
           <Content>
             <Switch>
               <RouteWithErrorBoundary

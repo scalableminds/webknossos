@@ -28,28 +28,24 @@ import {
   APIDatasetId,
   APITeam,
   CoordinateTransformation,
+  APIDataStore,
+  LayerLink,
 } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
-import { getDataset } from "admin/admin_rest_api";
+import { createDatasetComposition, getDataset } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 
 const FormItem = Form.Item;
 
 type FileList = UploadFile<any>[];
 
-type LayerLink = {
-  datasetId: APIDatasetId;
-  sourceName: string;
-  newName: string;
-  transformations: CoordinateTransformation[];
-};
-
 type Props = {
   onAdded: (
     datasetOrganization: string,
     uploadedDatasetName: string,
-    isRemoteDataset: boolean,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
+  datastores: APIDataStore[];
 };
 
 export default function DatasetAddComposeView(props: Props) {
@@ -59,8 +55,8 @@ export default function DatasetAddComposeView(props: Props) {
   const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<FileList>([]);
-  const [matrix, setMatrix] = useState<Matrix4x4 | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
+  const [linkedDatasets, setLinkedDatasets] = useState<APIDataset[]>([]);
 
   const onRemoveLayer = (layer: LayerLink) => {
     const oldLayers = form.getFieldValue(["layers"]);
@@ -133,16 +129,16 @@ export default function DatasetAddComposeView(props: Props) {
       );
 
       for (const [node1, node2] of _.zip(nodes1, nodes2)) {
-        if (node1 == null) {
-          throw new Error("Empty trees found.");
+        if ((node1 == null) != (node2 == null)) {
+          throw new Error("A tree was empty while its corresponding tree wasn't.");
         }
-        sourcePoints.push(node1.position);
-        if (node2 == null) {
-          throw new Error("Empty trees found.");
+        if (node1 != null && node2 != null) {
+          sourcePoints.push(node1.position);
+          targetPoints.push(node2.position);
         }
-        targetPoints.push(node2.position);
       }
       const datasets = [dataset1, dataset2];
+      setLinkedDatasets(datasets);
       const newMatrix = estimateAffineMatrix4x4(sourcePoints, targetPoints);
       const newLinks: LayerLink[] = (
         _.flatMap(datasets, (dataset) =>
@@ -150,6 +146,12 @@ export default function DatasetAddComposeView(props: Props) {
         ) as [APIDataset, APIDataLayer][]
       ).map(
         ([dataset, dataLayer]): LayerLink => ({
+          // todo: backend should expect datasetId
+          id: {
+            // todo: backend should expect owningOrganization, too
+            team: dataset.owningOrganization,
+            name: dataset.name,
+          },
           datasetId: {
             owningOrganization: dataset.owningOrganization,
             name: dataset.name,
@@ -172,27 +174,28 @@ export default function DatasetAddComposeView(props: Props) {
     }
   };
 
-  // The following transform should be added to the layer which belongs to the first NML
-  // so that it is transformed to fit the layer of the second NML.
-  // const datasourceJSON =
-  //   matrix != null
-  //     ? `
-  //       "coordinateTransformations": [{
-  //         "type": "affine",
-  //         "matrix": ${formatNestedMatrix(flatToNestedMatrix(matrix))}
-  //       }]
-  //   `
-  //     : "";
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (activeUser == null) {
+      throw new Error("Cannot upload dataset without being logged in.");
+    }
     const layers = form.getFieldValue(["layers"]);
-    // @ts-ignore
-    const createDatasetComposition = (obj) => console.log(obj);
-    createDatasetComposition({
-      newDatasetName: form.getFieldValue(["name"]),
+
+    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
+    const datastoreToUse = uploadableDatastores[0];
+    if (!datastoreToUse) {
+      Toast.error("Could not find datastore that allows uploading.");
+      return;
+    }
+
+    const newDatasetName = form.getFieldValue(["name"]);
+    await createDatasetComposition(datastoreToUse.url, {
+      newDatasetName,
+      targetFolderId: form.getFieldValue(["targetFolderId"]),
+      organizationName: "sample_organization",
+      scale: linkedDatasets[1].dataSource.scale,
       layers,
-      //     - scale
     });
+    props.onAdded(activeUser.organization, newDatasetName, false);
   };
 
   return (
@@ -334,6 +337,7 @@ function LinkedLayerForm({
   form: FormInstance;
   datasetId: APIDatasetId;
 }) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = Form.useWatch(["layers"]);
 
   React.useEffect(() => {

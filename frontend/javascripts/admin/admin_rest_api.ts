@@ -66,6 +66,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   RenderAnimationOptions,
+  LayerLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -1498,6 +1499,22 @@ export function updateDatasetDefaultConfiguration(
 export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
+  );
+}
+
+type DatasetCompositionArgs = {
+  newDatasetName: string;
+  targetFolderId: string;
+  organizationName: string;
+  scale: Vector3;
+  layers: LayerLink[];
+};
+
+export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
+      data: payload,
+    }),
   );
 }
 

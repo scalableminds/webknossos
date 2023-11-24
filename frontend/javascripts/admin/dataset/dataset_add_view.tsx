@@ -17,28 +17,36 @@ import DatasetAddComposeView from "./dataset_add_compose_view";
 const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
-enum DatasetAddViewTabs {
+// Used for the tab keys as well as for
+// distinguishing between the add type after
+// successful import.
+enum DatasetAddType {
   UPLOAD = "upload",
   REMOTE = "remote",
   COMPOSE = "compose",
 }
+const addTypeToVerb: Record<DatasetAddType, string> = {
+  upload: "uploaded",
+  remote: "added",
+  compose: "created",
+};
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetName, setDatasetName] = useState("");
   const [organization, setOrganization] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
-  const [isRemoteDataset, setIsRemoteDataset] = useState(false);
+  const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
+    datasetAddType: DatasetAddType,
     datasetOrganization: string,
     uploadedDatasetName: string,
-    isRemoteDataset: boolean,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
-    setIsRemoteDataset(isRemoteDataset);
+    setImportType(datasetAddType);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
     setDatasetNeedsConversion(needsConversion);
   };
@@ -58,7 +66,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
           textAlign: "center",
         }}
       >
-        The dataset was {isRemoteDataset ? "imported" : "uploaded"} successfully
+        The dataset was {addTypeToVerb[datasetAddType]} successfully
         {datasetNeedsConversion ? " and a conversion job was started." : null}.
         <br />
         <div
@@ -103,12 +111,12 @@ function DatasetAddView({ history }: RouteComponentProps) {
   };
 
   const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = Object.values(DatasetAddViewTabs).includes(
-    defaultActiveTabFromHash as DatasetAddViewTabs,
+  const defaultActiveKey = Object.values(DatasetAddType).includes(
+    defaultActiveTabFromHash as DatasetAddType,
   )
-    ? (defaultActiveTabFromHash as DatasetAddViewTabs)
+    ? (defaultActiveTabFromHash as DatasetAddType)
     : // todo: revert
-      DatasetAddViewTabs.COMPOSE;
+      DatasetAddType.COMPOSE;
 
   return (
     <React.Fragment>
@@ -122,9 +130,12 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   Upload Dataset
                 </span>
               }
-              key={DatasetAddViewTabs.UPLOAD}
+              key={DatasetAddType.UPLOAD}
             >
-              <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />
+              <DatasetUploadView
+                datastores={datastores}
+                onUploaded={handleDatasetAdded.bind(null, DatasetAddType.UPLOAD)}
+              />
             </TabPane>
             <TabPane
               tab={
@@ -133,9 +144,12 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   Add Remote Dataset
                 </span>
               }
-              key={DatasetAddViewTabs.REMOTE}
+              key={DatasetAddType.REMOTE}
             >
-              <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />
+              <DatasetAddRemoteView
+                datastores={datastores}
+                onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
+              />
             </TabPane>
             <TabPane
               tab={
@@ -144,9 +158,12 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   Compose from existing datasets
                 </span>
               }
-              key={DatasetAddViewTabs.COMPOSE}
+              key={DatasetAddType.COMPOSE}
             >
-              <DatasetAddComposeView onAdded={handleDatasetAdded} />
+              <DatasetAddComposeView
+                datastores={datastores}
+                onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
+              />
             </TabPane>
           </Tabs>
         </Content>

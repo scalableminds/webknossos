@@ -51,6 +51,7 @@ type Props = {
 export default function DatasetAddComposeView(props: Props) {
   const formRef = React.useRef<FormInstance<any>>(null);
 
+  const [isLoading, setIsLoading] = useState(false);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
@@ -188,13 +189,20 @@ export default function DatasetAddComposeView(props: Props) {
     }
 
     const newDatasetName = form.getFieldValue(["name"]);
-    await createDatasetComposition(datastoreToUse.url, {
-      newDatasetName,
-      targetFolderId: form.getFieldValue(["targetFolderId"]),
-      organizationName: "sample_organization",
-      scale: linkedDatasets[1].dataSource.scale,
-      layers,
-    });
+    setIsLoading(true);
+    try {
+      await createDatasetComposition(datastoreToUse.url, {
+        newDatasetName,
+        targetFolderId: form.getFieldValue(["targetFolderId"]),
+        organizationName: "sample_organization",
+        scale: linkedDatasets[1].dataSource.scale,
+        layers,
+      });
+      await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+    } finally {
+      setIsLoading(false);
+    }
+
     props.onAdded(activeUser.organization, newDatasetName, false);
   };
 
@@ -311,6 +319,7 @@ export default function DatasetAddComposeView(props: Props) {
               size="large"
               type="primary"
               htmlType="submit"
+              loading={isLoading}
               style={{
                 width: "100%",
               }}

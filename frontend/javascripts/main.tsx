@@ -1,7 +1,7 @@
 import { Provider } from "react-redux";
 import React from "react";
 import ReactDOM from "react-dom";
-import { document } from "libs/window";
+import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
 import { message } from "antd";
@@ -27,6 +27,9 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+
+// Suppress warning emitted by Olvy because it tries to eagerly initialize
+window.OlvyConfig = null;
 
 setModel(Model);
 setStore(UnthrottledStore);

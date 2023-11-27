@@ -537,8 +537,11 @@ Expects:
       val userToken = urlOrHeaderToken(token, request)
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
         for {
-          _ <- Fox.serialCombined(request.body.layers.map(_.id).toList)(id =>
-            accessTokenService.assertUserAccess(UserAccessRequest.readDataSources(id), userToken))
+          _ <- Fox.serialCombined(request.body.layers.map(_.id).toList)(
+            id =>
+              accessTokenService.assertUserAccess(
+                UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
+                userToken))
           _ <- composeService.composeDataset(request.body, userToken)
         } yield Ok
       }

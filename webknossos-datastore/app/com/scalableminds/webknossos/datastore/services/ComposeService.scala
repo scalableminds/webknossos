@@ -38,7 +38,7 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeLayer(
-    id: DataSourceId,
+    id: DataLayerId,
     sourceName: String,
     newName: String,
     transformations: Seq[CoordinateTransformation]
@@ -46,6 +46,12 @@ case class ComposeLayer(
 
 object ComposeLayer {
   implicit val composeLayerFormat: OFormat[ComposeLayer] = Json.format[ComposeLayer]
+}
+
+case class DataLayerId(name: String, owningOrganization: String)
+
+object DataLayerId {
+  implicit val dataLayerIdFormat: OFormat[DataLayerId] = Json.format[DataLayerId]
 }
 
 class SymlinkHelper(dataSourceService: DataSourceService)(implicit ec: ExecutionContext) extends FoxImplicits {
@@ -100,7 +106,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def getLayerFromComposeLayer(composeLayer: ComposeLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      dataSource <- Fox.option2Fox(dataSourceRepository.find(composeLayer.id))
+      dataSourceId <- Fox.successful(DataSourceId(composeLayer.id.name, composeLayer.id.owningOrganization))
+      dataSource <- Fox.option2Fox(dataSourceRepository.find(dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
@@ -108,11 +115,11 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.id.team,
+      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.id.owningOrganization,
                                                     composeLayer.id.name,
                                                     composeLayer.sourceName,
                                                     Some(composeLayer.newName))
-      layerIsRemote = isLayerRemote(composeLayer.id, composeLayer.sourceName)
+      layerIsRemote = isLayerRemote(dataSourceId, composeLayer.sourceName)
       _ <- Fox.runIf(!layerIsRemote)(addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
         case l: PrecomputedDataLayer =>

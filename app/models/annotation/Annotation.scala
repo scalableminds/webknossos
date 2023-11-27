@@ -322,9 +322,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           u.firstname,
           u.lastname,
           a.othersmayedit,
-          string_agg(t._id, ',') as team_ids,
-          string_agg(t.name, ',') as team_names,
-          string_agg(t._organization, ',') as team_orgs,
+          STRING_AGG(t._id, ',') AS team_ids,
+          STRING_AGG(t.name, ',') AS team_names,
+          STRING_AGG(t._organization, ',') AS team_orgs,
           a.modified,
           a.statistics,
           a.tags,
@@ -334,9 +334,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           a.visibility,
           a.tracingtime,
           o.name,
-          string_agg(al.tracingid, ',') as tracing_ids,
-          string_agg(al.name, ',') as tracing_names,
-          string_agg(al.typ :: varchar, ',') as tracing_typs
+          STRING_AGG(al.tracingid, ',') AS tracing_ids,
+          STRING_AGG(al.name, ',') AS tracing_names,
+          STRING_AGG(al.typ :: varchar, ',') AS tracing_typs
       FROM webknossos.annotations as a
                LEFT JOIN webknossos.users_ u
                          ON u._id = a._user

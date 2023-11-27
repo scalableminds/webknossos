@@ -982,17 +982,7 @@ class AnnotationService @Inject()(
           "name" -> annotationInfo.annotationLayerNames(idx)
       )
     )
-    val tracingType: String = {
-      val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
-      val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
-      if (skeletonPresent && volumePresent) {
-        "hybrid"
-      } else if (skeletonPresent) {
-        "skeleton"
-      } else {
-        "volume"
-      }
-    }
+    val tracingType: String = getAnnotationTypeForTag(annotationInfo)
     Json.obj(
       "modified" -> annotationInfo.modified,
       "state" -> annotationInfo.state,
@@ -1015,5 +1005,17 @@ class AnnotationService @Inject()(
       ),
       "othersMayEdit" -> annotationInfo.othersMayEdit,
     )
+  }
+
+  private def getAnnotationTypeForTag(annotationInfo: AnnotationCompactInfo): String = {
+    val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
+    val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
+    if (skeletonPresent && volumePresent) {
+      "hybrid"
+    } else if (skeletonPresent) {
+      "skeleton"
+    } else {
+      "volume"
+    }
   }
 }

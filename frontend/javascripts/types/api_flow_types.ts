@@ -419,7 +419,7 @@ export type AnnotationLayerDescriptor = {
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
-export type APIAnnotationInfoCompact = {
+export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly dataSetName: string;
   readonly organization: string;
@@ -438,7 +438,7 @@ export type APIAnnotationInfoCompact = {
   readonly othersMayEdit: boolean;
 };
 
-export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfoCompact {
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
   const {
     dataSetName,
     description,
@@ -482,7 +482,7 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-type APIAnnotationBase = APIAnnotationInfoCompact & {
+type APIAnnotationBase = APIAnnotationInfo & {
   readonly visibility: APIAnnotationVisibility;
   readonly tracingTime: number | null | undefined;
 

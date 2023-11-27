@@ -19,7 +19,7 @@ import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
 import {
   annotationToCompact,
-  APIAnnotationInfoCompact,
+  APIAnnotationInfo,
   APIUser,
   APIUserCompact,
 } from "types/api_flow_types";
@@ -56,11 +56,11 @@ import { SearchProps } from "antd/lib/input";
 
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIAnnotationInfoCompact[] = [];
+const typeHint: APIAnnotationInfo[] = [];
 const pageLength: number = 1000;
 
 type TracingModeState = {
-  tracings: Array<APIAnnotationInfoCompact>;
+  tracings: Array<APIAnnotationInfo>;
   lastLoadedPage: number;
   loadedAllTracings: boolean;
 };
@@ -120,7 +120,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   // Other than that, the value should not be changed. It can be used to
   // retrieve the items of the currently rendered page (while respecting
   // the active search and filters).
-  currentPageData: Readonly<APIAnnotationInfoCompact[]> = [];
+  currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
   componentDidMount() {
     this.setState(persistence.load() as PartialState, () => {
@@ -217,7 +217,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   finishOrReopenAnnotation = async (
     type: "finish" | "reopen",
-    tracing: APIAnnotationInfoCompact,
+    tracing: APIAnnotationInfo,
   ) => {
     const shouldFinish = type === "finish";
     const newTracing = annotationToCompact(
@@ -256,14 +256,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   _updateAnnotationWithArchiveAction = (
-    annotation: APIAnnotationInfoCompact,
+    annotation: APIAnnotationInfo,
     type: "finish" | "reopen",
-  ): APIAnnotationInfoCompact => ({
+  ): APIAnnotationInfo => ({
     ...annotation,
     state: type === "reopen" ? "Active" : "Finished",
   });
 
-  renderActions = (tracing: APIAnnotationInfoCompact) => {
+  renderActions = (tracing: APIAnnotationInfo) => {
     if (tracing.typ !== "Explorational") {
       return null;
     }
@@ -319,7 +319,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationInfoCompact> {
+  getCurrentTracings(): Array<APIAnnotationInfo> {
     return this.getCurrentModeState().tracings;
   }
 
@@ -329,7 +329,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
-  renameTracing(tracing: APIAnnotationInfoCompact, name: string) {
+  renameTracing(tracing: APIAnnotationInfo, name: string) {
     const tracings = this.getCurrentTracings();
     const newTracings = tracings.map((currentTracing) => {
       if (currentTracing.id !== tracing.id) {
@@ -357,7 +357,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   archiveAll = () => {
     const selectedAnnotations = this.currentPageData.filter(
-      (annotation: APIAnnotationInfoCompact) => annotation.owner?.id === this.props.activeUser.id,
+      (annotation: APIAnnotationInfo) => annotation.owner?.id === this.props.activeUser.id,
     );
 
     if (selectedAnnotations.length === 0) {
@@ -400,7 +400,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   editTagFromAnnotation = (
-    annotation: APIAnnotationInfoCompact,
+    annotation: APIAnnotationInfo,
     shouldAddTag: boolean,
     tag: string,
     event: React.SyntheticEvent,
@@ -502,7 +502,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderIdAndCopyButton(tracing: APIAnnotationInfoCompact) {
+  renderIdAndCopyButton(tracing: APIAnnotationInfo) {
     const copyIdToClipboard = async () => {
       await navigator.clipboard.writeText(tracing.id);
       Toast.success("ID copied to clipboard");
@@ -526,7 +526,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderNameWithDescription(tracing: APIAnnotationInfoCompact) {
+  renderNameWithDescription(tracing: APIAnnotationInfo) {
     return (
       <div style={{ color: tracing.name ? "inherit" : "#7c7c7c" }}>
         <TextWithDescription
@@ -540,7 +540,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  isTracingEditable(tracing: APIAnnotationInfoCompact): boolean {
+  isTracingEditable(tracing: APIAnnotationInfo): boolean {
     return tracing.owner?.id === this.props.activeUser.id || tracing.othersMayEdit;
   }
 
@@ -622,7 +622,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationInfoCompact) => (
+          render={(__, tracing: APIAnnotationInfo) => (
             <>
               <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
 
@@ -641,7 +641,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={280}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.name)}
-          render={(_name: string, tracing: APIAnnotationInfoCompact) =>
+          render={(_name: string, tracing: APIAnnotationInfo) =>
             this.renderNameWithDescription(tracing)
           }
         />
@@ -651,7 +651,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={300}
           filters={ownerAndTeamsFilters}
           filterMode="tree"
-          onFilter={(value: string | number | boolean, tracing: APIAnnotationInfoCompact) =>
+          onFilter={(value: string | number | boolean, tracing: APIAnnotationInfo) =>
             (tracing.owner != null && tracing.owner.id === value.toString()) ||
             tracing.teams.some((team) => team.id === value)
           }
@@ -659,7 +659,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             typeHint,
             (annotation) => annotation.owner?.firstName || "",
           )}
-          render={(owner: APIUser | null, tracing: APIAnnotationInfoCompact) => {
+          render={(owner: APIUser | null, tracing: APIAnnotationInfo) => {
             const ownerName = owner != null ? renderOwner(owner) : null;
             const teamTags = tracing.teams.map((t) => (
               <Tag key={t.id} color={stringToColor(t.name)}>
@@ -686,7 +686,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           width={150}
-          render={(__, annotation: APIAnnotationInfoCompact) =>
+          render={(__, annotation: APIAnnotationInfo) =>
             "treeCount" in annotation.stats &&
             "nodeCount" in annotation.stats &&
             "edgeCount" in annotation.stats ? (
@@ -730,7 +730,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Tags"
           dataIndex="tags"
-          render={(tags: Array<string>, annotation: APIAnnotationInfoCompact) => (
+          render={(tags: Array<string>, annotation: APIAnnotationInfo) => (
             <div>
               {tags.map((tag) => (
                 <CategorizationLabel
@@ -767,7 +767,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing: APIAnnotationInfoCompact) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationInfo) => this.renderActions(tracing)}
         />
       </Table>
     );

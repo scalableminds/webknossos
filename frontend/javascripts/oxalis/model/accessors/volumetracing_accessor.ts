@@ -1,7 +1,7 @@
 import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
-  APIAnnotationInfoCompact,
+  APIAnnotationInfo,
   APIDataset,
   APISegmentationLayer,
   AnnotationLayerDescriptor,

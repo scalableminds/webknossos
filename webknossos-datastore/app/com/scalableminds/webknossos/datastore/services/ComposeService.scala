@@ -38,7 +38,7 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeLayer(
-    id: DataLayerId,
+    datasetId: DataLayerId,
     sourceName: String,
     newName: String,
     transformations: Seq[CoordinateTransformation]
@@ -106,7 +106,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def getLayerFromComposeLayer(composeLayer: ComposeLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      dataSourceId <- Fox.successful(DataSourceId(composeLayer.id.name, composeLayer.id.owningOrganization))
+      dataSourceId <- Fox.successful(
+        DataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
       dataSource <- Fox.option2Fox(dataSourceRepository.find(dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
@@ -115,8 +116,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.id.owningOrganization,
-                                                    composeLayer.id.name,
+      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.datasetId.owningOrganization,
+                                                    composeLayer.datasetId.name,
                                                     composeLayer.sourceName,
                                                     Some(composeLayer.newName))
       layerIsRemote = isLayerRemote(dataSourceId, composeLayer.sourceName)

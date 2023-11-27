@@ -99,7 +99,6 @@ export function* prepareQuickSelect(
     if ("quickSelectGeometry" in action) {
       const { quickSelectGeometry } = action;
       quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-      // TODO: Reset Area Tool here
     }
     return null;
   }

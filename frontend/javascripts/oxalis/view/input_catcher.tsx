@@ -105,7 +105,7 @@ const cursorForTool = {
   BOUNDING_BOX: "copy",
   RECTANGLE_QUICK_SELECT: "crosshair",
   AREA_QUICK_SELECT: "crosshair",
-  PROOFREAD: "crosshair",
+  PROOFREAD: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
   LINE_MEASUREMENT: "url(/assets/images/ruler-pointed-border.svg) 0 14,auto",
   AREA_MEASUREMENT: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
 };

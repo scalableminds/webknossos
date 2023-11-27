@@ -865,6 +865,7 @@ export class AreaQuickSelectTool {
         const cleanUp = () => {
           Store.dispatch(resetContourAction());
           quickSelectAreaGeometry.resetAndHide();
+          this.isDrawingBounds = false;
         };
         const _state = Store.getState();
         if (!this.isDrawingBounds || !this.volumeLayer) {
@@ -879,7 +880,6 @@ export class AreaQuickSelectTool {
           return;
         }
         // Stop drawing area and close the drawn area if still measuring.
-        this.isDrawingBounds = false;
         const voxelMap = this.volumeLayer.getFillingVoxelBuffer2D(
           AnnotationToolEnum.AREA_QUICK_SELECT,
         );

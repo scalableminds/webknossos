@@ -323,6 +323,8 @@ export default function* performQuickSelect(
     volumeTracing,
     colorLayer,
   } = preparation;
+  const quickSelectGeometry =
+    action.type === "COMPUTE_QUICK_SELECT_FOR_RECT" ? action.quickSelectGeometry : null;
   const voxelMap: VoxelBuffer2D | null =
     action.type === "COMPUTE_QUICK_SELECT_FOR_AREA" ? action.voxelMap : null;
   const { alignedUserBoundingBoxMag1, unalignedUserBoxMag1 } = getUserBoundingBoxesInMag1(
@@ -392,7 +394,7 @@ export default function* performQuickSelect(
 
   sendAnalyticsEvent("used_quick_select_with_ai");
   yield* finalizeQuickSelect(
-    null,
+    quickSelectGeometry,
     volumeTracing,
     activeViewport,
     labeledResolution,

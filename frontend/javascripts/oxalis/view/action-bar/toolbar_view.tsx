@@ -1289,7 +1289,7 @@ function ToolSpecificSettings({
         </>
       )}
 
-      {QuickSelectTools.includes(adaptedActiveTool) ? (
+      {QuickSelectTools.includes(adaptedActiveTool) && isAISelectAvailable ? (
         <QuickSelectToolSwitch activeTool={adaptedActiveTool} />
       ) : null}
 
@@ -1456,14 +1456,17 @@ function QuickSelectToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.RECTANGLE_QUICK_SELECT}
       >
-        <img src="/assets/images/line-measurement.svg" alt="Rectangle Quick Selection Tool Icon" />
+        <img
+          src="/assets/images/rectangle-area-select.svg"
+          alt="Rectangle Quick Selection Tool Icon"
+        />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Draw an area instead of a rectangle to predict it."
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.AREA_QUICK_SELECT}
       >
-        <img src="/assets/images/area-measurement.svg" alt="Area Quick Selection Icon" />
+        <img src="/assets/images/area-measurement.svg" alt="Free Area Quick Selection Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

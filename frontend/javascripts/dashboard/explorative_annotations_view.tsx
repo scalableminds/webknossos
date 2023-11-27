@@ -32,7 +32,6 @@ import {
   downloadAnnotation,
   getCompactAnnotationsForUser,
   getReadableAnnotations,
-  getAnnotationInformation,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";

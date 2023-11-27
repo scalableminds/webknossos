@@ -16,7 +16,7 @@ import { OxalisState } from "oxalis/store";
 import { map3 } from "libs/utils";
 import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
-import Dimensions from "../dimensions";
+import Dimensions, { DimensionIndices } from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { VoxelBuffer2D } from "../volumetracing/volumelayer";
@@ -206,92 +206,6 @@ async function inferFromEmbedding(
   return mask;
 }
 
-async function inferFromEmbeddingWithArea(
-  embedding: Float32Array,
-  embeddingBoxInTargetMag: BoundingBox,
-  voxelMapBoundingBox: BoundingBox,
-  voxelMap: VoxelBuffer2D,
-  activeViewport: OrthoView,
-) {
-  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
-  const topLeft = V3.sub(voxelMapBoundingBox.min, embeddingBoxInTargetMag.min);
-  const bottomRight = V3.sub(voxelMapBoundingBox.max, embeddingBoxInTargetMag.min);
-  const ort = await import("onnxruntime-web");
-
-  let ortSession;
-  try {
-    ortSession = await getInferenceSession();
-  } catch (exception) {
-    console.error(exception);
-    return null;
-  }
-
-  // Somewhere between the front-end, the back-end and the embedding
-  // server, there seems to be a different linearization of the 2D image
-  // data which is why the code here deals with the YZ plane as a special
-  // case.
-  const onnxCoord =
-    activeViewport === "PLANE_YZ"
-      ? new Float32Array([
-          topLeft[secondDim],
-          topLeft[firstDim],
-          bottomRight[secondDim],
-          bottomRight[firstDim],
-        ])
-      : new Float32Array([
-          topLeft[firstDim],
-          topLeft[secondDim],
-          bottomRight[firstDim],
-          bottomRight[secondDim],
-        ]);
-
-  // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
-  const onnxLabel = new Float32Array([2, 3]);
-  const onnxHasMaskInput = new Float32Array([1]);
-  const origImSize = new Float32Array([1024, 1024]);
-  const ortInputs = {
-    image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
-    point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
-    point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
-    mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
-    has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
-    orig_im_size: new ort.Tensor("float32", origImSize, [2]),
-  };
-
-  // Use intersection-over-union estimates to pick the best mask.
-  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
-  // @ts-ignore
-  debugger;
-  const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
-  const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
-  // Fill the mask data with a for loop (slicing/mapping would incur additional
-  // data copies).
-  const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
-  for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
-    maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
-  }
-
-  const size = embeddingBoxInTargetMag.getSize();
-  // TODO here!
-  const voxelMapSizeInTargetMag = voxelMapBoundingBox.getSize();
-  // Somewhere between the front-end, the back-end and the embedding
-  // server, there seems to be a different linearization of the 2D image
-  // data which is why the code here deals with the XZ plane as a special
-  // case.
-  const stride =
-    activeViewport === "PLANE_XZ"
-      ? [size[1], size[0], size[0] * size[1] * size[2]]
-      : [size[2], size[0], size[0] * size[1] * size[2]];
-
-  let mask = ndarray(maskData, size, stride);
-  mask = mask
-    // a.lo(x,y) => a[x:, y:]
-    .lo(topLeft[firstDim], topLeft[secondDim], 0)
-    // a.hi(x,y) => a[:x, :y]
-    .hi(voxelMapSizeInTargetMag[firstDim], voxelMapSizeInTargetMag[secondDim], 1);
-  return mask;
-}
-
 export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
@@ -345,8 +259,45 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   }
 }
 
-export default function* performRectangleQuickSelect(
-  action: ComputeQuickSelectForRectAction,
+function getAlignedUserBoundingBox(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForAreaAction,
+  labeledResolution: Vector3,
+  activeViewport: OrthoView,
+  thirdDim: DimensionIndices,
+) {
+  if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
+    const { startPosition, endPosition, quickSelectGeometry } = action;
+
+    // Effectively, zero the first and second dimension in the mag.
+    const depthSummand = V3.scale3(
+      labeledResolution,
+      Dimensions.transDim([0, 0, 1], activeViewport),
+    );
+    const unalignedUserBoxMag1 = new BoundingBox({
+      min: V3.floor(V3.min(startPosition, endPosition)),
+      max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
+    });
+    // Ensure that the third dimension is inclusive (otherwise, the center of the passed
+    // coordinates wouldn't be exactly on the W plane on which the user started this action).
+    const inclusiveMaxW = map3(
+      (el, idx) => (idx === thirdDim ? el - 1 : el),
+      unalignedUserBoxMag1.max,
+    );
+    return unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
+  } else {
+    const { voxelMap } = action;
+    const unalignedVoxelMapBoundingBoxMag1 = action.boundingBox;
+    // Reducing the third dimension to a single voxel as the volume layer of the bounding box has additional padding in the third dimension.
+    // This is necessary to be within the allowed volume size of the inferral.
+    unalignedVoxelMapBoundingBoxMag1.min[thirdDim] = voxelMap.get3DCoordinate([0, 0])[thirdDim];
+    unalignedVoxelMapBoundingBoxMag1.max[thirdDim] =
+      unalignedVoxelMapBoundingBoxMag1.min[thirdDim] + 1;
+    return unalignedVoxelMapBoundingBoxMag1.alignWithMag(labeledResolution, "floor");
+  }
+}
+
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForAreaAction,
 ): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
@@ -356,7 +307,6 @@ export default function* performRectangleQuickSelect(
       }D datasets.`,
     );
   }
-
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
     return;
@@ -371,124 +321,14 @@ export default function* performRectangleQuickSelect(
     volumeTracing,
     colorLayer,
   } = preparation;
-  const { startPosition, endPosition, quickSelectGeometry } = action;
-
-  // Effectively, zero the first and second dimension in the mag.
-  const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
-  const unalignedUserBoxMag1 = new BoundingBox({
-    min: V3.floor(V3.min(startPosition, endPosition)),
-    max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
-  });
-  // Ensure that the third dimension is inclusive (otherwise, the center of the passed
-  // coordinates wouldn't be exactly on the W plane on which the user started this action).
-  const inclusiveMaxW = map3(
-    (el, idx) => (idx === thirdDim ? el - 1 : el),
-    unalignedUserBoxMag1.max,
-  );
-  quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
-
-  const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
-  const dataset = yield* select((state: OxalisState) => state.dataset);
-  const layerConfiguration = yield* select(
-    (state) => state.datasetConfiguration.layers[colorLayer.name],
-  );
-  const { intensityRange } = layerConfiguration;
-
-  const { embeddingPromise, embeddingBoxMag1 } = yield* call(
-    getEmbedding,
-    dataset,
-    colorLayer.name,
-    alignedUserBoxMag1,
+  const voxelMap: VoxelBuffer2D | null =
+    action.type === "COMPUTE_QUICK_SELECT_FOR_AREA" ? action.voxelMap : null;
+  const alignedVoxelMapBoundingBoxMag1 = getAlignedUserBoundingBox(
+    action,
     labeledResolution,
     activeViewport,
-    additionalCoordinates || [],
-    colorLayer.elementClass === "uint8" ? null : intensityRange,
-  );
-  let embedding;
-  try {
-    embedding = yield embeddingPromise;
-  } catch (exception) {
-    console.error(exception);
-    removeEmbeddingPromiseFromCache(embeddingPromise);
-    throw new Error("Could not load embedding. See console for details.");
-  }
-
-  const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
-  const userBoxInTargetMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
-
-  if (embeddingBoxInTargetMag.getVolume() === 0) {
-    Toast.warning("The drawn rectangular had a width or height of zero.");
-    return;
-  }
-
-  let mask = yield* call(
-    inferFromEmbedding,
-    embedding,
-    embeddingBoxInTargetMag,
-    userBoxInTargetMag,
-    activeViewport,
-  );
-  if (!mask) {
-    Toast.error("Could not infer mask. See console for details.");
-    return;
-  }
-
-  const overwriteMode = yield* select(
-    (state: OxalisState) => state.userConfiguration.overwriteMode,
-  );
-
-  sendAnalyticsEvent("used_quick_select_with_ai");
-  yield* finalizeQuickSelect(
-    quickSelectGeometry,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    alignedUserBoxMag1,
     thirdDim,
-    userBoxInTargetMag.getSize(),
-    firstDim,
-    secondDim,
-    mask,
-    overwriteMode,
-    labeledZoomStep,
   );
-}
-
-export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction): Saga<void> {
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  if (additionalCoordinates && additionalCoordinates.length > 0) {
-    Toast.warning(
-      `Quick select with AI might produce unexpected results for ${
-        3 + additionalCoordinates.length
-      }D datasets.`,
-    );
-  }
-  const preparation = yield* call(prepareQuickSelect, action);
-  if (preparation == null) {
-    return;
-  }
-  const {
-    labeledZoomStep,
-    labeledResolution,
-    firstDim,
-    secondDim,
-    thirdDim,
-    activeViewport,
-    volumeTracing,
-    colorLayer,
-  } = preparation;
-  const { voxelMap } = action;
-  const unalignedVoxelMapBoundingBoxMag1 = action.boundingBox;
-  // Reducing the third dimension to a single voxel as the volume layer of the bounding box has additional padding in the third dimension.
-  // This is necessary to be within the allowed volume size of the inferral.
-  unalignedVoxelMapBoundingBoxMag1.min[thirdDim] = voxelMap.get3DCoordinate([0, 0])[thirdDim];
-  unalignedVoxelMapBoundingBoxMag1.max[thirdDim] =
-    unalignedVoxelMapBoundingBoxMag1.min[thirdDim] + 1;
-  const alignedVoxelMapBoundingBoxMag1 = unalignedVoxelMapBoundingBoxMag1.alignWithMag(
-    labeledResolution,
-    "floor",
-  );
-
   const dataset = yield* select((state: OxalisState) => state.dataset);
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
@@ -515,15 +355,13 @@ export function* performAreaQuickSelect(action: ComputeQuickSelectForAreaAction)
   }
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
-  //const userBoxInTargetMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+  const alignedVoxelMapBoundingBoxMag =
+    alignedVoxelMapBoundingBoxMag1.fromMag1ToMag(labeledResolution);
 
   if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
-
-  const alignedVoxelMapBoundingBoxMag =
-    alignedVoxelMapBoundingBoxMag1.fromMag1ToMag(labeledResolution);
 
   let mask = yield* call(
     inferFromEmbedding,

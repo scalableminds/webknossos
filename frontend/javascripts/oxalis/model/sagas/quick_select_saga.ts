@@ -13,9 +13,8 @@ import features from "features";
 
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
 import performRectangleQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performRectangleQuickSelectML, {
+import performQuickSelectML, {
   getInferenceSession,
-  performAreaQuickSelect,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -30,27 +29,25 @@ export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
     ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_AREA"],
     function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForAreaAction) {
-      const isRectangleSelect = action.type === "COMPUTE_QUICK_SELECT_FOR_RECT";
       try {
         yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
-        if (isRectangleSelect) {
-          if (yield* call(shouldUseHeuristic)) {
-            yield* call(performRectangleQuickSelectHeuristic, action);
-          } else {
-            yield* call(performRectangleQuickSelectML, action);
-          }
-        } else {
-          yield* call(performAreaQuickSelect, action);
-        }
 
         yield* put(setQuickSelectStateAction("active"));
+        if (yield* call(shouldUseHeuristic)) {
+          if (action.type === "COMPUTE_QUICK_SELECT_FOR_AREA") {
+            throw new Error("Area quick select is not supported for the heuristic quick select.");
+          }
+          yield* call(performRectangleQuickSelectHeuristic, action);
+        } else {
+          yield* call(performQuickSelectML, action);
+        }
       } catch (ex) {
         Toast.error((ex as Error).toString());
         ErrorHandling.notify(ex as Error);
         console.error(ex);
       } finally {
         yield* put(setBusyBlockingInfoAction(false));
-        if (isRectangleSelect) {
+        if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
           action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         }
         yield* put(setQuickSelectStateAction("inactive"));

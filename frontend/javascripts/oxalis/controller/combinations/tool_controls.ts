@@ -867,6 +867,10 @@ export class AreaQuickSelectTool {
         this.volumeLayer.addContour(position);
       },
       leftMouseUp: () => {
+        const cleanUp = () => {
+          Store.dispatch(resetContourAction());
+          quickSelectAreaGeometry.resetAndHide();
+        };
         const state = Store.getState();
         if (!this.isDrawingBounds || !this.volumeLayer) {
           return;
@@ -876,8 +880,7 @@ export class AreaQuickSelectTool {
           // || state.uiInformation.quickSelectState === "inactive"
           // Dont know why this check is here ^
         ) {
-          // clear contour because user didn't drag
-          // TODO: implement cleanup
+          cleanUp();
           return;
         }
         // Stop drawing area and close the drawn area if still measuring.
@@ -889,11 +892,7 @@ export class AreaQuickSelectTool {
           this.volumeLayer.getLabeledBoundingBox() ||
           new BoundingBox({ min: [0, 0, 0], max: [0, 0, 0] });
         Store.dispatch(computeQuickSelectForAreaAction(voxelMap, voxelMapBBox));
-        // TODO: performQuickSelect selbst machen bis inferFromEmbedding. Das kann nicht gleich bleiben.
-        // Vorher noch den bereich der VoxelMap als embedding downloaden
-        // => Wahrscheinlich "einfach nur" die voxelMap in den Infer Space umrechnen und dann wars das schon.
-        Store.dispatch(resetContourAction());
-        // TODO: hide contour at the end.
+        cleanUp();
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(

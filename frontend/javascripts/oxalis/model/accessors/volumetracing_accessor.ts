@@ -76,7 +76,7 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | HybridTracing,
+  annotation: APIAnnotation | HybridTracing | APIAnnotationInfo,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }

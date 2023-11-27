@@ -215,10 +215,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   };
 
-  finishOrReopenAnnotation = async (
-    type: "finish" | "reopen",
-    tracing: APIAnnotationInfo,
-  ) => {
+  finishOrReopenAnnotation = async (type: "finish" | "reopen", tracing: APIAnnotationInfo) => {
     const shouldFinish = type === "finish";
     const newTracing = annotationToCompact(
       shouldFinish
@@ -280,10 +277,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
           <AsyncLink
             href="#"
-            onClick={async () => {
-              const fullAnnotation = await getAnnotationInformation(tracing.id);
-              const hasVolumeTracing = getVolumeDescriptors(fullAnnotation).length > 0;
-
+            onClick={() => {
+              const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
               return downloadAnnotation(id, typ, hasVolumeTracing);
             }}
             icon={<DownloadOutlined key="download" />}

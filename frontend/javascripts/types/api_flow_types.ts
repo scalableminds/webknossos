@@ -420,20 +420,22 @@ export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
 export type APIAnnotationInfoCompact = {
-  readonly id: string;
-  readonly typ: APIAnnotationType;
-  readonly name: string;
+  readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly dataSetName: string;
+  readonly organization: string;
   readonly description: string;
+  readonly modified: number;
+  readonly id: string;
+  readonly name: string;
+  readonly state: string;
+  readonly stats: SkeletonTracingStats | {};
+  readonly tags: Array<string>;
+  readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
   readonly othersMayEdit: boolean;
-  readonly modified: number;
-  readonly stats: SkeletonTracingStats | {};
-  readonly dataSetName: string;
-  readonly tags: Array<string>;
-  readonly state: string;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfoCompact {
@@ -450,16 +452,20 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     owner,
     teams,
     othersMayEdit,
+    organization,
+    annotationLayers,
   } = annotation;
 
   return {
+    annotationLayers,
     dataSetName,
+    organization,
     description,
     modified,
     id,
     name,
-    stats,
     state,
+    stats,
     tags,
     typ,
     owner,
@@ -477,9 +483,7 @@ export type AnnotationViewConfiguration = {
   >;
 };
 type APIAnnotationBase = APIAnnotationInfoCompact & {
-  readonly organization: string;
   readonly visibility: APIAnnotationVisibility;
-  readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly tracingTime: number | null | undefined;
 
   readonly dataStore: APIDataStore;

@@ -146,11 +146,14 @@ object S3DataVault {
         new AnonymousAWSCredentialsProvider
     }
 
+  private def isNonAmazonHost(uri: URI): Boolean =
+    isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")
+
   private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): AmazonS3 = {
     val basic = AmazonS3ClientBuilder.standard
       .withCredentials(getCredentialsProvider(credentialOpt))
       .withForceGlobalBucketAccessEnabled(true)
-    if (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com"))
+    if (isNonAmazonHost(uri))
       basic
         .withPathStyleAccessEnabled(true)
         .withEndpointConfiguration(

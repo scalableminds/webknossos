@@ -208,7 +208,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_MESH_VISIBILITY": {
       const { layerName, id, visibility, additionalCoordinates } = action;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
+      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
       return update(state, {
         localSegmentationData: {
           [layerName]: {

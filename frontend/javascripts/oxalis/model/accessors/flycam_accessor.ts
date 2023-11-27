@@ -274,7 +274,7 @@ function _getPosition(flycam: Flycam): Vector3 {
 }
 
 export function getAdditionalCoordinatesAsString(
-  additionalCoordinates: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): string {
   if (additionalCoordinates != null && additionalCoordinates.length > 0) {
     return additionalCoordinates

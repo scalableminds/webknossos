@@ -257,7 +257,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
     if (
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
-      getAdditionalCoordinatesAsString(additionalCoordinates || null)
+      getAdditionalCoordinatesAsString(additionalCoordinates)
     ) {
       dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
     }

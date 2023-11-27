@@ -123,7 +123,7 @@ function getOrAddMapForSegment(
   segmentId: number,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
-  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates || null);
+  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
   adhocMeshesMapByLayer[additionalCoordinatesString] =
     adhocMeshesMapByLayer[additionalCoordinatesString] || new Map();
   adhocMeshesMapByLayer[additionalCoordinatesString][layerName] =

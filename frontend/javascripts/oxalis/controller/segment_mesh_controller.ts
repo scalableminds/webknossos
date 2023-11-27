@@ -34,21 +34,10 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): boolean {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(
-      additionalCoordinates || null,
+    return (
+      this.getMeshGroups(getAdditionalCoordinatesAsString(additionalCoordinates), layerName, id) !=
+      null
     );
-
-    if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null ||
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null
-    )
-      return false;
-
-    const segments = this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName];
-    if (!segments) {
-      return false;
-    }
-    return segments[id] != null;
   }
 
   addMeshFromVertices(
@@ -115,42 +104,23 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): void {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(
-      additionalCoordinates || null,
+    const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const newGroup = new THREE.Group();
+    const keys = [additionalCoordinatesString, layerName, segmentationId, lod];
+    _.set(
+      this.meshesGroupsPerSegmentationId,
+      keys,
+      _.get(this.meshesGroupsPerSegmentationId, keys, newGroup),
     );
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString] = {};
+    if (lod === NO_LOD_MESH_INDEX) {
+      this.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
+    } else {
+      this.meshesLODRootGroup.addLODMesh(newGroup, lod);
     }
-
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] = {};
-    }
-    if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId] ==
-      null
-    ) {
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId] =
-        {};
-    }
-    if (
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId][
-        lod
-      ] == null
-    ) {
-      const newGroup = new THREE.Group();
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId][
-        lod
-      ] = newGroup;
-      if (lod === NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
-      } else {
-        this.meshesLODRootGroup.addLODMesh(newGroup, lod);
-      }
-      // @ts-ignore
-      newGroup.cellId = segmentationId;
-      if (scale != null) {
-        newGroup.scale.copy(new THREE.Vector3(...scale));
-      }
+    // @ts-ignore
+    newGroup.cellId = segmentationId;
+    if (scale != null) {
+      newGroup.scale.copy(new THREE.Vector3(...scale));
     }
     const mesh = this.constructMesh(segmentationId, geometry);
     if (offset) {
@@ -158,9 +128,7 @@ export default class SegmentMeshController {
       mesh.translateY(offset[1]);
       mesh.translateZ(offset[2]);
     }
-    this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId][
-      lod
-    ].add(mesh);
+    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentationId, lod, mesh);
   }
 
   removeMeshById(
@@ -168,7 +136,7 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): void {
-    // either remove a mesh for specific additional coordinates, or remove all meshes for a segment per default.
+    // either remove a mesh for specific additional coordinates, or remove all meshes for a segment per default by passing null as additionalCoordinates.
     let additionalCoordinatesToRemoveMeshes;
     if (additionalCoordinates == null) {
       additionalCoordinatesToRemoveMeshes = Object.keys(this.meshesGroupsPerSegmentationId);
@@ -178,17 +146,11 @@ export default class SegmentMeshController {
       ];
     }
     for (const additionalCoordinatesString of additionalCoordinatesToRemoveMeshes) {
-      if (
-        this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null ||
-        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName] == null ||
-        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
-          segmentationId
-        ] == null
-      ) {
+      if (this.getMeshGroups(additionalCoordinatesString, layerName, segmentationId) == null) {
         return;
       }
       _.forEach(
-        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentationId],
+        this.getMeshGroups(additionalCoordinatesString, layerName, segmentationId),
         (meshGroup, lod) => {
           const lodNumber = parseInt(lod);
           if (lodNumber !== NO_LOD_MESH_INDEX) {
@@ -198,9 +160,7 @@ export default class SegmentMeshController {
           }
         },
       );
-      delete this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][
-        segmentationId
-      ];
+      this.removeMeshFromMeshGroups(additionalCoordinatesString, layerName, segmentationId);
     }
   }
 
@@ -209,18 +169,13 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): THREE.Group {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(
-      additionalCoordinates || null,
-    );
-
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const bestLod = Math.min(
-      ...Object.keys(
-        this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentId],
-      ).map((lodVal) => parseInt(lodVal)),
+      ...Object.keys(this.getMeshGroups(additionalCoordKey, layerName, segmentId)).map((lodVal) =>
+        parseInt(lodVal),
+      ),
     );
-    return this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][segmentId][
-      bestLod
-    ];
+    return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }
 
   setMeshVisibility(
@@ -229,20 +184,14 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
-    const additionalCoordinatesString = getAdditionalCoordinatesAsString(
-      additionalCoordinates || null,
+    console.log(
+      "if mesh visibility is broken, look into segment mesh controller l. 197.",
+      "we stopped checking the records",
     );
-
-    if (this.meshesGroupsPerSegmentationId[additionalCoordinatesString] == null) {
-      return;
-    }
-
-    _.forEach(
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString][layerName][id],
-      (meshGroup) => {
-        meshGroup.visible = visibility;
-      },
-    );
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    _.forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
+      meshGroup.visible = visibility;
+    });
   }
 
   setMeshColor(id: number, layerName: string): void {
@@ -295,5 +244,41 @@ export default class SegmentMeshController {
     this.meshesLODRootGroup.add(directionalLight);
     this.meshesLODRootGroup.add(directionalLight2);
     this.meshesLODRootGroup.add(pointLight);
+  }
+
+  getMeshGroupsByLOD(
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+    layerName: string,
+    segmentationId: number,
+    lod: number,
+  ) {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const keys = [additionalCoordKey, layerName, segmentationId, lod];
+    return _.get(this.meshesGroupsPerSegmentationId, keys, null);
+  }
+
+  getMeshGroups(additionalCoordKey: string, layerName: string, segmentationId: number) {
+    const keys = [additionalCoordKey, layerName, segmentationId];
+    return _.get(this.meshesGroupsPerSegmentationId, keys, null);
+  }
+
+  addMeshToMeshGroups(
+    additionalCoordKey: string,
+    layerName: string,
+    segmentationId: number,
+    lod: number,
+    mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>,
+  ) {
+    this.meshesGroupsPerSegmentationId[additionalCoordKey][layerName][segmentationId][lod].add(
+      mesh,
+    );
+  }
+
+  removeMeshFromMeshGroups(
+    additionalCoordinateKey: string,
+    layerName: string,
+    segmentationId: number,
+  ) {
+    delete this.meshesGroupsPerSegmentationId[additionalCoordinateKey][layerName][segmentationId];
   }
 }

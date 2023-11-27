@@ -242,7 +242,7 @@ function _MeshInfoItem(props: {
 
   if (
     !mesh ||
-    getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates || null) !==
+    getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates) !==
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates)
   ) {
     if (isSelectedInList) {

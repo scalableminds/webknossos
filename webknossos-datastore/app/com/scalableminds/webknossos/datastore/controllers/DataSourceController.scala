@@ -543,6 +543,7 @@ Expects:
                 UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
                 userToken))
           _ <- composeService.composeDataset(request.body, userToken)
+          _ <- dataSourceService.checkInbox(verbose = false)
         } yield Ok
       }
     }

@@ -147,12 +147,6 @@ export default function DatasetAddComposeView(props: Props) {
         ) as [APIDataset, APIDataLayer][]
       ).map(
         ([dataset, dataLayer]): LayerLink => ({
-          // todo: backend should expect datasetId
-          id: {
-            // todo: backend should expect owningOrganization, too
-            team: dataset.owningOrganization,
-            name: dataset.name,
-          },
           datasetId: {
             owningOrganization: dataset.owningOrganization,
             name: dataset.name,
@@ -198,7 +192,6 @@ export default function DatasetAddComposeView(props: Props) {
         scale: linkedDatasets[1].dataSource.scale,
         layers,
       });
-      await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
     } finally {
       setIsLoading(false);
     }

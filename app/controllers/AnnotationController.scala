@@ -592,35 +592,27 @@ class AnnotationController @Inject()(
   def listExplorationals(isFinished: Option[Boolean],
                          limit: Option[Int],
                          pageNumber: Option[Int] = None,
-                         includeTotalCount: Option[Boolean] = None,
-                         compact: Option[Boolean]): Action[AnyContent] =
+                         includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      if (compact.getOrElse(false)) {
-        for {
-          annotationInfos <- annotationDAO.findAllListableExplorationalsCompact(
-            isFinished,
-            limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-            pageNumber.getOrElse(0))
-          annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
-        } yield Ok(Json.toJson(annotationInfosJsons))
-      } else {
-        for {
-          readableAnnotations <- annotationDAO.findAllListableExplorationals(
-            isFinished,
-            limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-            pageNumber.getOrElse(0))
-          annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-            annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
-          jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.writeListItem) ?~> "annotation.compactWrites.failed"
-          _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
-        } yield {
-          val result = Ok(Json.toJson(jsonList))
-          annotationCount match {
-            case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
-            case None        => result
-          }
+      for {
+        annotationInfos <- annotationDAO.findAllListableExplorationals(
+          isFinished,
+          None,
+          AnnotationType.Explorational,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0))
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+          annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
+        annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+      } yield {
+        val result = Ok(Json.toJson(annotationInfosJsons))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
         }
       }
+
     }
 
   @ApiOperation(hidden = true, value = "")

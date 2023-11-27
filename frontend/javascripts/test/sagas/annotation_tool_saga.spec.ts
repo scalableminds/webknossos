@@ -26,6 +26,11 @@ mockRequire("oxalis/controller/scene_controller_provider", () => ({
     reset: _.noop,
     resetAndHide: _.noop,
   },
+  quickSelectAreaGeometry: {
+    hide: _.noop,
+    reset: _.noop,
+    resetAndHide: _.noop,
+  },
 }));
 const {
   MoveTool,
@@ -35,7 +40,8 @@ const {
   EraseTool,
   FillCellTool,
   PickCellTool,
-  QuickSelectTool,
+  RectangleQuickSelectTool,
+  AreaQuickSelectTool,
   ProofreadTool,
   LineMeasurementTool,
   AreaMeasurementTool,
@@ -52,7 +58,8 @@ const allTools = [
   EraseTool,
   FillCellTool,
   PickCellTool,
-  QuickSelectTool,
+  RectangleQuickSelectTool,
+  AreaQuickSelectTool,
   ProofreadTool,
   LineMeasurementTool,
   AreaMeasurementTool,
@@ -94,7 +101,9 @@ test.serial(
     cycleTool();
     t.true(PickCellTool.onToolDeselected.calledOnce);
     cycleTool();
-    t.true(QuickSelectTool.onToolDeselected.calledOnce);
+    t.true(RectangleQuickSelectTool.onToolDeselected.calledOnce);
+    cycleTool();
+    t.true(AreaQuickSelectTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(BoundingBoxTool.onToolDeselected.calledOnce);
     cycleTool();
@@ -135,8 +144,12 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   t.true(EraseTool.onToolDeselected.calledTwice);
   cycleTool(AnnotationToolEnum.PICK_CELL);
   t.true(FillCellTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.BOUNDING_BOX);
+  cycleTool(AnnotationToolEnum.RECTANGLE_QUICK_SELECT);
   t.true(PickCellTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.AREA_QUICK_SELECT);
+  t.true(RectangleQuickSelectTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.BOUNDING_BOX);
+  t.true(AreaQuickSelectTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.PROOFREAD);
   t.true(BoundingBoxTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.LINE_MEASUREMENT);

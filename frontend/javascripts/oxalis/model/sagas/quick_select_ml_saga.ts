@@ -259,14 +259,14 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   }
 }
 
-function getAlignedUserBoundingBox(
+function getUserBoundingBoxesInMag1(
   action: ComputeQuickSelectForRectAction | ComputeQuickSelectForAreaAction,
   labeledResolution: Vector3,
   activeViewport: OrthoView,
   thirdDim: DimensionIndices,
 ) {
   if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
-    const { startPosition, endPosition, quickSelectGeometry } = action;
+    const { startPosition, endPosition } = action;
 
     // Effectively, zero the first and second dimension in the mag.
     const depthSummand = V3.scale3(
@@ -277,13 +277,11 @@ function getAlignedUserBoundingBox(
       min: V3.floor(V3.min(startPosition, endPosition)),
       max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
     });
-    // Ensure that the third dimension is inclusive (otherwise, the center of the passed
-    // coordinates wouldn't be exactly on the W plane on which the user started this action).
-    const inclusiveMaxW = map3(
-      (el, idx) => (idx === thirdDim ? el - 1 : el),
-      unalignedUserBoxMag1.max,
+    const alignedUserBoundingBoxMag1 = unalignedUserBoxMag1.alignWithMag(
+      labeledResolution,
+      "floor",
     );
-    return unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
+    return { alignedUserBoundingBoxMag1, unalignedUserBoxMag1 };
   } else {
     const { voxelMap } = action;
     const unalignedVoxelMapBoundingBoxMag1 = action.boundingBox;
@@ -292,7 +290,11 @@ function getAlignedUserBoundingBox(
     unalignedVoxelMapBoundingBoxMag1.min[thirdDim] = voxelMap.get3DCoordinate([0, 0])[thirdDim];
     unalignedVoxelMapBoundingBoxMag1.max[thirdDim] =
       unalignedVoxelMapBoundingBoxMag1.min[thirdDim] + 1;
-    return unalignedVoxelMapBoundingBoxMag1.alignWithMag(labeledResolution, "floor");
+    const alignedUserBoundingBoxMag1 = unalignedVoxelMapBoundingBoxMag1.alignWithMag(
+      labeledResolution,
+      "floor",
+    );
+    return { alignedUserBoundingBoxMag1, unalignedUserBoxMag1: unalignedVoxelMapBoundingBoxMag1 };
   }
 }
 
@@ -323,12 +325,21 @@ export default function* performQuickSelect(
   } = preparation;
   const voxelMap: VoxelBuffer2D | null =
     action.type === "COMPUTE_QUICK_SELECT_FOR_AREA" ? action.voxelMap : null;
-  const alignedVoxelMapBoundingBoxMag1 = getAlignedUserBoundingBox(
+  const { alignedUserBoundingBoxMag1, unalignedUserBoxMag1 } = getUserBoundingBoxesInMag1(
     action,
     labeledResolution,
     activeViewport,
     thirdDim,
   );
+  if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
+    // Ensure that the third dimension is inclusive (otherwise, the center of the passed
+    // coordinates wouldn't be exactly on the W plane on which the user started this action).
+    const inclusiveMaxW = map3(
+      (el, idx) => (idx === thirdDim ? el - 1 : el),
+      unalignedUserBoxMag1.max,
+    );
+    action.quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
+  }
   const dataset = yield* select((state: OxalisState) => state.dataset);
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
@@ -339,7 +350,7 @@ export default function* performQuickSelect(
     getEmbedding,
     dataset,
     colorLayer.name,
-    alignedVoxelMapBoundingBoxMag1,
+    alignedUserBoundingBoxMag1,
     labeledResolution,
     activeViewport,
     additionalCoordinates || [],
@@ -355,8 +366,7 @@ export default function* performQuickSelect(
   }
 
   const embeddingBoxInTargetMag = embeddingBoxMag1.fromMag1ToMag(labeledResolution);
-  const alignedVoxelMapBoundingBoxMag =
-    alignedVoxelMapBoundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const alignedUserBoundingBox = alignedUserBoundingBoxMag1.fromMag1ToMag(labeledResolution);
 
   if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
@@ -367,7 +377,7 @@ export default function* performQuickSelect(
     inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,
-    alignedVoxelMapBoundingBoxMag,
+    alignedUserBoundingBox,
     activeViewport,
     voxelMap,
   );
@@ -386,9 +396,9 @@ export default function* performQuickSelect(
     volumeTracing,
     activeViewport,
     labeledResolution,
-    alignedVoxelMapBoundingBoxMag1,
+    alignedUserBoundingBoxMag1,
     thirdDim,
-    alignedVoxelMapBoundingBoxMag.getSize(),
+    alignedUserBoundingBox.getSize(),
     firstDim,
     secondDim,
     mask,

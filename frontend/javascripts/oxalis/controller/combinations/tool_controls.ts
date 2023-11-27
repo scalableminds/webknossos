@@ -7,12 +7,7 @@ import type {
   AnnotationTool,
   Vector3,
 } from "oxalis/constants";
-import {
-  OrthoViews,
-  ContourModeEnum,
-  AnnotationToolEnum,
-  OrthoViewValuesWithoutTDView,
-} from "oxalis/constants";
+import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -871,7 +866,7 @@ export class AreaQuickSelectTool {
           Store.dispatch(resetContourAction());
           quickSelectAreaGeometry.resetAndHide();
         };
-        const state = Store.getState();
+        const _state = Store.getState();
         if (!this.isDrawingBounds || !this.volumeLayer) {
           return;
         }
@@ -921,11 +916,12 @@ export class AreaQuickSelectTool {
   }
 
   static onToolDeselected() {
-    const { areaMeasurementGeometry } = getSceneController();
-    areaMeasurementGeometry.resetAndHide();
-    Store.dispatch(hideMeasurementTooltipAction());
+    const { quickSelectAreaGeometry } = getSceneController();
+    quickSelectAreaGeometry.resetAndHide();
     this.isDrawingBounds = false;
     this.initialPlane = OrthoViews.PLANE_XY;
+    this.volumeLayer = null;
+    this.volumeTracing = null;
   }
 }
 

@@ -4,35 +4,36 @@ WEBKNOSSOS is an [open-source tool](https://github.com/scalableminds/webknossos)
 The web-based tool is powered by a specialized data-delivery backend that stores [large datasets](./datasets.md) efficiently on disk and serves many concurrent users.
 WEBKNOSSOS has a GPU-accelerated viewer that includes tools for creating and sharing skeleton and volume annotations.
 Powerful [user](./users.md) and [task](./tasks.md) management features automatically distribute tasks to human annotators.
-There are a lot of productivity improvements to make the human part as efficient as possible.
+There are many features to enhance the productivity and efficiency of human annotators.
 WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
 
 ![youtube-video](https://www.youtube.com/embed/36t4Rwx7Shg)
 
 ## Getting Started
 
-Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own datasets, or work with a large selection of published community datasets.
+Create a free account on [https://webknossos.org/](https://webknossos.org/) and upload your own datasets or explore the published datasets from the community.
 
 ## Features
 
-- Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT
+- Exploration of large 2D, 3D, 4D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT, and light microscopy
 - Fully browser-based user experience. No installation required
 - Efficient 3D data streaming for quick loading speeds
 - Creation/editing of [skeleton (line-segments)](./skeleton_annotation.md) and [3D volumetric annotations](./volume_annotation.md)
 - [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
-- [Easy Sharing](./sharing.md). Every dataset and annotation can be securely shared as a web link with others
+- [Easy Sharing](./sharing.md). Share your datasets and annotations securely with others using web links
 - [Fine-grained access permission](./users.md) and and user roles for secure collaboration
 - [AI Quick Select tool](./volume_annotation.md#ai-quick-select) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data_formats.md) (some formats will be converted on upload)
 - [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
+- Supports Time Series datasets
 - [3D Mesh Visualization](./mesh_visualization.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
-- [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
-- [Documented frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
-- Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
-- [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
+- [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
+- [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+- Developed as an open-source project with [automated testing](https://circleci.com/gh/scalableminds/webknossos)
+- [Deployable with Docker for production and development](https://hub.docker.com/r/scalableminds/webknossos/)
 
 ## Screenshots
 

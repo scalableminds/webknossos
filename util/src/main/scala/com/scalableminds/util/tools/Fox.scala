@@ -19,8 +19,17 @@ trait FoxImplicits {
   implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(b))
 
+  /**
+    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
+    */
   implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f.map(Full(_)))
+    for {
+      fut <- f.transform {
+        case Success(value)        => Try(Fox.successful(value))
+        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+      }
+      f <- fut
+    } yield f
 
   implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(Box(b)))
@@ -260,17 +269,6 @@ object Fox extends FoxImplicits {
     runNext(foxes)
   }
 
-  /**
-    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
-    */
-  def transformFuture[T](future: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    for {
-      fut <- future.transform {
-        case Success(value)        => Try(Fox.successful(value))
-        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
-      }
-      f <- fut
-    } yield f
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

@@ -93,6 +93,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   val unreportedStatus: String = "No longer available on datastore."
   val deletedByUserStatus: String = "Deleted by user."
+  private val unreportedStatusList = List(unreportedStatus, deletedByUserStatus)
 
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
@@ -288,7 +289,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            isUnreported = row._10 == unreportedStatus,
+            isUnreported = unreportedStatusList.contains(row._10),
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
@@ -333,8 +334,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = $unreportedStatus"
-      case Some(false) => q"status != $unreportedStatus"
+      case Some(true)  => q"status = $unreportedStatus or status = $deletedByUserStatus"
+      case Some(false) => q"status != $unreportedStatus and status != $deletedByUserStatus"
       case None        => q"${true}"
     }
 

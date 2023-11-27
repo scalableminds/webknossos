@@ -1,7 +1,7 @@
 import _ from "lodash";
 import React, { useRef, useState, useEffect } from "react";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { InputNumber } from "antd";
+import { InputNumber, Switch } from "antd";
 import { AsyncButton } from "./async_clickables";
 
 export function MatchViewer() {
@@ -9,18 +9,22 @@ export function MatchViewer() {
   const width = 300;
   const height = 300;
 
+  const [info_refresher, set_info_refresher] = useState(0);
+  const refetch_info = () => set_info_refresher(info_refresher + 1);
   const [partnerIndex, setPartnerIndex] = useState(0);
   const [tilePairIndex, setTilePairIndex] = useState(0);
   const [use_flann, set_use_flann] = useState(false);
-  const onChange = (value: number | null) => {
+  const onChangeTilePairIndex = (value: number | null) => {
     if (value != null) {
       setTilePairIndex(value);
     }
+    set_use_flann(false);
   };
 
   const rematch = async () => {
     await fetch(`http://localhost:8000/rematch?tile_pair_index=${tilePairIndex}`);
     set_use_flann(true);
+    refetch_info();
   };
 
   useInterval(() => {
@@ -34,7 +38,7 @@ export function MatchViewer() {
       );
     },
     null,
-    [tilePairIndex],
+    [tilePairIndex, info_refresher],
   );
 
   useEffect(() => {
@@ -64,26 +68,42 @@ export function MatchViewer() {
   if (info == null) {
     return null;
   }
-  const { distances_of_tile_pair } = info;
+  const { feature_distances_base, feature_distances_flann } = info;
 
-  const images = _.range(0, Math.min(20, distances_of_tile_pair.length)).map((idx) => (
-    <div key={idx} style={{ textAlign: "center" }}>
-      <img
-        style={{ border: "1px white solid" }}
-        src={`http://localhost:8000/match_image?tile_pair_index=${tilePairIndex}&feature_index=${idx}&partner_index=${partnerIndex}&use_flann=${
-          use_flann ? "True" : "False"
-        }`}
-      />
-      <div>{Math.round(distances_of_tile_pair[idx])}</div>
-    </div>
-  ));
+  const feature_count = feature_distances_base.length;
+  const feature_distances = use_flann ? feature_distances_flann : feature_distances_base;
+
+  feature_distances.sort((a, b) => a - b);
+
+  const sortedIndices = _.sortBy(
+    feature_distances.map((value, index) => ({ value, index })),
+    "value",
+  ).map((item) => item.index);
+
+  const images = _.range(0, Math.min(20, feature_count)).map((idx) => {
+    const match_idx = sortedIndices[idx];
+    return (
+      match_idx && (
+        <div key={match_idx} style={{ textAlign: "center" }}>
+          <img
+            style={{ border: "1px white solid" }}
+            src={`http://localhost:8000/match_image?tile_pair_index=${tilePairIndex}&feature_index=${match_idx}&partner_index=${partnerIndex}&use_flann=${
+              use_flann ? "True" : "False"
+            }`}
+          />
+          <div>{Math.round(feature_distances[match_idx])}</div>
+        </div>
+      )
+    );
+  });
 
   return (
     <div>
+      <Switch checked={use_flann} onChange={(bool) => set_use_flann(bool)} />
       <AsyncButton onClick={() => rematch()}>Rematch</AsyncButton>
       <div style={{ textAlign: "center" }}>
         <canvas ref={canvasRef} width={300} height={300} />
-        <InputNumber value={tilePairIndex} min={0} max={100} onChange={onChange} />
+        <InputNumber value={tilePairIndex} min={0} max={100} onChange={onChangeTilePairIndex} />
         {info.tiles[0].indices.join("-")} vs {info.tiles[1].indices.join("-")}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <img

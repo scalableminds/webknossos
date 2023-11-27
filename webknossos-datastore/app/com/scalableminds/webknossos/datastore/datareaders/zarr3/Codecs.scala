@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -12,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Format, JsObject, JsResult, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
 
@@ -36,6 +37,17 @@ object TransposeSetting {
   }
 
   def fOrderFromRank(rank: Int): IntArrayTransposeSetting = IntArrayTransposeSetting(Array.range(rank - 1, -1, -1))
+}
+
+object IndexLocationSetting extends ExtendedEnumeration {
+  type IndexLocationSetting = Value
+  val start, end = Value
+
+  implicit object IndexLocationSettingFormat extends Format[IndexLocationSetting] {
+    override def reads(json: JsValue): JsResult[IndexLocationSetting] =
+      json.validate[String].map(IndexLocationSetting.withName)
+    override def writes(o: IndexLocationSetting): JsValue = JsString(o.toString)
+  }
 }
 
 trait Codec
@@ -169,7 +181,8 @@ class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
 class ShardingCodec(val chunk_shape: Array[Int],
                     val codecs: Seq[CodecConfiguration],
-                    val index_codecs: Seq[CodecConfiguration])
+                    val index_codecs: Seq[CodecConfiguration],
+                    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end)
     extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
@@ -276,7 +289,9 @@ object CodecSpecification {
 
 final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             codecs: Seq[CodecConfiguration],
-                                            index_codecs: Seq[CodecConfiguration])
+                                            index_codecs: Seq[CodecConfiguration],
+                                            index_location: IndexLocationSetting.IndexLocationSetting =
+                                              IndexLocationSetting.end)
     extends CodecConfiguration {
   override def name: String = ShardingCodecConfiguration.name
 }

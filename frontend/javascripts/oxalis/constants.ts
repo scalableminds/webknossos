@@ -229,6 +229,16 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.LINE_MEASUREMENT,
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
+export type ArrayElement<ArrayType extends readonly unknown[]> =
+  ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
+export const SubTools: Array<
+  AnnotationToolEnum.AREA_MEASUREMENT | AnnotationToolEnum.AREA_QUICK_SELECT
+> = [AnnotationToolEnum.AREA_MEASUREMENT, AnnotationToolEnum.AREA_QUICK_SELECT];
+export type SubToolsType = ArrayElement<typeof SubTools>;
+export const MainToolMap = {
+  [AnnotationToolEnum.AREA_MEASUREMENT]: AnnotationToolEnum.LINE_MEASUREMENT,
+  [AnnotationToolEnum.AREA_QUICK_SELECT]: AnnotationToolEnum.RECTANGLE_QUICK_SELECT,
+};
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {

@@ -64,6 +64,8 @@ import {
   Unicode,
   MeasurementTools,
   QuickSelectTools,
+  MainToolMap,
+  SubToolsType,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import Store, { BrushPresets, OxalisState } from "oxalis/store";
@@ -906,10 +908,13 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
-
+  const adaptedActiveMainTool =
+    adaptedActiveTool in MainToolMap
+      ? MainToolMap[adaptedActiveTool as SubToolsType]
+      : adaptedActiveTool;
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveMainTool}>
         <ToolRadioButton
           name={TOOL_NAMES.MOVE}
           description="Use left-click to move around and right-click to open a contextmenu."
@@ -1270,7 +1275,7 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {adaptedActiveTool === "RECTANGLE_QUICK_SELECT" && (
+      {QuickSelectTools.includes(adaptedActiveTool) && (
         <>
           <ButtonComponent
             style={{
@@ -1290,7 +1295,10 @@ function ToolSpecificSettings({
       )}
 
       {QuickSelectTools.includes(adaptedActiveTool) && isAISelectAvailable ? (
-        <QuickSelectToolSwitch activeTool={adaptedActiveTool} />
+        <QuickSelectToolSwitch
+          activeTool={adaptedActiveTool}
+          usingHeuristic={isQuickSelectHeuristic}
+        />
       ) : null}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
@@ -1436,12 +1444,21 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   );
 }
 
-function QuickSelectToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
+function QuickSelectToolSwitch({
+  activeTool,
+  usingHeuristic,
+}: {
+  activeTool: AnnotationTool;
+  usingHeuristic: boolean;
+}) {
   const dispatch = useDispatch();
 
   const handleSetQuickSelectTool = (evt: RadioChangeEvent) => {
     dispatch(setToolAction(evt.target.value));
   };
+  const areaQuickSelectTooltip = usingHeuristic
+    ? "Draw an area instead of a rectangle to predict it. This is only available when AI is enabled."
+    : "Draw an area instead of a rectangle to predict it.";
   return (
     <Radio.Group
       value={activeTool}
@@ -1451,7 +1468,6 @@ function QuickSelectToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
       }}
     >
       <RadioButtonWithTooltip
-        // TODO: Other images.
         title="Draw a rectangle to predict it."
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.RECTANGLE_QUICK_SELECT}
@@ -1462,9 +1478,10 @@ function QuickSelectToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
-        title="Draw an area instead of a rectangle to predict it."
-        style={NARROW_BUTTON_STYLE}
+        title={areaQuickSelectTooltip}
         value={AnnotationToolEnum.AREA_QUICK_SELECT}
+        style={{ ...NARROW_BUTTON_STYLE, opacity: usingHeuristic ? 0.5 : 1 }}
+        disabled={usingHeuristic}
       >
         <img src="/assets/images/area-measurement.svg" alt="Free Area Quick Selection Icon" />
       </RadioButtonWithTooltip>

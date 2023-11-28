@@ -142,22 +142,24 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
-  def countUnassignedPendingForDataStore(dataStoreName: String): Fox[Int] =
+  def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
     for {
       r <- run(q"""select count(_id) from $existingCollectionName
                    where state = ${JobState.PENDING}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    and manualState is null
                    and _dataStore = $dataStoreName
                    and _worker is null""".as[Int])
       head <- r.headOption
     } yield head
 
-  def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
+  def countUnfinishedByWorker(workerId: ObjectId, jobCommands: Set[JobCommand]): Fox[Int] =
     for {
       r <- run(q"""SELECT COUNT(_id)
                    FROM $existingCollectionName
                    WHERE _worker = $workerId
-                   AND state in ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL""".as[Int])
       head <- r.headOption
     } yield head
@@ -219,25 +221,27 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    where _id = $jobId""".asUpdate)
     } yield ()
 
-  def reserveNextJob(worker: Worker): Fox[Unit] = {
+  def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] = {
     val query = q"""
-          with subquery as (
-            select _id
-            from $existingCollectionName
-            where
+          WITH subquery AS (
+            SELECT _id
+            FROM $existingCollectionName
+            WHERE
               state = ${JobState.PENDING}
-              and _dataStore = ${worker._dataStore}
-              and manualState is NULL
-              and _worker is NULL
-            order by created
-            limit 1
+              AND _dataStore = ${worker._dataStore}
+              AND manualState IS NULL
+              AND _worker IS NULL
+              AND command IN ${SqlToken.tupleFromList(jobCommands)}
+            ORDER BY created
+            LIMIT 1
           )
-          update webknossos.jobs_ j
-          set _worker = ${worker._id}
-          from subquery
-          where j._id = subquery._id
+          UPDATE webknossos.jobs_ j
+          SET _worker = ${worker._id}
+          FROM subquery
+          WHERE j._id = subquery._id
           """.asUpdate
     for {
+      _ <- Fox.successful(logger.info("reserve next job"))
       _ <- run(
         query.withTransactionIsolation(Serializable),
         retryCount = 50,

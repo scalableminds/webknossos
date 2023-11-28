@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.DataStoreDAO
+import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
@@ -25,7 +26,7 @@ case class Worker(_id: ObjectId,
                   key: String,
                   maxParallelHighPriorityJobs: Int,
                   maxParallelLowPriorityJobs: Int,
-                  supportedJobCommands: Set[String],
+                  supportedJobCommands: Set[JobCommand],
                   lastHeartBeat: Long = 0,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
@@ -39,19 +40,22 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: WorkersRow): Fox[Worker] =
-    Fox.successful(
+    for {
+      supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
+        JobCommand.fromString(s).toFox
+      }
+    } yield
       Worker(
         ObjectId(r._Id),
         r._Datastore,
         r.key,
         r.maxparallelhighpriorityjobs,
         r.maxparallellowpriorityjobs,
-        parseArrayLiteral(r.supportedjobcommands).toSet,
+        supportedJobCommands.toSet,
         r.lastheartbeat.getTime,
         Instant.fromSql(r.created),
         r.isdeleted
       )
-    )
 
   def findOneByKey(key: String): Fox[Worker] =
     for {

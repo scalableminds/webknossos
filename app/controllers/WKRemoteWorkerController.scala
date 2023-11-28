@@ -2,6 +2,8 @@ package controllers
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.job.JobCommand.JobCommand
+
 import javax.inject.Inject
 import models.job._
 import play.api.libs.json.Json
@@ -32,15 +34,32 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
 
   private def reserveNextJobs(worker: Worker): Fox[Unit] =
     for {
-      unfinishedCount <- jobDAO.countUnfinishedByWorker(worker._id)
-      pendingCount <- jobDAO.countUnassignedPendingForDataStore(worker._dataStore) // TODO
-      _ <- if (unfinishedCount >= worker.maxParallelLowPriorityJobs || pendingCount == 0) Fox.successful(())
+      unfinishedHighPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.highPriorityJobs)
+      unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
+      pendingHighPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
+        worker._dataStore,
+        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands))
+      pendingLowPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
+        worker._dataStore,
+        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands))
+      mayAssignHighPriorityJob = unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
+      mayAssignLowPriorityJob = unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
+      currentlyAssignableJobCommands = assignableJobCommands(mayAssignHighPriorityJob, mayAssignLowPriorityJob)
+      _ <- if ((unfinishedHighPriorityCount >= worker.maxParallelHighPriorityJobs && unfinishedLowPriorityCount >= worker.maxParallelLowPriorityJobs) || (pendingLowPriorityCount == 0 && pendingHighPriorityCount == 0))
+        Fox.successful(())
       else {
-        jobDAO.reserveNextJob(worker).flatMap { _ =>
+        jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
           reserveNextJobs(worker)
         }
       }
     } yield ()
+
+  private def assignableJobCommands(mayAssignHighPriorityJob: Boolean,
+                                    mayAssignLowPriorityJob: Boolean): Set[JobCommand] = {
+    val lowPriorityOrEmpty = if (mayAssignLowPriorityJob) JobCommand.lowPriorityJobs else Set()
+    val highPriorityOrEmpty = if (mayAssignHighPriorityJob) JobCommand.highPriorityJobs else Set()
+    lowPriorityOrEmpty ++ highPriorityOrEmpty
+  }
 
   def updateJobStatus(key: String, id: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
     implicit request =>

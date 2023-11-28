@@ -13,8 +13,6 @@ UPDATE webknossos.workers set maxParallelLowPriorityJobs = maxParallelJobs;
 
 ALTER TABLE webknossos.workers DROP COLUMN maxParallelJobs;
 
-UPDATE
-
 CREATE VIEW webknossos.workers_ as SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 110;

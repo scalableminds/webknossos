@@ -128,9 +128,25 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def readAccessQ(requestingUserId: ObjectId) =
     q"""_owner = $requestingUserId"""
 
+  private def listAccessQ(requestingUserId: ObjectId) =
+    q"""_owner = $requestingUserId
+        OR
+        (_owner in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)))
+        OR
+        ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))
+        OR
+        ($requestingUserId in
+          (
+            select u._id
+            from webknossos.users_ u join webknossos.multiUsers_ m on u._multiUser = m._id
+            where m.isSuperUser
+          )
+        )
+       """
+
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed

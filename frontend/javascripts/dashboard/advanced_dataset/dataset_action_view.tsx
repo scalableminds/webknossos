@@ -174,7 +174,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   <p>{dataset.status}</p>
                   {dataset.status === "Deleted by user." ? (
                     <p>
-                      Even though, this dataset was deleted by a user, it is still shown here,
+                      Even though this dataset was deleted by a user, it is still shown here,
                       because it is referenced by at least one annotation.
                     </p>
                   ) : null}

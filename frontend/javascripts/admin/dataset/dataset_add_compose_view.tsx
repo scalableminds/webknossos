@@ -61,111 +61,115 @@ export default function DatasetAddComposeView(props: Props) {
 
   const onRemoveLayer = (layer: LayerLink) => {
     const oldLayers = form.getFieldValue(["layers"]);
-    const newLayers = oldLayers.filter(
-      (existingLayer: LayerLink) =>
-        existingLayer.datasetId.owningOrganization !== layer.datasetId.owningOrganization ||
-        existingLayer.datasetId.name !== layer.datasetId.name ||
-        existingLayer.sourceName !== layer.sourceName,
-    );
+    const newLayers = oldLayers.filter((existingLayer: LayerLink) => existingLayer !== layer);
     form.setFieldsValue({ layers: newLayers });
   };
 
   const handleChange = async (info: UploadChangeParam<UploadFile<any>>) => {
-    const newFileList = info.fileList;
-    setFileList(newFileList);
+    try {
+      const newFileList = info.fileList;
+      setFileList(newFileList);
 
-    const sourcePoints = [];
-    const targetPoints = [];
-    if (newFileList.length === 1 && newFileList[0]?.originFileObj) {
-      const csv = await readFileAsText(newFileList[0]?.originFileObj);
-      console.log("csv", csv);
-      const lines = csv.split("\n");
-      for (const line of lines) {
-        const fields = line.split(",");
-        const [_pointName, _enabled, x1, y1, z1, x2, y2, z2] = fields;
+      const sourcePoints = [];
+      const targetPoints = [];
+      if (newFileList.length === 1 && newFileList[0]?.originFileObj) {
+        const csv = await readFileAsText(newFileList[0]?.originFileObj);
+        console.log("csv", csv);
+        const lines = csv.split("\n");
+        for (const line of lines) {
+          const fields = line.split(",");
+          const [_pointName, _enabled, x1, y1, z1, x2, y2, z2] = fields;
 
-        const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-        const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-        sourcePoints.push(source);
-        targetPoints.push(target);
-      }
-    }
-
-    if (newFileList.length === 2) {
-      const nmlString1 = await readFileAsText(newFileList[0]?.originFileObj!);
-      const nmlString2 = await readFileAsText(newFileList[1]?.originFileObj!);
-
-      if (nmlString1 === "" || nmlString2 === "") {
-        throw new Error("NML files are empty.");
-      }
-
-      const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
-      const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
-
-      if (!datasetName1 || !datasetName2) {
-        throw new Error("Could not extract dataset names.");
-      }
-
-      const [dataset1, dataset2] = await Promise.all([
-        getDataset({
-          owningOrganization: activeUser?.organization || "",
-          name: datasetName1,
-        }),
-        getDataset({
-          owningOrganization: activeUser?.organization || "",
-          name: datasetName2,
-        }),
-      ]);
-      console.log("dataset1, dataset2", dataset1, dataset2);
-
-      const nodes1 = Array.from(
-        values(trees1)
-          .map((tree) => Array.from(tree.nodes.values())[0])
-          .values(),
-      );
-      const nodes2 = Array.from(
-        values(trees2)
-          .map((tree) => Array.from(tree.nodes.values())[0])
-          .values(),
-      );
-
-      for (const [node1, node2] of _.zip(nodes1, nodes2)) {
-        if ((node1 == null) != (node2 == null)) {
-          throw new Error("A tree was empty while its corresponding tree wasn't.");
-        }
-        if (node1 != null && node2 != null) {
-          sourcePoints.push(node1.position);
-          targetPoints.push(node2.position);
+          const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+          const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+          sourcePoints.push(source);
+          targetPoints.push(target);
         }
       }
-      const datasets = [dataset1, dataset2];
-      setLinkedDatasets(datasets);
-      const newMatrix = estimateAffineMatrix4x4(sourcePoints, targetPoints);
-      const newLinks: LayerLink[] = (
-        _.flatMap(datasets, (dataset) =>
-          dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
-        ) as [APIDataset, APIDataLayer][]
-      ).map(
-        ([dataset, dataLayer]): LayerLink => ({
-          datasetId: {
-            owningOrganization: dataset.owningOrganization,
-            name: dataset.name,
-          },
-          sourceName: dataLayer.name,
-          newName: dataLayer.name,
-          transformations:
-            dataset === datasets[0]
-              ? [
-                  {
-                    type: "affine",
-                    matrix: flatToNestedMatrix(newMatrix),
-                  },
-                ]
-              : [],
-        }),
-      );
 
-      form.setFieldsValue({ layers: newLinks });
+      if (newFileList.length === 2) {
+        const nmlString1 = await readFileAsText(newFileList[0]?.originFileObj!);
+        const nmlString2 = await readFileAsText(newFileList[1]?.originFileObj!);
+
+        if (nmlString1 === "" || nmlString2 === "") {
+          throw new Error("NML files are empty.");
+        }
+
+        const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
+        const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
+
+        if (!datasetName1 || !datasetName2) {
+          throw new Error("Could not extract dataset names.");
+        }
+
+        const [dataset1, dataset2] = await Promise.all([
+          getDataset({
+            owningOrganization: activeUser?.organization || "",
+            name: datasetName1,
+          }),
+          getDataset({
+            owningOrganization: activeUser?.organization || "",
+            name: datasetName2,
+          }),
+        ]);
+        console.log("dataset1, dataset2", dataset1, dataset2);
+
+        const nodes1 = Array.from(
+          values(trees1)
+            .map((tree) => Array.from(tree.nodes.values())[0])
+            .values(),
+        );
+        const nodes2 = Array.from(
+          values(trees2)
+            .map((tree) => Array.from(tree.nodes.values())[0])
+            .values(),
+        );
+
+        for (const [node1, node2] of _.zip(nodes1, nodes2)) {
+          if ((node1 == null) != (node2 == null)) {
+            throw new Error("A tree was empty while its corresponding tree wasn't.");
+          }
+          if (node1 != null && node2 != null) {
+            sourcePoints.push(node1.position);
+            targetPoints.push(node2.position);
+          }
+        }
+        const datasets = [dataset1, dataset2];
+        setLinkedDatasets(datasets);
+
+        const transformationArr =
+          sourcePoints.length > 0 && targetPoints.length > 0
+            ? [
+                {
+                  type: "affine" as const,
+                  matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+                },
+              ]
+            : [];
+        console.log("transformationArr", transformationArr);
+        const newLinks: LayerLink[] = (
+          _.flatMap(datasets, (dataset) =>
+            dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
+          ) as [APIDataset, APIDataLayer][]
+        ).map(
+          ([dataset, dataLayer]): LayerLink => ({
+            datasetId: {
+              owningOrganization: dataset.owningOrganization,
+              name: dataset.name,
+            },
+            sourceName: dataLayer.name,
+            newName: dataLayer.name,
+            transformations: dataset === datasets[0] ? transformationArr : [],
+          }),
+        );
+
+        form.setFieldsValue({ layers: newLinks });
+      }
+    } catch (exception) {
+      Toast.error(
+        "An error occurred while importing the uploaded files. See the Browser's console for more feedback.",
+      );
+      console.error(exception);
     }
   };
 

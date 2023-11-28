@@ -139,6 +139,7 @@ import Constants, {
   AnnotationToolEnum,
   TDViewDisplayModeEnum,
   MappingStatusEnum,
+  EMPTY_OBJECT,
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
@@ -173,6 +174,7 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { EMPTY_KEY_VALUE } from "oxalis/model/bucket_data_handling/abstract_cuckoo_table";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -2257,8 +2259,15 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+    if (
+      Store.getState().localSegmentationData[effectiveLayerName].meshes != null &&
+      Store.getState().localSegmentationData[effectiveLayerName].meshes![segmentId] != null
+    ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
+    } else {
+      throw new Error(
+        `Error while setting mesh visibility. Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
+      );
     }
   }
 
@@ -2275,8 +2284,15 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+    if (
+      Store.getState().localSegmentationData[effectiveLayerName].meshes != null &&
+      Store.getState().localSegmentationData[effectiveLayerName].meshes![segmentId] != null
+    ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
+    } else {
+      throw new Error(
+        `Error while removing mesh. Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
+      );
     }
   }
 
@@ -2293,7 +2309,7 @@ class DataApi {
       layerName,
     ).name;
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].meshes,
+      Store.getState().localSegmentationData[effectiveLayerName].meshes || EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {

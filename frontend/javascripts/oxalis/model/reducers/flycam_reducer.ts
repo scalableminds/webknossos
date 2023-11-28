@@ -271,34 +271,11 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         return { name, value: fallbackValue };
       });
 
-      const updatedFlycamState = update(state, {
+      return update(state, {
         flycam: {
           additionalCoordinates: { $set: values },
         },
       });
-
-      const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-      const additionalCoordinateString = getAdditionalCoordinatesAsString(values);
-      if (
-        visibleSegmentationLayer == null ||
-        state.localSegmentationData[visibleSegmentationLayer.name].meshes[
-          additionalCoordinateString
-        ] != null
-      ) {
-        return updatedFlycamState;
-      }
-
-      const updatedLocalSegmentationState = update(updatedFlycamState, {
-        localSegmentationData: {
-          [visibleSegmentationLayer.name]: {
-            meshes: {
-              [additionalCoordinateString]: { $set: [] },
-            },
-          },
-        },
-      });
-
-      return updatedLocalSegmentationState;
     }
 
     case "SET_ROTATION": {

@@ -233,6 +233,7 @@ function _MeshInfoItem(props: {
   setPosition: (arg0: Vector3) => void;
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
+  const additionalCoordinates = useSelector((state: OxalisState) =>state.flycam.additionalCoordinates)
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
     dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
@@ -243,7 +244,7 @@ function _MeshInfoItem(props: {
   if (
     !mesh ||
     getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates) !==
-      getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates)
+      getAdditionalCoordinatesAsString(additionalCoordinates)
   ) {
     if (isSelectedInList) {
       return (

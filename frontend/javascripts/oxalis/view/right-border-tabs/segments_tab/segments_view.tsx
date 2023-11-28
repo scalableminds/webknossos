@@ -39,7 +39,7 @@ import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
@@ -153,7 +153,6 @@ type StateProps = {
   resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
 };
 
-const EMPTY_OBJECT = {};
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
@@ -169,20 +168,17 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
 
-  let meshesForCurrentAdditionalCoordinates = EMPTY_OBJECT;
+  let meshesForCurrentAdditionalCoordinates;
   if (visibleSegmentationLayer != null) {
-    const meshRecords = state.localSegmentationData[visibleSegmentationLayer?.name].meshes;
-    meshesForCurrentAdditionalCoordinates =
-      meshRecords != null &&
-      Object.keys(meshRecords).length > 0 &&
-      Object.keys(meshRecords[addCoordString]).length > 0
-        ? meshRecords[addCoordString]
-        : EMPTY_OBJECT;
+    const meshRecords = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
+    if(meshRecords != null && meshRecords[addCoordString] != null){
+        meshesForCurrentAdditionalCoordinates = meshRecords[addCoordString]; 
+      }
   }
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
-    meshes: meshesForCurrentAdditionalCoordinates,
+    meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",

@@ -557,8 +557,20 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
 
   const { segmentId, layerName } = action;
 
+  const meshData = yield* select((state) => state.localSegmentationData[layerName].meshes);
+  if (meshData == null) {
+    throw new Error("Mesh refreshing failed due to lack of mesh data in localSegmentationData.");
+  }
+  const meshDataForAddCoord = yield* select(
+    (state) => state.localSegmentationData[layerName].meshes![additionalCoordinates],
+  );
+  if (meshDataForAddCoord == null) {
+    throw new Error(
+      `Mesh refreshing failed due to lack of mesh data for add. coord. ${additionalCoordinates} in localSegmentationData.`,
+    );
+  }
   const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[additionalCoordinates][segmentId],
+    (state) => state.localSegmentationData[layerName].meshes![additionalCoordinates]![segmentId],
   );
 
   if (meshInfo.isPrecomputed) {

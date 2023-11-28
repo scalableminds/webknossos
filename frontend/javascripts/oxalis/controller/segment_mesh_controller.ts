@@ -184,10 +184,6 @@ export default class SegmentMeshController {
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
-    console.log(
-      "if mesh visibility is broken, look into segment mesh controller l. 197.",
-      "we stopped checking the records",
-    );
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     _.forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
       meshGroup.visible = visibility;

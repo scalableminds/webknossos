@@ -229,11 +229,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
       const newMeshes: Record<string, Record<number, MeshInformation>> = {};
+      if (state.localSegmentationData[layerName].meshes == null) {
+        throw Error("No mesh data found in state.localSegmentationData.");
+      }
       for (const additionalCoordString of Object.keys(
-        state.localSegmentationData[layerName].meshes,
+        state.localSegmentationData[layerName].meshes!,
       )) {
-        const { [segmentId]: _, ...remainingMeshes } =
-          state.localSegmentationData[layerName].meshes[additionalCoordString];
+        const { [segmentId]: _, ...remainingMeshes } = state.localSegmentationData[layerName]
+          .meshes![additionalCoordString] as Record<number, MeshInformation>;
         newMeshes[additionalCoordString] = remainingMeshes;
       }
       return update(state, {
@@ -268,7 +271,27 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         mappingType,
       };
       const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
-      const updatedKey = update(state, {
+
+      let stateWithCurrentAddCoords = state;
+
+      // maybe add current add. coord. as key in meshes records
+      if (
+        state.localSegmentationData[layerName] == null ||
+        state.localSegmentationData[layerName].meshes == null ||
+        state.localSegmentationData[layerName].meshes![addCoordString] == null
+      ) {
+        stateWithCurrentAddCoords = update(state, {
+          localSegmentationData: {
+            [layerName]: {
+              meshes: {
+                [addCoordString]: { $set: [] },
+              },
+            },
+          },
+        });
+      }
+
+      const updatedKey = update(stateWithCurrentAddCoords, {
         localSegmentationData: {
           [layerName]: {
             meshes: {

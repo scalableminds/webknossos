@@ -11,7 +11,7 @@ import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import type { ViewMode, Vector3 } from "oxalis/constants";
-import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
+import constants, { ViewModeValues, MappingStatusEnum, EMPTY_OBJECT } from "oxalis/constants";
 import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -274,9 +274,12 @@ class UrlManager {
     for (const layerName of Object.keys(state.localSegmentationData)) {
       const { meshes: localMeshes, currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
-      const meshes = Utils.values(localMeshes)
-        .filter(({ isVisible }) => isVisible)
-        .map(mapMeshInfoToUrlMeshDescriptor);
+      const meshes =
+        localMeshes != null
+          ? Utils.values(localMeshes as Record<number, MeshInformation>)
+              .filter(({ isVisible }) => isVisible)
+              .map(mapMeshInfoToUrlMeshDescriptor)
+          : [];
 
       if (currentMeshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = {

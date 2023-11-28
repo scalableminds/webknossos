@@ -445,7 +445,9 @@ CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
   key VARCHAR(1024) NOT NULL UNIQUE,
-  maxParallelJobs INT NOT NULL DEFAULT 1,
+  maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
+  maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
+  supportedJobCommands VARCHAR(256)[] NOT NULL,
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false

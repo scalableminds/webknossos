@@ -23,7 +23,9 @@ import scala.concurrent.duration._
 case class Worker(_id: ObjectId,
                   _dataStore: String,
                   key: String,
-                  maxParallelJobs: Int,
+                  maxParallelHighPriorityJobs: Int,
+                  maxParallelLowPriorityJobs: Int,
+                  supportedJobCommands: Set[String],
                   lastHeartBeat: Long = 0,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
@@ -42,7 +44,9 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         ObjectId(r._Id),
         r._Datastore,
         r.key,
-        r.maxparalleljobs,
+        r.maxparallelhighpriorityjobs,
+        r.maxparallellowpriorityjobs,
+        parseArrayLiteral(r.supportedjobcommands).toSet,
         r.lastheartbeat.getTime,
         Instant.fromSql(r.created),
         r.isdeleted

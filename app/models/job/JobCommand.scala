@@ -7,4 +7,6 @@ object JobCommand extends ExtendedEnumeration {
 
   val compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei,
   infer_neurons, materialize_volume_annotation, render_animation = Value
+
+  val highPriorityJobs: Seq[Value] = Seq(convert_to_wkw, export_tiff)
 }

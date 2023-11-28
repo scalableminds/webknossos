@@ -33,8 +33,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
   private def reserveNextJobs(worker: Worker): Fox[Unit] =
     for {
       unfinishedCount <- jobDAO.countUnfinishedByWorker(worker._id)
-      pendingCount <- jobDAO.countUnassignedPendingForDataStore(worker._dataStore)
-      _ <- if (unfinishedCount >= worker.maxParallelJobs || pendingCount == 0) Fox.successful(())
+      pendingCount <- jobDAO.countUnassignedPendingForDataStore(worker._dataStore) // TODO
+      _ <- if (unfinishedCount >= worker.maxParallelLowPriorityJobs || pendingCount == 0) Fox.successful(())
       else {
         jobDAO.reserveNextJob(worker).flatMap { _ =>
           reserveNextJobs(worker)

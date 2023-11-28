@@ -81,7 +81,9 @@ class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDA
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
       "id" -> worker._id.id,
-      "maxParallelJobs" -> worker.maxParallelJobs,
+      "maxParallelHighPriorityJobs" -> worker.maxParallelHighPriorityJobs,
+      "maxParallelLowPriorityJobs" -> worker.maxParallelLowPriorityJobs,
+      "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)

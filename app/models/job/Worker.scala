@@ -42,7 +42,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {
       supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
-        JobCommand.fromString(s).toFox
+        JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
       }
     } yield
       Worker(

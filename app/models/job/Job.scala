@@ -143,26 +143,32 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield parsed
 
   def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
-    for {
-      r <- run(q"""select count(_id) from $existingCollectionName
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""select count(_id) from $existingCollectionName
                    where state = ${JobState.PENDING}
                    AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    and manualState is null
                    and _dataStore = $dataStoreName
                    and _worker is null""".as[Int])
-      head <- r.headOption
-    } yield head
+        head <- r.headOption
+      } yield head
+    }
 
   def countUnfinishedByWorker(workerId: ObjectId, jobCommands: Set[JobCommand]): Fox[Int] =
-    for {
-      r <- run(q"""SELECT COUNT(_id)
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""SELECT COUNT(_id)
                    FROM $existingCollectionName
                    WHERE _worker = $workerId
                    AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
                    AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL""".as[Int])
-      head <- r.headOption
-    } yield head
+        head <- r.headOption
+      } yield head
+    }
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
@@ -221,8 +227,11 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    where _id = $jobId""".asUpdate)
     } yield ()
 
-  def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] = {
-    val query = q"""
+  def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =
+    if (jobCommands.isEmpty) Fox.successful()
+    else {
+      val query =
+        q"""
           WITH subquery AS (
             SELECT _id
             FROM $existingCollectionName
@@ -240,15 +249,15 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           FROM subquery
           WHERE j._id = subquery._id
           """.asUpdate
-    for {
-      _ <- Fox.successful(logger.info("reserve next job"))
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
-    } yield ()
-  }
+      for {
+        _ <- Fox.successful(logger.info("reserve next job"))
+        _ <- run(
+          query.withTransactionIsolation(Serializable),
+          retryCount = 50,
+          retryIfErrorContains = List(transactionSerializationError)
+        )
+      } yield ()
+    }
 
   def countByState: Fox[Map[String, Int]] =
     for {

@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(109);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(110);
 COMMIT TRANSACTION;
 
 
@@ -447,7 +447,7 @@ CREATE TABLE webknossos.workers(
   key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
-  supportedJobCommands VARCHAR(256)[] NOT NULL,
+  supportedJobCommands VARCHAR(256)[] NOT NULL DEFAULT array[]::varchar(256)[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false

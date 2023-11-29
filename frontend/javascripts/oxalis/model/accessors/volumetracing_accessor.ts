@@ -670,18 +670,31 @@ export function hasAgglomerateMapping(state: OxalisState) {
 export function getMeshesForAdditionalCoordinates(
   state: OxalisState,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  layerName: string,
 ) {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  if (visibleSegmentationLayer != null) {
-    const meshRecords = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-    if (meshRecords != null && meshRecords[addCoordKey] != null) {
-      return meshRecords[addCoordKey];
-    }
+  const meshRecords = state.localSegmentationData[layerName].meshes;
+  if (meshRecords != null && meshRecords[addCoordKey] != null) {
+    return meshRecords[addCoordKey];
   }
   return null;
 }
 
-export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState) {
-  return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates);
+export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState, layerName: string) {
+  return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates, layerName);
+}
+
+export function getMeshInfoForSegment(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+  layerName: string,
+  segmentId: number,
+) {
+  const meshesForAddCoords = getMeshesForAdditionalCoordinates(
+    state,
+    additionalCoordinates,
+    layerName,
+  );
+  if (meshesForAddCoords == null) return null;
+  return meshesForAddCoords[segmentId];
 }

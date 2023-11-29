@@ -168,7 +168,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
-  const meshesForCurrentAdditionalCoordinates = getMeshesForCurrentAdditionalCoordinates(state);
+  
+  const meshesForCurrentAdditionalCoordinates = 
+    visibleSegmentationLayer != null ? 
+    getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name) : undefined;
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,

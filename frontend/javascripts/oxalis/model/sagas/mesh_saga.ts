@@ -7,7 +7,7 @@ import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_fl
 import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 
-import Store, { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import {
   getResolutionInfo,
   getMappingInfo,

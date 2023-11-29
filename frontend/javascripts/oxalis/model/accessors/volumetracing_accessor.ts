@@ -674,7 +674,7 @@ export function getMeshesForAdditionalCoordinates(
 ) {
   const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const meshRecords = state.localSegmentationData[layerName].meshes;
-  if (meshRecords != null && meshRecords[addCoordKey] != null) {
+  if (meshRecords?.[addCoordKey] != null) {
     return meshRecords[addCoordKey];
   }
   return null;

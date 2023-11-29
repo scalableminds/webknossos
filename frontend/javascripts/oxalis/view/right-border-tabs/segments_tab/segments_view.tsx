@@ -52,7 +52,6 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
-  getMeshesForAdditionalCoordinates,
   getMeshesForCurrentAdditionalCoordinates,
   getVisibleSegments,
   hasEditableMapping,

@@ -174,7 +174,6 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { EMPTY_KEY_VALUE } from "oxalis/model/bucket_data_handling/abstract_cuckoo_table";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

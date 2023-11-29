@@ -7,16 +7,12 @@ import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import {
-  getAdditionalCoordinatesAsString,
   getValidZoomRangeForUser,
   ZOOM_STEP_INTERVAL,
 } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-import {
-  getUnifiedAdditionalCoordinates,
-  getVisibleSegmentationLayer,
-} from "../accessors/dataset_accessor";
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [

@@ -368,6 +368,47 @@ class UserService @Inject()(conf: WkConf,
     }
   }
 
+  def publicWritesCompact(user: User, requestingUser: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
+    for {
+      isEditable <- isEditableBy(user, requestingUser)
+      splitString = (s: String) => Option(s).map(str => str.split(",")).getOrElse(Array[String]()).toSeq
+      teamsJson = splitString(userCompactInfo.team_ids).indices.map(
+        idx =>
+          Json.obj(
+            "id" -> splitString(userCompactInfo.team_ids)(idx),
+            "name" -> splitString(userCompactInfo.team_names)(idx),
+            "isTeamManager" -> splitString(userCompactInfo.team_managers)(idx).toBoolean
+        ))
+      experienceJson = Json.obj(
+        splitString(userCompactInfo.experienceValues).indices.map(idx =>
+          (splitString(userCompactInfo.experienceDomains)(idx),
+           Json.toJsFieldJsValueWrapper(splitString(userCompactInfo.experienceValues)(idx).toInt))): _*)
+      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> userCompactInfo.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isOrganizationOwner" -> user.isOrganizationOwner,
+        "isDatasetManager" -> user.isDatasetManager,
+        "isActive" -> !user.isDeactivated,
+        "teams" -> teamsJson,
+        "experiences" -> experienceJson,
+        "lastActivity" -> user.lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> isEditable,
+        "organization" -> userCompactInfo.organization_name,
+        "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> userCompactInfo.selectedTheme,
+        "created" -> user.created,
+        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+        "isSuperUser" -> userCompactInfo.isSuperUser,
+        "isEmailVerified" -> userCompactInfo.isEmailVerified,
+      )
+    }
+
   def compactWrites(user: User): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {

@@ -51,7 +51,7 @@ PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     
 POST          /user/tasks/request                                                               controllers.TaskController.request()
 GET           /user/tasks/peek                                                                  controllers.TaskController.peekNext()
 
-GET           /users                                                                            controllers.UserController.list(isEditable: Option[Boolean], isTeamManagerOrAdmin: Option[Boolean], isAdmin: Option[Boolean])
+GET           /users                                                                            controllers.UserController.list(isEditable: Option[Boolean], isTeamManagerOrAdmin: Option[Boolean], isAdmin: Option[Boolean], compact: Option[Boolean])
 GET           /user                                                                             controllers.UserController.current()
 GET           /user/tasks                                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/annotations                                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])

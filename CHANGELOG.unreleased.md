@@ -15,6 +15,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for reading uint24 rgb layers in datasets with zarr2/zarr3/n5/neuroglancerPrecomputed format, as used for voxelytics predictions. [#7413](https://github.com/scalableminds/webknossos/pull/7413)
 - Adding a remote dataset can now be done by providing a Neuroglancer URI. [#7416](https://github.com/scalableminds/webknossos/pull/7416)
 - Added a filter to the Task List->Stats column to quickly filter for tasks with "Pending", "In-Progress" or "Finished" instances. [#7430](https://github.com/scalableminds/webknossos/pull/7430)
+- Added support for S3-compliant object storage services (e.g. MinIO) as a storage backend for remote datasets. [#7453](https://github.com/scalableminds/webknossos/pull/7453)
+- Added support for blosc compressed N5 datasets. [#7465](https://github.com/scalableminds/webknossos/pull/7465)
 
 ### Changed
 - An appropriate error is returned when requesting an API version that is higher that the current version. [#7424](https://github.com/scalableminds/webknossos/pull/7424)
@@ -28,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Exploring HTTP uris of unknown hosts no longer causes an exception error message to be displayed. [#7422](https://github.com/scalableminds/webknossos/pull/7422)
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)
 - Fixed the initialization of the dark theme if it was active during page load. [#7446](https://github.com/scalableminds/webknossos/pull/7446)
+- Fixed a rare bug in ad-hoc meshing for voxelytics-created segmentations with agglomerate mappings. [#7449](https://github.com/scalableminds/webknossos/pull/7449)
 
 ### Removed
 

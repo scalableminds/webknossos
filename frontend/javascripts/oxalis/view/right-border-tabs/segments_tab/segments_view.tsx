@@ -52,6 +52,8 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
+  getMeshesForAdditionalCoordinates,
+  getMeshesForCurrentAdditionalCoordinates,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -166,15 +168,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
-  const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
-
-  let meshesForCurrentAdditionalCoordinates;
-  if (visibleSegmentationLayer != null) {
-    const meshRecords = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-    if(meshRecords != null && meshRecords[addCoordString] != null){
-        meshesForCurrentAdditionalCoordinates = meshRecords[addCoordString]; 
-      }
-  }
+  const meshesForCurrentAdditionalCoordinates = getMeshesForCurrentAdditionalCoordinates(state);
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,

@@ -7,7 +7,7 @@ import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_fl
 import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 
-import Store from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 import {
   getResolutionInfo,
   getMappingInfo,
@@ -551,44 +551,60 @@ function* refreshMeshes(): Saga<void> {
   }
 }
 
+const selectMeshDataFromState = (
+  state: OxalisState,
+  layerName: string,
+  addCoordKey: string,
+  segmentId: number,
+) => {
+  if (state.localSegmentationData[layerName].meshes == null) {
+    throw new Error("There is no mesh data in localSegmentationData.");
+  }
+  if (state.localSegmentationData[layerName].meshes![addCoordKey] == null) {
+    throw new Error(
+      `There is no mesh data for add. coord. ${addCoordKey} in localSegmentationData.`,
+    );
+  }
+  return state.localSegmentationData[layerName].meshes![addCoordKey]![segmentId];
+};
+
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const additionalCoordinatesObject = yield* select((state) => state.flycam.additionalCoordinates);
   let additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
 
   const { segmentId, layerName } = action;
 
-  const meshData = yield* select((state) => state.localSegmentationData[layerName].meshes);
-  if (meshData == null) {
-    throw new Error("Mesh refreshing failed due to lack of mesh data in localSegmentationData.");
-  }
-  const meshDataForAddCoord = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes![additionalCoordinates],
-  );
-  if (meshDataForAddCoord == null) {
-    throw new Error(
-      `Mesh refreshing failed due to lack of mesh data for add. coord. ${additionalCoordinates} in localSegmentationData.`,
+  try {
+    const meshInfo = yield* select((state) =>
+      selectMeshDataFromState(state, layerName, additionalCoordinates, segmentId),
     );
-  }
-  const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes![additionalCoordinates]![segmentId],
-  );
 
-  if (meshInfo.isPrecomputed) {
-    yield* put(removeMeshAction(layerName, meshInfo.segmentId));
-    yield* put(
-      loadPrecomputedMeshAction(
-        meshInfo.segmentId,
-        meshInfo.seedPosition,
-        meshInfo.seedAdditionalCoordinates,
-        meshInfo.meshFileName,
+    if (meshInfo.isPrecomputed) {
+      yield* put(removeMeshAction(layerName, meshInfo.segmentId));
+      yield* put(
+        loadPrecomputedMeshAction(
+          meshInfo.segmentId,
+          meshInfo.seedPosition,
+          meshInfo.seedAdditionalCoordinates,
+          meshInfo.meshFileName,
+          layerName,
+        ),
+      );
+    } else {
+      if (adhocMeshesMapByLayer[additionalCoordinates] == null) return;
+      const threeDMap =
+        adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
+      if (threeDMap == null) return;
+      yield* call(
+        _refreshMeshWithMap,
+        segmentId,
+        threeDMap,
         layerName,
-      ),
-    );
-  } else {
-    if (adhocMeshesMapByLayer[additionalCoordinates] == null) return;
-    const threeDMap = adhocMeshesMapByLayer[additionalCoordinates][action.layerName].get(segmentId);
-    if (threeDMap == null) return;
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinatesObject);
+        additionalCoordinatesObject,
+      );
+    }
+  } catch (error) {
+    console.error("Mesh refreshing failed due to the following error:", error);
   }
 }
 
@@ -598,52 +614,54 @@ function* _refreshMeshWithMap(
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
 ): Saga<void> {
-  const additionalCoordinateString = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[additionalCoordinateString][segmentId],
-  );
-  yield* call(
-    [ErrorHandling, ErrorHandling.assert],
-    !meshInfo.isPrecomputed,
-    "_refreshMeshWithMap was called for a precomputed mesh.",
-  );
-  if (meshInfo.isPrecomputed) return;
-  const { mappingName, mappingType } = meshInfo;
-  const meshPositions = threeDMap.entries().filter(([value, _position]) => value);
-
-  if (meshPositions.length === 0) {
-    return;
-  }
-
-  yield* put(startedLoadingMeshAction(layerName, segmentId));
-  // Remove mesh from cache.
-  yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
-  // The mesh should only be removed once after re-fetching the mesh first position.
-  let shouldBeRemoved = true;
-
-  for (const [, position] of meshPositions) {
-    // Reload the mesh at the given position if it isn't already loaded there.
-    // This is done to ensure that every voxel of the mesh is reloaded.
-    yield* call(
-      loadAdHocMesh,
-      position,
-      additionalCoordinates || undefined,
-      segmentId,
-      shouldBeRemoved,
-      layerName,
-      {
-        mappingName,
-        mappingType,
-      },
+  const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  try {
+    const meshInfo = yield* select((state) =>
+      selectMeshDataFromState(state, layerName, addCoordKey, segmentId),
     );
-    shouldBeRemoved = false;
-  }
-  // see comment in l. 292
-  const { segmentMeshController } = getSceneController();
-  if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
-    yield* put(removeMeshAction(layerName, meshInfo.segmentId));
-  }
-  yield* put(finishedLoadingMeshAction(layerName, segmentId));
+    yield* call(
+      [ErrorHandling, ErrorHandling.assert],
+      !meshInfo.isPrecomputed,
+      "_refreshMeshWithMap was called for a precomputed mesh.",
+    );
+    if (meshInfo.isPrecomputed) return;
+    const { mappingName, mappingType } = meshInfo;
+    const meshPositions = threeDMap.entries().filter(([value, _position]) => value);
+
+    if (meshPositions.length === 0) {
+      return;
+    }
+
+    yield* put(startedLoadingMeshAction(layerName, segmentId));
+    // Remove mesh from cache.
+    yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
+    // The mesh should only be removed once after re-fetching the mesh first position.
+    let shouldBeRemoved = true;
+
+    for (const [, position] of meshPositions) {
+      // Reload the mesh at the given position if it isn't already loaded there.
+      // This is done to ensure that every voxel of the mesh is reloaded.
+      yield* call(
+        loadAdHocMesh,
+        position,
+        additionalCoordinates || undefined,
+        segmentId,
+        shouldBeRemoved,
+        layerName,
+        {
+          mappingName,
+          mappingType,
+        },
+      );
+      shouldBeRemoved = false;
+    }
+    // see comment in l. 292
+    const { segmentMeshController } = getSceneController();
+    if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
+      yield* put(removeMeshAction(layerName, meshInfo.segmentId));
+    }
+    yield* put(finishedLoadingMeshAction(layerName, segmentId));
+  } catch (error) {}
 }
 
 /*

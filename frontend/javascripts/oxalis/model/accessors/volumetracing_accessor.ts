@@ -4,6 +4,7 @@ import type {
   APIAnnotationCompact,
   APIDataset,
   APISegmentationLayer,
+  AdditionalCoordinate,
   AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
@@ -34,6 +35,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import {
   getFlooredPosition,
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
 } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
@@ -663,4 +665,23 @@ export function hasAgglomerateMapping(state: OxalisState) {
   }
 
   return AGGLOMERATE_STATES.YES;
+}
+
+export function getMeshesForAdditionalCoordinates(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+) {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  if (visibleSegmentationLayer != null) {
+    const meshRecords = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
+    if (meshRecords != null && meshRecords[addCoordKey] != null) {
+      return meshRecords[addCoordKey];
+    }
+  }
+  return null;
+}
+
+export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState) {
+  return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates);
 }

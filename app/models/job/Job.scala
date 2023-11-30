@@ -228,7 +228,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =
-    if (jobCommands.isEmpty) Fox.successful()
+    if (jobCommands.isEmpty) Fox.successful(())
     else {
       val query =
         q"""

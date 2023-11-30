@@ -21,7 +21,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
-      _ <- reserveNextJobs(worker)
+      _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
       // make sure that the jobs to run have not already just been cancelled
@@ -32,7 +32,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
-  private def reserveNextJobs(worker: Worker): Fox[Unit] =
+  private def reserveNextJobs(worker: Worker, pendingIterationCount: Int): Fox[Unit] =
     for {
       unfinishedHighPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.highPriorityJobs)
       unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
@@ -45,11 +45,12 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
       mayAssignHighPriorityJob = unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
       mayAssignLowPriorityJob = unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
       currentlyAssignableJobCommands = assignableJobCommands(mayAssignHighPriorityJob, mayAssignLowPriorityJob)
-      _ <- if ((unfinishedHighPriorityCount >= worker.maxParallelHighPriorityJobs && unfinishedLowPriorityCount >= worker.maxParallelLowPriorityJobs) || (pendingLowPriorityCount == 0 && pendingHighPriorityCount == 0))
+        .intersect(worker.supportedJobCommands)
+      _ <- if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
         Fox.successful(())
       else {
         jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
-          reserveNextJobs(worker)
+          reserveNextJobs(worker, pendingIterationCount - 1)
         }
       }
     } yield ()

@@ -161,7 +161,7 @@ class JobsController @Inject()(
       } yield Ok(js)
     }
 
-  def runComputeSegmentIndexJob(organizationName: String,
+  def runComputeSegmentIndexFileJob(organizationName: String,
                                 dataSetName: String,
                                 layerName: String,
                                 mag: String,

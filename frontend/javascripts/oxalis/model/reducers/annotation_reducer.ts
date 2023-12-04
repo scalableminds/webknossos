@@ -208,12 +208,12 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_MESH_VISIBILITY": {
       const { layerName, id, visibility, additionalCoordinates } = action;
-      const addCoordString = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       return update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [addCoordString]: {
+              [additionalCoordKey]: {
                 [id]: {
                   isVisible: {
                     $set: visibility,
@@ -319,12 +319,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isPrecomputed: true,
         meshFileName,
       };
-      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
+      );
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [addCoordString]: {
+              [additionalCoordKey]: {
                 [segmentId]: {
                   $set: meshInfo,
                 },
@@ -338,12 +340,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
+      );
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [addCoordString]: {
+              [additionalCoordKey]: {
                 [segmentId]: {
                   isLoading: {
                     $set: true,
@@ -359,12 +363,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "FINISHED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
+      );
       const updatedKey = update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [addCoordString]: {
+              [additionalCoordKey]: {
                 [segmentId]: {
                   isLoading: {
                     $set: false,

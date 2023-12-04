@@ -1169,8 +1169,8 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
     getSceneController().segmentMeshController.removeMeshById(segmentId, layerName, null);
   }
 
-  for (const addCoordString of Object.keys(adhocMeshesMapByLayer)) {
-    removeMapForSegment(layerName, segmentId, addCoordString);
+  for (const additionalCoordKey of Object.keys(adhocMeshesMapByLayer)) {
+    removeMapForSegment(layerName, segmentId, additionalCoordKey);
   }
 }
 
@@ -1214,7 +1214,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
               layerName,
               segmentId,
               shouldBeVisible,
-              additionalCoordinates || undefined,
+              additionalCoordinates,
             ),
           );
           yield* call(

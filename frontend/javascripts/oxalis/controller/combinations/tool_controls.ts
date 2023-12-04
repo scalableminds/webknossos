@@ -829,6 +829,7 @@ export class AreaQuickSelectTool {
           maybeResolutionAndZoomStep.resolution,
         );
         Store.dispatch(maybePrefetchEmbeddingAction(position));
+        Store.dispatch(setQuickSelectStateAction("drawing"));
       },
       leftDownMove: (
         _delta: Point2,
@@ -836,7 +837,6 @@ export class AreaQuickSelectTool {
         id: string | null | undefined,
         evt: MouseEvent,
       ) => {
-        console.log("leftDownMove");
         if (evt.altKey) {
           MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
           return;
@@ -867,14 +867,15 @@ export class AreaQuickSelectTool {
           quickSelectAreaGeometry.resetAndHide();
           this.isDrawingBounds = false;
         };
-        const _state = Store.getState();
+        const state = Store.getState();
         if (!this.isDrawingBounds || !this.volumeLayer) {
           return;
         }
         if (
-          quickSelectAreaGeometry.vertexBuffer.getLength() <= 2
-          // || state.uiInformation.quickSelectState === "inactive"
-          // Dont know why this check is here ^
+          quickSelectAreaGeometry.vertexBuffer.getLength() <= 2 ||
+          // Guard against edge cases where the user did not trigger
+          // the leftMouseDown function to set the state to drawing.
+          state.uiInformation.quickSelectState === "inactive"
         ) {
           cleanUp();
           return;

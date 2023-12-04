@@ -117,7 +117,7 @@ async function inferFromEmbedding(
   activeViewport: OrthoView,
   voxelMap?: VoxelBuffer2D | null,
 ) {
-  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
+  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
   const ort = await import("onnxruntime-web");
@@ -134,41 +134,80 @@ async function inferFromEmbedding(
   // server, there seems to be a different linearization of the 2D image
   // data which is why the code here deals with the YZ plane as a special
   // case.
-  const onnxCoord =
-    activeViewport === "PLANE_YZ"
-      ? new Float32Array([
-          topLeft[secondDim],
-          topLeft[firstDim],
-          bottomRight[secondDim],
-          bottomRight[firstDim],
-        ])
-      : new Float32Array([
-          topLeft[firstDim],
-          topLeft[secondDim],
-          bottomRight[firstDim],
-          bottomRight[secondDim],
-        ]);
+  const maybeAdjustedFirstDim = activeViewport === "PLANE_YZ" ? secondDim : firstDim;
+  const maybeAdjustedSecondDim = activeViewport === "PLANE_YZ" ? firstDim : secondDim;
+  let onnxCoord = new Float32Array([
+    topLeft[maybeAdjustedFirstDim],
+    topLeft[maybeAdjustedSecondDim],
+    bottomRight[maybeAdjustedFirstDim],
+    bottomRight[maybeAdjustedSecondDim],
+  ]);
 
   // Fill input mask according to the voxel map.
   const onnxMaskInput = new Float32Array(256 * 256);
+  let minDist = Number.MAX_VALUE;
+  // The input mask is within the embedding box, so we need to calculate
+  // which part of it is covered by the voxel map and fill the input mask
+  // with 1s where the voxel map is to 1.
+  let foundMarkingInVoxelMap = false;
+  let minCoords = [0, 0];
   if (voxelMap) {
-    for (let i = 0; i < 256; i++) {
-      for (let j = 0; j < 256; j++) {
-        const xInVoxelMap = Math.floor((i / 256) * voxelMap.width);
-        const yInVoxelMap = Math.floor((j / 256) * voxelMap.height);
-        const value = voxelMap.map[voxelMap.linearizeIndex(xInVoxelMap, yInVoxelMap)];
-        onnxMaskInput[i * 256 + j] = value;
+    // The voxel map is in the same resolution as the embedding box.
+    // As the input mask is downsampled by a factor of 4 (256 in relation to 1024), we can only consider each fourth coordinate.
+    const firstDimOffset = Math.ceil(topLeft[maybeAdjustedFirstDim] / 4);
+    const secondDimOffset = Math.ceil(topLeft[maybeAdjustedSecondDim] / 4);
+    console.log("voxelMap.width", voxelMap.width, "voxelMap.height", voxelMap.height);
+    for (let i = 0; i < voxelMap.width; i += 4) {
+      for (let j = 0; j < voxelMap.height; j += 4) {
+        const value = voxelMap.map[voxelMap.linearizeIndex(i, j)];
+        const iInMask = Math.floor(i / 4);
+        const jInMask = Math.floor(j / 4);
+        onnxMaskInput[(firstDimOffset + iInMask) * 256 + (secondDimOffset + jInMask)] = value;
+        if (value === 1) {
+          const dist =
+            i * i +
+            j * j +
+            (voxelMap.width - i) * (voxelMap.width - i) +
+            (voxelMap.height - j) * (voxelMap.height - j);
+          if (dist < minDist) {
+            minDist = dist;
+            minCoords = [i, j];
+          }
+          foundMarkingInVoxelMap = true;
+        }
       }
     }
+    onnxCoord = new Float32Array([
+      topLeft[maybeAdjustedFirstDim] + minCoords[0],
+      topLeft[maybeAdjustedSecondDim] + minCoords[1],
+      0,
+      0,
+    ]);
   }
+  /* Mask visualization  for debugging */
+  /*const cvs = document.getElementById("mask-123") || document.createElement("canvas");
+  const ctx = cvs.getContext("2d");
+  const imgData = ctx.createImageData(256, 256);
+
+  for (let i = 0; i < 256 * 256; i++) {
+    imgData.data[i * 4 + 0] = onnxMaskInput[i] * 255;
+    imgData.data[i * 4 + 1] = 0;
+    imgData.data[i * 4 + 2] = 0;
+    imgData.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  cvs.style.width = "256px";
+  cvs.style.height = "256px";
+  cvs.id = "mask-123";
+  document.body.appendChild(cvs);*/
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
-  const onnxLabel = new Float32Array([2, 3]);
-  const onnxHasMaskInput = new Float32Array([0]);
+  const onnxLabel = foundMarkingInVoxelMap ? new Float32Array([1, -1]) : new Float32Array([2, 3]);
+  const onnxHasMaskInput = foundMarkingInVoxelMap ? new Float32Array([1]) : new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
-    point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
-    point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
+    point_coords: new ort.Tensor("float32", onnxCoord, [1, onnxCoord.length / 2, 2]),
+    point_labels: new ort.Tensor("float32", onnxLabel, [1, onnxLabel.length]),
     mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
     orig_im_size: new ort.Tensor("float32", origImSize, [2]),

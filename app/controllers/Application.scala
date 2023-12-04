@@ -8,8 +8,7 @@ import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
-import models.user.{MultiUserDAO, UserService}
-import play.api.http.HeaderNames
+import models.user.UserService
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -20,8 +19,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
-class Application @Inject()(multiUserDAO: MultiUserDAO,
-                            actorSystem: ActorSystem,
+class Application @Inject()(actorSystem: ActorSystem,
                             analyticsService: AnalyticsService,
                             userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,

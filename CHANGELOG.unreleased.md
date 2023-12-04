@@ -32,6 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Exploring HTTP uris of unknown hosts no longer causes an exception error message to be displayed. [#7422](https://github.com/scalableminds/webknossos/pull/7422)
 - Fixed the initialization of the dark theme if it was active during page load. [#7446](https://github.com/scalableminds/webknossos/pull/7446)
 - Fixed a rare bug in ad-hoc meshing for voxelytics-created segmentations with agglomerate mappings. [#7449](https://github.com/scalableminds/webknossos/pull/7449)
+- Fixed several deprecation warning for using antd's Tabs.TabPane components. [#7469]
 
 ### Removed
 

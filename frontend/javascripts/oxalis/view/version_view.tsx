@@ -1,4 +1,4 @@
-import { Button, Alert, Tabs } from "antd";
+import { Button, Alert, Tabs, TabsProps } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -9,7 +9,7 @@ import type { OxalisState, Tracing } from "oxalis/store";
 import { TracingType, TracingTypeEnum } from "types/api_flow_types";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
-const { TabPane } = Tabs;
+
 export type Versions = {
   skeleton?: number | null | undefined;
   volumes?: Record<string, number>;
@@ -52,6 +52,52 @@ class VersionView extends React.Component<Props, State> {
   };
 
   render() {
+    const tabs: TabsProps["items"] = [];
+
+    if (this.props.tracing.skeleton != null)
+      tabs.push({
+        label: "Skeleton",
+        key: "skeleton",
+        children: (
+          <VersionList
+            versionedObjectType="skeleton"
+            tracing={this.props.tracing.skeleton}
+            allowUpdate={this.state.initialAllowUpdate}
+          />
+        ),
+      });
+
+    tabs.push(
+      ...this.props.tracing.volumes.map((volumeTracing) => ({
+        label: getReadableNameByVolumeTracingId(this.props.tracing, volumeTracing.tracingId),
+        key: volumeTracing.tracingId,
+        children: (
+          <VersionList
+            versionedObjectType="volume"
+            tracing={volumeTracing}
+            allowUpdate={this.state.initialAllowUpdate}
+          />
+        ),
+      })),
+    );
+
+    tabs.push(
+      ...this.props.tracing.mappings.map((mapping) => ({
+        label: `${getReadableNameByVolumeTracingId(
+          this.props.tracing,
+          mapping.tracingId,
+        )} (Editable Mapping)`,
+        key: `${mapping.tracingId}-${mapping.mappingName}`,
+        children: (
+          <VersionList
+            versionedObjectType="mapping"
+            tracing={mapping}
+            allowUpdate={this.state.initialAllowUpdate}
+          />
+        ),
+      })),
+    );
+
     return (
       <div
         style={{
@@ -112,44 +158,8 @@ class VersionView extends React.Component<Props, State> {
             onChange={this.onChangeTab}
             activeKey={this.state.activeTracingType}
             tabBarStyle={{ marginLeft: 6 }}
-          >
-            {this.props.tracing.skeleton != null ? (
-              <TabPane tab="Skeleton" key="skeleton">
-                <VersionList
-                  versionedObjectType="skeleton"
-                  tracing={this.props.tracing.skeleton}
-                  allowUpdate={this.state.initialAllowUpdate}
-                />
-              </TabPane>
-            ) : null}
-            {this.props.tracing.volumes.map((volumeTracing) => (
-              <TabPane
-                tab={getReadableNameByVolumeTracingId(this.props.tracing, volumeTracing.tracingId)}
-                key={volumeTracing.tracingId}
-              >
-                <VersionList
-                  versionedObjectType="volume"
-                  tracing={volumeTracing}
-                  allowUpdate={this.state.initialAllowUpdate}
-                />
-              </TabPane>
-            ))}
-            {this.props.tracing.mappings.map((mapping) => (
-              <TabPane
-                tab={`${getReadableNameByVolumeTracingId(
-                  this.props.tracing,
-                  mapping.tracingId,
-                )} (Editable Mapping)`}
-                key={`${mapping.tracingId}-${mapping.mappingName}`}
-              >
-                <VersionList
-                  versionedObjectType="mapping"
-                  tracing={mapping}
-                  allowUpdate={this.state.initialAllowUpdate}
-                />
-              </TabPane>
-            ))}
-          </Tabs>
+            items={tabs}
+          />
         </div>
       </div>
     );

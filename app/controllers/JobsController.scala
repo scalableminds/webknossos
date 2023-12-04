@@ -322,6 +322,33 @@ class JobsController @Inject()(
       }
     }
 
+  def runComputeSegmentIndexFileJob(organizationName: String,
+                                    dataSetName: String,
+                                    layerName: String,
+                                    mag: String,
+                                    agglomerateView: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.couldNotRunComputeSegmentIndexFileJob.notAllowed.organization" ~> FORBIDDEN
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataset.notFound",
+          dataSetName) ~> NOT_FOUND
+        command = JobCommand.compute_segment_index_file
+        commandArgs = Json.obj(
+          "organization_name" -> organizationName,
+          "dataset_name" -> dataSetName,
+          "segmentation_layer_name" -> layerName,
+          "mag" -> mag,
+          "agglomerate_view" -> agglomerateView
+        )
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunComputeSegmentIndexFileJob"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
   def runRenderAnimationJob(organizationName: String, dataSetName: String): Action[AnimationJobOptions] =
     sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {

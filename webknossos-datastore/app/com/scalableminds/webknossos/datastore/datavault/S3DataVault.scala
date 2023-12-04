@@ -8,9 +8,11 @@ import com.amazonaws.auth.{
   BasicAWSCredentials,
   EnvironmentVariableCredentialsProvider
 }
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
+import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   LegacyDataVaultCredential,
@@ -31,8 +33,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
   }
 
-  val client: AmazonS3 =
-    S3DataVault.getAmazonS3Client(s3AccessKeyCredential)
+  private lazy val client: AmazonS3 =
+    S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri)
 
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
@@ -125,7 +127,8 @@ object S3DataVault {
 
   // https://s3.region-code.amazonaws.com/bucket-name/key-name
   private def isPathStyle(uri: URI): Boolean =
-    uri.getHost.matches("s3(.[\\w\\-_]+)?.amazonaws.com")
+    uri.getHost.matches("s3(.[\\w\\-_]+)?.amazonaws.com") ||
+      (!uri.getHost.contains("amazonaws.com") && uri.getHost.contains("."))
 
   // S3://bucket-name/key-name
   private def isShortStyle(uri: URI): Boolean =
@@ -151,12 +154,25 @@ object S3DataVault {
         new AnonymousAWSCredentialsProvider
     }
 
-  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential]): AmazonS3 =
-    AmazonS3ClientBuilder.standard
+  private def isNonAmazonHost(uri: URI): Boolean =
+    isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")
+
+  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): AmazonS3 = {
+    val basic = AmazonS3ClientBuilder.standard
       .withCredentials(getCredentialsProvider(credentialOpt))
-      .withRegion(Regions.DEFAULT_REGION)
       .withForceGlobalBucketAccessEnabled(true)
-      .build
+    if (isNonAmazonHost(uri))
+      basic
+        .withPathStyleAccessEnabled(true)
+        .withEndpointConfiguration(
+          new EndpointConfiguration(
+            s"http://${uri.getAuthority}",
+            AwsHostNameUtils.parseRegion(uri.getAuthority, "s3")
+          )
+        )
+        .build()
+    else basic.withRegion(Regions.DEFAULT_REGION).build()
+  }
 
 }
 

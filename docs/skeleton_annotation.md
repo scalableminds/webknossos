@@ -1,14 +1,14 @@
 ## Skeleton Annotations
 
-A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that spans many data slices as a graph of connected nodes.
-A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset (see image below).
+Skeleton annotations are typically used to reconstruct structures that span across multiple data slices as graphs of connected nodes.
+For example, you can analyze nerve cells by placing nodes along their pat/circuitry through the dataset (see image below).
 
-Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
-All connected nodes form a tree, i.e., an undirected graph.
+Commonly, skeleton annotations contain reconstructions of one or more structures, sometimes thousands of nodes.
+Each connected group of nodes form a tree, i.e., an undirected graph.
 
 WEBKNOSSOS skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
 
-This article outlines commonly used features and operations for viewing, editing, or creating new skeleton annotations in WEBKNOSSOS.
+This article shows you how to view, edit, or create skeleton annotations in WEBKNOSSOS
 
 ![An example of a complex WEBKNOSSOS skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
 
@@ -21,11 +21,11 @@ WEBKNOSSOS supports several modes for displaying your dataset & interacting with
 
 #### Orthogonal Mode
 
-Orthogonal mode displays a dataset with the camera oriented orthogonally to each of the three main axis x, y, z.
+Orthogonal mode shows the dataset from three orthogonal views along the x, y, and z axes.
 Additionally, a fourth viewport shows the data and skeleton from a 3D perspective.
-All camera movements happen along the respective main axis.
-This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY.
-Every single slice of the raw data can be viewed.
+You can move the camera along any of the main axes.
+This view lets you see your data in the highest quality along its main imaging axis, usually XY
+You can view your dataset slice by slice.
 
 Most skeleton annotation operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
@@ -33,19 +33,19 @@ Most skeleton annotation operations and keyboard shortcuts are tailored for the 
 
 #### Oblique Mode
 
-Oblique mode presents an arbitrarily-resliced view through the data.
-In contrast to the Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
+Oblique mode lets you slice the data at any angle.
+Unlike Orthogonal mode, you can rotate the camera and slice the data in any direction.
 
 ![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](./images/tracing_ui_obliquemode.jpeg)
 
 #### Flight Mode
 
-Flight mode also allows a resliced view through the data.
-In contrast to Oblique mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere.
+Flight mode gives you another way to slice the data.
+Unlike Oblique mode, Flight mode projects the data on a sphere around the camera.
 
 ![Annotate processes, e.g. neurites, efficiently in Flight mode](./images/tracing_ui_flightmode.jpeg)
 
-Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner.
+Spherical projection makes it easier to rotate the camera, because the pixels near the center of the screen stay in place.
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.
 
 ![Spherical projection of the Flight mode](./images/tracing_ui_flightmode_schema.jpeg)
@@ -53,13 +53,13 @@ Interactions and movements in Flight mode feel similar to First-Person-View (FPV
 
 ![Changing the radius of the spherical projection](./images/tracing_ui_flightmode_radius.gif)
 
-Flight mode is best used for annotating structures very quickly.
-Trained tracers can follow "tube"-like structures, e.g. dendrites/axons in a neuron, as though they are "flying" through them.
-Nodes are placed automatically along the flight path, creating skeletons very efficiently.
+You can annotate structures faster in Flight mode.
+Seasoned annotators can follow tube-like structures, such as dendrites or axons, as if they are flying through them, much like in racing game or flight simulator.
+Flight mode places nodes along your path automatically, which creates skeletons more efficiently.
 
 ### Tools
 
-The WEBKNOSSOS toolbar at the top of the screen contains several tools designed to work with skeletons:
+You can use these tools in the WEBKNOSSOS toolbar to work with skeletons:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
@@ -67,17 +67,17 @@ The WEBKNOSSOS toolbar at the top of the screen contains several tools designed 
 When the `Skeleton` tool is active, the following modifiers become available:
 
 - `Create new Tree`: Creates a new tree.
-- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g., for marking nuclei. Also called "Soma-clicking mode".
-- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons, can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
+- `Toggle single node tree mode`: This modifier makes the skeleton annotation tool create a new tree for each node instead of adding nodes to the current tree. You can use this mode to mark single objects or seeds, such as nuclei. This is also known as "Soma-clicking mode".
+- `Toggle merger mode`: This modifier activates the `Merger Mode` for the skeleton annotation tool. In merger mode, you can use skeletons to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
 
 ![Skeleton Tool modifiers](./images/skeleton_tool_modifiers.jpeg)
 
 ### Nodes and Trees
 
-Skeleton annotations consist of connected nodes forming a graph.
-Nodes are connected through edges and are organized in trees.
+A skeleton annotation is a graph of connected nodes.
+Edges connect the nodes and form trees.
 
-Nodes can be placed by left-clicking in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
+You can place nodes by left-clicking in Orthogonal Mode (with the Skeleton tool selected) or by moving in Flight or Oblique Mode.
 All (global) operations are executed on the currently active node, e.g., adding a comment or node deletion.
 The active node is always highlighted with a circle around it.
 Most keyboard shortcuts take the active node into context.
@@ -217,7 +217,7 @@ Importing a skeleton annotation can be achieved using one of two ways:
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.jpeg)
 
-If you are looking to import/export annotations through Python code, check out our [WEBKNOSSOS Python library](./tooling.md).
+If you are looking to import/export annotations through Python code, check out our [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py).
 
 ### Merging Skeleton Annotations
 

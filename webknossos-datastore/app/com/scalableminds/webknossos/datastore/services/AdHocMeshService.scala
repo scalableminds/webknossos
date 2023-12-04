@@ -193,7 +193,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data).toFox
+      agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)

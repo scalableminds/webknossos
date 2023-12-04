@@ -161,11 +161,8 @@ class JobsController @Inject()(
       } yield Ok(js)
     }
 
-  def runComputeSegmentIndexFileJob(organizationName: String,
-                                dataSetName: String,
-                                layerName: String,
-                                mag: String,
-                                agglomerateView: Option[String]): Action[AnyContent] =
+  def runComputeSegmentIndexFileJob(organizationName: String, dataSetName: String, layerName: String,
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
@@ -180,8 +177,6 @@ class JobsController @Inject()(
           "organization_name" -> organizationName,
           "dataset_name" -> dataSetName,
           "segmentation_layer_name" -> layerName,
-          "mag" -> mag,
-          "agglomerate_view" -> agglomerateView
         )
         job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
         js <- jobService.publicWrites(job)

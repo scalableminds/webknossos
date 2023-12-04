@@ -179,7 +179,7 @@ function CreateAnimationModal(props: Props) {
 
     if (visibleSegmentationLayer) {
       const availableMeshes = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-      if(availableMeshes == null){
+      if (availableMeshes == null) {
         throw new Error("There is no mesh data in localSegmentationData.");
       }
       meshSegmentIds = Object.values(availableMeshes as Record<number, MeshInformation>)

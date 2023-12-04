@@ -167,10 +167,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
-  
-  const meshesForCurrentAdditionalCoordinates = 
-    visibleSegmentationLayer != null ? 
-    getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name) : undefined;
+  const meshesForCurrentAdditionalCoordinates =
+    visibleSegmentationLayer != null
+      ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
+      : undefined;
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
@@ -251,7 +251,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
       getAdditionalCoordinatesAsString(additionalCoordinates)
     ) {
-      dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
+      dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
     }
   },
 

@@ -60,7 +60,7 @@ export default class SegmentMeshController {
       null,
       NO_LOD_MESH_INDEX,
       layerName,
-      additionalCoordinates || null,
+      additionalCoordinates,
     );
   }
 
@@ -102,7 +102,7 @@ export default class SegmentMeshController {
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
-    additionalCoordinates: AdditionalCoordinate[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
     const newGroup = new THREE.Group();

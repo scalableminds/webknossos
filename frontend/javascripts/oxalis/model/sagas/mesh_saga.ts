@@ -351,7 +351,8 @@ function* loadFullAdHocMesh(
   const usePositionsFromSegmentStats =
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.mappingIsEditable &&
-    visibleSegmentationLayer?.tracingId != null;
+    visibleSegmentationLayer?.tracingId != null &&
+    additionalCoordinates == null; // TODO remove in https://github.com/scalableminds/webknossos/pull/7411
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,
@@ -364,6 +365,7 @@ function* loadFullAdHocMesh(
     : [clippedPosition];
 
   if (positionsToRequest.length === 0) {
+    //TODO may be null
     const { segmentMeshController } = getSceneController();
     segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
   }
@@ -1103,21 +1105,25 @@ function* downloadMeshCellsAsZIP(
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
-      const geometry = segmentMeshController.getMeshGeometryInBestLOD(
-        element.segmentId,
-        element.layerName,
-        additionalCoordinates,
-      );
+      if (
+        segmentMeshController.hasMesh(element.segmentId, element.layerName, additionalCoordinates)
+      ) {
+        const geometry = segmentMeshController.getMeshGeometryInBestLOD(
+          element.segmentId,
+          element.layerName,
+          additionalCoordinates,
+        );
 
-      if (geometry == null) {
-        const errorMessage = messages["tracing.not_mesh_available_to_download"];
-        Toast.error(errorMessage, {
-          sticky: false,
-        });
-        return;
+        if (geometry == null) {
+          const errorMessage = messages["tracing.not_mesh_available_to_download"];
+          Toast.error(errorMessage, {
+            sticky: false,
+          });
+          return;
+        }
+        const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
+        return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
       }
-      const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
-      return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(addFileToZipWriterPromises);
     const result = yield* call([zipWriter, zipWriter.close]);
@@ -1175,6 +1181,9 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
 }
 
 export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+  // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
+  // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
+  // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
   yield* take("WK_READY");
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);

@@ -232,12 +232,12 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (state.localSegmentationData[layerName].meshes == null) {
         throw Error("No mesh data found in state.localSegmentationData.");
       }
-      for (const additionalCoordString of Object.keys(
+      for (const additionalCoordKey of Object.keys(
         state.localSegmentationData[layerName].meshes!,
       )) {
         const { [segmentId]: _, ...remainingMeshes } = state.localSegmentationData[layerName]
-          .meshes![additionalCoordString] as Record<number, MeshInformation>;
-        newMeshes[additionalCoordString] = remainingMeshes;
+          .meshes![additionalCoordKey] as Record<number, MeshInformation>;
+        newMeshes[additionalCoordKey] = remainingMeshes;
       }
       return update(state, {
         localSegmentationData: {
@@ -270,7 +270,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         mappingName,
         mappingType,
       };
-      const addCoordString = getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates);
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
+      );
 
       let stateWithCurrentAddCoords = state;
 
@@ -278,13 +280,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (
         state.localSegmentationData[layerName] == null ||
         state.localSegmentationData[layerName].meshes == null ||
-        state.localSegmentationData[layerName].meshes![addCoordString] == null
+        state.localSegmentationData[layerName].meshes![additionalCoordKey] == null
       ) {
         stateWithCurrentAddCoords = update(state, {
           localSegmentationData: {
             [layerName]: {
               meshes: {
-                [addCoordString]: { $set: [] },
+                [additionalCoordKey]: { $set: [] },
               },
             },
           },
@@ -295,7 +297,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [addCoordString]: {
+              [additionalCoordKey]: {
                 [segmentId]: {
                   $set: meshInfo,
                 },

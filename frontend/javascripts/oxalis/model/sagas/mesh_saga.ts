@@ -124,12 +124,12 @@ function getOrAddMapForSegment(
   segmentId: number,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
-  let additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
+  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-  const keys = [additionalCoordinatesString, layerName];
+  const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
   _.set(adhocMeshesMapByLayer, keys, _.get(adhocMeshesMapByLayer, keys, new Map()));
-  const meshesMap = adhocMeshesMapByLayer[additionalCoordinatesString][layerName];
+  const meshesMap = adhocMeshesMapByLayer[additionalCoordKey][layerName];
   const maybeMap = meshesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -144,16 +144,16 @@ function getOrAddMapForSegment(
 function removeMapForSegment(
   layerName: string,
   segmentId: number,
-  additionalCoordinateString: string,
+  additionalCoordinateKey: string,
 ): void {
   if (
-    adhocMeshesMapByLayer[additionalCoordinateString] == null ||
-    adhocMeshesMapByLayer[additionalCoordinateString][layerName] == null
+    adhocMeshesMapByLayer[additionalCoordinateKey] == null ||
+    adhocMeshesMapByLayer[additionalCoordinateKey][layerName] == null
   ) {
     return;
   }
 
-  adhocMeshesMapByLayer[additionalCoordinateString][layerName].delete(segmentId);
+  adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -289,12 +289,19 @@ function* loadAdHocMesh(
         action.layerName === layer.name,
     ),
   });
+  removeMeshWithoutVoxelsFromStore(segmentId, layer.name, seedAdditionalCoordinates);
+}
 
+function removeMeshWithoutVoxelsFromStore(
+  segmentId: number,
+  layerName: string,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+) {
   // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
   // remove it from the store's state aswell.
   const { segmentMeshController } = getSceneController();
-  if (!segmentMeshController.hasMesh(segmentId, layer.name, seedAdditionalCoordinates)) {
-    yield* put(removeMeshAction(layer.name, segmentId));
+  if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
+    Store.dispatch(removeMeshAction(layerName, segmentId));
   }
 }
 
@@ -356,6 +363,10 @@ function* loadFullAdHocMesh(
       )
     : [clippedPosition];
 
+  if (positionsToRequest.length === 0) {
+    const { segmentMeshController } = getSceneController();
+    segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
+  }
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
     if (currentPosition == null) {
@@ -525,17 +536,17 @@ function* refreshMeshes(): Saga<void> {
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
 
-  const additionalCoordinatesObject = yield* select((state) => state.flycam.additionalCoordinates);
-  const additionalCoordinates = getAdditionalCoordinatesAsString(additionalCoordinatesObject);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
   if (!segmentationLayer) {
     return;
   }
 
-  adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name] =
-    adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name] || new Map();
-  const meshesMapForLayer = adhocMeshesMapByLayer[additionalCoordinates][segmentationLayer.name];
+  adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name] =
+    adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name] || new Map();
+  const meshesMapForLayer = adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name];
 
   for (const [segmentId, threeDMap] of Array.from(meshesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(segmentId)) {
@@ -547,14 +558,14 @@ function* refreshMeshes(): Saga<void> {
       segmentId,
       threeDMap,
       segmentationLayer.name,
-      additionalCoordinatesObject,
+      additionalCoordinates,
     );
   }
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  let addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const { segmentId, layerName } = action;
 
@@ -578,9 +589,11 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       ),
     );
   } else {
-    if (adhocMeshesMapByLayer[addCoordKey] == null) return;
-    const threeDMap = adhocMeshesMapByLayer[addCoordKey][action.layerName].get(segmentId);
-    if (threeDMap == null) return;
+    if (adhocMeshesMapByLayer[additionalCoordKey] == null) return;
+    const threeDMap = adhocMeshesMapByLayer[additionalCoordKey][action.layerName].get(segmentId);
+    if (threeDMap == null) {
+      return;
+    }
     yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
   }
 }
@@ -610,7 +623,7 @@ function* _refreshMeshWithMap(
     return;
   }
 
-  yield* put(startedLoadingMeshAction(layerName, segmentId));
+  //yield* put(startedLoadingMeshAction(layerName, segmentId)); TODO can i leave this out?
   // Remove mesh from cache.
   yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
   // The mesh should only be removed once after re-fetching the mesh first position.
@@ -633,12 +646,8 @@ function* _refreshMeshWithMap(
     );
     shouldBeRemoved = false;
   }
-  // see comment in l. 292
-  const { segmentMeshController } = getSceneController();
-  if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
-    yield* put(removeMeshAction(layerName, meshInfo.segmentId));
-  }
-  yield* put(finishedLoadingMeshAction(layerName, segmentId));
+  //yield* put(finishedLoadingMeshAction(layerName, segmentId)); TODO can I leave this out?
+  removeMeshWithoutVoxelsFromStore(segmentId, layerName, additionalCoordinates);
 }
 
 /*
@@ -1169,54 +1178,50 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
   yield* take("WK_READY");
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const { segmentMeshController } = yield* call(getSceneController);
 
   while (true) {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
     //satisfy TS
-    if (action.type === "SET_ADDITIONAL_COORDINATES") {
-      const { segmentMeshController } = yield* call(getSceneController);
-      const meshRecords = yield* call({
-        context: segmentMeshController,
-        fn: () => segmentMeshController.meshesGroupsPerSegmentationId,
-      });
+    if (action.type !== "SET_ADDITIONAL_COORDINATES") {
+      throw new Error("Unexpected action type");
+    }
+    const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
 
-      if (action.values == null || action.values.length === 0) break;
-      const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
+    if (action.values == null || action.values.length === 0) break;
+    const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
 
-      for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
-        const currentAdditionalCoordinatesAsString =
-          getAdditionalCoordinatesAsString(additionalCoordinates);
-        const shouldBeVisible = currentAdditionalCoordinatesAsString === newAdditionalCoordinates;
-        const recordsOfLayers = meshRecords[currentAdditionalCoordinatesAsString];
-        if (recordsOfLayers != null) {
-          for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
-            const segmentIds = Object.keys(recordsForOneLayer);
-            for (const segmentIdAsString of segmentIds) {
-              const segmentId = parseInt(segmentIdAsString);
-              yield* put(
-                updateMeshVisibilityAction(
-                  layerName,
-                  segmentId,
-                  shouldBeVisible,
-                  additionalCoordinates || undefined,
-                ),
-              );
-              yield* call(
-                {
-                  context: segmentMeshController,
-                  fn: segmentMeshController.setMeshVisibility,
-                },
-                segmentId,
-                shouldBeVisible,
-                layerName,
-                additionalCoordinates,
-              );
-            }
-          }
+    for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
+      const currentAdditionalCoordinatesAsString =
+        getAdditionalCoordinatesAsString(additionalCoordinates);
+      const shouldBeVisible = currentAdditionalCoordinatesAsString === newAdditionalCoordinates;
+      const recordsOfLayers = meshRecords[currentAdditionalCoordinatesAsString] || {};
+      for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
+        const segmentIds = Object.keys(recordsForOneLayer);
+        for (const segmentIdAsString of segmentIds) {
+          const segmentId = parseInt(segmentIdAsString);
+          yield* put(
+            updateMeshVisibilityAction(
+              layerName,
+              segmentId,
+              shouldBeVisible,
+              additionalCoordinates || undefined,
+            ),
+          );
+          yield* call(
+            {
+              context: segmentMeshController,
+              fn: segmentMeshController.setMeshVisibility,
+            },
+            segmentId,
+            shouldBeVisible,
+            layerName,
+            additionalCoordinates,
+          );
         }
       }
-      previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
     }
+    previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   }
 }
 

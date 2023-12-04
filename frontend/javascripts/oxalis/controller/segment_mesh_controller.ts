@@ -134,7 +134,7 @@ export default class SegmentMeshController {
   removeMeshById(
     segmentationId: number,
     layerName: string,
-    additionalCoordinates: AdditionalCoordinate[] | null,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
     // either remove a mesh for specific additional coordinates, or remove all meshes for a segment per default by passing null as additionalCoordinates.
     let additionalCoordinatesToRemoveMeshes;

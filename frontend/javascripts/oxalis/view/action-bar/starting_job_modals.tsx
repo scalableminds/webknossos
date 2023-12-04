@@ -68,6 +68,7 @@ const jobNameToImagePath: Record<
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
 };
+const jobTypeWithConfigurableLayerName = ["materialize_volume_annotation", "neuron_inferral"];
 type Props = {
   handleClose: () => void;
 };
@@ -566,8 +567,7 @@ function StartJobForm(props: StartJobFormProps) {
   initialOutputSegmentationLayerName = `${
     initialOutputSegmentationLayerName || "segmentation"
   }_corrected`;
-  // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
-  const hasOutputSegmentationLayer = jobName === "materialize_volume_annotation";
+  const hasOutputSegmentationLayer = jobTypeWithConfigurableLayerName.indexOf(jobName) > -1;
   const notAllowedOutputLayerNames = allLayers
     .filter((layer) => {
       // Existing layer names may not be used for the output layer. The only exception

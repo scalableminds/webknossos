@@ -63,11 +63,11 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, "key")
     } yield parsed
 
-  def findOneByDataStore(dataStoreName: String): Fox[Worker] =
+  def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        q"select $columns from $existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
-      parsed <- parseFirst(r, "dataStoreName")
+        q"SELECT $columns FROM $existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
+      parsed <- parseAll(r)
     } yield parsed
 
   def updateHeartBeat(_id: ObjectId): Unit = {

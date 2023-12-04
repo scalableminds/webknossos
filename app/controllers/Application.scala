@@ -9,6 +9,7 @@ import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, UserService}
+import play.api.http.HeaderNames
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -69,7 +70,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
     addNoCacheHeaderFallback(
-      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())))
+      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
   }
 
   @ApiOperation(value = "Health endpoint")

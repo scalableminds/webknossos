@@ -109,11 +109,6 @@ class JobsController @Inject()(
     } yield Ok(js)
   }
 
-  def isWorkerAvailableFor(command: String, dataStoreName: String) = sil.UserAwareAction.async { implicit request =>
-    // TODO
-    Fox.successful(Ok)
-  }
-
   // Note that the dataset has to be registered by reserveUpload via the datastore first.
   def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>

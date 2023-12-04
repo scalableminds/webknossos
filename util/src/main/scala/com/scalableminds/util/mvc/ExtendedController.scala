@@ -13,6 +13,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.mvc._
 import play.twirl.api._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import play.filters.csp.CSPConfig
 
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
@@ -79,6 +80,20 @@ trait RemoteOriginHelpers {
 
   def addRemoteOriginHeaders(result: Result): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
+}
+
+trait CspHeaders extends HeaderNames {
+  def cspConfig: CSPConfig
+
+  private lazy val contentSecurityPolicyDirectivesString =
+    cspConfig.directives.map(d => s"${d.name} ${d.value}").mkString("; ")
+
+  def addCspHeader(result: Result): Result =
+    result.withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
+
+  def addCspHeader(action: Action[AnyContent])(implicit request: Request[AnyContent],
+                                               ec: ExecutionContext): Future[Result] =
+    action.apply(request).map(addCspHeader)
 }
 
 trait ResultImplicits extends BoxToResultHelpers with I18nSupport {

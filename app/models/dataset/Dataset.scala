@@ -264,8 +264,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
               d.tags,
-              STRING_AGG(cl.name :: TEXT, ',') AS colorLayerNames,
-              STRING_AGG(sl.name :: TEXT, ',') AS segmentationLayerNames
+              STRING_AGG(cl.name :: TEXT, ',' ORDER BY cl.name) AS colorLayerNames,
+              STRING_AGG(sl.name :: TEXT, ',' ORDER BY sl.name) AS segmentationLayerNames
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o

@@ -47,9 +47,7 @@ class PullQueue {
 
   pull(): void {
     // Start to download some buckets
-    let iterationCounter = 0;
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
-      iterationCounter++;
       const batch = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {

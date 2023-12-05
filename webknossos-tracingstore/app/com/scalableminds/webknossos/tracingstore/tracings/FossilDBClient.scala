@@ -85,11 +85,11 @@ class FossilDBClient(collection: String,
             new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
           case e: Exception =>
             val messageWithCauses = new StringBuilder
-            messageWithCauses.append(e.getMessage)
+            messageWithCauses.append(e.toString)
             var cause: Throwable = e.getCause
             while (cause != null) {
               messageWithCauses.append(" <- ")
-              messageWithCauses.append(cause.getMessage)
+              messageWithCauses.append(cause.toString)
               cause = cause.getCause
             }
             new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)

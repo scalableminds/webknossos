@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import net.liftweb.common.Box
 
 import scala.collection.mutable.ArrayBuffer
-import scala.tools.nsc.classpath.FileUtils
 
 case class DataSourceImportReport[A](ctx: A, messages: ArrayBuffer[(String, String)] = ArrayBuffer.empty) {
 

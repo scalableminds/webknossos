@@ -278,7 +278,7 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
-    let firstLayerName = ""
+    let firstLayerName = "";
     if (this.data.colorLayerNames.length > 0) {
       firstLayerName = this.data.colorLayerNames[0];
     } else if (this.data.segmentationLayerNames.length > 0) {
@@ -312,9 +312,7 @@ class DatasetRenderer {
         {this.datasetTable.props.context.globalSearchQuery != null ? (
           <>
             <br />
-            <BreadcrumbsTag
-              parts={this.datasetTable.props.context.getBreadcrumbs(this.data)}
-            />
+            <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
           </>
         ) : null}
       </>

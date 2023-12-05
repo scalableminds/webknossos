@@ -311,7 +311,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             status = row._10,
             tags = parseArrayLiteral(row._11),
             isUnreported = row._10 == unreportedStatus,
-            colorLayerNames = Option(row._12).map(str => str.split(",")).getOrElse(Array[String]()).toList, // TODO extract into convenience method. handle {}
+            colorLayerNames = Option(row._12).map(str => str.split(",")).getOrElse(Array[String]()).toList, // TODO extract into convenience method. handle escaped?
             segmentationLayerNames = Option(row._13).map(str => str.split(",")).getOrElse(Array[String]()).toList // TODO extract into convenience method
         ))
 

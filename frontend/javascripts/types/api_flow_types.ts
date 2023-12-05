@@ -199,7 +199,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "tags"
   | "isUnreported"
 >;
-export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;

@@ -283,29 +283,32 @@ class DatasetRenderer {
         <Link
           to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
           title="View Dataset"
-          >
+        >
           <img
-          src={`/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/color/thumbnail?w=200&h=200`}
-          className="datasetTableThumbnail"
-        />
+            src={`/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/color/thumbnail?w=200&h=200`}
+            className="dataset-table-thumbnail"
+            alt=""
+          />
         </Link>
         <div style={{ display: "inline-block", verticalAlign: "middle" }}>
-        <Link
-          to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
-          title="View Dataset"
-          className="incognito-link"
-        >
-          {this.data.name}
-        </Link>
-        <br />
+          <Link
+            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            title="View Dataset"
+            className="incognito-link"
+          >
+            {this.data.name}
+          </Link>
+          <br />
 
-        {this.renderTags()}
+          {this.renderTags()}
         </div>
 
         {this.datasetTable.props.context.globalSearchQuery != null ? (
           <>
-          <br />
-          <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} style={{marginTop: "10px", display: "block"}}/>
+            <br />
+            <BreadcrumbsTag
+              parts={this.datasetTable.props.context.getBreadcrumbs(this.data)}
+            />
           </>
         ) : null}
       </>
@@ -899,7 +902,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag style={{marginTop: "10px"}}>
+      <Tag style={{ marginTop: "10px" }}>
         <FolderOpenOutlined />
         {formatPath(parts)}
       </Tag>

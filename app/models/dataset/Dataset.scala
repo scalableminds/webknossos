@@ -76,7 +76,8 @@ case class DatasetCompactInfo(
     lastUsedByUser: Instant,
     status: String,
     tags: List[String],
-    isUnreported: Boolean
+    isUnreported: Boolean,
+    layerNames: List[String]
 )
 
 object DatasetCompactInfo {
@@ -261,7 +262,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ) AS isEditable,
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
-              d.tags
+              d.tags,
+              STRING_AGG(l.name :: TEXT, ',') AS layerNames
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -270,9 +272,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ON u._id = $requestingUserIdOpt
             LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
+            LEFT JOIN webknossos.dataSet_layers l
+              ON d._id = l._dataset
+            GROUP BY d._id, d.name, o.name, d._folder, d.isUsable, d.displayName, d.created, d.status, d.tags, d._organization, u._id, u.isAdmin, u._organization, u.isdatasetmanager, lastusedtimes.lastusedtime
             """
       rows <- run(
-        query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
+        query
+          .as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String, String)])
     } yield
       rows.toList.map(
         row =>
@@ -289,6 +295,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             status = row._10,
             tags = parseArrayLiteral(row._11),
             isUnreported = row._10 == unreportedStatus,
+            layerNames = row._11
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],

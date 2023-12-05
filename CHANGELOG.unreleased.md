@@ -11,10 +11,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.12.0...HEAD)
 
 ### Added
+- Added support for S3-compliant object storage services (e.g. MinIO) as a storage backend for remote datasets. [#7453](https://github.com/scalableminds/webknossos/pull/7453)
+- Added support for blosc compressed N5 datasets. [#7465](https://github.com/scalableminds/webknossos/pull/7465)
+- Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 
 ### Changed
 
 ### Fixed
+- Fixed several deprecation warning for using antd's Tabs.TabPane components. [#7469]
 
 ### Removed
 

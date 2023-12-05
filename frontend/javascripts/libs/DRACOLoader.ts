@@ -237,6 +237,7 @@ class DRACOLoader extends Loader {
   _getWorker(taskID, taskCost) {
     return this._initDecoder().then(() => {
       if (this.workerPool.length < this.workerLimit) {
+        // See https://webpack.js.org/guides/web-workers/
         const worker = new Worker(new URL("./DRACOWorker.worker.js", import.meta.url));
 
         worker._callbacks = {};

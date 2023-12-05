@@ -186,7 +186,7 @@ export type MaintenanceInfo = {
 
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
-export type APIDatasetCompactWithoutStatus = Pick<
+export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   APIMaybeUnimportedDataset,
   | "owningOrganization"
   | "name"
@@ -202,6 +202,8 @@ export type APIDatasetCompactWithoutStatus = Pick<
 export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
+  colorLayerNames: Array<string>;
+  segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
@@ -217,6 +219,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
+    colorLayerNames: [], // TODO
+    segmentationLayerNames: [],
   };
 }
 

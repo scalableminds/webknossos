@@ -19,7 +19,8 @@
         "noImplicitBoolean": "off",
         "useTemplate": "off",
         "useSingleVarDeclarator": "off",
-        "noShoutyConstants": "off"
+        "noShoutyConstants": "off",
+        "noInferrableTypes": "off"
       },
       "complexity": { "useSimplifiedLogicExpression": "off" },
       "a11y": {

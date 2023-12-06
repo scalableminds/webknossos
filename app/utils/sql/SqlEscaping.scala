@@ -25,26 +25,25 @@ trait SqlEscaping {
     }
   }
 
-  protected def enumArrayLiteral(elements: List[Enumeration#Value]): String = {
-    val commaSeparated = elements.map(e => s""""$e"""").mkString(",")
-    s"'{$commaSeparated}'"
-  }
-
-  protected def parseArrayLiteral(literal: String): List[String] = {
-    val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty)
-      List.empty
+  protected def parseArrayLiteral(literal: String): List[String] =
+    if (literal == null) List.empty
     else {
-      val split = trimmed.split(",", -1).toList.map(unescapeInArrayLiteral)
-      split.map { item =>
-        if (item.startsWith("\"") && item.endsWith("\"")) {
-          item.drop(1).dropRight(1)
-        } else item
+      val trimmed = literal.drop(1).dropRight(1)
+      if (trimmed.isEmpty)
+        List.empty
+      else {
+        // split at commas unless they are surrounded by unescaped double quotes
+        val split =
+          trimmed.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1).toList.map(unescapeInArrayLiteral)
+        split.map { item =>
+          if (item.startsWith("\"") && item.endsWith("\"")) {
+            item.drop(1).dropRight(1)
+          } else item
+        }
       }
     }
-  }
 
-  protected def unescapeInArrayLiteral(aString: String): String =
+  private def unescapeInArrayLiteral(aString: String): String =
     aString.replaceAll("""\\"""", """"""").replaceAll("""\\,""", ",")
 
 }

@@ -8,15 +8,9 @@ import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, S
 import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
-case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long])
-object SegmentStatisticsParameters {
-  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
-}
 
 class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTracingService,
                                                volumeSegmentIndexService: VolumeSegmentIndexService,

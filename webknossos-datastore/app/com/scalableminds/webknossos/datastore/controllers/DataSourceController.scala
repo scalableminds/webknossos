@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.helpers.SegmentStatisticsParameters
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
@@ -661,12 +662,18 @@ Expects:
     }
 
   def getSegmentVolume(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String) =
-    Action.async { implicit request =>
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           _ <- Fox.successful(())
-        } yield Ok("Not implemented yet")
+          _ <- Fox.box2Fox(segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName)) ?~> "segmentIndexFile.notFound" //TODO: Dont use head, get all volumes
+          volume <- segmentIndexFileService.getSegmentVolume(organizationName,
+                                                             dataSetName,
+                                                             dataLayerName,
+                                                             request.body.segmentIds.head,
+                                                             request.body.mag)
+        } yield Ok(volume.toString)
       }
     }
 
@@ -674,7 +681,7 @@ Expects:
                             organizationName: String,
                             dataSetName: String,
                             dataLayerName: String) =
-    Action.async { implicit request =>
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {

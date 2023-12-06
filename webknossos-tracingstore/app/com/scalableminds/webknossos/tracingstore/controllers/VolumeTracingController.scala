@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebknossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -22,7 +22,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
-  SegmentStatisticsParameters,
   UpdateMappingNameAction,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,

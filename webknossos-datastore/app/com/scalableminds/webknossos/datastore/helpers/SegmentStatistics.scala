@@ -5,16 +5,22 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.UnsignedInteger
+import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
+
+case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long])
+object SegmentStatisticsParameters {
+  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
+}
 
 trait SegmentStatistics extends ProtoGeometryImplicits {
 
   def calculateSegmentVolume(segmentId: Long,
                              mag: Vec3Int,
-                             getTypedDataForSegmentIndex: (Long, Vec3Int) => Fox[Array[UnsignedInteger]]): Fox[Long] =
+                             getTypedDataForSegment: (Long, Vec3Int) => Fox[Array[UnsignedInteger]]): Fox[Long] =
     for {
-      dataTyped: Array[UnsignedInteger] <- getTypedDataForSegmentIndex(segmentId, mag)
+      dataTyped: Array[UnsignedInteger] <- getTypedDataForSegment(segmentId, mag)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
 

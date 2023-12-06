@@ -44,7 +44,7 @@ export default class SegmentMeshController {
     vertices: Float32Array,
     segmentationId: number,
     layerName: string,
-    additionalCoordinates?: AdditionalCoordinate[],
+    additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
   ): void {
     if (vertices.length === 0) return;
     let bufferGeometry = new THREE.BufferGeometry();

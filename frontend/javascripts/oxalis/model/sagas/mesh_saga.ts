@@ -365,9 +365,10 @@ function* loadFullAdHocMesh(
     : [clippedPosition];
 
   if (positionsToRequest.length === 0) {
-    //TODO may be null
-    const { segmentMeshController } = getSceneController();
-    segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
+    //if no positions are requested, remove the mesh,
+    //so that the old one isn't displayed anymore
+    console.log("371");
+    yield* put(removeMeshAction(layer.name, segmentId));
   }
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
@@ -508,7 +509,7 @@ function* maybeLoadMeshChunk(
         vertices,
         segmentId,
         layer.name,
-        additionalCoordinates || undefined,
+        additionalCoordinates,
       );
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
@@ -1155,23 +1156,31 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  // The dispatched action will make sure that the mesh entry is removed from the
-  // store **and** from the scene. Otherwise, the store will still contain a reference
-  // to the mesh even though it's not in the scene, anymore.
-  yield* put(removeMeshAction(action.layerName, action.segmentId));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const { layerName, segmentId } = action;
+  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
+    // The dispatched action will make sure that the mesh entry is removed from the
+    // store **and** from the scene. Otherwise, the store will still contain a reference
+    // to the mesh even though it's not in the scene, anymore.
+    yield* put(removeMeshAction(action.layerName, action.segmentId));
+  }
 }
 
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const { layerName } = action;
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().segmentMeshController.removeMeshById(segmentId, layerName, null);
+    getSceneController().segmentMeshController.removeMeshById(
+      segmentId,
+      layerName,
+      additionalCoordinates,
+    );
   }
-
-  for (const additionalCoordKey of Object.keys(adhocMeshesMapByLayer)) {
-    removeMapForSegment(layerName, segmentId, additionalCoordKey);
-  }
+  removeMapForSegment(layerName, segmentId, additionalCoordKey);
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
@@ -1198,13 +1207,12 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
     const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
 
     if (action.values == null || action.values.length === 0) break;
-    const newAdditionalCoordinates = getAdditionalCoordinatesAsString(action.values);
+    const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);
 
     for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
-      const currentAdditionalCoordinatesAsString =
-        getAdditionalCoordinatesAsString(additionalCoordinates);
-      const shouldBeVisible = currentAdditionalCoordinatesAsString === newAdditionalCoordinates;
-      const recordsOfLayers = meshRecords[currentAdditionalCoordinatesAsString] || {};
+      const currentAdditionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const shouldBeVisible = currentAdditionalCoordKey === newAdditionalCoordKey;
+      const recordsOfLayers = meshRecords[currentAdditionalCoordKey] || {};
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {

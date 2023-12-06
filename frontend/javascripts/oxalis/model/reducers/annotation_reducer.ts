@@ -229,21 +229,24 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
       const newMeshes: Record<string, Record<number, MeshInformation>> = {};
-      if (state.localSegmentationData[layerName].meshes == null) {
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
+      );
+      if (
+        state.localSegmentationData[layerName].meshes == null ||
+        state.localSegmentationData[layerName].meshes![additionalCoordKey] == null
+      ) {
         throw Error("No mesh data found in state.localSegmentationData.");
       }
-      for (const additionalCoordKey of Object.keys(
-        state.localSegmentationData[layerName].meshes!,
-      )) {
-        const { [segmentId]: _, ...remainingMeshes } = state.localSegmentationData[layerName]
-          .meshes![additionalCoordKey] as Record<number, MeshInformation>;
-        newMeshes[additionalCoordKey] = remainingMeshes;
-      }
+      const { [segmentId]: _, ...remainingMeshes } = state.localSegmentationData[layerName].meshes![
+        additionalCoordKey
+      ] as Record<number, MeshInformation>;
+      newMeshes[additionalCoordKey] = remainingMeshes;
       return update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              $set: newMeshes,
+              $merge: newMeshes,
             },
           },
         },

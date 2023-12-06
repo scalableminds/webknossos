@@ -56,8 +56,8 @@ class FossilDBClient(collection: String,
 
   def checkHealth: Fox[Unit] = {
     val resultFox = for {
-      reply: HealthCheckResponse <- Grpc.guavaFuture2ScalaFuture(
-        healthStub.check(HealthCheckRequest.getDefaultInstance))
+      reply: HealthCheckResponse <- wrapException(
+        Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
       replyString = reply.getStatus.toString
       _ <- bool2Fox(replyString == "SERVING") ?~> replyString
       _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
@@ -84,7 +84,15 @@ class FossilDBClient(collection: String,
           case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
             new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
           case e: Exception =>
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${e.getMessage}", Full(e), Empty)
+            val messageWithCauses = new StringBuilder
+            messageWithCauses.append(e.toString)
+            var cause: Throwable = e.getCause
+            while (cause != null) {
+              messageWithCauses.append(" <- ")
+              messageWithCauses.append(cause.toString)
+              cause = cause.getCause
+            }
+            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
         }
         Future.successful(box)
     }

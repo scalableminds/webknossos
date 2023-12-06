@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
   BoolCompressionSetting,
   CompressionSetting,
   Compressor,
@@ -25,7 +26,8 @@ object N5CompressorFactory {
       case "zlib" => new ZlibCompressor(properties)
       case "gzip" if properties.getOrElse("useZlib", BoolCompressionSetting(false)) == BoolCompressionSetting(true) =>
         new ZlibCompressor(properties)
-      case "gzip" => new GzipCompressor(properties)
-      case _      => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
+      case "gzip"  => new GzipCompressor(properties)
+      case "blosc" => new BloscCompressor(properties)
+      case _       => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
     }
 }

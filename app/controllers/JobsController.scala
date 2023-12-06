@@ -161,6 +161,28 @@ class JobsController @Inject()(
       } yield Ok(js)
     }
 
+  def runComputeSegmentIndexFileJob(organizationName: String, dataSetName: String, layerName: String,
+  ): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.segmentIndexFile.notAllowed.organization" ~> FORBIDDEN
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataset.notFound",
+          dataSetName) ~> NOT_FOUND
+        command = JobCommand.compute_segment_index_file
+        commandArgs = Json.obj(
+          "organization_name" -> organizationName,
+          "dataset_name" -> dataSetName,
+          "segmentation_layer_name" -> layerName,
+        )
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
   def runInferNucleiJob(organizationName: String,
                         dataSetName: String,
                         layerName: String,

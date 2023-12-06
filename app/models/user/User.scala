@@ -219,21 +219,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         $accessQuery
        """
 
-  def findAllWithFilters(isEditable: Option[Boolean],
-                         isTeamManagerOrAdmin: Option[Boolean],
-                         isAdmin: Option[Boolean],
-                         requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[User]] =
-    for {
-
-      selectionPredicates <- buildSelectionPredicates(isEditable,
-                                                      isTeamManagerOrAdmin,
-                                                      isAdmin,
-                                                      requestingUser,
-                                                      SqlToken.raw(""))
-      r <- run(q"select $columns from $existingCollectionName where $selectionPredicates".as[UsersRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   implicit def GetResultUserCompactInfo(implicit e0: GetResult[String],
                                         e1: GetResult[java.sql.Timestamp],
                                         e2: GetResult[Boolean],

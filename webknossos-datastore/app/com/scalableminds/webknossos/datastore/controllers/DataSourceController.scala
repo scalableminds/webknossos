@@ -253,8 +253,8 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def explore(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def suggestDatasourceJson(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
         UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
         urlOrHeaderToken(token, request)) {
@@ -280,7 +280,7 @@ Expects:
             ))
         }
       }
-  }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def listMappings(

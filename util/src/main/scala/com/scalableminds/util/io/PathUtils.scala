@@ -50,11 +50,11 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path,
-                              maxDepth: Int,
-                              dropCount: Int,
-                              silent: Boolean,
-                              filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](directory: Path,
+                                      maxDepth: Int,
+                                      dropCount: Int,
+                                      silent: Boolean,
+                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -81,6 +81,9 @@ trait PathUtils extends LazyLogging {
         }
         Failure(errorMsg)
     }
+
+  def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
 
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))

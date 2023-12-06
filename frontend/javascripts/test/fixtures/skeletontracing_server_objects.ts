@@ -172,7 +172,6 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
     allowSave: true,
   },
-  formattedHash: "f043e7",
   annotationLayers: [
     {
       name: "Skeleton",

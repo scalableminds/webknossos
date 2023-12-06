@@ -246,7 +246,7 @@ function* getInfoForMeshLoading(
 
 function* loadAdHocMesh(
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   segmentId: number,
   removeExistingMesh: boolean = false,
   layerName?: string | null | undefined,
@@ -309,7 +309,7 @@ function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
   resolutionInfo: ResolutionInfo,
@@ -502,7 +502,7 @@ function* maybeLoadMeshChunk(
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingMesh) {
-        segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
+        segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
       segmentMeshController.addMeshFromVertices(
@@ -747,7 +747,7 @@ type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefine
 function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
@@ -1174,11 +1174,7 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().segmentMeshController.removeMeshById(
-      segmentId,
-      layerName,
-      additionalCoordinates,
-    );
+    getSceneController().segmentMeshController.removeMeshById(segmentId, layerName);
   }
   removeMapForSegment(layerName, segmentId, additionalCoordKey);
 }

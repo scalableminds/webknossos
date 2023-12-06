@@ -2265,7 +2265,7 @@ class DataApi {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
-        `Error while setting mesh visibility. Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
       );
     }
   }
@@ -2290,7 +2290,7 @@ class DataApi {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(
-        `Error while removing mesh. Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
+        `Mesh for segment ${segmentId} was not found in OxalisState.localSegmentationData.`,
       );
     }
   }

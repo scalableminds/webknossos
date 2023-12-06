@@ -287,7 +287,7 @@ export const addAdHocMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
 ) =>
@@ -305,7 +305,7 @@ export const addPrecomputedMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
 ) =>
   ({

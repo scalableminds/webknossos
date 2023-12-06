@@ -17,9 +17,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
+- Improved loading speed for the users list. [#7466](https://github.com/scalableminds/webknossos/pull/7466)
 
 ### Fixed
-- Fixed several deprecation warning for using antd's Tabs.TabPane components. [#7469]
+- Fixed several deprecation warnings for using antd's Tabs.TabPane components. [#7469]
 - Fixed problems when requests for loading data failed (could impact volume data consistency and rendering). [#7477](https://github.com/scalableminds/webknossos/pull/7477)
 - The settings page for non-wkw datasets no longer shows a wall of non-applying errors. [#7475](https://github.com/scalableminds/webknossos/pull/7475)
 

@@ -660,4 +660,27 @@ Expects:
       }
     }
 
+  def getSegmentVolume(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String) =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- Fox.successful(())
+        } yield Ok("Not implemented yet")
+      }
+    }
+
+  def getSegmentBoundingBox(token: Option[String],
+                            organizationName: String,
+                            dataSetName: String,
+                            dataLayerName: String) =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- Fox.successful(())
+        } yield Ok("Not implemented yet")
+      }
+    }
+
 }

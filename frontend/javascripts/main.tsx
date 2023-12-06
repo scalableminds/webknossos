@@ -48,7 +48,7 @@ const localStoragePersister = createSyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v2",
+  key: "query-cache-v3",
 });
 
 async function loadActiveUser() {

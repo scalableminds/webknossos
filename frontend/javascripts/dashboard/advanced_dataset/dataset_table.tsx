@@ -278,44 +278,40 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
-    let selectedLayerName = "";
+    let selectedLayerName = null;
     if (this.data.colorLayerNames.length > 0) {
       selectedLayerName = this.data.colorLayerNames[0];
     } else if (this.data.segmentationLayerNames.length > 0) {
       selectedLayerName = this.data.segmentationLayerNames[0];
     }
+    const imgSrc = selectedLayerName
+      ? `/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`
+      : "/assets/images/inactive-dataset-thumbnail.svg";
     return (
       <>
         <Link
           to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
           title="View Dataset"
         >
-          <img
-            src={`/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`}
-            className="dataset-table-thumbnail"
-            alt=""
-          />
+          <img src={imgSrc} className="dataset-table-thumbnail" alt="" />
         </Link>
-        <div style={{ display: "inline-block", verticalAlign: "middle", maxWidth: "500px" }}>
+        <div className="dataset-table-name-container">
           <Link
             to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
             title="View Dataset"
-            className="incognito-link"
-            style={{fontSize: "16px"}}
+            className="incognito-link dataset-table-name"
           >
             {this.data.name}
           </Link>
-          <br />
 
           {this.renderTags()}
+          {this.datasetTable.props.context.globalSearchQuery != null ? (
+            <>
+              <br />
+              <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
+            </>
+          ) : null}
         </div>
-
-        {this.datasetTable.props.context.globalSearchQuery != null ? (
-          <>
-            <br />
-            <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
-          </>
-        ) : null}
       </>
     );
   }
@@ -359,11 +355,19 @@ class FolderRenderer {
   getRowKey() {
     return this.data.key;
   }
-  renderTypeColumn() {
-    return <FolderOpenOutlined style={{ fontSize: "18px" }} />;
-  }
   renderNameColumn() {
-    return this.data.name;
+    return (
+      <>
+        <img
+          src={`/assets/images/folder-thumbnail.svg`}
+          className="dataset-table-thumbnail"
+          alt=""
+        />
+        <div className="dataset-table-name-container">
+          <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        </div>
+      </>
+    );
   }
   renderCreationDateColumn() {
     return null;
@@ -720,12 +724,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           }}
         >
           <Column
-            width={70}
-            title="Type"
-            key="type"
-            render={(__, renderer: RowRenderer) => renderer.renderTypeColumn()}
-          />
-          <Column
             title="Name"
             dataIndex="name"
             key="name"
@@ -814,7 +812,11 @@ export function DatasetTags({
         />
       ))}
       {dataset.isEditable ? (
-        <EditableTextIcon icon={<PlusOutlined />} onChange={_.partial(editTagFromDataset, true)} label="Add Tag"/>
+        <EditableTextIcon
+          icon={<PlusOutlined />}
+          onChange={_.partial(editTagFromDataset, true)}
+          label="Add Tag"
+        />
       ) : null}
     </div>
   );
@@ -907,7 +909,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag style={{ marginTop: "10px" }}>
+      <Tag style={{ marginTop: "5px" }}>
         <FolderOpenOutlined />
         {formatPath(parts)}
       </Tag>

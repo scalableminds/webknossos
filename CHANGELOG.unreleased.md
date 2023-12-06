@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 
 ### Changed
+- Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
 - Admins and Team Managers can now also download job exports for jobs of other users, if they have the link. [7462](https://github.com/scalableminds/webknossos/pull/7462)
 
 ### Fixed

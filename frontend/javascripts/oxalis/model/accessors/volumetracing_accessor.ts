@@ -1,7 +1,7 @@
 import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIDataset,
   APISegmentationLayer,
   AnnotationLayerDescriptor,
@@ -76,13 +76,13 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing | APIAnnotationInfo,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
@@ -97,7 +97,7 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);

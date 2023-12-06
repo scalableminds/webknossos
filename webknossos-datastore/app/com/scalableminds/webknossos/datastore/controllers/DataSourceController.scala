@@ -626,6 +626,23 @@ Expects:
       }
     }
 
+  def checkSegmentIndexFile(token: Option[String],
+                            organizationName: String,
+                            dataSetName: String,
+                            dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        val segmentIndexFileOpt =
+          segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName).toOption
+        for {
+          _ <- Fox.successful(())
+          segmentIndexPaths = Seq() ++ segmentIndexFileOpt
+          segmentIndexFiles = segmentIndexPaths.map(_.toString)
+        } yield Ok(Json.toJson(segmentIndexFiles))
+      }
+    }
+
   def getSegmentIndex(token: Option[String],
                       organizationName: String,
                       dataSetName: String,

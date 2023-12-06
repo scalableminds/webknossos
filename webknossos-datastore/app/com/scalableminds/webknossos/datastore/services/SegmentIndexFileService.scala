@@ -20,7 +20,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig)(implicit ec: Ex
 
   private lazy val meshFileCache = new Hdf5FileCache(10)
 
-  private def getSegmentIndexFile(organizationName: String, datasetName: String, dataLayerName: String): Box[Path] =
+  def getSegmentIndexFile(organizationName: String, datasetName: String, dataLayerName: String): Box[Path] =
     for {
       _ <- Full("")
       layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)

@@ -1267,6 +1267,22 @@ export function startComputeMeshFileJob(
   );
 }
 
+export function startComputeSegmentIndexFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  const params = new URLSearchParams();
+  params.append("layerName", layerName);
+
+  return Request.receiveJSON(
+    `/api/jobs/run/computeSegmentIndexFile/${organizationName}/${datasetName}?${params}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export function startNucleiInferralJob(
   organizationName: string,
   datasetName: string,

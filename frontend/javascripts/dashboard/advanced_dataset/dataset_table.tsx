@@ -278,11 +278,11 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
-    let firstLayerName = "";
+    let selectedLayerName = "";
     if (this.data.colorLayerNames.length > 0) {
-      firstLayerName = this.data.colorLayerNames[0];
+      selectedLayerName = this.data.colorLayerNames[0];
     } else if (this.data.segmentationLayerNames.length > 0) {
-      firstLayerName = this.data.segmentationLayerNames[0];
+      selectedLayerName = this.data.segmentationLayerNames[0];
     }
     return (
       <>
@@ -291,12 +291,12 @@ class DatasetRenderer {
           title="View Dataset"
         >
           <img
-            src={`/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${firstLayerName}/thumbnail?w=200&h=200`}
+            src={`/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`}
             className="dataset-table-thumbnail"
             alt=""
           />
         </Link>
-        <div style={{ display: "inline-block", verticalAlign: "middle" }}>
+        <div style={{ display: "inline-block", verticalAlign: "middle", maxWidth: "400px" }}>
           <Link
             to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
             title="View Dataset"

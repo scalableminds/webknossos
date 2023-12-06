@@ -207,6 +207,18 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  let colorLayerNames = [];
+  let segmentationLayerNames = [];
+  if (dataset.dataSource) {
+    for (const layer of dataset.dataSource.dataLayers) {
+      if (layer.category === "segmentation") {
+        segmentationLayerNames.push(layer.name);
+      } else if (layer.category === "color") {
+        colorLayerNames.push(layer.name);
+      }
+    }
+  }
+
   return {
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
@@ -219,8 +231,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
-    colorLayerNames: [], // TODO
-    segmentationLayerNames: [],
+    colorLayerNames: colorLayerNames.sort(),
+    segmentationLayerNames: segmentationLayerNames.sort(),
   };
 }
 

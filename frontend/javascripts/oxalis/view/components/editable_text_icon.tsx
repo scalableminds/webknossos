@@ -57,13 +57,15 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
       <Button
         size="small"
         icon={this.props.icon}
-        style={{ height: 22, width: 22 }}
+        style={{ height: 22 }}
         onClick={() =>
           this.setState({
             isEditing: true,
           })
         }
-      />
+      >
+        Add Tag
+      </Button>
     );
   }
 }

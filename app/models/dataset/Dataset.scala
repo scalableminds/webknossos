@@ -274,9 +274,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ON u._id = $requestingUserIdOpt
             LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name) AS names FROM webknossos.dataSet_layers WHERE category = 'color' GROUP BY _dataset) cl
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'color' GROUP BY _dataset) cl
               ON d._id = cl._dataset
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name) AS names FROM webknossos.dataSet_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
               ON d._id = sl._dataset
             """
       rows <- run(

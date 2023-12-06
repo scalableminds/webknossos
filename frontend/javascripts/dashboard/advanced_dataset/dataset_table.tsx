@@ -359,7 +359,7 @@ class FolderRenderer {
     return (
       <>
         <img
-          src={`/assets/images/folder-thumbnail.svg`}
+          src={"/assets/images/folder-thumbnail.svg"}
           className="dataset-table-thumbnail"
           alt=""
         />

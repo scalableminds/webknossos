@@ -112,7 +112,7 @@ const getComputeMeshAdHocMenuItem = (
   loadAdHocMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
@@ -134,7 +134,7 @@ const getComputeMeshAdHocMenuItem = (
         loadAdHocMesh(
           segment.id,
           segment.somePosition,
-          Store.getState().flycam.additionalCoordinates || undefined,
+          Store.getState().flycam.additionalCoordinates,
         ),
       );
     },

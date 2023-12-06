@@ -2258,10 +2258,7 @@ class DataApi {
       layerName,
     ).name;
 
-    if (
-      Store.getState().localSegmentationData[effectiveLayerName].meshes != null &&
-      Store.getState().localSegmentationData[effectiveLayerName].meshes![segmentId] != null
-    ) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
@@ -2283,10 +2280,7 @@ class DataApi {
       layerName,
     ).name;
 
-    if (
-      Store.getState().localSegmentationData[effectiveLayerName].meshes != null &&
-      Store.getState().localSegmentationData[effectiveLayerName].meshes![segmentId] != null
-    ) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(

@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 
 ### Changed
+- Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
 
 ### Fixed
 - Fixed several deprecation warning for using antd's Tabs.TabPane components. [#7469]

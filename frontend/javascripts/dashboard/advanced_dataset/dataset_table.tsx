@@ -296,11 +296,12 @@ class DatasetRenderer {
             alt=""
           />
         </Link>
-        <div style={{ display: "inline-block", verticalAlign: "middle", maxWidth: "400px" }}>
+        <div style={{ display: "inline-block", verticalAlign: "middle", maxWidth: "500px" }}>
           <Link
             to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
             title="View Dataset"
             className="incognito-link"
+            style={{fontSize: "16px"}}
           >
             {this.data.name}
           </Link>
@@ -813,7 +814,7 @@ export function DatasetTags({
         />
       ))}
       {dataset.isEditable ? (
-        <EditableTextIcon icon={<PlusOutlined />} onChange={_.partial(editTagFromDataset, true)} />
+        <EditableTextIcon icon={<PlusOutlined />} onChange={_.partial(editTagFromDataset, true)} label="Add Tag"/>
       ) : null}
     </div>
   );

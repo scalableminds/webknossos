@@ -287,13 +287,14 @@ class DatasetRenderer {
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`
       : "/assets/images/inactive-dataset-thumbnail.svg";
+    const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
         <Link
           to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
           title="View Dataset"
         >
-          <img src={imgSrc} className="dataset-table-thumbnail" alt="" />
+          <img src={imgSrc} className={`dataset-table-thumbnail ${iconClassName}`} alt="" />
         </Link>
         <div className="dataset-table-name-container">
           <Link
@@ -360,7 +361,7 @@ class FolderRenderer {
       <>
         <img
           src={"/assets/images/folder-thumbnail.svg"}
-          className="dataset-table-thumbnail"
+          className="dataset-table-thumbnail icon-thumbnail"
           alt=""
         />
         <div className="dataset-table-name-container">

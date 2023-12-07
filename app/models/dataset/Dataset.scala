@@ -54,7 +54,7 @@ case class Dataset(_id: ObjectId,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
                    details: Option[JsObject] = None,
-                   tags: Set[String] = Set.empty,
+                   tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
     extends FoxImplicits {
@@ -135,7 +135,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.logourl,
         Instant.fromSql(r.sortingkey),
         details,
-        parseArrayLiteral(r.tags).toSet,
+        parseArrayLiteral(r.tags).sorted,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -536,7 +536,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
            ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
            ${d.name}, ${d.scale}, ${d.status.take(1024)},
-           ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags.toList},
+           ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags},
            ${d.created}, ${d.isDeleted})
            """.asUpdate)
     } yield ()

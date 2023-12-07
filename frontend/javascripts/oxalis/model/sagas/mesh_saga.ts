@@ -246,7 +246,7 @@ function* getInfoForMeshLoading(
 
 function* loadAdHocMesh(
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   segmentId: number,
   removeExistingMesh: boolean = false,
   layerName?: string | null | undefined,
@@ -289,10 +289,10 @@ function* loadAdHocMesh(
         action.layerName === layer.name,
     ),
   });
-  removeMeshWithoutVoxelsFromStore(segmentId, layer.name, seedAdditionalCoordinates);
+  removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
 }
 
-function removeMeshWithoutVoxelsFromStore(
+function removeMeshWithoutVoxels(
   segmentId: number,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
@@ -309,7 +309,7 @@ function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
   resolutionInfo: ResolutionInfo,
@@ -367,7 +367,6 @@ function* loadFullAdHocMesh(
   if (positionsToRequest.length === 0) {
     //if no positions are requested, remove the mesh,
     //so that the old one isn't displayed anymore
-    console.log("371");
     yield* put(removeMeshAction(layer.name, segmentId));
   }
   while (positionsToRequest.length > 0) {
@@ -502,7 +501,7 @@ function* maybeLoadMeshChunk(
       const vertices = new Float32Array(responseBuffer);
 
       if (removeExistingMesh) {
-        segmentMeshController.removeMeshById(segmentId, layer.name, additionalCoordinates);
+        segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
       segmentMeshController.addMeshFromVertices(
@@ -568,7 +567,7 @@ function* refreshMeshes(): Saga<void> {
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const { segmentId, layerName } = action;
 
@@ -577,7 +576,9 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   );
 
   if (meshInfo == null) {
-    throw new Error("Mesh refreshing failed due to lack of mesh data in store.");
+    throw new Error(
+      `Mesh refreshing failed due to lack of mesh info for segment ${segmentId} in store.`,
+    );
   }
 
   if (meshInfo.isPrecomputed) {
@@ -611,7 +612,9 @@ function* _refreshMeshWithMap(
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
   );
   if (meshInfo == null) {
-    throw new Error("Mesh refreshing failed due to lack of mesh data in store.");
+    throw new Error(
+      `Mesh refreshing failed due to lack of mesh info for segment ${segmentId} in store.`,
+    );
   }
   yield* call(
     [ErrorHandling, ErrorHandling.assert],
@@ -626,7 +629,6 @@ function* _refreshMeshWithMap(
     return;
   }
 
-  //yield* put(startedLoadingMeshAction(layerName, segmentId)); TODO can i leave this out?
   // Remove mesh from cache.
   yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
   // The mesh should only be removed once after re-fetching the mesh first position.
@@ -638,7 +640,7 @@ function* _refreshMeshWithMap(
     yield* call(
       loadAdHocMesh,
       position,
-      additionalCoordinates || undefined,
+      additionalCoordinates,
       segmentId,
       shouldBeRemoved,
       layerName,
@@ -649,8 +651,6 @@ function* _refreshMeshWithMap(
     );
     shouldBeRemoved = false;
   }
-  //yield* put(finishedLoadingMeshAction(layerName, segmentId)); TODO can I leave this out?
-  removeMeshWithoutVoxelsFromStore(segmentId, layerName, additionalCoordinates);
 }
 
 /*
@@ -747,7 +747,7 @@ type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefine
 function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
@@ -1174,11 +1174,7 @@ function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true):
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
-    getSceneController().segmentMeshController.removeMeshById(
-      segmentId,
-      layerName,
-      additionalCoordinates,
-    );
+    getSceneController().segmentMeshController.removeMeshById(segmentId, layerName);
   }
   removeMapForSegment(layerName, segmentId, additionalCoordKey);
 }

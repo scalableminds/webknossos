@@ -53,7 +53,7 @@ const getLoadPrecomputedMeshMenuItem = (
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void,
   andCloseContextMenu: (_ignore?: any) => void,
@@ -112,7 +112,7 @@ const getComputeMeshAdHocMenuItem = (
   loadAdHocMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
@@ -134,7 +134,7 @@ const getComputeMeshAdHocMenuItem = (
         loadAdHocMesh(
           segment.id,
           segment.somePosition,
-          Store.getState().flycam.additionalCoordinates || undefined,
+          Store.getState().flycam.additionalCoordinates,
         ),
       );
     },
@@ -148,7 +148,7 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell: (
     arg0: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
@@ -162,11 +162,7 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       andCloseContextMenu(
-        setActiveCell(
-          segment.id,
-          segment.somePosition,
-          segment.someAdditionalCoordinates || undefined,
-        ),
+        setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
@@ -201,22 +197,24 @@ type Props = {
   loadAdHocMesh: (
     segmentId: number,
     somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void;
   setActiveCell: (
     arg0: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
   mesh: MeshInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
-  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
+  setAdditionalCoordinates: (
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  ) => void;
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;

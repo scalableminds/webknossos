@@ -174,7 +174,7 @@ export const finishEditingAction = () =>
 export const setActiveCellAction = (
   segmentId: number,
   somePosition?: Vector3,
-  someAdditionalCoordinates?: AdditionalCoordinate[],
+  someAdditionalCoordinates?: AdditionalCoordinate[] | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
@@ -186,7 +186,7 @@ export const setActiveCellAction = (
 export const clickSegmentAction = (
   segmentId: number,
   somePosition: Vector3,
-  someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   layerName?: string,
 ) =>
   ({

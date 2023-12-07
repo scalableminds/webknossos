@@ -161,7 +161,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;
-    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
+    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
     if (segment.somePosition) {
       somePosition = Utils.floor3(segment.somePosition);
       someAdditionalCoordinates = segment.someAdditionalCoordinates;

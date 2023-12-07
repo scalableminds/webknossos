@@ -226,7 +226,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -533,7 +533,7 @@ type UiInformation = {
 type BaseMeshInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
-  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };

@@ -131,37 +131,24 @@ export default class SegmentMeshController {
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentationId, lod, mesh);
   }
 
-  removeMeshById(
-    segmentationId: number,
-    layerName: string,
-    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-  ): void {
-    // either remove a mesh for specific additional coordinates, or remove all meshes for a segment per default by passing null as additionalCoordinates.
-    let additionalCoordinatesToRemoveMeshes;
-    if (additionalCoordinates == null) {
-      additionalCoordinatesToRemoveMeshes = Object.keys(this.meshesGroupsPerSegmentationId);
-    } else {
-      additionalCoordinatesToRemoveMeshes = [
-        getAdditionalCoordinatesAsString(additionalCoordinates),
-      ];
+  removeMeshById(segmentationId: number, layerName: string): void {
+    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    if (this.getMeshGroups(additionalCoordKey, layerName, segmentationId) == null) {
+      return;
     }
-    for (const additionalCoordinatesString of additionalCoordinatesToRemoveMeshes) {
-      if (this.getMeshGroups(additionalCoordinatesString, layerName, segmentationId) == null) {
-        return;
-      }
-      _.forEach(
-        this.getMeshGroups(additionalCoordinatesString, layerName, segmentationId),
-        (meshGroup, lod) => {
-          const lodNumber = parseInt(lod);
-          if (lodNumber !== NO_LOD_MESH_INDEX) {
-            this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-          } else {
-            this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-          }
-        },
-      );
-      this.removeMeshFromMeshGroups(additionalCoordinatesString, layerName, segmentationId);
-    }
+    _.forEach(
+      this.getMeshGroups(additionalCoordKey, layerName, segmentationId),
+      (meshGroup, lod) => {
+        const lodNumber = parseInt(lod);
+        if (lodNumber !== NO_LOD_MESH_INDEX) {
+          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+        } else {
+          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+        }
+      },
+    );
+    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentationId);
   }
 
   getMeshGeometryInBestLOD(

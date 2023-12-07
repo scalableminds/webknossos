@@ -214,7 +214,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   loadAdHocMesh(
     segmentId: number,
     seedPosition: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) {
     dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
   },
@@ -222,7 +222,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   loadPrecomputedMesh(
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) {
     dispatch(
@@ -233,7 +233,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setActiveCell(
     segmentId: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
@@ -246,7 +246,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setPositionAction(position));
   },
 
-  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
+  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined | null) {
     if (
       getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
       getAdditionalCoordinatesAsString(additionalCoordinates)
@@ -1310,12 +1310,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.handlePerSegment(groupId, (segment) => {
       if (meshes[segment.id] != null) {
         Store.dispatch(
-          updateMeshVisibilityAction(
-            layerName,
-            segment.id,
-            isVisible,
-            additionalCoordinates || undefined,
-          ),
+          updateMeshVisibilityAction(layerName, segment.id, isVisible, additionalCoordinates),
         );
       }
     });
@@ -1327,7 +1322,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.props.loadAdHocMesh(
         segment.id,
         segment.somePosition,
-        this.props.flycam.additionalCoordinates || undefined,
+        this.props.flycam.additionalCoordinates,
       );
     });
   };

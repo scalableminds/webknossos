@@ -5,7 +5,6 @@ import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -899,7 +898,6 @@ class AnnotationService @Inject()(
         "task" -> taskJson,
         "stats" -> annotation.statistics,
         "restrictions" -> restrictionsJs,
-        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
@@ -966,39 +964,58 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation): Fox[JsObject] = {
-    implicit val ctx: DBAccessContext = GlobalAccessContext
-    for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
-      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
-      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
-      user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
-      userJson = Json.obj(
-        "id" -> user._id.toString,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName
+
+  def writeCompactInfo(annotationInfo: AnnotationCompactInfo): JsObject = {
+    val teamsJson = annotationInfo.teamNames.indices.map(
+      idx =>
+        Json.obj(
+          "id" -> annotationInfo.teamIds(idx),
+          "name" -> annotationInfo.teamNames(idx),
+          "organizationId" -> annotationInfo.teamOrganizationIds(idx)
+      ))
+
+    val annotationLayerJson = annotationInfo.tracingIds.indices.map(
+      idx =>
+        Json.obj(
+          "tracingId" -> annotationInfo.tracingIds(idx),
+          "typ" -> annotationInfo.annotationLayerTypes(idx),
+          "name" -> annotationInfo.annotationLayerNames(idx)
       )
-    } yield {
-      Json.obj(
-        "modified" -> annotation.modified,
-        "state" -> annotation.state,
-        "id" -> annotation._id.toString,
-        "name" -> annotation.name,
-        "description" -> annotation.description,
-        "typ" -> annotation.typ,
-        "stats" -> annotation.statistics,
-        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
-        "annotationLayers" -> annotation.annotationLayers,
-        "dataSetName" -> dataSet.name,
-        "organization" -> organization.name,
-        "visibility" -> annotation.visibility,
-        "tracingTime" -> annotation.tracingTime,
-        "teams" -> teamsJson,
-        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userJson,
-        "othersMayEdit" -> annotation.othersMayEdit
-      )
+    )
+    val tracingType: String = getAnnotationTypeForTag(annotationInfo)
+    Json.obj(
+      "modified" -> annotationInfo.modified,
+      "state" -> annotationInfo.state,
+      "id" -> annotationInfo.id,
+      "name" -> annotationInfo.name,
+      "description" -> annotationInfo.description,
+      "typ" -> annotationInfo.typ,
+      "stats" -> annotationInfo.stats,
+      "annotationLayers" -> annotationLayerJson,
+      "dataSetName" -> annotationInfo.dataSetName,
+      "organization" -> annotationInfo.organizationName,
+      "visibility" -> annotationInfo.visibility,
+      "tracingTime" -> annotationInfo.tracingTime,
+      "teams" -> teamsJson,
+      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName, tracingType)),
+      "owner" -> Json.obj(
+        "id" -> annotationInfo.ownerId.toString,
+        "firstName" -> annotationInfo.ownerFirstName,
+        "lastName" -> annotationInfo.ownerLastName
+      ),
+      "othersMayEdit" -> annotationInfo.othersMayEdit,
+    )
+  }
+
+  private def getAnnotationTypeForTag(annotationInfo: AnnotationCompactInfo): String = {
+    val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
+    val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
+    if (skeletonPresent && volumePresent) {
+      "hybrid"
+    } else if (skeletonPresent) {
+      "skeleton"
+    } else {
+      "volume"
     }
   }
 }

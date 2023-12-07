@@ -45,7 +45,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
+  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {

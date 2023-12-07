@@ -170,6 +170,19 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Segment index file computation for{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
       job.organizationName &&
       job.datasetName &&
@@ -253,7 +266,10 @@ class JobListView extends React.PureComponent<Props, State> {
           Cancel
         </AsyncLink>
       );
-    } else if (job.type === APIJobType.CONVERT_TO_WKW) {
+    } else if (
+      job.type === APIJobType.CONVERT_TO_WKW ||
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE
+    ) {
       return (
         <span>
           {job.resultLink && (

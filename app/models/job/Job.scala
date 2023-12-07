@@ -126,19 +126,36 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
+    q"""
+      _owner = $requestingUserId
+      OR
+      (_owner IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)))
+      OR
+      ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+      OR
+      ($requestingUserId IN
+        (
+          SELECT u._id
+          FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
+          WHERE m.isSuperUser
+        )
+      )
+     """
+
+  private def listAccessQ(requestingUserId: ObjectId) =
     q"""_owner = $requestingUserId"""
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[JobsRow])
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery and _id = $jobId".as[JobsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery AND _id = $jobId".as[JobsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
@@ -146,12 +163,12 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
       for {
-        r <- run(q"""select count(_id) from $existingCollectionName
-                   where state = ${JobState.PENDING}
+        r <- run(q"""SELECT COUNT(_id) from $existingCollectionName
+                   WHERE state = ${JobState.PENDING}
                    AND command IN ${SqlToken.tupleFromList(jobCommands)}
-                   and manualState is null
-                   and _dataStore = $dataStoreName
-                   and _worker is null""".as[Int])
+                   AND manualState IS NULL
+                   AND _dataStore = $dataStoreName
+                   AND _worker IS NULL""".as[Int])
         head <- r.headOption
       } yield head
     }
@@ -213,7 +230,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"""update webknossos.jobs set manualState = $manualState where _id = $id""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
@@ -224,7 +241,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    returnValue = ${s.returnValue},
                    started = ${s.started},
                    ended = ${s.ended}
-                   where _id = $jobId""".asUpdate)
+                   WHERE _id = $jobId""".asUpdate)
     } yield ()
 
   def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =
@@ -261,11 +278,11 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countByState: Fox[Map[String, Int]] =
     for {
-      result <- run(q"""select state, count(_id)
-                        from webknossos.jobs_
-                        where manualState is null
-                        group by state
-                        order by state
+      result <- run(q"""SELECT state, count(_id)
+                        FROM webknossos.jobs_
+                        WHERE manualState IS NULL
+                        GROUP BY state
+                        ORDER BY state
                         """.as[(String, Int)])
     } yield result.toMap
 

@@ -116,7 +116,9 @@ class DataSourceService @Inject()(
     val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
-      dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
+      looksLikeWKWDataSource <- WKWDataFormat.looksLikeWKWDataSource(path)
+      dataSource <- if (looksLikeWKWDataSource) WKWDataFormat.exploreDataSource(id, path, previous, report)
+      else WKWDataFormat.dummyDataSource(id, previous, report)
     } yield (dataSource, report.messages.toList)
   }
 

@@ -38,6 +38,8 @@ import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
+const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
+
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
 
@@ -513,10 +515,27 @@ function _SegmentListItem({
             )}? This operation will set all voxels with id ${segment.id} to 0.`,
             okText: "Yes, delete",
             okType: "danger",
-            onOk: async () =>
-              new Promise<void>((resolve) =>
+            onOk: async () => {
+              await new Promise<void>((resolve) =>
                 deleteSegmentData(segment.id, visibleSegmentationLayer.name, resolve),
-              ),
+              );
+
+              Toast.info(
+                <span>
+                  The data of segment {getSegmentName(segment, true)} was deleted.{" "}
+                  <a
+                    href="#"
+                    onClick={() => {
+                      removeSegment(segment.id, visibleSegmentationLayer.name);
+                      Toast.close(ALSO_DELETE_SEGMENT_FROM_LIST_KEY);
+                    }}
+                  >
+                    Also remove from list.
+                  </a>
+                </span>,
+                { key: ALSO_DELETE_SEGMENT_FROM_LIST_KEY },
+              );
+            },
           });
 
           andCloseContextMenu();

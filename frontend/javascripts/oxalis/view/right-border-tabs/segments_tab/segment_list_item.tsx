@@ -507,7 +507,10 @@ function _SegmentListItem({
           }
 
           Modal.confirm({
-            content: `Are you sure you want to delete the segment's data? This operation will set all voxels with id ${segment.id} to 0.`,
+            content: `Are you sure you want to delete the data of segment ${getSegmentName(
+              segment,
+              true,
+            )}? This operation will set all voxels with id ${segment.id} to 0.`,
             okText: "Yes, delete",
             okType: "danger",
             onOk: async () =>
@@ -579,7 +582,7 @@ function _SegmentListItem({
         <div style={{ display: "inline-flex", alignItems: "center" }}>
           <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
           <EditableTextLabel
-            value={segment.name || `Segment ${segment.id}`}
+            value={getSegmentName(segment)}
             label="Segment Name"
             onClick={() => onSelectSegment(segment)}
             onRenameStart={onRenameStart}
@@ -707,6 +710,11 @@ function getComputeMeshAdHocTooltipInfo(
     disabled,
     title,
   };
+}
+
+function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
 }
 
 export default SegmentListItem;

@@ -44,6 +44,12 @@ madge("frontend/javascripts/main.tsx", {
         .map((cycle) => cycle.join(" -> "))
         .join("\n")}\n`,
     );
+  } else if (cyclicDependencies.length < knownCycleStrings.length) {
+    throw new Error(`Congratulations! Your admirable work removed at least one cyclic dependency from the TypeScript modules. To ensure
+      that this improvement is not undone accidentally in the future, please adapt the KNOWN_CYCLES variable in the check-cyclic-dependies.js
+      script. Please set the variable to the following and commit it:
+      ${JSON.stringify(cyclicDependencies, null, " ")}
+    `);
   }
   console.log("Success.");
 });

@@ -40,7 +40,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
     if (!request.cuboid.hasValidDimensions) {
       Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
-    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.subsamplingStrides == Vec3Int(1, 1, 1)) {
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.subsamplingStrides == Vec3Int.ones) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }

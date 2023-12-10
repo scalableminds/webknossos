@@ -1,4 +1,4 @@
-import play.sbt.PlayImport._
+import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
@@ -31,7 +31,9 @@ object Dependencies {
     // Asynchronous caching. import com.github.benmanes.caffeine
     caffeine,
     // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
-    "at.favre.lib" % "bcrypt" % "0.10.2"
+    "at.favre.lib" % "bcrypt" % "0.10.2",
+    // Play http filters. Not imported.
+    filters,
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -45,8 +47,6 @@ object Dependencies {
     "com.google.code.gson" % "gson" % "2.10.1",
     // Reading wkw files. import com.scalableminds.webknossos.wrap
     "com.scalableminds" %% "webknossos-wrap" % "1.1.23",
-    // Play http filters. Not imported.
-    filters,
     // Play WS Http client, used for RPC calls. import play.api.libs.ws
     ws,
     // Dependency Injection. import javax.inject.Inject

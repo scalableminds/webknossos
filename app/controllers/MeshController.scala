@@ -1,6 +1,6 @@
 package controllers
 
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}

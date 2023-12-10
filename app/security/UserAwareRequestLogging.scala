@@ -1,6 +1,6 @@
 package security
 
-import io.github.honeycombcheesecake.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.requestlogging.AbstractRequestLogging
 import play.api.mvc.{Request, Result}
 

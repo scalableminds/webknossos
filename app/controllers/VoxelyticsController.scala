@@ -1,7 +1,7 @@
 package controllers
 
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
-import io.github.honeycombcheesecake.play.silhouette.api.actions.SecuredRequest
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO

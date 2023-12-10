@@ -1,6 +1,6 @@
 package controllers
 
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox

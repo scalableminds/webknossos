@@ -3,7 +3,7 @@ package security
 import java.security.SecureRandom
 import java.util.Base64
 
-import io.github.honeycombcheesecake.play.silhouette.api.util.IDGenerator
+import play.silhouette.api.util.IDGenerator
 
 import scala.concurrent.{ExecutionContext, Future}
 

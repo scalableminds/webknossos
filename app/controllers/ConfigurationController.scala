@@ -1,6 +1,6 @@
 package controllers
 
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}

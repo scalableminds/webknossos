@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}

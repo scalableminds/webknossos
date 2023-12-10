@@ -1,7 +1,7 @@
 package controllers
 
 import akka.actor.ActorSystem
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}

@@ -1,6 +1,6 @@
 package controllers
 
-import io.github.honeycombcheesecake.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.dataset.DatasetDAO

@@ -1,13 +1,13 @@
 package security
 
-import io.github.honeycombcheesecake.play.silhouette.api.services.{AuthenticatorService, IdentityService}
-import io.github.honeycombcheesecake.play.silhouette.api.util.Clock
-import io.github.honeycombcheesecake.play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
-import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.{
+import play.silhouette.api.services.{AuthenticatorService, IdentityService}
+import play.silhouette.api.util.Clock
+import play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
+import play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorSettings,
   CookieAuthenticatorSettings
 }
-import io.github.honeycombcheesecake.play.silhouette.impl.util.DefaultFingerprintGenerator
+import play.silhouette.impl.util.DefaultFingerprintGenerator
 import models.user.{User, UserService}
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf

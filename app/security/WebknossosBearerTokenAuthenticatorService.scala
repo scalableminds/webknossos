@@ -1,14 +1,11 @@
 package security
 
-import io.github.honeycombcheesecake.play.silhouette.api.LoginInfo
-import io.github.honeycombcheesecake.play.silhouette.api.exceptions.{
-  AuthenticatorCreationException,
-  AuthenticatorInitializationException
-}
-import io.github.honeycombcheesecake.play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
-import io.github.honeycombcheesecake.play.silhouette.api.util.{Clock, IDGenerator}
-import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
-import io.github.honeycombcheesecake.play.silhouette.impl.authenticators.{
+import play.silhouette.api.LoginInfo
+import play.silhouette.api.exceptions.{AuthenticatorCreationException, AuthenticatorInitializationException}
+import play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
+import play.silhouette.api.util.{Clock, IDGenerator}
+import play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
+import play.silhouette.impl.authenticators.{
   BearerTokenAuthenticator,
   BearerTokenAuthenticatorService,
   BearerTokenAuthenticatorSettings
@@ -17,6 +14,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import TokenType.TokenType
+import com.scalableminds.util.time.Instant
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.duration._
@@ -36,19 +34,20 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
   def create(loginInfo: LoginInfo, tokenType: TokenType): Future[BearerTokenAuthenticator] = {
-    val expiry: Duration = tokenType match {
+    val expiry: FiniteDuration = tokenType match {
       case TokenType.Authentication => settings.authenticatorExpiry
       case TokenType.ResetPassword  => resetPasswordExpiry
       case TokenType.DataStore      => dataStoreExpiry
       case _                        => throw new Exception("Cannot create an authenticator without a valid TokenType")
     }
     idGenerator.generate.map { id =>
-      val now = clock.now
-      BearerTokenAuthenticator(id = id,
-                               loginInfo = loginInfo,
-                               lastUsedDateTime = now,
-                               expirationDateTime = now.plus(expiry.toMillis),
-                               idleTimeout = settings.authenticatorIdleTimeout)
+      BearerTokenAuthenticator(
+        id = id,
+        loginInfo = loginInfo,
+        lastUsedDateTime = clock.now,
+        expirationDateTime = Instant.in(expiry).toZonedDateTime,
+        idleTimeout = settings.authenticatorIdleTimeout
+      )
     }.recover {
       case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
     }

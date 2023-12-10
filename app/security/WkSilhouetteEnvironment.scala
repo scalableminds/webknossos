@@ -3,10 +3,7 @@ package security
 import play.silhouette.api.services.{AuthenticatorService, IdentityService}
 import play.silhouette.api.util.Clock
 import play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
-import play.silhouette.impl.authenticators.{
-  BearerTokenAuthenticatorSettings,
-  CookieAuthenticatorSettings
-}
+import play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
 import play.silhouette.impl.util.DefaultFingerprintGenerator
 import models.user.{User, UserService}
 import play.api.mvc.{Cookie, CookieHeaderEncoding}

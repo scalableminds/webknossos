@@ -3,12 +3,7 @@ package security
 import play.silhouette.api._
 import play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
-import play.silhouette.api.util.{
-  Clock,
-  ExtractableRequest,
-  FingerprintGenerator,
-  IDGenerator
-}
+import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
 import play.silhouette.impl.authenticators._
 import models.user.UserService

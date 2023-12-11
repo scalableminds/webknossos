@@ -4,7 +4,7 @@ import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.http.Status._
 import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}

@@ -7,7 +7,7 @@ import models.dataset.DatasetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import play.api.i18n.Messages
 import play.api.libs.json.Json._

@@ -59,19 +59,19 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
-      r: Seq[WorkersRow] <- run(q"select $columns from $existingCollectionName where key = $key".as[WorkersRow])
+      r: Seq[WorkersRow] <- run(q"SELECT $columns FROM $existingCollectionName WHERE key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
 
   def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        q"SELECT $columns FROM $existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
+        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def updateHeartBeat(_id: ObjectId): Unit = {
-    run(q"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}".asUpdate)
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }

@@ -267,7 +267,6 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE j._id = subquery._id
           """.asUpdate
       for {
-        _ <- Fox.successful(logger.info("reserve next job"))
         _ <- run(
           query.withTransactionIsolation(Serializable),
           retryCount = 50,

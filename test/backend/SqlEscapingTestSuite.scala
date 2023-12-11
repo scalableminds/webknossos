@@ -8,10 +8,10 @@ class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscapi
     "not change plain string" in {
       assert(escapeLiteral("hello") == "'hello'")
     }
-    "escape string with 's" in {
+    "escape string with single quotes (')" in {
       assert(escapeLiteral("he'l'lo") == "'he''l''lo'")
     }
-    "escape string with consecutive 's" in {
+    "escape string with consecutive single quotes (')" in {
       assert(escapeLiteral("he''l''lo") == "'he''''l''''lo'")
     }
     "escape string with backslash" in {
@@ -41,22 +41,22 @@ class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscapi
     "parse two elements if one has a comma" in {
       assert(parseArrayLiteral("""{"he,llo",there}""") == List("he,llo", "there"))
     }
-    "parse two elements if one has a comma and escaped quotes" in {
+    "parse two elements if one has a comma and escaped double quotes" in {
       assert(parseArrayLiteral("""{"h\"e,llo",there}""") == List("""h"e,llo""", "there"))
     }
-    "parse single element if the comma is between escaped quotess" in {
+    "parse single element if the comma is between escaped duoble quotes" in {
       assert(parseArrayLiteral("""{"this one has \"spe,cial\" chars"}""") == List("""this one has "spe,cial" chars"""))
     }
-    "parse single elements if it has a comma and single escaped quote" in {
+    "parse single elements if it has a comma and single escaped double quote" in {
       assert(parseArrayLiteral("""{"h\"e,llo"}""") == List("""h"e,llo"""))
     }
-    "parse single elements if it has escaped quotes" in {
+    "parse single elements if it has escaped double quotes" in {
       assert(parseArrayLiteral("""{"\"hello\""}""") == List(""""hello""""))
     }
-    "parse single element if it has single quotes" in {
+    "parse single element if it has single quotes (')" in {
       assert(parseArrayLiteral("""{'hello'}""") == List("""'hello'"""))
     }
-    "parse single element with multiple quotes, backslashes, and commas" in {
+    "parse single element with multiple double quotes, backslashes, and commas" in {
       assert(
         parseArrayLiteral("""{"can I \\\\\\\\\"\\\",\\\\\"break,\",\",\"\",,\"it"}""") == List(
           """can I \\\\"\",\\"break,",","",,"it"""))

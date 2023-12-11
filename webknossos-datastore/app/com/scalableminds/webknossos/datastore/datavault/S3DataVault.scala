@@ -14,7 +14,11 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
 import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  LegacyDataVaultCredential,
+  RemoteSourceDescriptor,
+  S3AccessKeyCredential
+}
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -96,7 +100,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
 object S3DataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor): S3DataVault = {
-    val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[S3AccessKeyCredential])
+    val credential = remoteSourceDescriptor.credential.flatMap {
+      case f: S3AccessKeyCredential     => Some(f)
+      case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
+      case _                            => None
+    }
     new S3DataVault(credential, remoteSourceDescriptor.uri)
   }
 

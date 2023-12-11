@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.io.ZipIO.GZIPOutputStream
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
@@ -8,11 +9,6 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressed
   CompressedSegmentation64
 }
 import com.sun.jna.ptr.NativeLongByReference
-import org.apache.commons.compress.compressors.gzip.{
-  GzipCompressorInputStream,
-  GzipCompressorOutputStream,
-  GzipParameters
-}
 import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
@@ -21,7 +17,7 @@ import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import java.nio.ByteBuffer
 import java.util
-import java.util.zip.{Deflater, DeflaterOutputStream, Inflater, InflaterInputStream}
+import java.util.zip.{Deflater, DeflaterOutputStream, GZIPInputStream, Inflater, InflaterInputStream}
 import javax.imageio.ImageIO
 import javax.imageio.ImageIO.createImageInputStream
 import javax.imageio.stream.ImageInputStream
@@ -151,9 +147,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
 
-    val parameters = new GzipParameters
-    parameters.setCompressionLevel(level)
-    val dos = new GzipCompressorOutputStream(os, parameters)
+    val dos = new GZIPOutputStream(os, level)
     try passThrough(is, dos)
     finally if (dos != null) dos.close()
     os.toByteArray
@@ -163,7 +157,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
   override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
-    val iis = new GzipCompressorInputStream(is, false)
+    val iis = new GZIPInputStream(is)
     try passThrough(iis, os)
     finally if (iis != null) iis.close()
     os.toByteArray

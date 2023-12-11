@@ -8,7 +8,7 @@ import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
-import models.user.{MultiUserDAO, UserService}
+import models.user.UserService
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -19,8 +19,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
-class Application @Inject()(multiUserDAO: MultiUserDAO,
-                            actorSystem: ActorSystem,
+class Application @Inject()(actorSystem: ActorSystem,
                             analyticsService: AnalyticsService,
                             userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,
@@ -69,7 +68,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
     addNoCacheHeaderFallback(
-      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())))
+      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
   }
 
   @ApiOperation(value = "Health endpoint")

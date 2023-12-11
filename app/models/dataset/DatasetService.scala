@@ -2,7 +2,6 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
@@ -16,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
-import models.job.WorkerDAO
+import models.job.JobService
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
@@ -34,9 +33,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                teamDAO: TeamDAO,
-                               workerDAO: WorkerDAO,
+                               jobService: JobService,
                                folderDAO: FolderDAO,
-                               additionalAxesDAO: DatasetLayerAdditionalAxesDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
@@ -329,8 +327,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
-      worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
-      jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
+      jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
+      jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
     } yield {
       Json.obj(
         "name" -> dataset.name,
@@ -351,6 +349,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "details" -> dataset.details,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "jobsEnabled" -> jobsEnabled,
+        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented

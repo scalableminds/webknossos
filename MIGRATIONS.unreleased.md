@@ -7,6 +7,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...HEAD)
-- 
+- The config `setting play.http.secret.key` (secret random string) now requires a minimum length of 32 bytes.
+
 
 ### Postgres Evolutions:

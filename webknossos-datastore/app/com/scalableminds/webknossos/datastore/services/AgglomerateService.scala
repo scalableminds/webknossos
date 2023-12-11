@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio._

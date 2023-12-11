@@ -27,7 +27,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
-      router,
+      () => router,
       errorHandler,
       httpConfiguration,
       filters

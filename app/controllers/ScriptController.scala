@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._

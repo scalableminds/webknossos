@@ -1,6 +1,5 @@
 package play.modules.swagger
 
-import play.modules.swagger.ApiHelpController
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 

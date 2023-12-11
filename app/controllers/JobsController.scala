@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
@@ -88,7 +88,8 @@ class JobsController @Inject()(
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      job <- jobDAO.findOne(ObjectId(id))
+      idValidated <- ObjectId.fromString(id)
+      job <- jobDAO.findOne(idValidated) ?~> "job.notFound"
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

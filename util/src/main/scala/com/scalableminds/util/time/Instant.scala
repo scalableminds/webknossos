@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
+import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -14,6 +15,8 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def toJavaInstant: java.time.Instant = java.time.Instant.ofEpochMilli(epochMillis)
 
   def toJodaDateTime: org.joda.time.DateTime = new org.joda.time.DateTime(epochMillis)
+
+  def toZonedDateTime: ZonedDateTime = ZonedDateTime.ofInstant(toJavaInstant, ZoneId.systemDefault())
 
   def toSql: java.sql.Timestamp = new java.sql.Timestamp(epochMillis)
 
@@ -54,6 +57,8 @@ object Instant extends FoxImplicits {
     fromStringSync(instantLiteral).toFox
 
   def fromJoda(jodaDateTime: org.joda.time.DateTime): Instant = Instant(jodaDateTime.getMillis)
+
+  def fromZonedDateTime(zonedDateTime: ZonedDateTime): Instant = Instant(zonedDateTime.toInstant.toEpochMilli)
 
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
 

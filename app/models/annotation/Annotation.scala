@@ -530,6 +530,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       count <- countList.headOption
     } yield count
 
+  def countAllByDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      accessQuery <- readAccessQuery
+      countList <- run(
+        q"select count(*) from $existingCollectionName where _dataset = $datasetId and $accessQuery".as[Int])
+      count <- countList.headOption
+    } yield count
+
   // update operations
 
   def insertOne(a: Annotation): Fox[Unit] = {

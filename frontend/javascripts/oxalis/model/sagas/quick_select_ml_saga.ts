@@ -117,7 +117,7 @@ async function inferFromEmbedding(
   activeViewport: OrthoView,
   voxelMap?: VoxelBuffer2D | null,
 ) {
-  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
+  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
   const ort = await import("onnxruntime-web");
@@ -154,16 +154,24 @@ async function inferFromEmbedding(
   if (voxelMap) {
     // The voxel map is in the same resolution as the embedding box.
     // As the input mask is downsampled by a factor of 4 (256 in relation to 1024), we can only consider each fourth coordinate.
+    // TODO: Distance Transform or sample randomly
     const firstDimOffset = Math.ceil(topLeft[maybeAdjustedFirstDim] / 4);
     const secondDimOffset = Math.ceil(topLeft[maybeAdjustedSecondDim] / 4);
     console.log("voxelMap.width", voxelMap.width, "voxelMap.height", voxelMap.height);
     for (let i = 0; i < voxelMap.width; i += 4) {
       for (let j = 0; j < voxelMap.height; j += 4) {
-        const value = voxelMap.map[voxelMap.linearizeIndex(i, j)];
+        const value = voxelMap.map[voxelMap.linearizeIndex(i, j)] === 1 ? 7 : -7;
         const iInMask = Math.floor(i / 4);
         const jInMask = Math.floor(j / 4);
         onnxMaskInput[(firstDimOffset + iInMask) * 256 + (secondDimOffset + jInMask)] = value;
-        if (value === 1) {
+        /*if (value === 4) {
+          /*onnxCoord = new Float32Array([
+            topLeft[maybeAdjustedFirstDim] + i,
+            topLeft[maybeAdjustedSecondDim] + j,
+            0,
+            0,
+          ]);*
+
           const dist =
             i * i +
             j * j +
@@ -174,35 +182,40 @@ async function inferFromEmbedding(
             minCoords = [i, j];
           }
           foundMarkingInVoxelMap = true;
-        }
+        }*/
       }
     }
-    onnxCoord = new Float32Array([
+    /*onnxCoord = new Float32Array([
       topLeft[maybeAdjustedFirstDim] + minCoords[0],
       topLeft[maybeAdjustedSecondDim] + minCoords[1],
       0,
       0,
-    ]);
+    ]);*/
   }
   /* Mask visualization  for debugging */
-  /*const cvs = document.getElementById("mask-123") || document.createElement("canvas");
-  const ctx = cvs.getContext("2d");
-  const imgData = ctx.createImageData(256, 256);
+  let cvs = document.getElementById("mask-123") || document.createElement("canvas");
+  let ctx = cvs.getContext("2d");
+  let imgData = ctx.createImageData(256, 256);
 
   for (let i = 0; i < 256 * 256; i++) {
-    imgData.data[i * 4 + 0] = onnxMaskInput[i] * 255;
-    imgData.data[i * 4 + 1] = 0;
+    imgData.data[i * 4 + 0] = onnxMaskInput[i] == 7 ? 255 : 0;
+    imgData.data[i * 4 + 1] = onnxMaskInput[i] == -7 ? 255 : 0;
     imgData.data[i * 4 + 2] = 0;
     imgData.data[i * 4 + 3] = 255;
   }
   ctx.putImageData(imgData, 0, 0);
   cvs.style.width = "256px";
   cvs.style.height = "256px";
+  cvs.style.objectFit = "cover";
+  // mirror on diagonal
+  cvs.style.transform = "scale(-1, -1)";
   cvs.id = "mask-123";
-  document.body.appendChild(cvs);*/
+  document.body.appendChild(cvs);
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
+  // TODO: Get mask into correct value range.
+  // TODO: Check whether using two fixed points from distance transform might be better than the bounding box as input points
   const onnxLabel = foundMarkingInVoxelMap ? new Float32Array([1, -1]) : new Float32Array([2, 3]);
-  const onnxHasMaskInput = foundMarkingInVoxelMap ? new Float32Array([1]) : new Float32Array([0]);
+  const onnxHasMaskInput = voxelMap != null ? new Float32Array([1]) : new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
@@ -214,16 +227,69 @@ async function inferFromEmbedding(
   };
 
   // Use intersection-over-union estimates to pick the best mask.
-  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
+  const { masks, iou_predictions: iouPredictions, ...rest } = await ortSession.run(ortInputs);
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
+  const maskAreaData = [];
   // Fill the mask data with a for loop (slicing/mapping would incur additional
   // data copies).
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
+    const x = idx % EMBEDDING_SIZE[0];
+    const y = Math.floor(idx / EMBEDDING_SIZE[0]);
+    if (x >= onnxCoord[0] && x < onnxCoord[2] && y >= onnxCoord[1] && y < onnxCoord[3]) {
+      maskAreaData.push(masks.data[idx + startOffset]);
+      /*const xInArea = x - onnxCoord[0];
+      const yInArea = y - onnxCoord[1];
+      const idxInArea = xInArea + yInArea * (onnxCoord[2]- onnxCoord[0]);
+      maskAreaData[idxInArea] = masks.data[idx + startOffset];*/
+    }
     maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
   }
+
+  cvs = document.getElementById("mask-23") || document.createElement("canvas");
+  ctx = cvs.getContext("2d");
+  imgData = ctx.createImageData(256, 256);
+
+  for (let i = 0; i < 256 * 256; i++) {
+    imgData.data[i * 4 + 0] = maskData[i * 4] == 1 ? 255 : 0;
+    imgData.data[i * 4 + 1] = onnxMaskInput[i * 4] == -1 ? 255 : 0;
+    imgData.data[i * 4 + 2] = 0;
+    imgData.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  cvs.style.width = "256px";
+  cvs.style.height = "256px";
+  cvs.style.objectFit = "cover";
+  // mirror on diagonal
+  cvs.style.transform = "scale(-1, -1)";
+  cvs.id = "mask-23";
+  document.body.appendChild(cvs);
+
+  const median = (array) => {
+    array.sort((a, b) => b - a);
+    const length = array.length;
+    if (length % 2 == 0) {
+      return (array[length / 2] + array[length / 2 - 1]) / 2;
+    } else {
+      return array[Math.floor(length / 2)];
+    }
+  };
+  /*const subArr = masks.data.subarray(
+    startOffset,
+    startOffset + EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1],
+  );*/
+  console.log(
+    "max",
+    _.max(maskAreaData),
+    "min",
+    _.min(maskAreaData),
+    "mean",
+    _.mean(maskAreaData),
+    "median",
+    median(maskAreaData),
+  );
 
   const size = embeddingBoxInTargetMag.getSize();
   const userSizeInTargetMag = userBoxInTargetMag.getSize();

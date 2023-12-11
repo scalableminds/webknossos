@@ -11,14 +11,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{
-  DataRequest,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  VoxelPosition,
-  WebKnossosDataRequest,
-  datasource
-}
+import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, VoxelPosition, datasource}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
@@ -58,15 +51,15 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       segmentIndexPath <- getSegmentIndexFile(organizationName, datasetName, dataLayerName).toFox
       segmentIndex = meshFileCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
-      nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_buckets")
+      nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
       bucketIndex = hashFunction(segmentId) % nBuckets
-      bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
+      bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
       _ <- bool2Fox(bucketEnd - bucketStart != 0)
       buckets = segmentIndex.reader
         .uint64()
-        .readMatrixBlockWithOffset("buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
+        .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
       bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
       _ <- bool2Fox(bucketLocalOffset >= 0)
       topLeftStart = buckets(bucketLocalOffset)(1)

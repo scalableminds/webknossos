@@ -675,7 +675,7 @@ export class DataBucket {
 
     if (this.pendingOperations.length === 0) {
       // This can happen when mutating an unloaded bucket and then
-      // undoing it. The bucket is still marked as dirty, even though,
+      // undoing it. The bucket is still marked as dirty, even though
       // no pending operations are necessary (since the bucket was restored
       // to an untouched version).
       // See this refactoring issue: https://github.com/scalableminds/webknossos/issues/5973

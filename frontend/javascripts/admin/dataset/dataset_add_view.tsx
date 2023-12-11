@@ -1,6 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout } from "antd";
+import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
 import { DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
@@ -13,7 +13,6 @@ import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 
-const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
 enum DatasetAddViewTabs {
@@ -107,34 +106,34 @@ function DatasetAddView({ history }: RouteComponentProps) {
     ? (defaultActiveTabFromHash as DatasetAddViewTabs)
     : DatasetAddViewTabs.UPLOAD;
 
+  const tabs: TabsProps["items"] = [
+    {
+      label: (
+        <span>
+          <UploadOutlined />
+          Upload Dataset
+        </span>
+      ),
+      key: DatasetAddViewTabs.UPLOAD,
+      children: <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />,
+    },
+    {
+      label: (
+        <span>
+          <DatabaseOutlined />
+          Add Remote Dataset
+        </span>
+      ),
+      key: DatasetAddViewTabs.REMOTE,
+      children: <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />,
+    },
+  ];
+
   return (
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey={defaultActiveKey} className="container">
-            <TabPane
-              tab={
-                <span>
-                  <UploadOutlined />
-                  Upload Dataset
-                </span>
-              }
-              key={DatasetAddViewTabs.UPLOAD}
-            >
-              <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />
-            </TabPane>
-            <TabPane
-              tab={
-                <span>
-                  <DatabaseOutlined />
-                  Add Remote Dataset
-                </span>
-              }
-              key={DatasetAddViewTabs.REMOTE}
-            >
-              <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />
-            </TabPane>
-          </Tabs>
+          <Tabs defaultActiveKey={defaultActiveKey} className="container" items={tabs} />
         </Content>
         <VoxelyticsBanner />
       </Layout>

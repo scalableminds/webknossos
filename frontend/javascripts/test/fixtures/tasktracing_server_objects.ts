@@ -70,7 +70,6 @@ export const annotation: APIAnnotation = {
   typ: "Task",
   task: {
     id: "5b1fd1cb97000027049c67ec",
-    formattedHash: "9c67ec",
     projectName: "sampleProject",
     projectId: "dummy-project-id",
     team: "Connectomics department",
@@ -116,7 +115,6 @@ export const annotation: APIAnnotation = {
     allowFinish: true,
     allowDownload: true,
   },
-  formattedHash: "9c67ee",
   annotationLayers: [
     {
       name: "Skeleton",

@@ -1,4 +1,4 @@
-import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.mvc.{CspHeaders, ExtendedController}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.{Assets, SitemapController, WkorgProxyController}
 
@@ -8,7 +8,10 @@ import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHan
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
+import play.filters.csp.CSPConfig
 import utils.WkConf
+
+import scala.concurrent.ExecutionContext
 
 class RequestHandler @Inject()(webCommands: WebCommands,
                                optionalDevContext: OptionalDevContext,
@@ -17,19 +20,21 @@ class RequestHandler @Inject()(webCommands: WebCommands,
                                httpConfiguration: HttpConfiguration,
                                wkorgProxyController: WkorgProxyController,
                                filters: HttpFilters,
+                               val cspConfig: CSPConfig,
                                conf: WkConf,
                                assets: Assets,
-                               sitemapController: SitemapController)
+                               sitemapController: SitemapController)(implicit ec: ExecutionContext)
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
-      router,
+      () => router,
       errorHandler,
       httpConfiguration,
       filters
     )
     with InjectedController
     with ExtendedController
+    with CspHeaders
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
@@ -40,9 +45,10 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       })
     } else if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
       super.routeRequest(request)
+    } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
+      Some(assetWithCsp(request))
     } else if (request.uri.matches("^(/assets/).*$")) {
-      val path = request.path.replaceFirst("^(/assets/)", "")
-      Some(assets.at(path = "/public", file = path))
+      Some(asset(request))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
@@ -50,6 +56,15 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(wkorgProxyController.proxyPageOrMainView)
+
+  private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>
+    addCspHeader(asset(requestHeader))
+  }
+
+  private def asset(requestHeader: RequestHeader) = {
+    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
+    assets.at(path = "/public", file = path)
+  }
 
   private def CURRENT_API_VERSION = 5
 
@@ -60,4 +75,5 @@ class RequestHandler @Inject()(webCommands: WebCommands,
         version.toInt > CURRENT_API_VERSION
       case None => false
     }
+
 }

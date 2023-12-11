@@ -159,25 +159,33 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
-  def countUnassignedPendingForDataStore(dataStoreName: String): Fox[Int] =
-    for {
-      r <- run(q"""SELECT COUNT(_id) FROM $existingCollectionName
+  def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""SELECT COUNT(_id) from $existingCollectionName
                    WHERE state = ${JobState.PENDING}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL
                    AND _dataStore = $dataStoreName
                    AND _worker IS NULL""".as[Int])
-      head <- r.headOption
-    } yield head
+        head <- r.headOption
+      } yield head
+    }
 
-  def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
-    for {
-      r <- run(q"""SELECT COUNT(_id)
+  def countUnfinishedByWorker(workerId: ObjectId, jobCommands: Set[JobCommand]): Fox[Int] =
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""SELECT COUNT(_id)
                    FROM $existingCollectionName
                    WHERE _worker = $workerId
-                   AND state in ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL""".as[Int])
-      head <- r.headOption
-    } yield head
+        head <- r.headOption
+      } yield head
+    }
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
@@ -233,11 +241,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    returnValue = ${s.returnValue},
                    started = ${s.started},
                    ended = ${s.ended}
-                   where _id = $jobId""".asUpdate)
+                   WHERE _id = $jobId""".asUpdate)
     } yield ()
 
-  def reserveNextJob(worker: Worker): Fox[Unit] = {
-    val query = q"""
+  def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =
+    if (jobCommands.isEmpty) Fox.successful(())
+    else {
+      val query =
+        q"""
           WITH subquery AS (
             SELECT _id
             FROM $existingCollectionName
@@ -246,6 +257,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND _dataStore = ${worker._dataStore}
               AND manualState IS NULL
               AND _worker IS NULL
+              AND command IN ${SqlToken.tupleFromList(jobCommands)}
             ORDER BY created
             LIMIT 1
           )
@@ -254,14 +266,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           FROM subquery
           WHERE j._id = subquery._id
           """.asUpdate
-    for {
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
-    } yield ()
-  }
+      for {
+        _ <- run(
+          query.withTransactionIsolation(Serializable),
+          retryCount = 50,
+          retryIfErrorContains = List(transactionSerializationError)
+        )
+      } yield ()
+    }
 
   def countByState: Fox[Map[String, Int]] =
     for {
@@ -440,21 +452,25 @@ class JobService @Inject()(wkConf: WkConf,
       "job_kwargs" -> job.commandArgs
     )
 
-  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String)(
-      implicit ctx: DBAccessContext): Fox[Job] =
+  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- assertDataStoreHasWorkers(dataStoreName) ?~> "job.noWorkerForDatastore"
+      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastore"
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  private def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
-      _ <- dataStoreDAO.findOneByName(dataStoreName)
-      _ <- workerDAO.findOneByDataStore(dataStoreName)
-    } yield ()
+      workers <- workerDAO.findAllByDataStore(dataStoreName)
+      jobs = if (workers.isEmpty) Set[JobCommand]() else workers.map(_.supportedJobCommands).reduce(_.union(_))
+    } yield jobs
+
+  private def jobIsSupportedByAvailableWorkers(command: JobCommand, dataStoreName: String): Fox[Boolean] =
+    for {
+      jobs <- jobsSupportedByAvailableWorkers(dataStoreName)
+    } yield jobs.contains(command)
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {

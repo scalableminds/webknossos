@@ -669,7 +669,7 @@ export function hasAgglomerateMapping(state: OxalisState) {
 
 export function getMeshesForAdditionalCoordinates(
   state: OxalisState,
-  additionalCoordinates: AdditionalCoordinate[] | null,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   layerName: string,
 ) {
   const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

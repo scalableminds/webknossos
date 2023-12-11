@@ -1106,25 +1106,21 @@ function* downloadMeshCellsAsZIP(
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
-      if (
-        segmentMeshController.hasMesh(element.segmentId, element.layerName, additionalCoordinates)
-      ) {
-        const geometry = segmentMeshController.getMeshGeometryInBestLOD(
-          element.segmentId,
-          element.layerName,
-          additionalCoordinates,
-        );
+      const geometry = segmentMeshController.getMeshGeometryInBestLOD(
+        element.segmentId,
+        element.layerName,
+        additionalCoordinates,
+      );
 
-        if (geometry == null) {
-          const errorMessage = messages["tracing.not_mesh_available_to_download"];
-          Toast.error(errorMessage, {
-            sticky: false,
-          });
-          return;
-        }
-        const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
-        return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
+      if (geometry == null) {
+        const errorMessage = messages["tracing.not_mesh_available_to_download"];
+        Toast.error(errorMessage, {
+          sticky: false,
+        });
+        return;
       }
+      const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
+      return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(addFileToZipWriterPromises);
     const result = yield* call([zipWriter, zipWriter.close]);

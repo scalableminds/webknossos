@@ -105,22 +105,27 @@ export default class SegmentMeshController {
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const newGroup = new THREE.Group();
     const keys = [additionalCoordinatesString, layerName, segmentationId, lod];
+    const isNewlyAddedMesh =
+      this.meshesGroupsPerSegmentationId[additionalCoordinatesString]?.[layerName]?.[
+        segmentationId
+      ] == null;
+    const targetGroup = _.get(this.meshesGroupsPerSegmentationId, keys, new THREE.Group());
     _.set(
       this.meshesGroupsPerSegmentationId,
       keys,
-      _.get(this.meshesGroupsPerSegmentationId, keys, newGroup),
+      _.get(this.meshesGroupsPerSegmentationId, keys, targetGroup),
     );
-    if (lod === NO_LOD_MESH_INDEX) {
-      this.meshesLODRootGroup.addNoLODSupportedMesh(newGroup);
-    } else {
-      this.meshesLODRootGroup.addLODMesh(newGroup, lod);
-    }
-    // @ts-ignore
-    newGroup.cellId = segmentationId;
-    if (scale != null) {
-      newGroup.scale.copy(new THREE.Vector3(...scale));
+    if (isNewlyAddedMesh) {
+      if (lod === NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);
+      } else {
+        this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
+      }
+      targetGroup.cellId = segmentationId;
+      if (scale != null) {
+        targetGroup.scale.copy(new THREE.Vector3(...scale));
+      }
     }
     const mesh = this.constructMesh(segmentationId, geometry);
     if (offset) {
@@ -155,13 +160,11 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
-  ): THREE.Group {
+  ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const bestLod = Math.min(
-      ...Object.keys(this.getMeshGroups(additionalCoordKey, layerName, segmentId)).map((lodVal) =>
-        parseInt(lodVal),
-      ),
-    );
+    const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
+    if (meshGroups == null) return null;
+    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => parseInt(lodVal)));
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }
 

@@ -10,6 +10,7 @@ import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reduce
 import _ from "lodash";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -47,6 +48,26 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
       ...maybeReadOnlyUpdater,
     },
   });
+};
+
+const maybeAddAdditionalCoordinatesToMeshState = (
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  layerName: string,
+) => {
+  if (getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName) == null) {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    return update(state, {
+      localSegmentationData: {
+        [layerName]: {
+          meshes: {
+            [additionalCoordKey]: { $set: [] },
+          },
+        },
+      },
+    });
+  }
+  return state;
 };
 
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
@@ -240,6 +261,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (maybeMeshes == null) {
         throw Error("No mesh data found in state.localSegmentationData.");
       }
+      if (maybeMeshes[segmentId] == null) {
+        return state;
+      }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
       newMeshes[additionalCoordKey] = remainingMeshes;
       return update(state, {
@@ -266,7 +290,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
-        seedAdditionalCoordinates: seedAdditionalCoordinates,
+        seedAdditionalCoordinates,
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
@@ -276,20 +300,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-      let stateWithCurrentAddCoords = state;
-
-      // maybe add current add. coord. as key for meshes in state
-      if (getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName) == null) {
-        stateWithCurrentAddCoords = update(state, {
-          localSegmentationData: {
-            [layerName]: {
-              meshes: {
-                [additionalCoordKey]: { $set: [] },
-              },
-            },
-          },
-        });
-      }
+      const stateWithCurrentAddCoords = maybeAddAdditionalCoordinatesToMeshState(
+        state,
+        additionalCoordinates,
+        layerName,
+      );
 
       const updatedKey = update(stateWithCurrentAddCoords, {
         localSegmentationData: {
@@ -308,19 +323,26 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_PRECOMPUTED_MESH": {
-      const { layerName, segmentId, seedPosition, meshFileName } = action;
+      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, meshFileName } =
+        action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
+        seedAdditionalCoordinates,
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
       };
-      const additionalCoordKey = getAdditionalCoordinatesAsString(
-        state.flycam.additionalCoordinates,
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+      const stateWithCurrentAddCoords = maybeAddAdditionalCoordinatesToMeshState(
+        state,
+        additionalCoordinates,
+        layerName,
       );
-      const updatedKey = update(state, {
+      const updatedKey = update(stateWithCurrentAddCoords, {
         localSegmentationData: {
           [layerName]: {
             meshes: {

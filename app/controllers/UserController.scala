@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
@@ -67,14 +67,16 @@ class UserController @Inject()(userService: UserService,
                   includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        annotations <- annotationDAO.findAllFor(request.identity._id,
-                                                isFinished,
-                                                AnnotationType.Explorational,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
+        annotations <- annotationDAO.findAllListableExplorationals(
+          isFinished,
+          Some(request.identity._id),
+          AnnotationType.Explorational,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0)
+        )
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+        jsonList = annotations.map(annotationService.writeCompactInfo)
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -179,14 +181,15 @@ class UserController @Inject()(userService: UserService,
         userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        annotations <- annotationDAO.findAllFor(userIdValidated,
-                                                isFinished,
-                                                AnnotationType.Explorational,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
+        annotations <- annotationDAO.findAllListableExplorationals(
+          isFinished,
+          Some(userIdValidated),
+          AnnotationType.Explorational,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0))
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
-        jsonList <- Fox.serialCombined(annotations)(annotationService.compactWrites)
+        jsonList = annotations.map(annotationService.writeCompactInfo)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {

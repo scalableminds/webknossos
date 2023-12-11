@@ -34,31 +34,30 @@ import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-case class Dataset(
-    _id: ObjectId,
-    _dataStore: String,
-    _organization: ObjectId,
-    _publication: Option[ObjectId],
-    _uploader: Option[ObjectId],
-    _folder: ObjectId,
-    inboxSourceHash: Option[Int],
-    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
-    adminViewConfiguration: Option[DatasetViewConfiguration] = None,
-    description: Option[String] = None,
-    displayName: Option[String] = None,
-    isPublic: Boolean,
-    isUsable: Boolean,
-    name: String,
-    scale: Option[Vec3Double],
-    sharingToken: Option[String],
-    status: String,
-    logoUrl: Option[String],
-    sortingKey: Instant = Instant.now,
-    details: Option[JsObject] = None,
-    tags: Set[String] = Set.empty,
-    created: Instant = Instant.now,
-    isDeleted: Boolean = false
-) extends FoxImplicits {
+case class Dataset(_id: ObjectId,
+                   _dataStore: String,
+                   _organization: ObjectId,
+                   _publication: Option[ObjectId],
+                   _uploader: Option[ObjectId],
+                   _folder: ObjectId,
+                   inboxSourceHash: Option[Int],
+                   defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+                   adminViewConfiguration: Option[DatasetViewConfiguration] = None,
+                   description: Option[String] = None,
+                   displayName: Option[String] = None,
+                   isPublic: Boolean,
+                   isUsable: Boolean,
+                   name: String,
+                   scale: Option[Vec3Double],
+                   sharingToken: Option[String],
+                   status: String,
+                   logoUrl: Option[String],
+                   sortingKey: Instant = Instant.now,
+                   details: Option[JsObject] = None,
+                   tags: Set[String] = Set.empty,
+                   created: Instant = Instant.now,
+                   isDeleted: Boolean = false)
+    extends FoxImplicits {
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
@@ -93,6 +92,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
   val unreportedStatus: String = "No longer available on datastore."
+  val deletedByUserStatus: String = "Deleted by user."
+  private val unreportedStatusList = List(unreportedStatus, deletedByUserStatus)
 
   private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
@@ -288,7 +289,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            isUnreported = row._10 == unreportedStatus,
+            isUnreported = unreportedStatusList.contains(row._10),
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
@@ -333,8 +334,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = $unreportedStatus"
-      case Some(false) => q"status != $unreportedStatus"
+      case Some(true)  => q"status = $unreportedStatus or status = $deletedByUserStatus"
+      case Some(false) => q"status != $unreportedStatus and status != $deletedByUserStatus"
       case None        => q"${true}"
     }
 
@@ -559,14 +560,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def deleteDataset(datasetId: ObjectId): Fox[Unit] = {
+  def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteResolutionsQuery =
       q"delete from webknossos.dataSet_resolutions where _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
       q"delete from webknossos.dataSet_layers where _dataset = $datasetId".asUpdate
     val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
-      q"delete from webknossos.datasets where _id = $datasetId".asUpdate
+      if (onlyMarkAsDeleted)
+        q"update webknossos.datasets set status = $deletedByUserStatus, isUsable = false where _id = $datasetId".asUpdate
+      else
+        q"delete from webknossos.datasets where _id = $datasetId".asUpdate
 
     for {
       _ <- run(

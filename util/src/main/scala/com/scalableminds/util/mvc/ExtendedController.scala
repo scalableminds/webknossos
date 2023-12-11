@@ -4,7 +4,7 @@ import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.http.Status._
 import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
@@ -13,6 +13,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.mvc._
 import play.twirl.api._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import play.filters.csp.CSPConfig
 
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
@@ -79,6 +80,20 @@ trait RemoteOriginHelpers {
 
   def addRemoteOriginHeaders(result: Result): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
+}
+
+trait CspHeaders extends HeaderNames {
+  def cspConfig: CSPConfig
+
+  private lazy val contentSecurityPolicyDirectivesString =
+    cspConfig.directives.map(d => s"${d.name} ${d.value}").mkString("; ")
+
+  def addCspHeader(result: Result): Result =
+    result.withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
+
+  def addCspHeader(action: Action[AnyContent])(implicit request: Request[AnyContent],
+                                               ec: ExecutionContext): Future[Result] =
+    action.apply(request).map(addCspHeader)
 }
 
 trait ResultImplicits extends BoxToResultHelpers with I18nSupport {

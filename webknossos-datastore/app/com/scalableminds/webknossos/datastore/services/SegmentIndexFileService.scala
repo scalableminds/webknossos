@@ -6,8 +6,19 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.SegmentStatistics
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{DataRequest, UnsignedInteger, UnsignedIntegerArray, VoxelPosition}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceRequestSettings
+}
+import com.scalableminds.webknossos.datastore.models.{
+  DataRequest,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  VoxelPosition,
+  WebKnossosDataRequest,
+  datasource
+}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
@@ -71,6 +82,36 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        dataLayerName: String,
                        segmentId: Long,
                        mag: Vec3Int)(implicit m: MessagesProvider): Fox[Long] = {
+
+    def getDataForBucketPositions(dataSource: datasource.DataSource,
+                                  dataLayer: DataLayer,
+                                  mag: Vec3Int,
+                                  bucketPositions: Seq[Vec3Int]): Fox[Array[Byte]] = {
+      val dataRequests = bucketPositions.map { position =>
+        DataServiceDataRequest(
+          dataSource = dataSource,
+          dataLayer = dataLayer,
+          dataLayerMapping = None,
+          cuboid = Cuboid(
+            VoxelPosition(position.x * DataLayer.bucketLength,
+                          position.y * DataLayer.bucketLength,
+                          position.z * DataLayer.bucketLength,
+                          mag),
+            DataLayer.bucketLength,
+            DataLayer.bucketLength,
+            DataLayer.bucketLength
+          ),
+          settings = DataServiceRequestSettings(halfByte = false,
+                                                appliedAgglomerate = None,
+                                                version = None,
+                                                additionalCoordinates = None),
+        )
+      }.toList
+      for {
+        (data, _) <- binaryDataServiceHolder.binaryDataService.handleDataRequests(dataRequests)
+      } yield data
+    }
+
     def getTypedDataForSegment(organizationName: String, datasetName: String, dataLayerName: String)(
         segmentId: Long,
         mag: Vec3Int)(implicit m: MessagesProvider) =
@@ -79,14 +120,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   datasetName,
                                                                                   dataLayerName)
-        request = DataRequest(
-          VoxelPosition(bucketPositions.head.x, bucketPositions.head.y, bucketPositions.head.z, mag),
-          DataLayer.bucketLength,
-          DataLayer.bucketLength,
-          DataLayer.bucketLength
-        )
-        data <- binaryDataServiceHolder.binaryDataService.handleDataRequest(
-          DataServiceDataRequest(dataSource, dataLayer, None, request.cuboid(dataLayer), request.settings))
+        //TODO: Mapping
+        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {

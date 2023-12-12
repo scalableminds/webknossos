@@ -44,6 +44,8 @@ const { Column } = Table;
 const typeHint: RowRenderer[] = [];
 const useLruRank = true;
 
+const THUMBNAIL_SIZE = 100;
+
 type Props = {
   datasets: Array<APIDatasetCompact>;
   subfolders: FolderItem[];
@@ -278,9 +280,12 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
-    const selectedLayerName: string | null = this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+    const selectedLayerName: string | null =
+      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`
+      ? `/api/datasets/${this.data.owningOrganization}/${
+          this.data.name
+        }/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
@@ -289,7 +294,12 @@ class DatasetRenderer {
           to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
           title="View Dataset"
         >
-          <img src={imgSrc} className={`dataset-table-thumbnail ${iconClassName}`} alt="" />
+          <img
+            src={imgSrc}
+            className={`dataset-table-thumbnail ${iconClassName}`}
+            style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+            alt=""
+          />
         </Link>
         <div className="dataset-table-name-container">
           <Link
@@ -357,6 +367,7 @@ class FolderRenderer {
         <img
           src={"/assets/images/folder-thumbnail.svg"}
           className="dataset-table-thumbnail icon-thumbnail"
+          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
           alt=""
         />
         <div className="dataset-table-name-container">

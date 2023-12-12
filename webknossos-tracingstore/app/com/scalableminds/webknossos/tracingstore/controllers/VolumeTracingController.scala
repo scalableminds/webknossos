@@ -302,7 +302,7 @@ class VolumeTracingController @Inject()(
       for {
         positionOpt <- tracingService.findData(tracingId)
       } yield {
-        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int(1, 1, 1))))
+        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
       }
     }
   }

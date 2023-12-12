@@ -64,7 +64,7 @@ type Olvy =
     }
   | undefined;
 
-const _window: Window & typeof globalThis & { Olvy?: Olvy } =
+const _window: Window & typeof globalThis & { Olvy?: Olvy; OlvyConfig?: Object | null } =
   typeof window === "undefined"
     ? ({
         alert: console.log.bind(console),

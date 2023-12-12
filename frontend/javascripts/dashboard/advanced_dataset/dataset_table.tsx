@@ -278,12 +278,7 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
-    let selectedLayerName = null;
-    if (this.data.colorLayerNames.length > 0) {
-      selectedLayerName = this.data.colorLayerNames[0];
-    } else if (this.data.segmentationLayerNames.length > 0) {
-      selectedLayerName = this.data.segmentationLayerNames[0];
-    }
+    const selectedLayerName: string | null = this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.owningOrganization}/${this.data.name}/layers/${selectedLayerName}/thumbnail?w=200&h=200`
       : "/assets/images/inactive-dataset-thumbnail.svg";

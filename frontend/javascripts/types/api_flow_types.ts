@@ -224,8 +224,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
-    colorLayerNames: colorLayerNames.sort(),
-    segmentationLayerNames: segmentationLayerNames.sort(),
+    colorLayerNames: colorLayerNames,
+    segmentationLayerNames: segmentationLayerNames,
   };
 }
 

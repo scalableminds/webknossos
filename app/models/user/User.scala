@@ -273,7 +273,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         INNER JOIN webknossos.multiusers m on u._multiuser = m._id
         INNER JOIN webknossos.user_team_roles utr on utr._user = u._id
         INNER JOIN webknossos.teams t on t._id = utr._team
-        INNER JOIN webknossos.user_experiences ux on ux._user = u._id
+        LEFT JOIN webknossos.user_experiences ux on ux._user = u._id
         WHERE $selectionPredicates
         GROUP BY u._id, o._id, m._id, m.email, m.noveluserexperienceinfos, m.selectedtheme, m.issuperuser, m.isemailverified
          """.as[UserCompactInfo])

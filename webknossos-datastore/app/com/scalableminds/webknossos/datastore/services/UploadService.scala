@@ -17,19 +17,20 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
 import scala.concurrent.ExecutionContext
 
-case class ReserveUploadInformation(uploadId: String,
-                                    name: String,
-                                    organization: String,
-                                    totalFileCount: Long,
-                                    layersToLink: Option[List[LinkedLayerIdentifier]],
-                                    initialTeams: List[String],
-                                    folderId: Option[String])
+case class ReserveUploadInformation(
+    uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
+    name: String, // dataset name
+    organization: String,
+    totalFileCount: Long,
+    layersToLink: Option[List[LinkedLayerIdentifier]],
+    initialTeams: List[String], // team ids
+    folderId: Option[String])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }

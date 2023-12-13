@@ -76,6 +76,7 @@ import { updateTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import {
   batchUpdateGroupsAndSegmentsAction,
   removeSegmentAction,
+  deleteSegmentDataAction,
   setActiveCellAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -280,6 +281,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   removeSegment(segmentId: number, layerName: string) {
     dispatch(removeSegmentAction(segmentId, layerName));
+  },
+
+  deleteSegmentData(segmentId: number, layerName: string, callback?: () => void) {
+    dispatch(deleteSegmentDataAction(segmentId, layerName, callback));
   },
 });
 
@@ -1602,6 +1607,7 @@ class SegmentsView extends React.Component<Props, State> {
                     allowUpdate={this.props.allowUpdate}
                     updateSegment={this.props.updateSegment}
                     removeSegment={this.props.removeSegment}
+                    deleteSegmentData={this.props.deleteSegmentData}
                     visibleSegmentationLayer={this.props.visibleSegmentationLayer}
                     loadAdHocMesh={this.props.loadAdHocMesh}
                     loadPrecomputedMesh={this.props.loadPrecomputedMesh}
@@ -1612,6 +1618,7 @@ class SegmentsView extends React.Component<Props, State> {
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
                     multiSelectMenu={multiSelectMenu()}
+                    activeVolumeTracing={this.props.activeVolumeTracing}
                   />
                 );
               } else {

@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, MenuProps } from "antd";
+import { List, Tooltip, Dropdown, MenuProps, Modal } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -21,7 +21,13 @@ import {
   refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { ActiveMappingInfo, MeshInformation, OxalisState, Segment } from "oxalis/store";
+import type {
+  ActiveMappingInfo,
+  MeshInformation,
+  OxalisState,
+  Segment,
+  VolumeTracing,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
@@ -32,6 +38,8 @@ import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+
+const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -192,6 +200,7 @@ type Props = {
     createsNewUndoState: boolean,
   ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
+  deleteSegmentData: (arg0: number, arg2: string, callback?: () => void) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
@@ -219,6 +228,7 @@ type Props = {
   onRenameStart: () => void;
   onRenameEnd: () => void;
   multiSelectMenu: MenuProps;
+  activeVolumeTracing: VolumeTracing | null | undefined;
 };
 
 function _MeshInfoItem(props: {
@@ -381,6 +391,7 @@ function _SegmentListItem({
   allowUpdate,
   updateSegment,
   removeSegment,
+  deleteSegmentData,
   onSelectSegment,
   visibleSegmentationLayer,
   loadAdHocMesh,
@@ -393,6 +404,7 @@ function _SegmentListItem({
   onRenameStart,
   onRenameEnd,
   multiSelectMenu,
+  activeVolumeTracing,
 }: Props) {
   const isEditingDisabled = !allowUpdate;
 
@@ -497,6 +509,52 @@ function _SegmentListItem({
         },
         label: "Remove Segment From List",
       },
+      {
+        key: "deleteSegmentData",
+        onClick: () => {
+          if (visibleSegmentationLayer == null) {
+            return;
+          }
+
+          Modal.confirm({
+            content: `Are you sure you want to delete the data of segment ${getSegmentName(
+              segment,
+              true,
+            )}? This operation will set all voxels with id ${segment.id} to 0.`,
+            okText: "Yes, delete",
+            okType: "danger",
+            onOk: async () => {
+              await new Promise<void>((resolve) =>
+                deleteSegmentData(segment.id, visibleSegmentationLayer.name, resolve),
+              );
+
+              Toast.info(
+                <span>
+                  The data of segment {getSegmentName(segment, true)} was deleted.{" "}
+                  <a
+                    href="#"
+                    onClick={() => {
+                      removeSegment(segment.id, visibleSegmentationLayer.name);
+                      Toast.close(ALSO_DELETE_SEGMENT_FROM_LIST_KEY);
+                    }}
+                  >
+                    Also remove from list.
+                  </a>
+                </span>,
+                { key: ALSO_DELETE_SEGMENT_FROM_LIST_KEY },
+              );
+            },
+          });
+
+          andCloseContextMenu();
+        },
+        disabled:
+          activeVolumeTracing == null ||
+          !activeVolumeTracing.hasSegmentIndex ||
+          // Not supported for fallback layers, yet.
+          activeVolumeTracing.fallbackLayer != null,
+        label: "Delete Segment's Data",
+      },
     ],
   });
 
@@ -551,7 +609,7 @@ function _SegmentListItem({
         <div style={{ display: "inline-flex", alignItems: "center" }}>
           <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
           <EditableTextLabel
-            value={segment.name || `Segment ${segment.id}`}
+            value={getSegmentName(segment)}
             label="Segment Name"
             onClick={() => onSelectSegment(segment)}
             onRenameStart={onRenameStart}
@@ -679,6 +737,11 @@ function getComputeMeshAdHocTooltipInfo(
     disabled,
     title,
   };
+}
+
+function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
 }
 
 export default SegmentListItem;

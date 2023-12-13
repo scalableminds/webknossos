@@ -1,5 +1,5 @@
 import ResumableJS from "resumablejs";
-import _ from "lodash";
+import _, { method } from "lodash";
 import dayjs from "dayjs";
 import type {
   APIActiveUser,
@@ -2242,11 +2242,10 @@ export function getBucketPositionsForAdHocMesh(
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.append("token", token);
-    params.append("cubeSize", `${cubeSize.join(",")}`);
-    params.append("mag", `${mag.join("-")}`);
 
-    const positions = await Request.receiveJSON(
+    const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      { data: { cubeSize, mag }, method: "POST" },
     );
     return positions;
   });

@@ -54,7 +54,7 @@ case class Dataset(_id: ObjectId,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
                    details: Option[JsObject] = None,
-                   tags: Set[String] = Set.empty,
+                   tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
     extends FoxImplicits {
@@ -75,7 +75,9 @@ case class DatasetCompactInfo(
     lastUsedByUser: Instant,
     status: String,
     tags: List[String],
-    isUnreported: Boolean
+    isUnreported: Boolean,
+    colorLayerNames: List[String],
+    segmentationLayerNames: List[String],
 )
 
 object DatasetCompactInfo {
@@ -133,7 +135,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.logourl,
         Instant.fromSql(r.sortingkey),
         details,
-        parseArrayLiteral(r.tags).toSet,
+        parseArrayLiteral(r.tags).sorted,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -262,7 +264,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ) AS isEditable,
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
-              d.tags
+              d.tags,
+              cl.names AS colorLayerNames,
+              sl.names AS segmentationLayerNames
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -271,9 +275,26 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ON u._id = $requestingUserIdOpt
             LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'color' GROUP BY _dataset) cl
+              ON d._id = cl._dataset
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
+              ON d._id = sl._dataset
             """
       rows <- run(
-        query.as[(ObjectId, String, String, ObjectId, Boolean, String, Instant, Boolean, Instant, String, String)])
+        query.as[
+          (ObjectId,
+           String,
+           String,
+           ObjectId,
+           Boolean,
+           String,
+           Instant,
+           Boolean,
+           Instant,
+           String,
+           String,
+           String,
+           String)])
     } yield
       rows.toList.map(
         row =>
@@ -290,6 +311,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             status = row._10,
             tags = parseArrayLiteral(row._11),
             isUnreported = unreportedStatusList.contains(row._10),
+            colorLayerNames = parseArrayLiteral(row._12),
+            segmentationLayerNames = parseArrayLiteral(row._13)
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
@@ -513,7 +536,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
            ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
            ${d.name}, ${d.scale}, ${d.status.take(1024)},
-           ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags.toList},
+           ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags},
            ${d.created}, ${d.isDeleted})
            """.asUpdate)
     } yield ()

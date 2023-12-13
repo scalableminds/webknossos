@@ -74,13 +74,7 @@ object Dependencies {
     // Brotli compression native bindings. not imported
     "com.aayushatharva.brotli4j" % "native-linux-x86_64" % brotliVersion,
     "com.aayushatharva.brotli4j" % "native-osx-x86_64" % brotliVersion,
-    "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion,
-    // Swagger API descriptions. import io.swagger
-    "io.swagger" % "swagger-core" % "1.6.11",
-    // Swagger API annotations. import io.swagger.annotations
-    "io.swagger" %% "swagger-scala-module" % "1.0.6",
-    // Swagger API descriptions generated from play routes. import play.routes
-    "com.typesafe.play" %% "routes-compiler" % "2.8.16",
+    "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

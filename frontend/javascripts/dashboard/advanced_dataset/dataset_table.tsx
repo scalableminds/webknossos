@@ -44,6 +44,8 @@ const { Column } = Table;
 const typeHint: RowRenderer[] = [];
 const useLruRank = true;
 
+const THUMBNAIL_SIZE = 100;
+
 type Props = {
   datasets: Array<APIDatasetCompact>;
   subfolders: FolderItem[];
@@ -278,24 +280,48 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn() {
+    const selectedLayerName: string | null =
+      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+    const imgSrc = selectedLayerName
+      ? `/api/datasets/${this.data.owningOrganization}/${
+          this.data.name
+        }/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+      : "/assets/images/inactive-dataset-thumbnail.svg";
+    const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
         <Link
           to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
           title="View Dataset"
-          className="incognito-link"
         >
-          {this.data.name}
+          <img
+            src={imgSrc}
+            className={`dataset-table-thumbnail ${iconClassName}`}
+            style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+            alt=""
+          />
         </Link>
-        <br />
+        <div className="dataset-table-name-container">
+          <Link
+            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            title="View Dataset"
+            className="incognito-link dataset-table-name"
+          >
+            {this.data.name}
+          </Link>
 
-        {this.datasetTable.props.context.globalSearchQuery != null ? (
-          <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
-        ) : null}
+          {this.renderTags()}
+          {this.datasetTable.props.context.globalSearchQuery != null ? (
+            <>
+              <br />
+              <BreadcrumbsTag parts={this.datasetTable.props.context.getBreadcrumbs(this.data)} />
+            </>
+          ) : null}
+        </div>
       </>
     );
   }
-  renderTagsColumn() {
+  renderTags() {
     return this.data.isActive ? (
       <DatasetTags
         dataset={this.data}
@@ -335,14 +361,20 @@ class FolderRenderer {
   getRowKey() {
     return this.data.key;
   }
-  renderTypeColumn() {
-    return <FolderOpenOutlined style={{ fontSize: "18px" }} />;
-  }
   renderNameColumn() {
-    return this.data.name;
-  }
-  renderTagsColumn() {
-    return null;
+    return (
+      <>
+        <img
+          src={"/assets/images/folder-thumbnail.svg"}
+          className="dataset-table-thumbnail icon-thumbnail"
+          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          alt=""
+        />
+        <div className="dataset-table-name-container">
+          <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        </div>
+      </>
+    );
   }
   renderCreationDateColumn() {
     return null;
@@ -699,31 +731,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
           }}
         >
           <Column
-            width={70}
-            title="Type"
-            key="type"
-            render={(__, renderer: RowRenderer) => renderer.renderTypeColumn()}
-          />
-          <Column
             title="Name"
             dataIndex="name"
             key="name"
-            width={280}
             sorter={Utils.localeCompareBy<RowRenderer>(
               typeHint,
               (rowRenderer) => rowRenderer.data.name,
             )}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
             render={(_name: string, renderer: RowRenderer) => renderer.renderNameColumn()}
-          />
-          <Column
-            title="Tags"
-            dataIndex="tags"
-            key="tags"
-            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_tags: Array<string>, rowRenderer: RowRenderer) =>
-              rowRenderer.renderTagsColumn()
-            }
           />
           <Column
             width={180}
@@ -803,7 +819,11 @@ export function DatasetTags({
         />
       ))}
       {dataset.isEditable ? (
-        <EditableTextIcon icon={<PlusOutlined />} onChange={_.partial(editTagFromDataset, true)} />
+        <EditableTextIcon
+          icon={<PlusOutlined />}
+          onChange={_.partial(editTagFromDataset, true)}
+          label="Add Tag"
+        />
       ) : null}
     </div>
   );
@@ -896,7 +916,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag>
+      <Tag style={{ marginTop: "5px" }}>
         <FolderOpenOutlined />
         {formatPath(parts)}
       </Tag>

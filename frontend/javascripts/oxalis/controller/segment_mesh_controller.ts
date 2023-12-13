@@ -235,13 +235,17 @@ export default class SegmentMeshController {
     layerName: string,
     segmentationId: number,
     lod: number,
-  ) {
+  ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordKey, layerName, segmentationId, lod];
     return _.get(this.meshesGroupsPerSegmentationId, keys, null);
   }
 
-  getMeshGroups(additionalCoordKey: string, layerName: string, segmentationId: number) {
+  getMeshGroups(
+    additionalCoordKey: string,
+    layerName: string,
+    segmentationId: number,
+  ): Record<number, THREE.Group> | null {
     const keys = [additionalCoordKey, layerName, segmentationId];
     return _.get(this.meshesGroupsPerSegmentationId, keys, null);
   }

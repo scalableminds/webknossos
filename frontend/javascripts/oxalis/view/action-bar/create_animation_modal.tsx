@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
-import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
+import Store, { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
 
 import {
   getColorLayers,
@@ -179,7 +179,10 @@ function CreateAnimationModal(props: Props) {
 
     if (visibleSegmentationLayer) {
       const availableMeshes = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-      meshSegmentIds = Object.values(availableMeshes)
+      if (availableMeshes == null) {
+        throw new Error("There is no mesh data in localSegmentationData.");
+      }
+      meshSegmentIds = Object.values(availableMeshes as Record<number, MeshInformation>)
         .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
         .map((mesh) => mesh.segmentId);
 

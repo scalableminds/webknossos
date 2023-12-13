@@ -39,16 +39,20 @@ import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
+  getMeshesForCurrentAdditionalCoordinates,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -150,7 +154,6 @@ type StateProps = {
   resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
 };
 
-const EMPTY_OBJECT = {};
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
@@ -164,12 +167,14 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
 
+  const meshesForCurrentAdditionalCoordinates =
+    visibleSegmentationLayer != null
+      ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
+      : undefined;
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
-    meshes:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].meshes
-        : EMPTY_OBJECT,
+    meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
@@ -209,15 +214,15 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   loadAdHocMesh(
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) {
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
+    dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
   },
 
   loadPrecomputedMesh(
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) {
     dispatch(
@@ -228,7 +233,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setActiveCell(
     segmentId: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
@@ -241,8 +246,13 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setPositionAction(position));
   },
 
-  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined) {
-    dispatch(setAdditionalCoordinatesAction(additionalCoordinates || null));
+  setAdditionalCoordinates(additionalCoordinates: AdditionalCoordinate[] | undefined | null) {
+    if (
+      getAdditionalCoordinatesAsString(Store.getState().flycam.additionalCoordinates) !==
+      getAdditionalCoordinatesAsString(additionalCoordinates)
+    ) {
+      dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
+    }
   },
 
   updateSegments(
@@ -679,8 +689,9 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     this.props.setPosition(segment.somePosition);
-    if (segment.someAdditionalCoordinates) {
-      this.props.setAdditionalCoordinates(segment.someAdditionalCoordinates);
+    const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
+    if (segmentAdditionalCoordinates != null) {
+      this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
     }
   };
 
@@ -1069,7 +1080,8 @@ class SegmentsView extends React.Component<Props, State> {
       visibleSegmentationLayer == null ||
       !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex
+      !this.props.activeVolumeTracing?.hasSegmentIndex ||
+      this.props.flycam.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
     ) {
       //in this case there is a fallback layer
       return null;
@@ -1256,14 +1268,11 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   handleRefreshMeshes = (groupId: number | null) => {
-    const { visibleSegmentationLayer } = this.props;
+    const { visibleSegmentationLayer, meshes } = this.props;
     if (visibleSegmentationLayer == null) return;
 
     this.handlePerSegment(groupId, (segment) => {
-      if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
-        null
-      ) {
+      if (meshes[segment.id] != null) {
         Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1282,13 +1291,10 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
-    const { visibleSegmentationLayer } = this.props;
+    const { visibleSegmentationLayer, meshes } = this.props;
     if (visibleSegmentationLayer == null) return;
     this.handlePerSegment(groupId, (segment) => {
-      if (
-        Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes[segment.id] !=
-        null
-      ) {
+      if (meshes[segment.id] != null) {
         Store.dispatch(removeMeshAction(visibleSegmentationLayer.name, segment.id));
       }
     });
@@ -1299,9 +1305,13 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
+    const { flycam, meshes } = this.props;
+    const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
-      if (Store.getState().localSegmentationData[layerName].meshes[segment.id] != null) {
-        Store.dispatch(updateMeshVisibilityAction(layerName, segment.id, isVisible));
+      if (meshes[segment.id] != null) {
+        Store.dispatch(
+          updateMeshVisibilityAction(layerName, segment.id, isVisible, additionalCoordinates),
+        );
       }
     });
   };
@@ -1309,7 +1319,11 @@ class SegmentsView extends React.Component<Props, State> {
   handleLoadMeshesAdHoc = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates);
+      this.props.loadAdHocMesh(
+        segment.id,
+        segment.somePosition,
+        this.props.flycam.additionalCoordinates,
+      );
     });
   };
 
@@ -1794,8 +1808,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null || relevantSegments.length === 0) return false;
-    const meshesOfLayer =
-      Store.getState().localSegmentationData[visibleSegmentationLayer.name].meshes;
+    const meshesOfLayer = this.props.meshes;
     return relevantSegments.some((segment) => meshesOfLayer[segment.id] != null);
   };
 

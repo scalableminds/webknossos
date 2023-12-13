@@ -31,6 +31,7 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -52,7 +53,7 @@ const getLoadPrecomputedMeshMenuItem = (
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void,
   andCloseContextMenu: (_ignore?: any) => void,
@@ -111,7 +112,7 @@ const getComputeMeshAdHocMenuItem = (
   loadAdHocMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore?: any) => void,
@@ -129,9 +130,12 @@ const getComputeMeshAdHocMenuItem = (
         andCloseContextMenu();
         return;
       }
-
       andCloseContextMenu(
-        loadAdHocMesh(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+        loadAdHocMesh(
+          segment.id,
+          segment.somePosition,
+          Store.getState().flycam.additionalCoordinates,
+        ),
       );
     },
     disabled,
@@ -144,7 +148,7 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell: (
     arg0: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
@@ -158,11 +162,7 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       andCloseContextMenu(
-        setActiveCell(
-          segment.id,
-          segment.somePosition,
-          segment.someAdditionalCoordinates || undefined,
-        ),
+        setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
@@ -197,22 +197,24 @@ type Props = {
   loadAdHocMesh: (
     segmentId: number,
     somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
-    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+    seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void;
   setActiveCell: (
     arg0: number,
     somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
   mesh: MeshInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
-  setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
+  setAdditionalCoordinates: (
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  ) => void;
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
@@ -229,15 +231,21 @@ function _MeshInfoItem(props: {
   setPosition: (arg0: Vector3) => void;
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
   const dispatch = useDispatch();
-
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
-    dispatch(updateMeshVisibilityAction(layerName, id, isVisible));
+    dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
   };
 
   const { segment, isSelectedInList, isHovered, mesh } = props;
 
-  if (!mesh) {
+  if (
+    !mesh ||
+    getAdditionalCoordinatesAsString(mesh.seedAdditionalCoordinates) !==
+      getAdditionalCoordinatesAsString(additionalCoordinates)
+  ) {
     if (isSelectedInList) {
       return (
         <div

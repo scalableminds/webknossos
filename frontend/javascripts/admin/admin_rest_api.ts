@@ -962,12 +962,13 @@ export function getSegmentVolumes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Promise<number[]> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
       {
-        data: { mag, segmentIds },
+        data: { mag, segmentIds, additionalCoordinates },
       },
     ),
   );
@@ -978,12 +979,13 @@ export function getSegmentBoundingBoxes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
       {
-        data: { mag, segmentIds },
+        data: { mag, segmentIds, additionalCoordinates },
       },
     ),
   );
@@ -2238,6 +2240,7 @@ export function getBucketPositionsForAdHocMesh(
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -2245,7 +2248,14 @@ export function getBucketPositionsForAdHocMesh(
 
     const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
-      { data: { cubeSize, mag }, method: "POST" },
+      {
+        data: {
+          cubeSize: `${cubeSize[0]},${cubeSize[1]},${cubeSize[2]}`,
+          mag: `${mag[0]}-${mag[1]}-${mag[2]}`,
+          additionalCoordinates,
+        },
+        method: "POST",
+      },
     );
     return positions;
   });

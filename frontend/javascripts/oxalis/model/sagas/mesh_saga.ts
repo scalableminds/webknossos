@@ -360,6 +360,7 @@ function* loadFullAdHocMesh(
         cubeSize,
         mag,
         clippedPosition,
+        additionalCoordinates,
       )
     : [clippedPosition];
 
@@ -406,6 +407,7 @@ function* getChunkPositionsFromSegmentStats(
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
   const unscaledPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -414,6 +416,7 @@ function* getChunkPositionsFromSegmentStats(
     segmentId,
     cubeSize,
     mag,
+    additionalCoordinates,
   );
   const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(positions, clippedPosition) as Vector3[];

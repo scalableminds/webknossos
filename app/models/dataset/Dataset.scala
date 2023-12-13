@@ -562,20 +562,30 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteResolutionsQuery =
-      q"delete from webknossos.dataSet_resolutions where _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataSet_resolutions WHERE _dataset = $datasetId".asUpdate
+    val deleteCoordinateTransformsQuery =
+      q"DELETE FROM webknossos.dataSet_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
-      q"delete from webknossos.dataSet_layers where _dataset = $datasetId".asUpdate
-    val deleteAllowedTeamsQuery = q"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataSet_layers WHERE _dataset = $datasetId".asUpdate
+    val deleteAllowedTeamsQuery = q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _dataset = $datasetId".asUpdate
+    val deleteAdditionalAxesQuery =
+      q"DELETE FROM webknossos.dataSet_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"update webknossos.datasets set status = $deletedByUserStatus, isUsable = false where _id = $datasetId".asUpdate
+        q"UPDATE webknossos.datasets SET status = $deletedByUserStatus, isUsable = false WHERE _id = $datasetId".asUpdate
       else
-        q"delete from webknossos.datasets where _id = $datasetId".asUpdate
+        q"DELETE FROM webknossos.datasets WHERE _id = $datasetId".asUpdate
 
     for {
       _ <- run(
         DBIO
-          .sequence(List(deleteResolutionsQuery, deleteLayersQuery, deleteAllowedTeamsQuery, deleteDatasetQuery))
+          .sequence(
+            List(deleteResolutionsQuery,
+                 deleteAdditionalAxesQuery,
+                 deleteLayersQuery,
+                 deleteAllowedTeamsQuery,
+                 deleteCoordinateTransformsQuery,
+                 deleteDatasetQuery))
           .transactionally)
     } yield ()
   }

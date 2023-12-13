@@ -10,11 +10,11 @@ import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import security.URLSharing
 import utils.{ObjectId, WkConf}
 
-import java.net.URLDecoder
 import scala.concurrent.ExecutionContext
 
 case class OpenGraphTags(
@@ -72,7 +72,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case shortLinkRouteRegex(key) =>
         for {
           shortLink <- shortLinkDAO.findOneByKey(key)
-          asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8"))
+          asUri <- tryo(Uri(shortLink.longLink))
         } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
       case _ => Fox.successful(uriPath, sharingToken)
     }

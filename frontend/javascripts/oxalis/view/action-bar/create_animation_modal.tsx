@@ -245,23 +245,25 @@ function CreateAnimationModal(props: Props) {
     >
       <React.Fragment>
         <Row gutter={8}>
-          <Col span={8} style={{ textAlign: "center" }}>
-            <img
-              src="/assets/images/animation-illustration.png"
-              alt="Create an animation showing your dataset in 3D"
-              style={{ width: 160, display: "inline-block" }}
+          <Col span={12} style={{ textAlign: "center" }}>
+            <video
+              src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
+              style={{ width: "100%", display: "inline-block", objectFit: "cover" }}
+              controls={true}
+              autoPlay
+              muted={true}
             />
           </Col>
-          <Col span={16}>
-            <p>
+          <Col span={12}>
+            <p style={{ paddingLeft: 10 }}>
               Create a short, engaging animation of your data. Watch as the block of volumetric
               image data shrinks to reveal segmented objects. Choose from three perspective options
               and select the color layer and meshes you want to render. The resulting video file can
               be used for presentations, publications, or your website.
             </p>
-            <p>
+            <p style={{ paddingLeft: 10 }}>
               For custom animations, please{" "}
-              <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+              <a target="_blank" href="mailto:sales@webknossos.org" rel="noopener noreferrer">
                 contact us
               </a>
               .

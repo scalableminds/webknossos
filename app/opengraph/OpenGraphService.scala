@@ -72,7 +72,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case shortLinkRouteRegex(key) =>
         for {
           shortLink <- shortLinkDAO.findOneByKey(key)
-          asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8"))
+          asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8").replaceAll(" ", "%20"))
         } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
       case _ => Fox.successful(uriPath, sharingToken)
     }

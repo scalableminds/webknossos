@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for S3-compliant object storage services (e.g. MinIO) as a storage backend for remote datasets. [#7453](https://github.com/scalableminds/webknossos/pull/7453)
 - Added support for blosc compressed N5 datasets. [#7465](https://github.com/scalableminds/webknossos/pull/7465)
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
+- Added thumbnails to the dashboard dataset list. [#7479](https://github.com/scalableminds/webknossos/pull/7479)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)

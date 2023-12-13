@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWit
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.codec.digest.MurmurHash3
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}

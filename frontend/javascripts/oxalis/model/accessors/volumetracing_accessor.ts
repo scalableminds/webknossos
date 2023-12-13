@@ -1,9 +1,10 @@
 import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIDataset,
   APISegmentationLayer,
+  AdditionalCoordinate,
   AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
@@ -34,6 +35,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import {
   getFlooredPosition,
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
 } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
@@ -76,13 +78,13 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing | APIAnnotationInfo,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
@@ -97,7 +99,7 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
@@ -663,4 +665,36 @@ export function hasAgglomerateMapping(state: OxalisState) {
   }
 
   return AGGLOMERATE_STATES.YES;
+}
+
+export function getMeshesForAdditionalCoordinates(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  layerName: string,
+) {
+  const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const meshRecords = state.localSegmentationData[layerName].meshes;
+  if (meshRecords?.[addCoordKey] != null) {
+    return meshRecords[addCoordKey];
+  }
+  return null;
+}
+
+export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState, layerName: string) {
+  return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates, layerName);
+}
+
+export function getMeshInfoForSegment(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+  layerName: string,
+  segmentId: number,
+) {
+  const meshesForAddCoords = getMeshesForAdditionalCoordinates(
+    state,
+    additionalCoordinates,
+    layerName,
+  );
+  if (meshesForAddCoords == null) return null;
+  return meshesForAddCoords[segmentId];
 }

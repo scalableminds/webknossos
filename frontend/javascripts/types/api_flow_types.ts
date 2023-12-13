@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type {
   BoundingBoxObject,
   Edge,
@@ -194,7 +195,7 @@ export type MaintenanceInfo = {
 
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
-export type APIDatasetCompactWithoutStatus = Pick<
+export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   APIMaybeUnimportedDataset,
   | "owningOrganization"
   | "name"
@@ -207,12 +208,19 @@ export type APIDatasetCompactWithoutStatus = Pick<
   | "tags"
   | "isUnreported"
 >;
-export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
+  colorLayerNames: Array<string>;
+  segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  const [colorLayerNames, segmentationLayerNames] = _.partition(
+    dataset.dataSource.dataLayers,
+    (layer) => layer.category === "segmentation",
+  ).map((layers) => layers.map((layer) => layer.name).sort());
+
   return {
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
@@ -225,6 +233,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
+    colorLayerNames: colorLayerNames,
+    segmentationLayerNames: segmentationLayerNames,
   };
 }
 
@@ -405,7 +415,6 @@ export type APITask = {
   readonly dataSet: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
-  readonly formattedHash: string;
   readonly id: string;
   readonly neededExperience: {
     readonly domain: string;
@@ -428,20 +437,17 @@ export type AnnotationLayerDescriptor = {
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
-export type APIAnnotationCompact = {
+export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
-  readonly formattedHash: string;
   readonly modified: number;
   readonly id: string;
-  readonly visibility: APIAnnotationVisibility;
   readonly name: string;
   readonly state: string;
   readonly stats: SkeletonTracingStats | {};
   readonly tags: Array<string>;
-  readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
   // or due to missing permissions).
@@ -450,25 +456,22 @@ export type APIAnnotationCompact = {
   readonly othersMayEdit: boolean;
 };
 
-export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
   const {
-    annotationLayers,
     dataSetName,
-    organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
-    state,
     stats,
+    state,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
     othersMayEdit,
+    organization,
+    annotationLayers,
   } = annotation;
 
   return {
@@ -476,15 +479,12 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     dataSetName,
     organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
     state,
     stats,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
@@ -500,7 +500,10 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-type APIAnnotationBase = APIAnnotationCompact & {
+type APIAnnotationBase = APIAnnotationInfo & {
+  readonly visibility: APIAnnotationVisibility;
+  readonly tracingTime: number | null | undefined;
+
   readonly dataStore: APIDataStore;
   readonly tracingStore: APITracingStore;
   readonly restrictions: APIRestrictions;
@@ -631,6 +634,7 @@ export enum APIJobType {
   "EXPORT_TIFF" = "export_tiff",
   "RENDER_ANIMATION" = "render_animation",
   "COMPUTE_MESH_FILE" = "compute_mesh_file",
+  "COMPUTE_SEGMENT_INDEX_FILE" = "compute_segment_index_file",
   "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
   "INFER_NUCLEI" = "infer_nuclei",
   "INFER_NEURONS" = "infer_neurons",

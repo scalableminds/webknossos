@@ -83,7 +83,6 @@ export const annotation: APIAnnotation = {
     allowFinish: true,
     allowDownload: true,
   },
-  formattedHash: "f043e7",
   annotationLayers: [
     {
       name: "volume",

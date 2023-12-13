@@ -5,6 +5,7 @@
       "libs/keyboard.ts",
       "libs/stl_exporter.ts",
       "libs/DRACOLoader.ts",
+      "libs/DRACOWorker.worker.js",
       "libs/BufferGeometryUtils.ts",
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",

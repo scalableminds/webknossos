@@ -169,7 +169,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           onClick={() =>
             Modal.error({
               title: "Cannot load this dataset",
-              content: dataset.status,
+              content: (
+                <div>
+                  <p>{dataset.status}</p>
+                  {dataset.status === "Deleted by user." ? (
+                    <p>
+                      Even though this dataset was deleted by a user, it is still shown here,
+                      because it was referenced by at least one annotation.
+                    </p>
+                  ) : null}
+                </div>
+              ),
             })
           }
         >

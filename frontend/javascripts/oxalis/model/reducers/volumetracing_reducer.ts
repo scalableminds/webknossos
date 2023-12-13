@@ -40,7 +40,7 @@ import {
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import type { ServerVolumeTracing } from "types/api_flow_types";
+import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import {
   SetMappingAction,
   SetMappingEnabledAction,
@@ -161,10 +161,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;
+    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
     if (segment.somePosition) {
       somePosition = Utils.floor3(segment.somePosition);
+      someAdditionalCoordinates = segment.someAdditionalCoordinates;
     } else if (oldSegment != null) {
       somePosition = oldSegment.somePosition;
+      someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
     } else {
       // UPDATE_SEGMENT was called for a non-existing segment without providing
       // a position. This is necessary to define custom colors for segments
@@ -179,7 +182,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
-      someAdditionalCoordinates: [],
+      someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
       somePosition,

@@ -1,6 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout } from "antd";
+import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
@@ -14,7 +14,6 @@ import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
-const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
 // Used for the tab keys as well as for
@@ -118,54 +117,59 @@ function DatasetAddView({ history }: RouteComponentProps) {
     : // todo: revert
       DatasetAddType.COMPOSE;
 
+  const tabs: TabsProps["items"] = [
+    {
+      label: (
+        <span>
+          <UploadOutlined />
+          Upload Dataset
+        </span>
+      ),
+      key: DatasetAddType.UPLOAD,
+      children: (
+        <DatasetUploadView
+          datastores={datastores}
+          onUploaded={handleDatasetAdded.bind(null, DatasetAddType.UPLOAD)}
+        />
+      ),
+    },
+    {
+      label: (
+        <span>
+          <DatabaseOutlined />
+          Add Remote Dataset
+        </span>
+      ),
+      key: DatasetAddType.REMOTE,
+      children: (
+        <DatasetAddRemoteView
+          datastores={datastores}
+          onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
+        />
+      ),
+    },
+    {
+      label: (
+        <span>
+          <CopyOutlined />
+          Compose from existing datasets
+        </span>
+      ),
+      key: DatasetAddType.COMPOSE,
+      children: (
+        <DatasetAddComposeView
+          datastores={datastores}
+          onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
+        />
+      ),
+    },
+  ];
+
   return (
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey={defaultActiveKey} className="container">
-            <TabPane
-              tab={
-                <span>
-                  <UploadOutlined />
-                  Upload Dataset
-                </span>
-              }
-              key={DatasetAddType.UPLOAD}
-            >
-              <DatasetUploadView
-                datastores={datastores}
-                onUploaded={handleDatasetAdded.bind(null, DatasetAddType.UPLOAD)}
-              />
-            </TabPane>
-            <TabPane
-              tab={
-                <span>
-                  <DatabaseOutlined />
-                  Add Remote Dataset
-                </span>
-              }
-              key={DatasetAddType.REMOTE}
-            >
-              <DatasetAddRemoteView
-                datastores={datastores}
-                onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
-              />
-            </TabPane>
-            <TabPane
-              tab={
-                <span>
-                  <CopyOutlined />
-                  Compose from existing datasets
-                </span>
-              }
-              key={DatasetAddType.COMPOSE}
-            >
-              <DatasetAddComposeView
-                datastores={datastores}
-                onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
-              />
-            </TabPane>
-          </Tabs>
+          <Tabs defaultActiveKey={defaultActiveKey} className="container" items={tabs} />
         </Content>
         <VoxelyticsBanner />
       </Layout>

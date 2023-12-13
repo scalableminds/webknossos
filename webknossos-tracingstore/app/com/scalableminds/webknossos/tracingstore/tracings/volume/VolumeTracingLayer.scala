@@ -114,7 +114,7 @@ case class VolumeTracingLayer(
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 
   override val resolutions: List[Vec3Int] =
-    if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
+    if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int.ones)
 
   override def containsResolution(resolution: Vec3Int) =
     true // allow requesting buckets of all resolutions. database takes care of missing.

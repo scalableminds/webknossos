@@ -51,6 +51,7 @@ import {
   convertToHybridTracing,
   deleteAnnotationLayer,
   updateDatasetDefaultConfiguration,
+  startComputeSegmentIndexFileJob,
 } from "admin/admin_rest_api";
 import {
   getDefaultValueRangeOfLayer,
@@ -145,6 +146,7 @@ type DatasetSettingsProps = {
   controlMode: ControlMode;
   isArbitraryMode: boolean;
   isAdminOrDatasetManager: boolean;
+  isSuperUser: boolean;
 };
 
 type State = {
@@ -445,6 +447,36 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
+  getComputeSegmentIndexFileButton = (layerName: string, isSegmentation: boolean) => {
+    if (!(this.props.isSuperUser && isSegmentation)) return <></>;
+
+    const triggerComputeSegmentIndexFileJob = async () => {
+      await startComputeSegmentIndexFileJob(
+        this.props.dataset.owningOrganization,
+        this.props.dataset.name,
+        layerName,
+      );
+      Toast.info(
+        <React.Fragment>
+          Started a job for computating a segment index file.
+          <br />
+          See{" "}
+          <a target="_blank" href="/jobs" rel="noopener noreferrer">
+            Processing Jobs
+          </a>{" "}
+          for an overview of running jobs.
+        </React.Fragment>,
+      );
+    };
+
+    return (
+      <div onClick={triggerComputeSegmentIndexFileJob}>
+        <i className="fas fa-database" />
+        Compute a Segment Index file
+      </div>
+    );
+  };
+
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
     Object.keys(layers).forEach((otherLayerName) =>
@@ -592,6 +624,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
+      {
+        label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
+        key: "computeSegmentIndexFileButton",
+      },
     ];
     const items = possibleItems.filter((el) => el);
     return (
@@ -1441,6 +1477,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
+  isSuperUser: state.activeUser?.isSuperUser || false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

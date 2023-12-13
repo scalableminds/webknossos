@@ -97,7 +97,10 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
+                                                        volumeSegmentIndexClient,
+                                                        tracing.version,
+                                                        dataLayer.additionalAxes)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)

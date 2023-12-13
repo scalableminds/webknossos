@@ -29,6 +29,15 @@ object AdditionalAxis {
       p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
     )
 
+  def fromProtoAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
+    val axes = fromProto(additionalAxisProtos)
+    if (axes.nonEmpty) {
+      Some(axes)
+    } else {
+      None
+    }
+  }
+
   def merge(additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Option[Seq[AdditionalAxis]] = {
     val additionalAxesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
     additionalAxeses.foreach {

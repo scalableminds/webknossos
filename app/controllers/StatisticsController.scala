@@ -41,7 +41,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
       )
   }
 
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
+  def webknossos(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       intervalHandler.get(interval) match {
         case Some(handler) =>

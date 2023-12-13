@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass, GenericDataSource}
-import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
 import models.dataset.explore.{
@@ -56,7 +55,6 @@ object SegmentAnythingEmbeddingParameters {
   implicit val jsonFormat: Format[SegmentAnythingEmbeddingParameters] = Json.format[SegmentAnythingEmbeddingParameters]
 }
 
-@Api
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -85,14 +83,12 @@ class DatasetController @Inject()(userService: UserService,
       (__ \ "tags").read[List[String]] and
       (__ \ "folderId").readNullable[ObjectId]).tupled
 
-  @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction {
       thumbnailCachingService.removeFromCache(organizationName, dataSetName)
       Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def thumbnail(organizationName: String,
                 dataSetName: String,
                 dataLayerName: String,
@@ -111,7 +107,6 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def exploreRemoteDataset(): Action[List[ExploreRemoteDatasetParameters]] =
     sil.SecuredAction.async(validateJson[List[ExploreRemoteDatasetParameters]]) { implicit request =>
       val reportMutable = ListBuffer[String]()
@@ -136,7 +131,6 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
     sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val reportMutable = ListBuffer[String]()
@@ -155,35 +149,27 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok
     }
 
-  @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
+  // List all accessible datasets (list of json objects, one per dataset)
   def list(
-      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets")
+      // Optional filtering: If true, list only active datasets, if false, list only inactive datasets
       isActive: Option[Boolean],
-      @ApiParam(
-        value =
-          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
+      // Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets
       isUnreported: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
-                example = "sample_organization")
+      // Optional filtering: List only datasets of the organization specified by its url-safe name, e.g. sample_organization
       organizationName: Option[String],
-      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
+      // Optional filtering: List only datasets of the requesting user’s organization
       onlyMyOrganization: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
+      // Optional filtering: List only datasets uploaded by the user with this id
       uploaderId: Option[String],
-      @ApiParam(value = "Optional filtering: List only datasets in the folder with this id")
+      // Optional filtering: List only datasets in the folder with this id
       folderId: Option[String],
-      @ApiParam(
-        value =
-          "Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)")
+      // Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)
       recursive: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets with names matching this search query")
+      // Optional filtering: List only datasets with names matching this search query
       searchQuery: Option[String],
-      @ApiParam(value = "Optional limit, return only the first n matching datasets.")
+      // return only the first n matching datasets.
       limit: Option[Int],
-      @ApiParam(value = "Change output format to return only a compact list with essential information on the datasets")
+      // Change output format to return only a compact list with essential information on the datasets
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
@@ -252,7 +238,6 @@ class DatasetController @Inject()(userService: UserService,
       }
     } yield js.flatten
 
-  @ApiOperation(hidden = true, value = "")
   def accessList(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -267,16 +252,10 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersJs))
   }
 
-  @ApiOperation(value = "Get information about this dataset", nickname = "datasetInfo")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing dataset information"),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def read(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                     example = "sample_organization") organizationName: String,
-           @ApiParam(value = "The name of the dataset") dataSetName: String,
-           @ApiParam(value =
-             "Optional sharing token allowing access to datasets your team does not normally have access to.") sharingToken: Option[
-             String]): Action[AnyContent] =
+  def read(organizationName: String,
+           dataSetName: String,
+           // Optional sharing token allowing access to datasets your team does not normally have access to.")
+           sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -304,7 +283,6 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def health(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -321,32 +299,7 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok("Ok")
     }
 
-  @ApiOperation(
-    value =
-      """Update information for a dataset.
-Expects:
- - As JSON object body with all optional keys (missing keys will not be updated, keys set to null will be set to null):
-  - description (string, nullable)
-  - displayName (string, nullable)
-  - sortingKey (timestamp)
-  - isPublic (boolean)
-  - tags (list of string)
-  - folderId (string)
- - As GET parameters:
-  - organizationName (string): url-safe name of the organization owning the dataset
-  - dataSetName (string): name of the dataset
-""",
-    nickname = "datasetUpdatePartial"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "datasetPartialUpdateInformation",
-                           required = true,
-                           dataTypeClass = classOf[JsObject],
-                           paramType = "body")))
-  def updatePartial(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                              example = "sample_organization") organizationName: String,
-                    @ApiParam(value = "The name of the dataset") dataSetName: String): Action[DatasetUpdateParameters] =
+  def updatePartial(organizationName: String, dataSetName: String): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
@@ -359,31 +312,8 @@ Expects:
       } yield Ok(js)
     }
 
-  @ApiOperation(
-    value = """Update information for a dataset.
-Expects:
- - As JSON object body with keys:
-  - description (optional string)
-  - displayName (optional string)
-  - sortingKey (optional long)
-  - isPublic (boolean)
-  - tags (list of string)
-  - folderId (optional string)
- - As GET parameters:
-  - organizationName (string): url-safe name of the organization owning the dataset
-  - dataSetName (string): name of the dataset
-""",
-    nickname = "datasetUpdate"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "datasetUpdateInformation",
-                           required = true,
-                           dataTypeClass = classOf[JsObject],
-                           paramType = "body")))
-  def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                       example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
+  // Note that there exists also updatePartial (which will only expect the changed fields)
+  def update(organizationName: String, dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, folderId) =>
@@ -405,26 +335,7 @@ Expects:
       }
     }
 
-  @ApiOperation(
-    value = """"Update teams of a dataset
-Expects:
- - As JSON object body:
-   List of team strings.
- - As GET parameters:
-  - organizationName (string): url-safe name of the organization owning the dataset
-  - dataSetName (string): name of the dataset
-""",
-    nickname = "datasetUpdateTeams"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "datasetUpdateTeamsInformation",
-                           required = true,
-                           dataType = "com.scalableminds.util.swaggerhelpers.ListOfString",
-                           paramType = "body")))
-  def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                            example = "sample_organization") organizationName: String,
-                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[List[ObjectId]] =
+  def updateTeams(organizationName: String, dataSetName: String): Action[List[ObjectId]] =
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
@@ -440,16 +351,7 @@ Expects:
       } yield Ok(Json.toJson(newTeams))
     }
 
-  @ApiOperation(value = "Sharing token of a dataset", nickname = "datasetSharingToken")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message = "JSON object containing the key sharingToken with the sharing token string."),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def getSharingToken(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                                example = "sample_organization") organizationName: String,
-                      @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
+  def getSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
@@ -458,7 +360,6 @@ Expects:
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def deleteSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -468,18 +369,11 @@ Expects:
       } yield Ok
   }
 
-  @ApiOperation(hidden = true, value = "")
   def create(typ: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     Future.successful(JsonBadRequest(Messages("dataset.type.invalid", typ)))
   }
 
-  @ApiOperation(value = "Check whether a new dataset name is valid", nickname = "newDatasetNameIsValid")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "Name is valid. Empty message."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def isValidNewName(@ApiParam(value = "The url-safe name of the organization owning the dataset",
-                               example = "sample_organization") organizationName: String,
-                     @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
+  def assertValidNewName(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
@@ -489,7 +383,6 @@ Expects:
       } yield Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getOrganizationForDataset(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
@@ -498,14 +391,12 @@ Expects:
       } yield Ok(Json.obj("organizationName" -> organization.name))
   }
 
-  @ApiOperation(hidden = true, value = "")
   private def notFoundMessage(dataSetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =
     ctx.data match {
       case Some(_: User) => Messages("dataset.notFound", dataSetName)
       case _             => Messages("dataset.notFoundConsiderLogin", dataSetName)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def segmentAnythingEmbedding(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String,

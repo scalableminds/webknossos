@@ -22,8 +22,10 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import security.{PasswordHasher, TokenDAO}
+import utils.sql.SqlEscaping
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +46,7 @@ class UserService @Inject()(conf: WkConf,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
+    with SqlEscaping
     with IdentityService[User] {
 
   private lazy val Mailer =
@@ -371,18 +374,19 @@ class UserService @Inject()(conf: WkConf,
   def publicWritesCompact(user: User, requestingUser: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
       isEditable <- isEditableBy(user, requestingUser)
-      splitString = (s: String) => Option(s).map(str => str.split(",")).getOrElse(Array[String]()).toSeq
-      teamsJson = splitString(userCompactInfo.team_ids).indices.map(
+      teamsJson = parseArrayLiteral(userCompactInfo.team_ids).indices.map(
         idx =>
           Json.obj(
-            "id" -> splitString(userCompactInfo.team_ids)(idx),
-            "name" -> splitString(userCompactInfo.team_names)(idx),
-            "isTeamManager" -> splitString(userCompactInfo.team_managers)(idx).toBoolean
+            "id" -> parseArrayLiteral(userCompactInfo.team_ids)(idx),
+            "name" -> parseArrayLiteral(userCompactInfo.team_names)(idx),
+            "isTeamManager" -> parseArrayLiteral(userCompactInfo.team_managers)(idx).toBoolean
         ))
       experienceJson = Json.obj(
-        splitString(userCompactInfo.experienceValues).indices.map(idx =>
-          (splitString(userCompactInfo.experienceDomains)(idx),
-           Json.toJsFieldJsValueWrapper(splitString(userCompactInfo.experienceValues)(idx).toInt))): _*)
+        parseArrayLiteral(userCompactInfo.experienceValues).zipWithIndex
+          .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
+          .map(valueAndIndex =>
+            (parseArrayLiteral(userCompactInfo.experienceDomains)(valueAndIndex._2),
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
       novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
     } yield {
       Json.obj(

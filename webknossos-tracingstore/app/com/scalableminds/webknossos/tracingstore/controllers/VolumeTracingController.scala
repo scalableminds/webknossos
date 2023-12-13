@@ -235,11 +235,13 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
             currentVersion <- tracingService.currentVersion(tracingId)
             before = Instant.now
-            processedBucketCountOpt <- tracingService.addSegmentIndex(tracingId,
-                                                                      tracing,
-                                                                      currentVersion,
-                                                                      urlOrHeaderToken(token, request),
-                                                                      dryRun) ?~> "addSegmentIndex.failed"
+            canAddSegmentIndex <- tracingService.checkIfSegmentIndexMayBeAdded(tracingId, tracing, token)
+            processedBucketCountOpt <- Fox.runIf(canAddSegmentIndex)(
+              tracingService.addSegmentIndex(tracingId,
+                                             tracing,
+                                             currentVersion,
+                                             urlOrHeaderToken(token, request),
+                                             dryRun)) ?~> "addSegmentIndex.failed"
             currentVersionNew <- tracingService.currentVersion(tracingId)
             _ <- Fox.runIf(!dryRun)(bool2Fox(
               processedBucketCountOpt.isEmpty || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime.")

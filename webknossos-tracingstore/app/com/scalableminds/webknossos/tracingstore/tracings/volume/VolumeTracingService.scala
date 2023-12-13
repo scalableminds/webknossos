@@ -408,6 +408,7 @@ class VolumeTracingService @Inject()(
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
       buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
+      // Duplicate segment index if it exists instead of building a new one?
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,
                                                         volumeSegmentIndexClient,
@@ -669,13 +670,7 @@ class VolumeTracingService @Inject()(
                       currentVersion: Long,
                       userToken: Option[String],
                       dryRun: Boolean): Fox[Option[Int]] =
-    if (tracing.hasSegmentIndex.getOrElse(false)) {
-      // tracing has a segment index already, do nothing
-      Fox.successful(None)
-    } else if (!VolumeSegmentIndexService.canHaveSegmentIndex(tracing.fallbackLayer)) {
-      // tracing is not eligible for segment index, do nothing
-      Fox.successful(None)
-    } else {
+    {
       var processedBucketCount = 0
       for {
         isTemporaryTracing <- isTemporaryTracing(tracingId)
@@ -702,6 +697,14 @@ class VolumeTracingService @Inject()(
         _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
       } yield Some(processedBucketCount)
     }
+
+  def checkIfSegmentIndexMayBeAdded(tracingId: String,tracing: VolumeTracing, userToken: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] = {
+      for {
+        fallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+        canHaveSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, Some(fallbackLayer), userToken)
+        alreadyHasSegmentIndex = tracing.hasSegmentIndex.getOrElse(false)
+      } yield canHaveSegmentIndex && !alreadyHasSegmentIndex
+  }
 
   def importVolumeData(tracingId: String,
                        tracing: VolumeTracing,

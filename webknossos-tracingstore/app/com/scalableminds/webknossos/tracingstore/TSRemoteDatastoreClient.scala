@@ -111,6 +111,15 @@ class TSRemoteDatastoreClient @Inject()(
     )
   }
 
+  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[Boolean] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      indexFiles <- rpc(s"$remoteLayerUri/segmentIndex")
+        .addQueryStringOptional("token", userToken)
+        .silent
+        .getWithJsonResponse[Seq[String]]
+    } yield indexFiles.nonEmpty
+
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
       datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)

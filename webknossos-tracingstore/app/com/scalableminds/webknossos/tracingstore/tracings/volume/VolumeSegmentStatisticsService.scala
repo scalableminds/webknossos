@@ -68,6 +68,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                         mag: Vec3Int,
                                         bucketPositions: Seq[Vec3Int],
                                         userToken: Option[String]): Fox[Array[Byte]] = {
+
     val dataRequests = bucketPositions.map { position =>
       WebKnossosDataRequest(
         position = position * mag * DataLayer.bucketLength,

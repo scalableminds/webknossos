@@ -10,6 +10,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
+import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -19,9 +21,19 @@ import scala.concurrent.ExecutionContext
 
 object VolumeSegmentIndexService {
   // Currently, segment index is not supported for volume tracings with fallback layer
-  def canHaveSegmentIndexOpt(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+  def canHaveSegmentIndexOpt(fallbackLayerName: Option[String]): Option[Boolean] =
+    Some(fallbackLayerName.isEmpty) // TODO: Ask datastore if a segment index file exists
 
-  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Boolean = fallbackLayerName.isEmpty
+  def canHaveSegmentIndex(remoteDatastoreClient: TSRemoteDatastoreClient,
+                          fallbackLayer: Option[RemoteFallbackLayer],
+                          userToken: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] =
+    for {
+      _ <- Fox.successful(())
+      canHaveSegmentIndex <- fallbackLayer match {
+        case Some(layer) => remoteDatastoreClient.hasSegmentIndexFile(layer, userToken)
+        case None        => Fox.successful(true)
+      }
+    } yield canHaveSegmentIndex
 }
 
 // Segment-to-Bucket index for volume tracings in FossilDB
@@ -48,15 +60,20 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     for {
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
+      // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.udpate.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.udpate.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ <- Fox.serialCombined(removals.toList)(segmentId =>
-        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
-      _ <- Fox.serialCombined(additions.toList)(segmentId =>
-        addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
+      _ <- Fox.serialCombined(removals.toList)(
+        segmentId =>
+          // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
+          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
+      _ <- Fox.serialCombined(additions.toList)(
+        segmentId =>
+          // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
+          addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(

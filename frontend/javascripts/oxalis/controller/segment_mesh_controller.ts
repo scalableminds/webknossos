@@ -109,7 +109,7 @@ export default class SegmentMeshController {
     const isNewlyAddedMesh =
       this.meshesGroupsPerSegmentationId[additionalCoordinatesString]?.[layerName]?.[
         segmentationId
-      ] == null;
+      ]?.[lod] == null;
     const targetGroup = _.get(this.meshesGroupsPerSegmentationId, keys, new THREE.Group());
     _.set(
       this.meshesGroupsPerSegmentationId,
@@ -139,20 +139,18 @@ export default class SegmentMeshController {
   removeMeshById(segmentationId: number, layerName: string): void {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    if (this.getMeshGroups(additionalCoordKey, layerName, segmentationId) == null) {
+    const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentationId);
+    if (meshGroups == null) {
       return;
     }
-    _.forEach(
-      this.getMeshGroups(additionalCoordKey, layerName, segmentationId),
-      (meshGroup, lod) => {
-        const lodNumber = parseInt(lod);
-        if (lodNumber !== NO_LOD_MESH_INDEX) {
-          this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
-        } else {
-          this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
-        }
-      },
-    );
+    _.forEach(meshGroups, (meshGroup, lod) => {
+      const lodNumber = parseInt(lod);
+      if (lodNumber !== NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+      } else {
+        this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+      }
+    });
     this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentationId);
   }
 

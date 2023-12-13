@@ -91,7 +91,7 @@ PATCH         /datasets/:organizationName/:dataSetName/teams                    
 GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail                  controllers.DatasetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int], mappingName: Option[String], sharingToken: Option[String])
 POST          /datasets/:organizationName/:dataSetName/layers/:layer/segmentAnythingEmbedding   controllers.DatasetController.segmentAnythingEmbedding(organizationName: String, dataSetName: String, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache                      controllers.DatasetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/isValidNewName                           controllers.DatasetController.isValidNewName(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/isValidNewName                           controllers.DatasetController.assertValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                                          controllers.DatasetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
 # Folders
@@ -232,7 +232,7 @@ GET           /projects/:id/usersWithActiveTasks                                
 POST          /projects/:id/transferActiveTasks                                                 controllers.ProjectController.transferActiveTasks(id:String)
 
 # Statistics
-GET           /statistics/webknossos                                                            controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
+GET           /statistics/webknossos                                                            controllers.StatisticsController.webknossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /statistics/users                                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 # Organizations

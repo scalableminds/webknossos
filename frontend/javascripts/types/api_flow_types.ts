@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type {
   BoundingBoxObject,
   Edge,
@@ -186,7 +187,7 @@ export type MaintenanceInfo = {
 
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
-export type APIDatasetCompactWithoutStatus = Pick<
+export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   APIMaybeUnimportedDataset,
   | "owningOrganization"
   | "name"
@@ -199,12 +200,19 @@ export type APIDatasetCompactWithoutStatus = Pick<
   | "tags"
   | "isUnreported"
 >;
-export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
+  colorLayerNames: Array<string>;
+  segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  const [colorLayerNames, segmentationLayerNames] = _.partition(
+    dataset.dataSource.dataLayers,
+    (layer) => layer.category === "segmentation",
+  ).map((layers) => layers.map((layer) => layer.name).sort());
+
   return {
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
@@ -217,6 +225,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
+    colorLayerNames: colorLayerNames,
+    segmentationLayerNames: segmentationLayerNames,
   };
 }
 

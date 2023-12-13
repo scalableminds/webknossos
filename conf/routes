@@ -2,5 +2,4 @@
 -> /data/                        com.scalableminds.webknossos.datastore.Routes
 -> /tracings/                    com.scalableminds.webknossos.tracingstore.Routes
 
-GET   /swagger.json              play.modules.swagger.ApiHelpController.getResources
 GET   /.well-known/security.txt  controllers.Application.getSecurityTxt

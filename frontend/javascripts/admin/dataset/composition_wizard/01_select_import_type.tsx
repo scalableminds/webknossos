@@ -33,7 +33,7 @@ export default function SelectImportType({
           </Space>
         </Radio.Group>
       </div>
-      <Button style={{ marginTop: 16 }} onClick={onNext}>
+      <Button type="primary" style={{ marginTop: 16 }} onClick={onNext}>
         Next
       </Button>
     </div>

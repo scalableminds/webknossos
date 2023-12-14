@@ -184,20 +184,13 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             marginBottom: 0,
           }}
         >
-          <Button
-            size="large"
-            type="primary"
-            htmlType="submit"
-            loading={isLoading}
-            style={{
-              width: "100%",
-            }}
-          >
+          <Button onClick={onPrev}>Back</Button>
+
+          <Button type="primary" htmlType="submit" loading={isLoading} style={{ marginLeft: 8 }}>
             Upload
           </Button>
         </FormItem>
       </Form>
-      <Button onClick={onPrev}>Back</Button>
     </div>
   );
 }

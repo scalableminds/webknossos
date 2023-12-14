@@ -35,33 +35,27 @@ export type WizardComponentProps = {
 };
 
 export async function tryToFetchDatasetsByName(
-  name1: string,
-  name2: string,
+  names: string[],
+  userErrorMessage: string,
 ): Promise<APIDataset[] | null> {
   const { activeUser } = Store.getState();
   try {
-    const [dataset1, dataset2] = await Promise.all([
-      getDataset(
-        {
-          owningOrganization: activeUser?.organization || "",
-          name: name1,
-        },
-        null,
-        { showErrorToast: false },
+    const datasets = await Promise.all(
+      names.map((name) =>
+        getDataset(
+          {
+            owningOrganization: activeUser?.organization || "",
+            name: name,
+          },
+          null,
+          { showErrorToast: false },
+        ),
       ),
-      getDataset(
-        {
-          owningOrganization: activeUser?.organization || "",
-          name: name2,
-        },
-        null,
-        { showErrorToast: false },
-      ),
-    ]);
-    return [dataset1, dataset2];
+    );
+    return datasets;
   } catch (exception) {
     console.warn(exception);
-    Toast.warning("Could not derive datasets from NML. Please specify these manally.");
+    Toast.warning(userErrorMessage);
     return null;
   }
 }

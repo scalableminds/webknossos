@@ -17,7 +17,10 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
     }));
   };
   const onNext = async () => {
-    const datasets = await tryToFetchDatasetsByName(datasetValues[0].value, datasetValues[1].value);
+    const datasets = await tryToFetchDatasetsByName(
+      datasetValues.map((el) => el.value),
+      "Could not find datasets. Please doublecheck your selection.",
+    );
     if (datasets == null) {
       // An error message was already shown in tryToFetchDatasetsByName
       return;
@@ -45,7 +48,7 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
         Back
       </Button>
 
-      <AsyncButton style={{ marginTop: 16 }} onClick={onNext}>
+      <AsyncButton type="primary" style={{ marginTop: 16, marginLeft: 8 }} onClick={onNext}>
         Next
       </AsyncButton>
     </div>

@@ -16,7 +16,7 @@ export interface AsyncSelectProps<ValueType = any>
 
 export default function AsyncSelect<
   ValueType extends { key?: string; label: React.ReactNode; value: string | number } = any,
->({ fetchOptions, debounceTimeout = 800, ...props }: AsyncSelectProps<ValueType>) {
+>({ fetchOptions, debounceTimeout = 400, ...props }: AsyncSelectProps<ValueType>) {
   const [fetching, setFetching] = useState(false);
   const [options, setOptions] = useState<ValueType[]>([]);
   const fetchRef = useRef(0);

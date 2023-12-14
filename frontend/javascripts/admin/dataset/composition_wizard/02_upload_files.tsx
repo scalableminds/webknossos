@@ -107,7 +107,10 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
           }
         }
 
-        const datasets = await tryToFetchDatasetsByName(datasetName1, datasetName2);
+        const datasets = await tryToFetchDatasetsByName(
+          [datasetName1, datasetName2],
+          "Could not derive datasets from NML. Please specify these manually.",
+        );
 
         setWizardContext((oldContext) => ({
           ...oldContext,
@@ -157,7 +160,7 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
         Back
       </Button>
 
-      <AsyncButton style={{ marginTop: 16 }} onClick={onNext}>
+      <AsyncButton type="primary" style={{ marginTop: 16, marginLeft: 8 }} onClick={onNext}>
         Next
       </AsyncButton>
     </div>

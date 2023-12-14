@@ -1,0 +1,53 @@
+import { Button } from "antd";
+import { AsyncButton } from "components/async_clickables";
+import DatasetSelectionComponent, {
+  DatasetSelectionValue,
+} from "dashboard/dataset/dataset_selection_component";
+import React, { useEffect, useState } from "react";
+import { tryToFetchDatasetsByName, WizardComponentProps } from "./common";
+
+export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
+  const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);
+
+  const onPrev = () => {
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep:
+        wizardContext.composeMode === "WITHOUT_TRANSFORMS" ? "SelectImportType" : "UploadFiles",
+    }));
+  };
+  const onNext = async () => {
+    const datasets = await tryToFetchDatasetsByName(datasetValues[0].value, datasetValues[1].value);
+    if (datasets == null) {
+      // An error message was already shown in tryToFetchDatasetsByName
+      return;
+    }
+
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: "ConfigureNewDataset",
+      datasets,
+    }));
+  };
+
+  useEffect(() => {
+    setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
+  }, []);
+
+  return (
+    <div>
+      <DatasetSelectionComponent
+        datasetValues={datasetValues}
+        setDatasetValues={setDatasetValues}
+      />
+
+      <Button style={{ marginTop: 16 }} onClick={onPrev}>
+        Back
+      </Button>
+
+      <AsyncButton style={{ marginTop: 16 }} onClick={onNext}>
+        Next
+      </AsyncButton>
+    </div>
+  );
+}

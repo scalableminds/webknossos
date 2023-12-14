@@ -96,8 +96,6 @@ type WizardContext = {
 type WizardComponentProps = {
   wizardContext: WizardContext;
   setWizardContext: React.Dispatch<React.SetStateAction<WizardContext>>;
-  onNext: () => void;
-  onPrev: (() => void) | null;
   datastores: APIDataStore[];
   onAdded: Props["onAdded"];
 };
@@ -555,21 +553,7 @@ export default function DatasetAddComposeView(props: Props) {
   });
   const { currentWizardStep } = wizardContext;
   const CurrentWizardComponent = WIZARD_STEPS[currentWizardStep].component;
-  const onNext = () => {
-    setWizardContext(({ currentWizardStep, ...rest }) => ({
-      ...rest,
-      currentWizardStep: Math.min(currentWizardStep + 1, WIZARD_STEPS.length - 1),
-    }));
-  };
-  const onPrev =
-    wizardContext.currentWizardStep > 0
-      ? () => {
-          setWizardContext(({ currentWizardStep, ...rest }) => ({
-            ...rest,
-            currentWizardStep: currentWizardStep - 1,
-          }));
-        }
-      : null;
+
   return (
     <div style={{ padding: 5 }}>
       <CardContainer title="Compose a dataset from existing dataset layers">
@@ -582,8 +566,6 @@ export default function DatasetAddComposeView(props: Props) {
           these landmarks.
         </p>
         <CurrentWizardComponent
-          onNext={onNext}
-          onPrev={onPrev}
           wizardContext={wizardContext}
           setWizardContext={setWizardContext}
           datastores={props.datastores}

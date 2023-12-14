@@ -5,10 +5,23 @@ import {
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
-import { Button, Col, Collapse, Form, FormInstance, Input, List, Radio, Row, Tooltip } from "antd";
+import {
+  Button,
+  Col,
+  Collapse,
+  Form,
+  FormInstance,
+  Input,
+  List,
+  Radio,
+  RadioChangeEvent,
+  Row,
+  Space,
+  Tooltip,
+} from "antd";
 import Upload, { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { Vector3 } from "oxalis/constants";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { readFileAsText } from "libs/read_file";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -32,8 +45,10 @@ import {
   LayerLink,
 } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
-import { createDatasetComposition, getDataset } from "admin/admin_rest_api";
+import { createDatasetComposition, getDataset, getDatasets } from "admin/admin_rest_api";
 import Toast from "libs/toast";
+import AsyncSelect from "components/async_select";
+import { AsyncButton } from "components/async_clickables";
 
 const FormItem = Form.Item;
 
@@ -47,37 +62,158 @@ type Props = {
   ) => Promise<void>;
   datastores: APIDataStore[];
 };
+const EXPECTED_VALUE_COUNT_PER_LINE = 8;
 
-export default function DatasetAddComposeView(props: Props) {
-  const formRef = React.useRef<FormInstance<any>>(null);
+// Usage of AsyncSelect
+interface DatasetValue {
+  label: string;
+  value: string;
+}
 
-  const [isLoading, setIsLoading] = useState(false);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
-  const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<FileList>([]);
-  const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
-  const [linkedDatasets, setLinkedDatasets] = useState<APIDataset[]>([]);
+async function fetchDatasets(query: string): Promise<DatasetValue[]> {
+  const datasets = await getDatasets(false, null, query, null, 20);
 
-  const onRemoveLayer = (layer: LayerLink) => {
-    const oldLayers = form.getFieldValue(["layers"]);
-    const newLayers = oldLayers.filter((existingLayer: LayerLink) => existingLayer !== layer);
-    form.setFieldsValue({ layers: newLayers });
+  return datasets.map((d) => ({
+    label: d.name,
+    value: d.name,
+  }));
+}
+
+const DatasetSelect = ({
+  datasetValues,
+  setDatasetValues,
+}: {
+  datasetValues: DatasetValue[];
+  setDatasetValues: (values: DatasetValue[]) => void;
+}) => {
+  return (
+    <AsyncSelect
+      mode="multiple"
+      value={datasetValues}
+      placeholder="Select dataset"
+      fetchOptions={fetchDatasets}
+      onChange={(newValue) => {
+        setDatasetValues(newValue as DatasetValue[]);
+        console.log("set value to", newValue);
+      }}
+      style={{ width: "100%" }}
+    />
+  );
+};
+
+const WIZARD_STEPS = [
+  {
+    title: "Import type",
+    component: ImportTypeQuestion,
+  },
+  {
+    title: "Upload file(s)",
+    component: UploadFiles,
+  },
+  {
+    title: "Select Datasets",
+    component: SelectDatasets,
+  },
+  {
+    title: "Configure New Datasets",
+    component: CompositionForm,
+  },
+];
+
+type COMPOSE_MODE = "WITHOUT_TRANSFORMS" | "WK_ANNOTATIONS" | "BIG_WARP";
+type WizardContext = {
+  currentWizardStep: number;
+  fileList: FileList;
+  composeMode: COMPOSE_MODE;
+  datasets: APIDataset[];
+  sourcePoints: Vector3[];
+  targetPoints: Vector3[];
+};
+
+type WizardComponentProps = {
+  wizardContext: WizardContext;
+  setWizardContext: React.Dispatch<React.SetStateAction<WizardContext>>;
+  onNext: () => void;
+  onPrev: (() => void) | null;
+  datastores: APIDataStore[];
+  onAdded: Props["onAdded"];
+};
+
+function ImportTypeQuestion({ wizardContext, setWizardContext }: WizardComponentProps) {
+  const { composeMode } = wizardContext;
+
+  const onNext = () => {
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: composeMode === "WITHOUT_TRANSFORMS" ? 2 : 1,
+    }));
+  };
+  const onChange = (e: RadioChangeEvent) => {
+    console.log("radio checked", e.target.value);
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      composeMode: e.target.value,
+    }));
   };
 
-  const handleChange = async (info: UploadChangeParam<UploadFile<any>>) => {
-    try {
-      const newFileList = info.fileList;
-      setFileList(newFileList);
+  return (
+    <div>
+      <div>
+        <p>Select how you want to create a new dataset:</p>
+        <Radio.Group onChange={onChange} value={composeMode}>
+          <Space direction="vertical">
+            <Radio value={"WITHOUT_TRANSFORMS"}>Combine datasets without any transforms</Radio>
+            <Radio value={"WK_ANNOTATIONS"}>Combine datasets by using skeleton annotations</Radio>
+            <Radio value={"BIG_WARP"}>Combine datasets by using a BigWarp CSV</Radio>
+          </Space>
+        </Radio.Group>
+      </div>
+      <Button style={{ marginTop: 16 }} onClick={onNext}>
+        Next
+      </Button>
+    </div>
+  );
+}
 
-      const sourcePoints = [];
-      const targetPoints = [];
-      if (newFileList.length === 1 && newFileList[0]?.originFileObj) {
-        const csv = await readFileAsText(newFileList[0]?.originFileObj);
+function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const fileList = wizardContext.fileList;
+  const handleChange = async (info: UploadChangeParam<UploadFile<any>>) => {
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      fileList: info.fileList,
+    }));
+  };
+
+  const onPrev = () => {
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: 0,
+    }));
+  };
+  const onNext = async () => {
+    try {
+      const sourcePoints: Vector3[] = [];
+      const targetPoints: Vector3[] = [];
+      if (wizardContext.composeMode === "BIG_WARP") {
+        if (fileList.length != 1 || fileList[0]?.originFileObj == null) {
+          Toast.error("Expected exactly one CSV file.");
+          return;
+        }
+
+        const csv = await readFileAsText(fileList[0]?.originFileObj);
         console.log("csv", csv);
         const lines = csv.split("\n");
         for (const line of lines) {
           const fields = line.split(",");
+          if (fields.length != EXPECTED_VALUE_COUNT_PER_LINE) {
+            if (line.trim() != "") {
+              throw new Error(
+                `Cannot interpret line in CSV file. Expected ${EXPECTED_VALUE_COUNT_PER_LINE} values, got ${fields.length}.`,
+              );
+            }
+            continue;
+          }
           const [_pointName, _enabled, x1, y1, z1, x2, y2, z2] = fields;
 
           const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
@@ -85,13 +221,25 @@ export default function DatasetAddComposeView(props: Props) {
           sourcePoints.push(source);
           targetPoints.push(target);
         }
-      }
 
-      if (newFileList.length === 2) {
-        const nmlString1 = await readFileAsText(newFileList[0]?.originFileObj!);
-        const nmlString2 = await readFileAsText(newFileList[1]?.originFileObj!);
+        setWizardContext((oldContext) => ({
+          ...oldContext,
+          sourcePoints,
+          targetPoints,
+          datasets: [],
+          currentWizardStep: 2,
+        }));
+      } else if (wizardContext.composeMode == "WK_ANNOTATIONS") {
+        if (fileList.length != 2) {
+          Toast.error("Expected exactly two NML files.");
+          return;
+        }
+
+        const nmlString1 = await readFileAsText(fileList[0]?.originFileObj!);
+        const nmlString2 = await readFileAsText(fileList[1]?.originFileObj!);
 
         if (nmlString1 === "" || nmlString2 === "") {
+          // todop unify error handling
           throw new Error("NML files are empty.");
         }
 
@@ -101,18 +249,6 @@ export default function DatasetAddComposeView(props: Props) {
         if (!datasetName1 || !datasetName2) {
           throw new Error("Could not extract dataset names.");
         }
-
-        const [dataset1, dataset2] = await Promise.all([
-          getDataset({
-            owningOrganization: activeUser?.organization || "",
-            name: datasetName1,
-          }),
-          getDataset({
-            owningOrganization: activeUser?.organization || "",
-            name: datasetName2,
-          }),
-        ]);
-        console.log("dataset1, dataset2", dataset1, dataset2);
 
         const nodes1 = Array.from(
           values(trees1)
@@ -134,36 +270,33 @@ export default function DatasetAddComposeView(props: Props) {
             targetPoints.push(node2.position);
           }
         }
-        const datasets = [dataset1, dataset2];
-        setLinkedDatasets(datasets);
 
-        const transformationArr =
-          sourcePoints.length > 0 && targetPoints.length > 0
-            ? [
-                {
-                  type: "affine" as const,
-                  matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
-                },
-              ]
-            : [];
-        console.log("transformationArr", transformationArr);
-        const newLinks: LayerLink[] = (
-          _.flatMap(datasets, (dataset) =>
-            dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
-          ) as [APIDataset, APIDataLayer][]
-        ).map(
-          ([dataset, dataLayer]): LayerLink => ({
-            datasetId: {
-              owningOrganization: dataset.owningOrganization,
-              name: dataset.name,
-            },
-            sourceName: dataLayer.name,
-            newName: dataLayer.name,
-            transformations: dataset === datasets[0] ? transformationArr : [],
-          }),
-        );
+        const datasets: APIDataset[] = [];
+        try {
+          const [dataset1, dataset2] = await Promise.all([
+            getDataset({
+              owningOrganization: activeUser?.organization || "",
+              name: datasetName1,
+            }),
+            getDataset({
+              owningOrganization: activeUser?.organization || "",
+              name: datasetName2,
+            }),
+          ]);
+          datasets.push(dataset1);
+          datasets.push(dataset2);
+        } catch (exception) {
+          console.warn(exception);
+          Toast.warning("Could not derive datasets from NML. Please specify these manally.");
+        }
 
-        form.setFieldsValue({ layers: newLinks });
+        setWizardContext((oldContext) => ({
+          ...oldContext,
+          datasets,
+          sourcePoints,
+          targetPoints,
+          currentWizardStep: 2,
+        }));
       }
     } catch (exception) {
       Toast.error(
@@ -172,6 +305,161 @@ export default function DatasetAddComposeView(props: Props) {
       console.error(exception);
     }
   };
+
+  return (
+    <div>
+      <div>
+        <p>
+          Landmark files ({wizardContext.composeMode === "BIG_WARP" ? "1 CSV file" : "2 NML files"}
+          ):
+        </p>
+        <Upload.Dragger
+          name="files"
+          fileList={fileList}
+          onChange={handleChange}
+          beforeUpload={() => false}
+          maxCount={2}
+          multiple
+        >
+          <p className="ant-upload-drag-icon">
+            <FileExcelOutlined
+              style={{
+                margin: 0,
+                fontSize: 35,
+              }}
+            />
+          </p>
+          <p className="ant-upload-text">Drag your landmark files to this area</p>
+          <p className="ant-upload-text-hint">...</p>
+        </Upload.Dragger>
+      </div>
+
+      <Button style={{ marginTop: 16 }} onClick={onPrev}>
+        Back
+      </Button>
+
+      <AsyncButton style={{ marginTop: 16 }} onClick={onNext}>
+        Next
+      </AsyncButton>
+    </div>
+  );
+}
+
+function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const [datasetValues, setDatasetValues] = useState<DatasetValue[]>([]);
+
+  const onPrev = () => {
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: wizardContext.composeMode === "WITHOUT_TRANSFORMS" ? 0 : 1,
+    }));
+  };
+  const onNext = async () => {
+    const datasets: APIDataset[] = [];
+    try {
+      const [dataset1, dataset2] = await Promise.all([
+        getDataset({
+          owningOrganization: activeUser?.organization || "",
+          name: datasetValues[0].value,
+        }),
+        getDataset({
+          owningOrganization: activeUser?.organization || "",
+          name: datasetValues[1].value,
+        }),
+      ]);
+      datasets.push(dataset1);
+      datasets.push(dataset2);
+    } catch (exception) {
+      console.warn(exception);
+      Toast.warning("Could not derive datasets from NML. Please specify these manally.");
+      return;
+    }
+
+    setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: 3,
+      datasets,
+    }));
+  };
+
+  useEffect(() => {
+    setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
+  }, []);
+
+  return (
+    <div>
+      <DatasetSelect datasetValues={datasetValues} setDatasetValues={setDatasetValues} />
+
+      <Button style={{ marginTop: 16 }} onClick={onPrev}>
+        Back
+      </Button>
+
+      <AsyncButton style={{ marginTop: 16 }} onClick={onNext}>
+        Next
+      </AsyncButton>
+    </div>
+  );
+}
+
+export function CompositionForm(props: WizardComponentProps) {
+  const formRef = React.useRef<FormInstance<any>>(null);
+
+  const onPrev = () => {
+    props.setWizardContext((oldContext) => ({
+      ...oldContext,
+      currentWizardStep: 2,
+    }));
+  };
+
+  const [isLoading, setIsLoading] = useState(false);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
+  const [form] = Form.useForm();
+  const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
+
+  const { wizardContext } = props;
+  const linkedDatasets = wizardContext.datasets;
+
+  const onRemoveLayer = (layer: LayerLink) => {
+    const oldLayers = form.getFieldValue(["layers"]);
+    const newLayers = oldLayers.filter((existingLayer: LayerLink) => existingLayer !== layer);
+    form.setFieldsValue({ layers: newLayers });
+  };
+
+  const handleTransformImport = async (sourcePoints: Vector3[], targetPoints: Vector3[]) => {
+    const datasets = linkedDatasets;
+    const transformationArr =
+      sourcePoints.length > 0 && targetPoints.length > 0
+        ? [
+            {
+              type: "affine" as const,
+              matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+            },
+          ]
+        : [];
+
+    const newLinks: LayerLink[] = (
+      _.flatMap(datasets, (dataset) =>
+        dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
+      ) as [APIDataset, APIDataLayer][]
+    ).map(
+      ([dataset, dataLayer]): LayerLink => ({
+        datasetId: {
+          owningOrganization: dataset.owningOrganization,
+          name: dataset.name,
+        },
+        sourceName: dataLayer.name,
+        newName: dataLayer.name,
+        transformations: dataset === datasets[0] ? transformationArr : [],
+      }),
+    );
+    form.setFieldsValue({ layers: newLinks });
+  };
+
+  useEffect(() => {
+    handleTransformImport(wizardContext.sourcePoints, wizardContext.targetPoints);
+  }, []);
 
   const handleSubmit = async () => {
     if (activeUser == null) {
@@ -206,6 +494,120 @@ export default function DatasetAddComposeView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Row gutter={8}>
+          <Col span={12}>
+            <DatasetNameFormItem activeUser={activeUser} />
+          </Col>
+          <Col span={12}>
+            <AllowedTeamsFormItem
+              isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
+              selectedTeams={selectedTeams}
+              setSelectedTeams={(selectedTeams) => setSelectedTeams(selectedTeams)}
+              formRef={formRef}
+            />
+          </Col>
+        </Row>
+
+        <FormItemWithInfo
+          name="targetFolderId"
+          label="Target Folder"
+          info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+          valuePropName="folderId"
+          rules={[
+            {
+              required: true,
+              message: messages["dataset.import.required.folder"],
+            },
+          ]}
+        >
+          <FolderSelection width="50%" disableNotEditableFolders />
+        </FormItemWithInfo>
+
+        <Form.Item shouldUpdate={(prevValues, curValues) => prevValues.layers !== curValues.layers}>
+          {({ getFieldValue }) => {
+            const layers = getFieldValue("layers") || [];
+            return (
+              <List
+                locale={{ emptyText: "No Layers" }}
+                header={
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Layers
+                  </div>
+                }
+              >
+                {layers.map((layer: LayerLink, idx: number) => (
+                  // the layer name may change in this view, the order does not, so idx is the right key choice here
+                  <List.Item key={`layer-${idx}`}>
+                    <LinkedLayerForm
+                      datasetId={layer.datasetId}
+                      layer={layer}
+                      index={idx}
+                      onRemoveLayer={onRemoveLayer}
+                      form={form}
+                    />
+                  </List.Item>
+                ))}
+              </List>
+            );
+          }}
+        </Form.Item>
+
+        <FormItem
+          style={{
+            marginBottom: 0,
+          }}
+        >
+          <Button
+            size="large"
+            type="primary"
+            htmlType="submit"
+            loading={isLoading}
+            style={{
+              width: "100%",
+            }}
+          >
+            Upload
+          </Button>
+        </FormItem>
+      </Form>
+      <Button onClick={onPrev}>Back</Button>
+    </div>
+  );
+}
+
+export default function DatasetAddComposeView(props: Props) {
+  const [wizardContext, setWizardContext] = useState<WizardContext>({
+    currentWizardStep: 0,
+    fileList: [],
+    composeMode: "WITHOUT_TRANSFORMS",
+    datasets: [],
+    sourcePoints: [],
+    targetPoints: [],
+  });
+  const { currentWizardStep } = wizardContext;
+  const CurrentWizardComponent = WIZARD_STEPS[currentWizardStep].component;
+  const onNext = () => {
+    setWizardContext(({ currentWizardStep, ...rest }) => ({
+      ...rest,
+      currentWizardStep: Math.min(currentWizardStep + 1, WIZARD_STEPS.length - 1),
+    }));
+  };
+  const onPrev =
+    wizardContext.currentWizardStep > 0
+      ? () => {
+          setWizardContext(({ currentWizardStep, ...rest }) => ({
+            ...rest,
+            currentWizardStep: currentWizardStep - 1,
+          }));
+        }
+      : null;
+  return (
+    <div style={{ padding: 5 }}>
       <CardContainer title="Compose a dataset from existing dataset layers">
         <p>
           You can create a new dataset by composing existing datasets together. To align multiple
@@ -215,116 +617,14 @@ export default function DatasetAddComposeView(props: Props) {
           find the datasets that are referenced in these files and will create transformations using
           these landmarks.
         </p>
-
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <FormItem
-            name="landmarks"
-            label={<React.Fragment>Landmark files (NML pairs or CSV)</React.Fragment>}
-            hasFeedback
-          >
-            <Upload.Dragger
-              name="files"
-              fileList={fileList}
-              onChange={handleChange}
-              beforeUpload={() => false}
-              maxCount={2}
-              multiple
-            >
-              <p className="ant-upload-drag-icon">
-                <FileExcelOutlined
-                  style={{
-                    margin: 0,
-                    fontSize: 35,
-                  }}
-                />
-              </p>
-              <p className="ant-upload-text">Drag your landmark files to this area</p>
-              <p className="ant-upload-text-hint">...</p>
-            </Upload.Dragger>
-          </FormItem>
-
-          <Row gutter={8}>
-            <Col span={12}>
-              <DatasetNameFormItem activeUser={activeUser} />
-            </Col>
-            <Col span={12}>
-              <AllowedTeamsFormItem
-                isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
-                selectedTeams={selectedTeams}
-                setSelectedTeams={(selectedTeams) => setSelectedTeams(selectedTeams)}
-                formRef={formRef}
-              />
-            </Col>
-          </Row>
-
-          <FormItemWithInfo
-            name="targetFolderId"
-            label="Target Folder"
-            info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
-            valuePropName="folderId"
-            rules={[
-              {
-                required: true,
-                message: messages["dataset.import.required.folder"],
-              },
-            ]}
-          >
-            <FolderSelection width="50%" disableNotEditableFolders />
-          </FormItemWithInfo>
-
-          <Form.Item
-            shouldUpdate={(prevValues, curValues) => prevValues.layers !== curValues.layers}
-          >
-            {({ getFieldValue }) => {
-              const layers = getFieldValue("layers") || [];
-              return (
-                <List
-                  locale={{ emptyText: "No Layers" }}
-                  header={
-                    <div
-                      style={{
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Layers
-                    </div>
-                  }
-                >
-                  {layers.map((layer: LayerLink, idx: number) => (
-                    // the layer name may change in this view, the order does not, so idx is the right key choice here
-                    <List.Item key={`layer-${idx}`}>
-                      <LinkedLayerForm
-                        datasetId={layer.datasetId}
-                        layer={layer}
-                        index={idx}
-                        onRemoveLayer={onRemoveLayer}
-                        form={form}
-                      />
-                    </List.Item>
-                  ))}
-                </List>
-              );
-            }}
-          </Form.Item>
-
-          <FormItem
-            style={{
-              marginBottom: 0,
-            }}
-          >
-            <Button
-              size="large"
-              type="primary"
-              htmlType="submit"
-              loading={isLoading}
-              style={{
-                width: "100%",
-              }}
-            >
-              Upload
-            </Button>
-          </FormItem>
-        </Form>
+        <CurrentWizardComponent
+          onNext={onNext}
+          onPrev={onPrev}
+          wizardContext={wizardContext}
+          setWizardContext={setWizardContext}
+          datastores={props.datastores}
+          onAdded={props.onAdded}
+        />
       </CardContainer>
     </div>
   );

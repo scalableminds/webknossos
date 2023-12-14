@@ -23,8 +23,17 @@ export default function SelectImportType({
 
   return (
     <div>
+      <p>
+        You can create a new dataset by composing existing datasets together. There are three
+        different ways to accomplish this:
+        <ul>
+          <li>Select existing datasets which should be combined without any transforms</li>
+          <li>Create landmarks nodes using the skeleton tool and upload these annotations here.</li>
+          <li>Import a landmark CSV as it can be exported by Big Warp.</li>
+        </ul>
+        In all three cases, you can later tweak which layers should be used.
+      </p>
       <div>
-        <p>Select how you want to create a new dataset:</p>
         <Radio.Group onChange={onChange} value={composeMode}>
           <Space direction="vertical">
             <Radio value={"WITHOUT_TRANSFORMS"}>Combine datasets without any transforms</Radio>

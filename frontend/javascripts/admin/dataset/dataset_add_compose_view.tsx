@@ -46,14 +46,6 @@ export default function DatasetAddComposeView(props: Props) {
   return (
     <div style={{ padding: 5 }}>
       <CardContainer title="Compose a dataset from existing dataset layers">
-        <p>
-          You can create a new dataset by composing existing datasets together. To align multiple
-          datasets with each other, create landmarks nodes using the skeleton tool. Then, download
-          these annotations as NMLs and drop them in the following landmarks input. Alternatively,
-          you can also add a landmark CSV as it can be exported by Big Warp. WEBKNOSSOS will try to
-          find the datasets that are referenced in these files and will create transformations using
-          these landmarks.
-        </p>
         <CurrentWizardComponent
           wizardContext={wizardContext}
           setWizardContext={setWizardContext}

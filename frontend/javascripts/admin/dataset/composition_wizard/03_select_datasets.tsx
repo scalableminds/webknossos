@@ -39,6 +39,7 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
 
   return (
     <div>
+      <p>Select the datasets that you want to combine or doublecheck the pre-selected datasets.</p>
       <DatasetSelectionComponent
         datasetValues={datasetValues}
         setDatasetValues={setDatasetValues}

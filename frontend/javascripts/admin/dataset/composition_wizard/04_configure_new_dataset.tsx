@@ -116,6 +116,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
+      <p>Please configure the dataset that is about to be created.</p>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={8}>
           <Col span={12}>

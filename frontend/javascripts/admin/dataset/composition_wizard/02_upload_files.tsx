@@ -130,6 +130,11 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
 
   return (
     <div>
+      <p>
+        {wizardContext.composeMode === "BIG_WARP"
+          ? "Please upload one CSV file that was exported by BigWarp."
+          : "Please upload two NML files that contain landmarks that you created with WEBKNOSSOS."}
+      </p>
       <div>
         <p>
           Landmark files ({wizardContext.composeMode === "BIG_WARP" ? "1 CSV file" : "2 NML files"}

@@ -40,7 +40,6 @@ import {
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";

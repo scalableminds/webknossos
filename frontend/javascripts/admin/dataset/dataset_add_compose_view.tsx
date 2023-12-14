@@ -8,7 +8,6 @@ import {
 import {
   Button,
   Col,
-  Collapse,
   Form,
   FormInstance,
   Input,
@@ -27,8 +26,7 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { values } from "libs/utils";
 import _ from "lodash";
-import { flatToNestedMatrix, formatNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
-import { Matrix4x4 } from "libs/mjs";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import messages from "messages";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -40,7 +38,6 @@ import {
   APIDataLayer,
   APIDatasetId,
   APITeam,
-  CoordinateTransformation,
   APIDataStore,
   LayerLink,
 } from "types/api_flow_types";
@@ -49,6 +46,7 @@ import { createDatasetComposition, getDataset, getDatasets } from "admin/admin_r
 import Toast from "libs/toast";
 import AsyncSelect from "components/async_select";
 import { AsyncButton } from "components/async_clickables";
+import { Store } from "oxalis/singletons";
 
 const FormItem = Form.Item;
 
@@ -176,7 +174,6 @@ function ImportTypeQuestion({ wizardContext, setWizardContext }: WizardComponent
 }
 
 function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const fileList = wizardContext.fileList;
   const handleChange = async (info: UploadChangeParam<UploadFile<any>>) => {
     setWizardContext((oldContext) => ({
@@ -196,7 +193,7 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
       const sourcePoints: Vector3[] = [];
       const targetPoints: Vector3[] = [];
       if (wizardContext.composeMode === "BIG_WARP") {
-        if (fileList.length != 1 || fileList[0]?.originFileObj == null) {
+        if (fileList.length !== 1 || fileList[0]?.originFileObj == null) {
           Toast.error("Expected exactly one CSV file.");
           return;
         }
@@ -206,8 +203,8 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
         const lines = csv.split("\n");
         for (const line of lines) {
           const fields = line.split(",");
-          if (fields.length != EXPECTED_VALUE_COUNT_PER_LINE) {
-            if (line.trim() != "") {
+          if (fields.length !== EXPECTED_VALUE_COUNT_PER_LINE) {
+            if (line.trim() !== "") {
               throw new Error(
                 `Cannot interpret line in CSV file. Expected ${EXPECTED_VALUE_COUNT_PER_LINE} values, got ${fields.length}.`,
               );
@@ -229,8 +226,8 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
           datasets: [],
           currentWizardStep: 2,
         }));
-      } else if (wizardContext.composeMode == "WK_ANNOTATIONS") {
-        if (fileList.length != 2) {
+      } else if (wizardContext.composeMode === "WK_ANNOTATIONS") {
+        if (fileList.length !== 2) {
           Toast.error("Expected exactly two NML files.");
           return;
         }
@@ -262,7 +259,7 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
         );
 
         for (const [node1, node2] of _.zip(nodes1, nodes2)) {
-          if ((node1 == null) != (node2 == null)) {
+          if ((node1 == null) !== (node2 == null)) {
             throw new Error("A tree was empty while its corresponding tree wasn't.");
           }
           if (node1 != null && node2 != null) {
@@ -271,28 +268,11 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
           }
         }
 
-        const datasets: APIDataset[] = [];
-        try {
-          const [dataset1, dataset2] = await Promise.all([
-            getDataset({
-              owningOrganization: activeUser?.organization || "",
-              name: datasetName1,
-            }),
-            getDataset({
-              owningOrganization: activeUser?.organization || "",
-              name: datasetName2,
-            }),
-          ]);
-          datasets.push(dataset1);
-          datasets.push(dataset2);
-        } catch (exception) {
-          console.warn(exception);
-          Toast.warning("Could not derive datasets from NML. Please specify these manally.");
-        }
+        const datasets = await tryToFetchDatasetsByName(datasetName1, datasetName2);
 
         setWizardContext((oldContext) => ({
           ...oldContext,
-          datasets,
+          datasets: datasets || [],
           sourcePoints,
           targetPoints,
           currentWizardStep: 2,
@@ -345,8 +325,39 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
   );
 }
 
+async function tryToFetchDatasetsByName(
+  name1: string,
+  name2: string,
+): Promise<APIDataset[] | null> {
+  const { activeUser } = Store.getState();
+  try {
+    const [dataset1, dataset2] = await Promise.all([
+      getDataset(
+        {
+          owningOrganization: activeUser?.organization || "",
+          name: name1,
+        },
+        null,
+        { showErrorToast: false },
+      ),
+      getDataset(
+        {
+          owningOrganization: activeUser?.organization || "",
+          name: name2,
+        },
+        null,
+        { showErrorToast: false },
+      ),
+    ]);
+    return [dataset1, dataset2];
+  } catch (exception) {
+    console.warn(exception);
+    Toast.warning("Could not derive datasets from NML. Please specify these manally.");
+    return null;
+  }
+}
+
 function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [datasetValues, setDatasetValues] = useState<DatasetValue[]>([]);
 
   const onPrev = () => {
@@ -356,23 +367,9 @@ function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProp
     }));
   };
   const onNext = async () => {
-    const datasets: APIDataset[] = [];
-    try {
-      const [dataset1, dataset2] = await Promise.all([
-        getDataset({
-          owningOrganization: activeUser?.organization || "",
-          name: datasetValues[0].value,
-        }),
-        getDataset({
-          owningOrganization: activeUser?.organization || "",
-          name: datasetValues[1].value,
-        }),
-      ]);
-      datasets.push(dataset1);
-      datasets.push(dataset2);
-    } catch (exception) {
-      console.warn(exception);
-      Toast.warning("Could not derive datasets from NML. Please specify these manally.");
+    const datasets = await tryToFetchDatasetsByName(datasetValues[0].value, datasetValues[1].value);
+    if (datasets == null) {
+      // An error message was already shown in tryToFetchDatasetsByName
       return;
     }
 
@@ -643,7 +640,6 @@ function LinkedLayerForm({
   form: FormInstance;
   datasetId: APIDatasetId;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = Form.useWatch(["layers"]);
 
   React.useEffect(() => {

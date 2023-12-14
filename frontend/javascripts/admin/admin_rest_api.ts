@@ -1430,10 +1430,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 export function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+    options,
   );
 }
 

@@ -42,11 +42,13 @@ import {
   LayerLink,
 } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
-import { createDatasetComposition, getDataset, getDatasets } from "admin/admin_rest_api";
+import { createDatasetComposition, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import AsyncSelect from "components/async_select";
 import { AsyncButton } from "components/async_clickables";
 import { Store } from "oxalis/singletons";
+import DatasetSelectionComponent, {
+  DatasetSelectionValue,
+} from "dashboard/dataset/dataset_selection_component";
 
 const FormItem = Form.Item;
 
@@ -61,43 +63,6 @@ type Props = {
   datastores: APIDataStore[];
 };
 const EXPECTED_VALUE_COUNT_PER_LINE = 8;
-
-// Usage of AsyncSelect
-interface DatasetValue {
-  label: string;
-  value: string;
-}
-
-async function fetchDatasets(query: string): Promise<DatasetValue[]> {
-  const datasets = await getDatasets(false, null, query, null, 20);
-
-  return datasets.map((d) => ({
-    label: d.name,
-    value: d.name,
-  }));
-}
-
-const DatasetSelect = ({
-  datasetValues,
-  setDatasetValues,
-}: {
-  datasetValues: DatasetValue[];
-  setDatasetValues: (values: DatasetValue[]) => void;
-}) => {
-  return (
-    <AsyncSelect
-      mode="multiple"
-      value={datasetValues}
-      placeholder="Select dataset"
-      fetchOptions={fetchDatasets}
-      onChange={(newValue) => {
-        setDatasetValues(newValue as DatasetValue[]);
-        console.log("set value to", newValue);
-      }}
-      style={{ width: "100%" }}
-    />
-  );
-};
 
 const WIZARD_STEPS = [
   {
@@ -147,7 +112,6 @@ function ImportTypeQuestion({ wizardContext, setWizardContext }: WizardComponent
     }));
   };
   const onChange = (e: RadioChangeEvent) => {
-    console.log("radio checked", e.target.value);
     setWizardContext((oldContext) => ({
       ...oldContext,
       composeMode: e.target.value,
@@ -199,7 +163,6 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
         }
 
         const csv = await readFileAsText(fileList[0]?.originFileObj);
-        console.log("csv", csv);
         const lines = csv.split("\n");
         for (const line of lines) {
           const fields = line.split(",");
@@ -228,7 +191,7 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
         }));
       } else if (wizardContext.composeMode === "WK_ANNOTATIONS") {
         if (fileList.length !== 2) {
-          Toast.error("Expected exactly two NML files.");
+          Toast.warning("Expected exactly two NML files.");
           return;
         }
 
@@ -237,7 +200,8 @@ function UploadFiles({ wizardContext, setWizardContext }: WizardComponentProps) 
 
         if (nmlString1 === "" || nmlString2 === "") {
           // todop unify error handling
-          throw new Error("NML files are empty.");
+          Toast.warning("NML files should not be empty.");
+          return;
         }
 
         const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
@@ -358,7 +322,7 @@ async function tryToFetchDatasetsByName(
 }
 
 function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
-  const [datasetValues, setDatasetValues] = useState<DatasetValue[]>([]);
+  const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);
 
   const onPrev = () => {
     setWizardContext((oldContext) => ({
@@ -386,7 +350,10 @@ function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProp
 
   return (
     <div>
-      <DatasetSelect datasetValues={datasetValues} setDatasetValues={setDatasetValues} />
+      <DatasetSelectionComponent
+        datasetValues={datasetValues}
+        setDatasetValues={setDatasetValues}
+      />
 
       <Button style={{ marginTop: 16 }} onClick={onPrev}>
         Back

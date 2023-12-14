@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
-import io.swagger.annotations._
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
@@ -49,7 +48,6 @@ object AnnotationLayerParameters {
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
-@Api
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
@@ -83,21 +81,12 @@ class AnnotationController @Inject()(
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
-  @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
-                nickname = "annotationInfoByType")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def info(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
-      @ApiParam(
-        value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
-      id: String,
-      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
-    : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def info( // Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType
+           typ: String,
+           // For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id
+           id: String,
+           // Timestamp in milliseconds (time at which the request is sent)
+           timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
@@ -123,25 +112,18 @@ class AnnotationController @Inject()(
     }
   }
 
-  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def infoWithoutType(@ApiParam(value = "Id of the stored annotation")
-                      id: String,
-                      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)",
-                                required = true) timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async {
-    implicit request =>
-      log() {
-        for {
-          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-          result <- info(annotation.typ.toString, id, timestamp)(request)
-        } yield result
+  def infoWithoutType(id: String,
+                      // Timestamp in milliseconds (time at which the request is sent
+                      timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    log() {
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- info(annotation.typ.toString, id, timestamp)(request)
+      } yield result
 
-      }
+    }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -155,7 +137,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -164,7 +145,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
   def loggedTime(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -183,7 +163,6 @@ class AnnotationController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -194,7 +173,6 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reset.success"))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def reopen(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
@@ -229,7 +207,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
@@ -238,7 +215,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
   def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -255,7 +231,6 @@ class AnnotationController @Inject()(
       } yield Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -264,7 +239,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
   def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
@@ -285,7 +259,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSandbox(organizationName: String,
                  dataSetName: String,
                  typ: String,
@@ -316,7 +289,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -329,7 +301,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -338,7 +309,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
   def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -353,7 +323,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
   def downsampleWithoutType(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -362,7 +331,6 @@ class AnnotationController @Inject()(
       } yield result
   }
 
-  @ApiOperation(hidden = true, value = "")
   def addSegmentIndex(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity)
@@ -376,7 +344,6 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
   def addSegmentIndicesToAll(parallelBatchCount: Int,
                              dryRun: Boolean,
                              skipTracings: Option[String]): Action[AnyContent] =
@@ -451,7 +418,6 @@ class AnnotationController @Inject()(
       _ <- timeSpanService.logUserInteraction(timestamp, issuingUser, annotation) // log time on tracing end
     } yield (updated, message)
 
-  @ApiOperation(hidden = true, value = "")
   def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       log() {
@@ -463,7 +429,6 @@ class AnnotationController @Inject()(
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       log() {
@@ -479,7 +444,6 @@ class AnnotationController @Inject()(
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def editAnnotation(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       for {
@@ -504,7 +468,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def editAnnotationLayer(typ: String, id: String, tracingId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       for {
@@ -516,14 +479,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfosByTaskId")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message = "JSON list of objects containing information about the selected annotations."),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] =
+  def annotationsForTask(taskId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         taskIdValidated <- ObjectId.fromString(taskId)
@@ -535,7 +491,6 @@ class AnnotationController @Inject()(
       } yield Ok(JsArray(jsons.flatten))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
       annotation match {
@@ -556,7 +511,6 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  @ApiOperation(hidden = true, value = "")
   def cancelWithoutType(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -564,7 +518,6 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  @ApiOperation(hidden = true, value = "")
   def transfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
@@ -576,7 +529,6 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
   def duplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -588,7 +540,7 @@ class AnnotationController @Inject()(
   }
 
   // Note that this lists both the user’s own explorationals and those shared with the user’s teams
-  @ApiOperation(hidden = true, value = "")
+
   def listExplorationals(isFinished: Option[Boolean],
                          limit: Option[Int],
                          pageNumber: Option[Int] = None,
@@ -615,7 +567,6 @@ class AnnotationController @Inject()(
 
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSharedTeams(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
@@ -625,7 +576,6 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def updateSharedTeams(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyAs[List[String]] { teams =>
@@ -640,7 +590,6 @@ class AnnotationController @Inject()(
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -688,7 +637,6 @@ class AnnotationController @Inject()(
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
 
-  @ApiOperation(hidden = true, value = "")
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {

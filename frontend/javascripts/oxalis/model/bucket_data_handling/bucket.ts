@@ -543,6 +543,8 @@ export class DataBucket {
         }
       }
     }
+
+    this.invalidateValueSet();
   }
 
   markAsPulled(): void {

@@ -65,6 +65,7 @@ import type {
   ClickSegmentAction,
   SetActiveCellAction,
   CreateCellAction,
+  DeleteSegmentDataAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
@@ -79,7 +80,11 @@ import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
-import { UpdateAction, updateSegmentGroups } from "oxalis/model/sagas/update_actions";
+import {
+  deleteSegmentDataVolumeAction,
+  UpdateAction,
+  updateSegmentGroups,
+} from "oxalis/model/sagas/update_actions";
 import {
   createSegmentVolumeAction,
   deleteSegmentVolumeAction,
@@ -90,7 +95,7 @@ import {
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -101,6 +106,7 @@ import {
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -842,8 +848,35 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
+function* handleDeleteSegmentData(): Saga<void> {
+  yield* take("WK_READY");
+  while (true) {
+    const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
+
+    yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
+    yield* put(
+      pushSaveQueueTransaction(
+        [deleteSegmentDataVolumeAction(action.segmentId)],
+        "volume",
+        action.layerName,
+      ),
+    );
+    yield* call([Model, Model.ensureSavedState]);
+
+    yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
+      bucket.containsValue(action.segmentId),
+    );
+
+    yield* put(setBusyBlockingInfoAction(false));
+    if (action.callback) {
+      action.callback();
+    }
+  }
+}
+
 export default [
   editVolumeLayerAsync,
+  handleDeleteSegmentData,
   ensureToolIsAllowedInResolution,
   floodFill,
   watchVolumeTracingAsync,

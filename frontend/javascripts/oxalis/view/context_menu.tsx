@@ -1162,7 +1162,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
         contextMenuPosition == null ||
         volumeTracing == null ||
         !hasNoFallbackLayer ||
-        !volumeTracing.hasSegmentIndex
+        !volumeTracing.hasSegmentIndex ||
+        props.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
       ) {
         return [];
       } else {
@@ -1300,7 +1301,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
+  const areSegmentStatisticsAvailable =
+    hasNoFallbackLayer &&
+    volumeTracing?.hasSegmentIndex &&
+    isHoveredSegmentOrMesh &&
+    props.additionalCoordinates == null; // TODO change once statistics are available for nd-datasets
+
+  if (areSegmentStatisticsAvailable) {
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
@@ -1314,7 +1321,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
+  if (areSegmentStatisticsAvailable) {
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
@@ -1518,7 +1525,14 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateMeshVisibilityAction(layerName, meshId, false));
+    dispatch(
+      updateMeshVisibilityAction(
+        layerName,
+        meshId,
+        false,
+        Store.getState().flycam.additionalCoordinates || undefined,
+      ),
+    );
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));

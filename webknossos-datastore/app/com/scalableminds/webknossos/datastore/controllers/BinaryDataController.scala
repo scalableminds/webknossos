@@ -18,7 +18,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import io.swagger.annotations._
 import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -28,7 +27,6 @@ import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
-@Api(tags = Array("datastore"))
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
@@ -49,7 +47,6 @@ class BinaryDataController @Inject()(
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
 
-  @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
       token: Option[String],
       organizationName: String,
@@ -81,26 +78,24 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
-  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname = "datasetDownload")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "Raw bytes from the dataset"),
-      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
-    ))
   def requestRawCuboid(
-      @ApiParam(value = "Datastore token identifying the requesting user") token: Option[String],
-      @ApiParam(value = "Name of the dataset’s organization", required = true) organizationName: String,
-      @ApiParam(value = "Dataset name", required = true) dataSetName: String,
-      @ApiParam(value = "Layer name of the dataset", required = true) dataLayerName: String,
-      @ApiParam(value = "Mag1 x coordinate of the top-left corner of the bounding box", required = true) x: Int,
-      @ApiParam(value = "Mag1 y coordinate of the top-left corner of the bounding box", required = true) y: Int,
-      @ApiParam(value = "Mag1 z coordinate of the top-left corner of the bounding box", required = true) z: Int,
-      @ApiParam(value = "Target-mag width of the bounding box", required = true) width: Int,
-      @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
-      @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
-      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: String,
-      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean,
-      @ApiParam(value = "If set, apply set mapping name") mappingName: Option[String]
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      // Mag1 coordinates of the top-left corner of the bounding box
+      x: Int,
+      y: Int,
+      z: Int,
+      // Target-mag size of the bounding box
+      width: Int,
+      height: Int,
+      depth: Int,
+      // Mag in three-component format (e.g. 1-1-1 or 16-16-8)
+      mag: String,
+      // If true, use lossy compression by sending only half-bytes of the data
+      halfByte: Boolean,
+      mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
@@ -121,7 +116,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def requestRawCuboidPost(
       token: Option[String],
       organizationName: String,
@@ -142,7 +136,6 @@ class BinaryDataController @Inject()(
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
-  @ApiOperation(hidden = true, value = "")
   def requestViaKnossos(token: Option[String],
                         organizationName: String,
                         dataSetName: String,
@@ -172,7 +165,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def thumbnailJpeg(token: Option[String],
                     organizationName: String,
                     dataSetName: String,
@@ -229,7 +221,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def mappingJson(
       token: Option[String],
       organizationName: String,
@@ -253,7 +244,6 @@ class BinaryDataController @Inject()(
   /**
     * Handles ad-hoc mesh requests.
     */
-  @ApiOperation(hidden = true, value = "")
   def requestAdHocMesh(token: Option[String],
                        organizationName: String,
                        dataSetName: String,
@@ -275,6 +265,7 @@ class BinaryDataController @Inject()(
             request.body.scale,
             request.body.mapping,
             request.body.mappingType,
+            request.body.additionalCoordinates,
             request.body.findNeighbors
           )
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
@@ -296,7 +287,6 @@ class BinaryDataController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  @ApiOperation(hidden = true, value = "")
   def colorStatistics(token: Option[String],
                       organizationName: String,
                       dataSetName: String,
@@ -316,7 +306,6 @@ class BinaryDataController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def findData(token: Option[String],
                organizationName: String,
                dataSetName: String,
@@ -336,7 +325,6 @@ class BinaryDataController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def histogram(token: Option[String],
                 organizationName: String,
                 dataSetName: String,

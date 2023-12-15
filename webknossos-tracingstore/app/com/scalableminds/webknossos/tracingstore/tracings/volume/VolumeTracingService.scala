@@ -141,11 +141,11 @@ class VolumeTracingService @Inject()(
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
-              case a: DeleteSegmentDataVolumeAction =>
+              /*case a: DeleteSegmentDataVolumeAction =>
                 if (!tracing.getHasSegmentIndex) {
                   Fox.failure("Cannot delete segment data for annotations without segment index.")
                 } else
-                  deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to delete segment data."
+                  deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to delete segment data."*/
               case _: UpdateTdCamera        => Fox.successful(tracing)
               case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
               case _                        => Fox.failure("Unknown action.")
@@ -192,7 +192,7 @@ class VolumeTracingService @Inject()(
       }
       _ <- segmentIndexBuffer.flush()
     } yield volumeTracing
-
+  /*
   private def deleteSegmentData(tracingId: String,
                                 volumeTracing: VolumeTracing,
                                 a: DeleteSegmentDataVolumeAction,
@@ -230,7 +230,7 @@ class VolumeTracingService @Inject()(
         } yield ()
       })
       _ <- segmentIndexBuffer.flush()
-    } yield volumeTracing
+    } yield volumeTracing*/
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.resolutions.nonEmpty) {

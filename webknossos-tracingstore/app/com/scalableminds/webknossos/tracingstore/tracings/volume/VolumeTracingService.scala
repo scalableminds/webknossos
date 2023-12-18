@@ -431,10 +431,12 @@ class VolumeTracingService @Inject()(
 
   def data(tracingId: String,
            tracing: VolumeTracing,
-           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+           dataRequests: DataRequestCollection,
+           includeFallbackDataIfAvailable: Boolean = false,
+           userToken: Option[String] = None): Fox[(Array[Byte], List[Int])] =
     for {
       isTemporaryTracing <- isTemporaryTracing(tracingId)
-      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
+      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing, includeFallbackDataIfAvailable, userToken)
       requests = dataRequests.map(r =>
         DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)

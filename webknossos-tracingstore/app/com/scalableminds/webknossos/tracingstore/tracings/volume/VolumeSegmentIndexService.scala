@@ -152,9 +152,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       version: Option[Long],
       userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      fromMutableIndex <- getSegmentToBucketIndexFromFossilDB(tracingId, segmentId, mag, version)
-      fromFileIndex <- layer match {
-        case Some(fallbackLayer) if fromMutableIndex.isEmpty =>
+      fromMutableIndex <- getSegmentToBucketIndexFromFossilDB(tracingId, segmentId, mag, version).fillEmpty(
+        ListOfVec3IntProto.of(Seq()))
+      fromFileIndex <- layer match { // isEmpty is not the same as length == 0 here :(
+        case Some(fallbackLayer) if fromMutableIndex.length == 0 =>
           getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, userToken)
         case _ => Fox.successful(Seq.empty)
       }

@@ -59,8 +59,9 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       fossilDbData <- volumeSegmentIndexClient
         .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
         .map(_.value)
+        .fillEmpty(ListOfVec3IntProto.of(Seq()))
       layerData <- fallbackLayer match {
-        case Some(layer) if fossilDbData.isEmpty =>
+        case Some(layer) if fossilDbData.length == 0 =>
           remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, userToken)
         case _ => Fox.successful(Seq.empty)
       }

@@ -291,8 +291,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         finishDatasetUpload(datastoreUrl, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-
             Toast.success(messages["dataset.upload_success"]);
             let maybeError;
 

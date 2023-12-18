@@ -5,7 +5,7 @@ import { Vector3 } from "oxalis/constants";
 import { Store } from "oxalis/singletons";
 import { APIDataset, APIDataStore } from "types/api_flow_types";
 
-type FileList = UploadFile<any>[];
+export type FileList = UploadFile<any>[];
 
 export type WizardStep =
   | "SelectImportType"

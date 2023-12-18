@@ -802,11 +802,6 @@ export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector
   ];
 }
 
-export function formatNestedMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): string {
-  const formatVec = (vec: Vector4) => `[${vec.join(", ")}]`;
-  return `[${matrix.map(formatVec).join(", ")}]`;
-}
-
 // Transposition is often needed so that the matrix has the right format
 // for matrix operations (e.g., on the GPU; but not for ThreeJS).
 // Inversion is needed when the position of an "output voxel" (e.g., during

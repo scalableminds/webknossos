@@ -28,17 +28,22 @@ export default function SelectImportType({
         different ways to accomplish this:
         <ul>
           <li>Select existing datasets which should be combined without any transforms</li>
-          <li>Create landmarks nodes using the skeleton tool and upload these annotations here.</li>
+          <li>
+            Create landmarks nodes using the skeleton tool in two datasets. Download the annotations
+            as NML and upload these here again.
+          </li>
           <li>Import a landmark CSV as it can be exported by Big Warp.</li>
         </ul>
-        In all three cases, you can later tweak which layers should be used.
+        In all three cases, you can tweak which layers should be used later.
       </p>
       <div>
         <Radio.Group onChange={onChange} value={composeMode}>
           <Space direction="vertical">
             <Radio value={"WITHOUT_TRANSFORMS"}>Combine datasets without any transforms</Radio>
-            <Radio value={"WK_ANNOTATIONS"}>Combine datasets by using skeleton annotations</Radio>
-            <Radio value={"BIG_WARP"}>Combine datasets by using a BigWarp CSV</Radio>
+            <Radio value={"WK_ANNOTATIONS"}>
+              Combine datasets by using skeleton annotations (NML)
+            </Radio>
+            <Radio value={"BIG_WARP"}>Combine datasets by using BigWarp landmarks (CSV)</Radio>
           </Space>
         </Radio.Group>
       </div>

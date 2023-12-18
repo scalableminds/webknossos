@@ -23,7 +23,7 @@ export default function SelectImportType({
 
   return (
     <div>
-      <p>
+      <div style={{ marginBottom: 8 }}>
         You can create a new dataset by composing existing datasets together. There are three
         different ways to accomplish this:
         <ul>
@@ -35,7 +35,7 @@ export default function SelectImportType({
           <li>Import a landmark CSV as it can be exported by Big Warp.</li>
         </ul>
         In all three cases, you can tweak which layers should be used later.
-      </p>
+      </div>
       <div>
         <Radio.Group onChange={onChange} value={composeMode}>
           <Space direction="vertical">

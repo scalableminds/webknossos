@@ -1176,3 +1176,5 @@ export function getFileExtension(fileName: string): string {
   const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
   return fileExtension;
 }
+
+export class SoftError extends Error {}

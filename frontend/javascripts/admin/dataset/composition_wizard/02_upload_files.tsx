@@ -4,7 +4,7 @@ import Upload, { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { values } from "libs/utils";
+import { SoftError, values } from "libs/utils";
 import _ from "lodash";
 import { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -38,18 +38,19 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
       } else {
         throw new Error("Unexpected compose mode: " + wizardContext.composeMode);
       }
-      if (newContextPartial == null) {
-        return;
-      }
       setWizardContext((oldContext) => ({
         ...oldContext,
         ...newContextPartial,
       }));
     } catch (exception) {
-      Toast.error(
-        "An error occurred while importing the uploaded files. See the Browser's console for more feedback.",
-      );
-      console.error(exception);
+      if (exception instanceof SoftError) {
+        Toast.warning(exception.message);
+      } else {
+        Toast.error(
+          "An error occurred while importing the uploaded files. See the Browser's console for more details.",
+        );
+        console.error(exception);
+      }
     }
   };
 
@@ -97,12 +98,11 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
   );
 }
 
-async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardContext> | null> {
+async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardContext>> {
   const sourcePoints: Vector3[] = [];
   const targetPoints: Vector3[] = [];
   if (fileList.length !== 1 || fileList[0]?.originFileObj == null) {
-    Toast.error("Expected exactly one CSV file.");
-    return null;
+    throw new SoftError("Expected exactly one CSV file.");
   }
 
   const csv = await readFileAsText(fileList[0]?.originFileObj);
@@ -111,7 +111,7 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const fields = line.split(",");
     if (fields.length !== EXPECTED_VALUE_COUNT_PER_CSV_LINE) {
       if (line.trim() !== "") {
-        throw new Error(
+        throw new SoftError(
           `Cannot interpret line in CSV file. Expected ${EXPECTED_VALUE_COUNT_PER_CSV_LINE} values, got ${fields.length}.`,
         );
       }
@@ -137,23 +137,21 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
   const sourcePoints: Vector3[] = [];
   const targetPoints: Vector3[] = [];
   if (fileList.length !== 2) {
-    Toast.warning("Expected exactly two NML files.");
-    return null;
+    throw new SoftError("Expected exactly two NML files.");
   }
 
   const nmlString1 = await readFileAsText(fileList[0]?.originFileObj!);
   const nmlString2 = await readFileAsText(fileList[1]?.originFileObj!);
 
   if (nmlString1 === "" || nmlString2 === "") {
-    Toast.warning("NML files should not be empty.");
-    return null;
+    throw new SoftError("NML files should not be empty.");
   }
 
   const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
   const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
 
   if (!datasetName1 || !datasetName2) {
-    throw new Error("Could not extract dataset names.");
+    throw new SoftError("Could not extract dataset names.");
   }
 
   const nodes1 = Array.from(
@@ -169,7 +167,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
 
   for (const [node1, node2] of _.zip(nodes1, nodes2)) {
     if ((node1 == null) !== (node2 == null)) {
-      throw new Error(
+      throw new SoftError(
         "A tree was empty while its corresponding tree wasn't. Ensure that the NML structures match each other.",
       );
     }

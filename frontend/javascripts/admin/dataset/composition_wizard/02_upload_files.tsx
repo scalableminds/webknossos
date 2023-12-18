@@ -82,8 +82,7 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
               }}
             />
           </p>
-          <p className="ant-upload-text">Drag your landmark files to this area</p>
-          <p className="ant-upload-text-hint">...</p>
+          <p className="ant-upload-text">Drag your landmark file(s) to this area</p>
         </Upload.Dragger>
       </div>
 

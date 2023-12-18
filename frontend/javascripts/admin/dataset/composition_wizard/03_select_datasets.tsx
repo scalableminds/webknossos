@@ -37,6 +37,14 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
     setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
   }, []);
 
+  // When not using any transforms,
+  let isDatasetCountValid = true;
+  if (wizardContext.composeMode === "WITHOUT_TRANSFORMS") {
+    isDatasetCountValid = datasetValues.length > 0;
+  } else {
+    isDatasetCountValid = datasetValues.length === 2;
+  }
+
   return (
     <div>
       <p>Select the datasets that you want to combine or doublecheck the pre-selected datasets.</p>
@@ -49,7 +57,12 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
         Back
       </Button>
 
-      <AsyncButton type="primary" style={{ marginTop: 16, marginLeft: 8 }} onClick={onNext}>
+      <AsyncButton
+        disabled={!isDatasetCountValid}
+        type="primary"
+        style={{ marginTop: 16, marginLeft: 8 }}
+        onClick={onNext}
+      >
         Next
       </AsyncButton>
     </div>

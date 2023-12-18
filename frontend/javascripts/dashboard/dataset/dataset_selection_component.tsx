@@ -32,7 +32,6 @@ export default function DatasetSelectionComponent({
       fetchOptions={fetchDatasets}
       onChange={(newValue) => {
         setDatasetValues(newValue as DatasetSelectionValue[]);
-        console.log("set value to", newValue);
       }}
       style={{ width: "100%" }}
     />

@@ -117,12 +117,14 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
       }
       continue;
     }
-    const [_pointName, _enabled, x1, y1, z1, x2, y2, z2] = fields;
+    const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
-    const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-    const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-    sourcePoints.push(source);
-    targetPoints.push(target);
+    if (enabled) {
+      const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+      const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+      sourcePoints.push(source);
+      targetPoints.push(target);
+    }
   }
 
   return {

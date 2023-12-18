@@ -290,13 +290,6 @@ async function inferFromEmbedding(
           const jInMask = Math.floor(j / 4);
           onnxMaskInput[(firstDimOffset + iInMask) * 256 + (secondDimOffset + jInMask)] = value;
           if (value === 7) {
-            onnxCoord = new Float32Array([
-              topLeft[maybeAdjustedFirstDim] + i,
-              topLeft[maybeAdjustedSecondDim] + j,
-              0,
-              0,
-            ]);
-
             const dist =
               i * i +
               j * j +
@@ -310,6 +303,7 @@ async function inferFromEmbedding(
         }
       }
       onnxCoord = new Float32Array([
+        ...onnxCoord,
         topLeft[maybeAdjustedFirstDim] + minCoords[0],
         topLeft[maybeAdjustedSecondDim] + minCoords[1],
         0,
@@ -435,7 +429,7 @@ async function inferFromEmbedding(
       -1,
     ]);
   } else if (voxelMap && mode === "mask") {
-    onnxLabel = new Float32Array([1, -1]);
+    onnxLabel = new Float32Array([...onnxLabel, 1, -1]);
   }
 
   const onnxHasMaskInput =

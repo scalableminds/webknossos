@@ -84,7 +84,7 @@ class VolumeTracingController @Inject()(
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
               resolutions <- tracingService
-                .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions)
+                .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions, token)
                 .toFox
               _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
             } yield Ok(Json.toJson(tracingId))
@@ -120,7 +120,7 @@ class VolumeTracingController @Inject()(
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData, token).toFox
               _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -200,9 +200,10 @@ class VolumeTracingController @Inject()(
               editPositionParsed,
               editRotationParsed,
               boundingBoxParsed,
-              newEditableMappingId
+              newEditableMappingId,
+              userToken
             )
-            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, tracingId, newTracing))
+            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, tracingId, newTracing, userToken))
           } yield Ok(Json.toJson(newId))
         }
       }
@@ -487,8 +488,9 @@ class VolumeTracingController @Inject()(
         for {
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
           cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          fallbackLayer <- tracingService.getFallbackLayer(tracingId)
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, magParsed)
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer, tracingId, segmentId, magParsed, None, token)
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets

@@ -39,7 +39,8 @@ object VolumeSegmentIndexService {
 // Segment-to-Bucket index for volume tracings in FossilDB
 // key: tracing id, segment id, mag – value: list of buckets
 // used for calculating segment statistics
-class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore)
+class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore,
+                                          remoteDatastoreClient: TSRemoteDatastoreClient)
     extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with VolumeBucketCompression
@@ -124,12 +125,14 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     } yield bucketList
 
   def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+      layer: Option[RemoteFallbackLayer],
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
-      version: Option[Long] = None)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+      version: Option[Long] = None,
+      userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      bucketListBox <- getSegmentToBucketIndex(tracingId, segmentId, mag, version).futureBox
+      bucketListBox <- getSegmentToBucketIndex(layer, tracingId, segmentId, mag, version, userToken).futureBox
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
@@ -141,12 +144,35 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       case Empty      => Fox.successful(ListOfVec3IntProto(Seq.empty))
     }
 
-  private def getSegmentToBucketIndex(tracingId: String,
-                                      segmentId: Long,
-                                      mag: Vec3Int,
-                                      version: Option[Long]): Fox[ListOfVec3IntProto] = {
+  private def getSegmentToBucketIndex(
+      layer: Option[RemoteFallbackLayer],
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      version: Option[Long],
+      userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+    for {
+      fromMutableIndex <- getSegmentToBucketIndexFromFossilDB(tracingId, segmentId, mag, version)
+      fromFileIndex <- layer match {
+        case Some(fallbackLayer) if fromMutableIndex.isEmpty =>
+          getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, userToken)
+        case _ => Fox.successful(Seq.empty)
+      }
+      combined = fromMutableIndex.values.map(vec3IntFromProto) ++ fromFileIndex
+    } yield ListOfVec3IntProto(combined.map(vec3IntToProto))
+
+  private def getSegmentToBucketIndexFromFossilDB(tracingId: String,
+                                                  segmentId: Long,
+                                                  mag: Vec3Int,
+                                                  version: Option[Long]): Fox[ListOfVec3IntProto] = {
     val key = segmentIndexKey(tracingId, segmentId, mag)
     volumeSegmentIndexClient.get(key, version, mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto]).map(_.value)
   }
+
+  private def getSegmentToBucketIndexFromFile(layer: RemoteFallbackLayer,
+                                              segmentId: Long,
+                                              mag: Vec3Int,
+                                              userToken: Option[String]) =
+    remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, userToken)
 
 }

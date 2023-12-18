@@ -70,11 +70,12 @@ trait VolumeTracingDownsampling
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(
-      tracingId: String,
-      oldTracingId: String,
-      tracing: VolumeTracing,
-      dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def downsampleWithLayer(tracingId: String,
+                                    oldTracingId: String,
+                                    tracing: VolumeTracing,
+                                    dataLayer: VolumeTracingLayer,
+                                    tracingService: VolumeTracingService,
+                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
@@ -97,7 +98,13 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
+      fallbackLayer <- tracingService.getFallbackLayer(tracingId)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
+                                                        volumeSegmentIndexClient,
+                                                        tracing.version,
+                                                        tracingService.remoteDatastoreClient,
+                                                        fallbackLayer,
+                                                        userToken)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)

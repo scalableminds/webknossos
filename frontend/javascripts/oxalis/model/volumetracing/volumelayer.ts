@@ -28,6 +28,7 @@ export class VoxelBuffer2D {
   width: number;
   height: number;
   minCoord2d: Vector2;
+  size: number;
   get3DCoordinate: (arg0: Vector2) => Vector3;
   getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
 
@@ -55,6 +56,7 @@ export class VoxelBuffer2D {
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
+    this.size = width * height;
     this.getFast3DCoordinate = getFast3DCoordinate;
 
     if (!V2.equals(this.minCoord2d, V2.floor(this.minCoord2d))) {
@@ -64,6 +66,10 @@ export class VoxelBuffer2D {
 
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
+  }
+
+  decomposeIndex(index: number): [number, number] {
+    return [Math.floor(index / this.height), index % this.height];
   }
 
   setValue(x: number, y: number, value: number) {

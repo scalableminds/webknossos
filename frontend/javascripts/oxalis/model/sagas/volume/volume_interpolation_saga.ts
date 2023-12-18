@@ -237,7 +237,7 @@ export function copyNdArray(
 /*
  * Computes a signed distance transform for an input nd array.
  */
-function signedDist(arr: ndarray.NdArray) {
+export function signedDist(arr: NdArray) {
   // Copy the input twice to avoid mutating it
   arr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;
   const negatedArr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;

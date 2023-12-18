@@ -864,7 +864,8 @@ export class AreaQuickSelectTool {
       leftMouseUp: () => {
         const cleanUp = () => {
           Store.dispatch(resetContourAction());
-          quickSelectAreaGeometry.resetAndHide();
+          // TODO: reenable later; deactivated to be able to see drawn lines
+          //quickSelectAreaGeometry.reset();
           this.isDrawingBounds = false;
         };
         const state = Store.getState();

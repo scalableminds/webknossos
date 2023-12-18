@@ -1,6 +1,10 @@
 declare global {
   interface Window {
     needsRerender: boolean;
+    squigglyMode?: string;
+    visualizeSampledPoints: boolean;
+    samplingMode?: string;
+    samplingPercentage?: number;
   }
 }
 

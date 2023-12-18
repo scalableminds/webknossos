@@ -10,7 +10,7 @@ import {
   MaybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import ndarray from "ndarray";
+import ndarray, { NdArray } from "ndarray";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
 import { map3 } from "libs/utils";
@@ -20,6 +20,14 @@ import Dimensions, { DimensionIndices } from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { VoxelBuffer2D } from "../volumetracing/volumelayer";
+import { signedDist } from "./volume/volume_interpolation_saga";
+import { Store } from "oxalis/singletons";
+import {
+  createNodeAction,
+  createTreeAction,
+  setTreeNameAction,
+} from "../actions/skeletontracing_actions";
+import { OrthoViewToNumber } from "oxalis/controller/combinations/skeleton_handlers";
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
 type CacheEntry = {
@@ -115,9 +123,10 @@ async function inferFromEmbedding(
   embeddingBoxInTargetMag: BoundingBox,
   userBoxInTargetMag: BoundingBox,
   activeViewport: OrthoView,
-  voxelMap?: VoxelBuffer2D | null,
+  voxelMap: VoxelBuffer2D | null,
+  labeledZoomStep: number,
 ) {
-  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
+  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
   const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
   const ort = await import("onnxruntime-web");
@@ -149,74 +158,291 @@ async function inferFromEmbedding(
   // The input mask is within the embedding box, so we need to calculate
   // which part of it is covered by the voxel map and fill the input mask
   // with 1s where the voxel map is to 1.
-  let foundMarkingInVoxelMap = false;
+  const sampledPointsWithin: Array<[number, number]> = [];
+  const sampledPointsOutside: Array<[number, number]> = [];
+  const sampleAmount = 10;
   let minCoords = [0, 0];
-  if (voxelMap) {
-    // The voxel map is in the same resolution as the embedding box.
-    // As the input mask is downsampled by a factor of 4 (256 in relation to 1024), we can only consider each fourth coordinate.
-    // TODO: Distance Transform or sample randomly
-    const firstDimOffset = Math.ceil(topLeft[maybeAdjustedFirstDim] / 4);
-    const secondDimOffset = Math.ceil(topLeft[maybeAdjustedSecondDim] / 4);
-    console.log("voxelMap.width", voxelMap.width, "voxelMap.height", voxelMap.height);
-    for (let i = 0; i < voxelMap.width; i += 4) {
-      for (let j = 0; j < voxelMap.height; j += 4) {
-        const value = voxelMap.map[voxelMap.linearizeIndex(i, j)] === 1 ? 7 : -7;
-        const iInMask = Math.floor(i / 4);
-        const jInMask = Math.floor(j / 4);
-        onnxMaskInput[(firstDimOffset + iInMask) * 256 + (secondDimOffset + jInMask)] = value;
-        /*if (value === 4) {
-          /*onnxCoord = new Float32Array([
-            topLeft[maybeAdjustedFirstDim] + i,
-            topLeft[maybeAdjustedSecondDim] + j,
-            0,
-            0,
-          ]);*
-
-          const dist =
-            i * i +
-            j * j +
-            (voxelMap.width - i) * (voxelMap.width - i) +
-            (voxelMap.height - j) * (voxelMap.height - j);
-          if (dist < minDist) {
-            minDist = dist;
-            minCoords = [i, j];
-          }
-          foundMarkingInVoxelMap = true;
-        }*/
+  const mode = window?.squigglyMode || "distanceTransform";
+  const getIndicesSample = (sampleAmount: number, indexLimit: number) => {
+    const indices = [];
+    while (indices.length < sampleAmount && indices.length < indexLimit) {
+      const randomIndex = Math.floor(Math.random() * indexLimit);
+      if (indices.indexOf(randomIndex) === -1) {
+        indices.push(randomIndex);
       }
     }
-    /*onnxCoord = new Float32Array([
-      topLeft[maybeAdjustedFirstDim] + minCoords[0],
-      topLeft[maybeAdjustedSecondDim] + minCoords[1],
-      0,
-      0,
-    ]);*/
-  }
-  /* Mask visualization  for debugging */
-  let cvs = document.getElementById("mask-123") || document.createElement("canvas");
-  let ctx = cvs.getContext("2d");
-  let imgData = ctx.createImageData(256, 256);
+    return indices;
+  };
+  if (voxelMap) {
+    const samplingMode = window?.samplingMode || "index";
+    const samplingPercentage = window?.samplingPercentage || 0.05;
+    let firstDimOffset = topLeft[maybeAdjustedFirstDim];
+    let secondDimOffset = topLeft[maybeAdjustedSecondDim];
+    function visualizeSampledPoints(sampledPoints: Array<[number, number]>, treeName: string) {
+      if (!window?.visualizeSampledPoints) {
+        return;
+      }
 
-  for (let i = 0; i < 256 * 256; i++) {
-    imgData.data[i * 4 + 0] = onnxMaskInput[i] == 7 ? 255 : 0;
-    imgData.data[i * 4 + 1] = onnxMaskInput[i] == -7 ? 255 : 0;
-    imgData.data[i * 4 + 2] = 0;
-    imgData.data[i * 4 + 3] = 255;
+      Store.dispatch(createTreeAction());
+      Store.dispatch(setTreeNameAction(treeName));
+      sampledPoints.forEach(([x, y]) => {
+        const coordsInViewport: Vector3 = [
+          x + embeddingBoxInTargetMag.min[maybeAdjustedFirstDim],
+          y + embeddingBoxInTargetMag.min[maybeAdjustedSecondDim],
+          embeddingBoxInTargetMag.min[thirdDim],
+        ];
+        const globalCoords = Dimensions.transDim(coordsInViewport, activeViewport);
+        Store.dispatch(
+          createNodeAction(
+            globalCoords,
+            null,
+            [0, 0, 0],
+            OrthoViewToNumber[activeViewport],
+            labeledZoomStep,
+          ),
+        );
+      });
+    }
+    function pushCoords(array: Array<[number, number]>, x: number, y: number) {
+      if (activeViewport === "PLANE_YZ") {
+        array.push([y, x]);
+      } else {
+        array.push([x, y]);
+      }
+    }
+    if (mode === "random") {
+      let pointsInMaskCount = 0;
+      let outsidePointsInMaskCount = 0;
+      for (let i = 0; i < voxelMap.size; i++) {
+        if (voxelMap.map[i] === 1) {
+          pointsInMaskCount++;
+        } else {
+          outsidePointsInMaskCount++;
+        }
+      }
+
+      const sampledInsidePointsIndices =
+        samplingMode === "index" ? getIndicesSample(sampleAmount, pointsInMaskCount) : [];
+      const sampledOutsidePointsIndices =
+        samplingMode === "index" ? getIndicesSample(sampleAmount, outsidePointsInMaskCount) : [];
+
+      pointsInMaskCount = 0;
+      outsidePointsInMaskCount = 0;
+      for (
+        let i = 0;
+        i < voxelMap.size;
+        //&& (sampledPointsWithin.length < sampleAmount || sampledPointsOutside.length < sampleAmount);
+        i++
+      ) {
+        if (voxelMap.map[i] === 1) {
+          pointsInMaskCount++;
+          const usePoint =
+            samplingMode === "index"
+              ? sampledInsidePointsIndices.indexOf(pointsInMaskCount) !== -1
+              : Math.random() < samplingPercentage;
+          if (usePoint) {
+            const [x, y] = voxelMap.decomposeIndex(i);
+            pushCoords(sampledPointsWithin, x + firstDimOffset, y + secondDimOffset);
+          }
+        } else {
+          outsidePointsInMaskCount++;
+          const usePoint =
+            samplingMode === "index"
+              ? sampledOutsidePointsIndices.indexOf(outsidePointsInMaskCount) !== -1
+              : Math.random() < samplingPercentage;
+          if (usePoint) {
+            const [x, y] = voxelMap.decomposeIndex(i);
+            pushCoords(sampledPointsOutside, x + firstDimOffset, y + secondDimOffset);
+          }
+        }
+      }
+      onnxCoord = new Float32Array([
+        ..._.flattenDeep(sampledPointsWithin),
+        ..._.flattenDeep(sampledPointsOutside),
+        0,
+        0,
+      ]);
+      visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_random");
+      visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_random");
+      console.log(
+        "sampledPointsWithin",
+        sampledPointsWithin.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
+      console.log(
+        "sampledPointsOutside",
+        sampledPointsOutside.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
+    } else if (mode === "mask") {
+      // The voxel map is in the same resolution as the embedding box.
+      // As the input mask is downsampled by a factor of 4 (256 in relation to 1024), we can only consider each fourth coordinate.
+      firstDimOffset = Math.ceil(topLeft[maybeAdjustedFirstDim] / 4);
+      secondDimOffset = Math.ceil(topLeft[maybeAdjustedSecondDim] / 4);
+      for (let i = 0; i < voxelMap.width; i += 4) {
+        for (let j = 0; j < voxelMap.height; j += 4) {
+          const value = voxelMap.map[voxelMap.linearizeIndex(i, j)] === 1 ? 7 : -20;
+          const iInMask = Math.floor(i / 4);
+          const jInMask = Math.floor(j / 4);
+          onnxMaskInput[(firstDimOffset + iInMask) * 256 + (secondDimOffset + jInMask)] = value;
+          if (value === 7) {
+            onnxCoord = new Float32Array([
+              topLeft[maybeAdjustedFirstDim] + i,
+              topLeft[maybeAdjustedSecondDim] + j,
+              0,
+              0,
+            ]);
+
+            const dist =
+              i * i +
+              j * j +
+              (voxelMap.width - i) * (voxelMap.width - i) +
+              (voxelMap.height - j) * (voxelMap.height - j);
+            if (dist < minDist) {
+              minDist = dist;
+              minCoords = [i, j];
+            }
+          }
+        }
+      }
+      onnxCoord = new Float32Array([
+        topLeft[maybeAdjustedFirstDim] + minCoords[0],
+        topLeft[maybeAdjustedSecondDim] + minCoords[1],
+        0,
+        0,
+      ]);
+    } else if (mode === "distanceTransform") {
+      const twoDimVoxelMap = ndarray(
+        voxelMap.map,
+        [voxelMap.height, voxelMap.width],
+        [1, voxelMap.height],
+      );
+      const distanceTransformed: NdArray<Uint8Array> = signedDist(twoDimVoxelMap) as any;
+      const min = _.min(distanceTransformed.data) || -1;
+      const max = _.max(distanceTransformed.data) || 1;
+      const maxLowerLimit = Math.max(max * 0.1, 3);
+      const maxUpperLimit = Math.min(Math.max(max * 0.4, 4), 7);
+      const minLimit = Math.min(min * 0.3, -1);
+      let pointsInMaskCount = 0;
+      let outsidePointsInMaskCount = 0;
+      const pointsCountAboveLimit =
+        samplingMode === "index"
+          ? distanceTransformed.data.reduce(
+              (acc, cur) => (cur >= maxLowerLimit && cur <= maxUpperLimit ? acc + 1 : acc),
+              0,
+            )
+          : 10;
+      const pointsCountBelowLimit =
+        samplingMode === "index"
+          ? distanceTransformed.data.reduce((acc, cur) => (cur <= minLimit ? acc + 1 : acc), 0)
+          : 10;
+      const sampledInsidePointsIndices =
+        samplingMode === "index" ? getIndicesSample(sampleAmount, pointsCountBelowLimit) : [];
+      const sampledOutsidePointsIndices =
+        samplingMode === "index" ? getIndicesSample(sampleAmount, pointsCountAboveLimit) : [];
+      for (
+        let i = 0;
+        i < distanceTransformed.data.length;
+        // && (sampledPointsWithin.length < sampleAmount || sampledPointsOutside.length < sampleAmount);
+        i++
+      ) {
+        const distanceValue = distanceTransformed.data[i];
+        if (distanceValue <= minLimit) {
+          pointsInMaskCount++;
+          const usePoint =
+            samplingMode === "index"
+              ? sampledInsidePointsIndices.indexOf(pointsInMaskCount) !== -1
+              : Math.random() < samplingPercentage;
+          if (usePoint) {
+            const [x, y] = voxelMap.decomposeIndex(i);
+            pushCoords(sampledPointsWithin, x + firstDimOffset, y + secondDimOffset);
+          }
+        } else if (distanceValue >= maxLowerLimit && distanceValue <= maxUpperLimit) {
+          outsidePointsInMaskCount++;
+          const usePoint =
+            samplingMode === "index"
+              ? sampledOutsidePointsIndices.indexOf(outsidePointsInMaskCount) !== -1
+              : Math.random() < samplingPercentage;
+          if (usePoint) {
+            const [x, y] = voxelMap.decomposeIndex(i);
+            pushCoords(sampledPointsOutside, x + firstDimOffset, y + secondDimOffset);
+          }
+        }
+      }
+      onnxCoord = new Float32Array([
+        ..._.flattenDeep(sampledPointsWithin),
+        ..._.flattenDeep(sampledPointsOutside),
+        0,
+        0,
+      ]);
+      // Location: 3187, 3938, 833
+      visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_distanceTransform");
+      visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_distanceTransform");
+      console.log(
+        "sampledPointsWithin",
+        sampledPointsWithin.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
+      console.log(
+        "sampledPointsOutside",
+        sampledPointsOutside.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
+      console.log("width", voxelMap.width, "height", voxelMap.height);
+      // TODO: Visualize transformed distance map
+      let cvs = (document.getElementById("mask-123") ||
+        document.createElement("canvas")) as any as HTMLCanvasElement;
+      let ctx = cvs.getContext("2d");
+      if (ctx) {
+        let imgData = ctx.createImageData(voxelMap.width, voxelMap.height);
+        // width first
+        for (let i = 0; i < voxelMap.height; i++) {
+          for (let j = 0; j < voxelMap.width; j++) {
+            const idx = i * voxelMap.width + j;
+            const value = distanceTransformed.get(i, j);
+            imgData.data[idx * 4 + 0] = value < 0 ? (value / min) * 255 : 0;
+            //imgData.data[idx * 4 + 0] = 0;
+            imgData.data[idx * 4 + 1] = value > 0 ? (value / max) * 255 : 0;
+            //imgData.data[idx * 4 + 1] = 0;
+            imgData.data[idx * 4 + 2] = 0;
+            imgData.data[idx * 4 + 3] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+      cvs.id = "mask-123";
+      document.body.appendChild(cvs);
+    } else {
+      throw new Error("Unknown squiggly mode");
+    }
   }
-  ctx.putImageData(imgData, 0, 0);
-  cvs.style.width = "256px";
-  cvs.style.height = "256px";
-  cvs.style.objectFit = "cover";
-  // mirror on diagonal
-  cvs.style.transform = "scale(-1, -1)";
-  cvs.id = "mask-123";
-  document.body.appendChild(cvs);
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
   // TODO: Get mask into correct value range.
   // TODO: Check whether using two fixed points from distance transform might be better than the bounding box as input points
-  const onnxLabel = foundMarkingInVoxelMap ? new Float32Array([1, -1]) : new Float32Array([2, 3]);
-  const onnxHasMaskInput = voxelMap != null ? new Float32Array([1]) : new Float32Array([0]);
+  let onnxLabel = new Float32Array([2, 3]);
+  if (voxelMap && (mode === "random" || mode === "distanceTransform")) {
+    onnxLabel = new Float32Array([
+      ...Array(sampledPointsWithin.length).fill(1),
+      ...Array(sampledPointsOutside.length).fill(-1),
+      -1,
+    ]);
+  } else if (voxelMap && mode === "mask") {
+    onnxLabel = new Float32Array([1, -1]);
+  }
+
+  const onnxHasMaskInput =
+    voxelMap != null && mode === "mask" ? new Float32Array([1]) : new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
+  console.log("onnxCoord", onnxCoord);
+  console.log("onnxLabel", onnxLabel);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
     point_coords: new ort.Tensor("float32", onnxCoord, [1, onnxCoord.length / 2, 2]),
@@ -227,7 +453,7 @@ async function inferFromEmbedding(
   };
 
   // Use intersection-over-union estimates to pick the best mask.
-  const { masks, iou_predictions: iouPredictions, ...rest } = await ortSession.run(ortInputs);
+  const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
@@ -247,49 +473,6 @@ async function inferFromEmbedding(
     }
     maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
   }
-
-  cvs = document.getElementById("mask-23") || document.createElement("canvas");
-  ctx = cvs.getContext("2d");
-  imgData = ctx.createImageData(256, 256);
-
-  for (let i = 0; i < 256 * 256; i++) {
-    imgData.data[i * 4 + 0] = maskData[i * 4] == 1 ? 255 : 0;
-    imgData.data[i * 4 + 1] = onnxMaskInput[i * 4] == -1 ? 255 : 0;
-    imgData.data[i * 4 + 2] = 0;
-    imgData.data[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(imgData, 0, 0);
-  cvs.style.width = "256px";
-  cvs.style.height = "256px";
-  cvs.style.objectFit = "cover";
-  // mirror on diagonal
-  cvs.style.transform = "scale(-1, -1)";
-  cvs.id = "mask-23";
-  document.body.appendChild(cvs);
-
-  const median = (array) => {
-    array.sort((a, b) => b - a);
-    const length = array.length;
-    if (length % 2 == 0) {
-      return (array[length / 2] + array[length / 2 - 1]) / 2;
-    } else {
-      return array[Math.floor(length / 2)];
-    }
-  };
-  /*const subArr = masks.data.subarray(
-    startOffset,
-    startOffset + EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1],
-  );*/
-  console.log(
-    "max",
-    _.max(maskAreaData),
-    "min",
-    _.min(maskAreaData),
-    "mean",
-    _.mean(maskAreaData),
-    "median",
-    median(maskAreaData),
-  );
 
   const size = embeddingBoxInTargetMag.getSize();
   const userSizeInTargetMag = userBoxInTargetMag.getSize();
@@ -487,6 +670,7 @@ export default function* performQuickSelect(
     alignedUserBoundingBox,
     activeViewport,
     voxelMap,
+    labeledZoomStep,
   );
   if (!mask) {
     Toast.error("Could not infer mask. See console for details.");

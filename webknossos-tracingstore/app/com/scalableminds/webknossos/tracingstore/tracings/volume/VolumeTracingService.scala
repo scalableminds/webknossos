@@ -10,10 +10,16 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelpe
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebknossosAdHocMeshRequest
+}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -123,11 +129,11 @@ class VolumeTracingService @Inject()(
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
             action match {
-              case action: UpdateBucketVolumeAction =>
+              case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else
-                  updateBucket(tracingId, tracing, action, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to save volume data."
+                  updateBucket(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to save volume data."
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
@@ -141,6 +147,11 @@ class VolumeTracingService @Inject()(
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
+              case a: DeleteSegmentDataVolumeAction =>
+                if (!tracing.getHasSegmentIndex) {
+                  Fox.failure("Cannot delete segment data for annotations without segment index.")
+                } else
+                  deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
               case _: UpdateTdCamera        => Fox.successful(tracing)
               case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
               case _                        => Fox.failure("Unknown action.")
@@ -185,6 +196,47 @@ class VolumeTracingService @Inject()(
                                   volumeTracing.elementClass) ?~> "failed to update segment index"
         } yield ()
       }
+      _ <- segmentIndexBuffer.flush()
+    } yield volumeTracing
+
+  private def deleteSegmentData(tracingId: String,
+                                volumeTracing: VolumeTracing,
+                                a: DeleteSegmentDataVolumeAction,
+                                segmentIndexBuffer: VolumeSegmentIndexBuffer,
+                                version: Long,
+                                userToken: Option[String]): Fox[VolumeTracing] =
+    for {
+      _ <- Fox.successful(())
+      dataLayer = volumeTracingLayer(tracingId, volumeTracing)
+      _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution => {
+        val mag = vec3IntFromProto(resolution)
+        for {
+          fallbackLayer <- getFallbackLayer(tracingId)
+          bucketPositionsRaw <- volumeSegmentIndexService
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer, tracingId, a.id, mag, None, userToken)
+          bucketPositions = bucketPositionsRaw.values
+            .map(vec3IntFromProto)
+            .map(_ * mag * DataLayer.bucketLength)
+            .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, a.additionalCoordinates))
+            .toList
+          _ <- Fox.serialCombined(bucketPositions) {
+            bucketPosition =>
+              for {
+                data <- loadBucket(dataLayer, bucketPosition)
+                typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
+                filteredData = typedData.map(elem =>
+                  if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
+                filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
+                _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
+                _ <- updateSegmentIndex(segmentIndexBuffer,
+                                        bucketPosition,
+                                        filteredBytes,
+                                        Some(data),
+                                        volumeTracing.elementClass)
+              } yield ()
+          }
+        } yield ()
+      })
       _ <- segmentIndexBuffer.flush()
     } yield volumeTracing
 
@@ -511,14 +563,17 @@ class VolumeTracingService @Inject()(
                  toCache)
     } yield id
 
-  def downsample(tracingId: String, oldTracingId: String, tracing: VolumeTracing, userToken: Option[String]): Fox[Unit] =
+  def downsample(tracingId: String,
+                 oldTracingId: String,
+                 tracing: VolumeTracing,
+                 userToken: Option[String]): Fox[Unit] =
     for {
       resultingResolutions <- downsampleWithLayer(tracingId,
                                                   oldTracingId,
                                                   tracing,
                                                   volumeTracingLayer(tracingId, tracing),
-        this,
-        userToken)
+                                                  this,
+                                                  userToken)
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
 
@@ -543,6 +598,7 @@ class VolumeTracingService @Inject()(
         request.scale,
         None,
         None,
+        request.additionalCoordinates,
         request.findNeighbors
       )
       result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)

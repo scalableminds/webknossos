@@ -135,6 +135,7 @@ class AnnotationService @Inject()(
   private def createVolumeTracing(
       dataSource: DataSource,
       datasetOrganizationName: String,
+      datasetDatastore: DataStore,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
@@ -148,6 +149,12 @@ class AnnotationService @Inject()(
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
+      remoteDatastoreClient = dataStoreService.clientFor(datasetDatastore)
+      fallbackLayerHasSegmentIndex <- fallbackLayer match {
+        case Some(layer) =>
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationName, dataSource.id.name, layer.name)
+        case None => Fox.successful(false)
+      }
     } yield
       VolumeTracing(
         None,
@@ -165,7 +172,7 @@ class AnnotationService @Inject()(
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
-        hasSegmentIndex = Some(fallbackLayer.isEmpty),
+        hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
         additionalAxes = AdditionalAxis.toProto(additionalCoordinates)
       )
   }
@@ -232,9 +239,9 @@ class AnnotationService @Inject()(
           fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
-    def createAndSaveAnnotationLayer(
-        annotationLayerParameters: AnnotationLayerParameters,
-        oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): Fox[AnnotationLayer] =
+    def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
+                                     oldPrecedenceLayerProperties: Option[RedundantTracingProperties],
+                                     dataStore: DataStore): Fox[AnnotationLayer] =
       for {
         client <- tracingStoreService.clientFor(dataSet)
         tracingIdAndName <- annotationLayerParameters.typ match {
@@ -268,6 +275,7 @@ class AnnotationService @Inject()(
               volumeTracing <- createVolumeTracing(
                 dataSource,
                 datasetOrganizationName,
+                dataStore,
                 fallbackLayer,
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
@@ -341,9 +349,10 @@ class AnnotationService @Inject()(
         All of this is skipped if existingAnnotationLayers is empty.
        */
       oldPrecedenceLayer <- fetchOldPrecedenceLayer
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "dataStore.notFoundForDataset"
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
-        createAndSaveAnnotationLayer(p, precedenceProperties))
+        createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))
     } yield newAnnotationLayers
   }
 
@@ -552,6 +561,7 @@ class AnnotationService @Inject()(
       dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    dataSetName)
       dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim)
 
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
@@ -564,6 +574,7 @@ class AnnotationService @Inject()(
       volumeTracing <- createVolumeTracing(
         dataSource,
         organization.name,
+        dataStore,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)

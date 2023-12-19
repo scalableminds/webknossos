@@ -495,7 +495,7 @@ class VolumeTracingController @Inject()(
                                                                    segmentId,
                                                                    magParsed,
                                                                    None,
-                                                                   token)
+                                                                   urlOrHeaderToken(token, request))
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets

@@ -558,7 +558,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       canHaveSegmentIndex <- fallbackLayerName match {
         case Some(layerName) =>
           remoteDatastoreClient match {
-            case Some(rdc) => rdc.hasSegmentIndexFile(organizationName, datasetName, layerName, userToken)
+            case Some(rdc) => rdc.hasSegmentIndexFile(organizationName, datasetName, layerName)
             case None      => Fox.successful(false)
           }
         case None => Fox.successful(true)

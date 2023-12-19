@@ -551,7 +551,9 @@ class DataSourceController @Inject()(
                       organizationName: String,
                       dataSetName: String,
                       dataLayerName: String,
-                      segmentId: String): Action[AnyContent] =
+                      segmentId: String,
+                      mag: String,
+                      cubeSize: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -560,6 +562,7 @@ class DataSourceController @Inject()(
                                                                dataSetName,
                                                                dataLayerName,
                                                                segmentId.toLong)
+          // TODO: Use mag and cubeSize
         } yield Ok(Json.toJson(topLefts))
       }
     }

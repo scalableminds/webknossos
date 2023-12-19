@@ -23,8 +23,8 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
     otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService,
-                                        remoteDataStoreClient: WKRemoteDataStoreClient)
+class AnnotationUploadService @Inject()(tempFileService: TempFileService)
+// TODO: remoteDataStoreClient: WKRemoteDataStoreClient)
     extends LazyLogging {
 
   private def extractFromNmlFile(
@@ -49,7 +49,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService,
       userToken: Option[String],
       basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
     NmlParser
-      .parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath, Some(remoteDataStoreClient), userToken)
+      .parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath, None, userToken)
       .await("TODO") match {
       case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
@@ -172,9 +172,12 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService,
                     userToken,
                     isTaskUpload
                   ))
-              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, userToken, isTaskUpload))
+              else
+                acc.combineWith(
+                  extractFromFile(file, name, useZipName, overwritingDataSetName, userToken, isTaskUpload))
             case _ => acc
-          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, userToken, isTaskUpload))
+          } else
+          acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, userToken, isTaskUpload))
     }
 
   def extractFromFile(file: File,

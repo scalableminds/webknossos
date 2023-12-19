@@ -20,10 +20,6 @@ import net.liftweb.common.Box.tryo
 import scala.concurrent.ExecutionContext
 
 object VolumeSegmentIndexService {
-  // Currently, segment index is not supported for volume tracings with fallback layer
-  def canHaveSegmentIndexOpt(fallbackLayerName: Option[String]): Option[Boolean] =
-    Some(fallbackLayerName.isEmpty) // TODO: Ask datastore if a segment index file exists
-
   def canHaveSegmentIndex(remoteDatastoreClient: TSRemoteDatastoreClient,
                           fallbackLayer: Option[RemoteFallbackLayer],
                           userToken: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] =

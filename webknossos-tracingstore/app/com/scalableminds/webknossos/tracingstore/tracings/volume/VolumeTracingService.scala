@@ -454,18 +454,19 @@ class VolumeTracingService @Inject()(
                 userToken: Option[String]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
-    val newTracing = tracingWithResolutionRestrictions.copy(
-      createdTimestamp = System.currentTimeMillis(),
-      editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
-      editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
-      boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
-      mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
-      version = 0,
-      // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
-      hasSegmentIndex =
-        VolumeSegmentIndexService.canHaveSegmentIndexOpt(tracingWithResolutionRestrictions.fallbackLayer)
-    )
     for {
+      fallbackLayer <- getFallbackLayer(tracingId)
+      hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer, userToken)
+      newTracing = tracingWithResolutionRestrictions.copy(
+        createdTimestamp = System.currentTimeMillis(),
+        editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
+        editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
+        boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+        mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
+        version = 0,
+        // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
+        hasSegmentIndex = Some(hasSegmentIndex)
+      )
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, sourceTracing, newId, newTracing, userToken)

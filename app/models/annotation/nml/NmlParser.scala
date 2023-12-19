@@ -2,6 +2,7 @@ package models.annotation.nml
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -20,15 +21,17 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIndexService
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
+import models.dataset.WKRemoteDataStoreClient
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
 import scala.collection.{immutable, mutable}
+import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
+object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator with FoxImplicits {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -42,29 +45,43 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             nmlInputStream: InputStream,
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
-            basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
+            basePath: Option[String] = None,
+            remoteDataStoreClient: Option[WKRemoteDataStoreClient],
+            userToken: Option[String])(
+      implicit m: MessagesProvider,
+      ec: ExecutionContext): Fox[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
-        parameters <- (data \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
+        _ <- Fox.successful(())
+        parameters <- box2Fox((data \ "parameters").headOption ?~ Messages("nml.parameters.notFound"))
         timestamp = parseTime(parameters \ "time")
-        comments <- parseComments(data \ "comments")
-        branchPoints <- parseBranchPoints(data \ "branchpoints", timestamp)
-        trees <- parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
-        treeGroups <- extractTreeGroups(data \ "groups")
+        comments <- box2Fox(parseComments(data \ "comments"))
+        branchPoints <- box2Fox(parseBranchPoints(data \ "branchpoints", timestamp))
+        trees <- box2Fox(parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments)))
+        treeGroups <- box2Fox(extractTreeGroups(data \ "groups"))
         volumes = extractVolumes(data \ "volume")
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
-        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
-        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
+        _ <- box2Fox(TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments))
+        additionalAxisProtos <- box2Fox(parseAdditionalAxes(parameters \ "additionalAxes"))
+        dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
+        organizationName = if (overwritingDataSetName.isDefined) None
+        else parseOrganizationName(parameters \ "experiment")
+        canHaveSegmentIndexOpts <- Fox.combined(
+          volumes
+            .map(
+              v =>
+                canHaveSegmentIndexOpt(remoteDataStoreClient,
+                                       organizationName.getOrElse(""),
+                                       dataSetName,
+                                       v.fallbackLayerName,
+                                       userToken))
+            .toList)
       } yield {
-        val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")
-        val organizationName =
-          if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val (editPosition, editPositionAdditionalCoordinates) =
           parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
@@ -81,32 +98,33 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         val volumeLayers: List[UploadedVolumeLayer] =
-          volumes.toList.map { v =>
-            UploadedVolumeLayer(
-              VolumeTracing(
-                None,
-                boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
-                timestamp,
-                dataSetName,
-                editPosition,
-                editRotation,
-                ElementClass.uint32,
-                v.fallbackLayerName,
-                v.largestSegmentId,
-                0,
-                zoomLevel,
-                None,
-                userBoundingBoxes,
-                organizationName,
-                segments = v.segments,
-                segmentGroups = v.segmentGroups,
-                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndexOpt(v.fallbackLayerName),
-                editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
-                additionalAxes = additionalAxisProtos
-              ),
-              basePath.getOrElse("") + v.dataZipPath,
-              v.name,
-            )
+          volumes.zip(canHaveSegmentIndexOpts).toList.map {
+            case (v, canHaveSegmentIndexOpt) =>
+              UploadedVolumeLayer(
+                VolumeTracing(
+                  None,
+                  boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
+                  timestamp,
+                  dataSetName,
+                  editPosition,
+                  editRotation,
+                  ElementClass.uint32,
+                  v.fallbackLayerName,
+                  v.largestSegmentId,
+                  0,
+                  zoomLevel,
+                  None,
+                  userBoundingBoxes,
+                  organizationName,
+                  segments = v.segments,
+                  segmentGroups = v.segmentGroups,
+                  hasSegmentIndex = canHaveSegmentIndexOpt,
+                  editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
+                  additionalAxes = additionalAxisProtos
+                ),
+                basePath.getOrElse("") + v.dataZipPath,
+                v.name,
+              )
           }
 
         val skeletonTracingOpt: Option[SkeletonTracing] =
@@ -530,5 +548,21 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       case _ => None
     }.toSeq
   }
+
+  private def canHaveSegmentIndexOpt(remoteDatastoreClient: Option[WKRemoteDataStoreClient],
+                                     organizationName: String,
+                                     datasetName: String,
+                                     fallbackLayerName: Option[String],
+                                     userToken: Option[String])(implicit ec: ExecutionContext) =
+    for {
+      canHaveSegmentIndex <- fallbackLayerName match {
+        case Some(layerName) =>
+          remoteDatastoreClient match {
+            case Some(rdc) => rdc.hasSegmentIndexFile(organizationName, datasetName, layerName, userToken)
+            case None      => Fox.successful(false)
+          }
+        case None => Fox.successful(true)
+      }
+    } yield Some(canHaveSegmentIndex)
 
 }

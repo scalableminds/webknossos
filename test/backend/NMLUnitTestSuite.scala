@@ -1,5 +1,7 @@
 package backend
 
+import com.scalableminds.util.tools.Fox
+
 import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
@@ -14,6 +16,7 @@ import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite extends PlaySpec {
@@ -45,7 +48,14 @@ class NMLUnitTestSuite extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
+    NmlParser
+      .parse("",
+             new ByteArrayInputStream(array),
+             None,
+             isTaskUpload = true,
+             remoteDataStoreClient = None,
+             userToken = None)
+      .await("use in test")
   }
 
   def isParseSuccessful(

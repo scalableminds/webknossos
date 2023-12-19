@@ -88,7 +88,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
                                                    useZipName = false,
-                                                   isTaskUpload = true)
+                                                   isTaskUpload = true,
+                                                   userToken = urlOrHeaderToken(None, request))
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService
         .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)

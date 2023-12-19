@@ -490,7 +490,12 @@ class VolumeTracingController @Inject()(
           cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           fallbackLayer <- tracingService.getFallbackLayer(tracingId)
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer, tracingId, segmentId, magParsed, None, token)
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,
+                                                                   tracingId,
+                                                                   segmentId,
+                                                                   magParsed,
+                                                                   None,
+                                                                   token)
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets

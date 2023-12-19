@@ -22,6 +22,7 @@ import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristi
 import { VoxelBuffer2D } from "../volumetracing/volumelayer";
 import { signedDist } from "./volume/volume_interpolation_saga";
 import { Store } from "oxalis/singletons";
+import { clamp } from "libs/utils";
 import {
   createNodeAction,
   createTreeAction,
@@ -160,7 +161,8 @@ async function inferFromEmbedding(
   // with 1s where the voxel map is to 1.
   const sampledPointsWithin: Array<[number, number]> = [];
   const sampledPointsOutside: Array<[number, number]> = [];
-  const sampleAmount = 10;
+  const sampleAmount = 15;
+  const gridSize = 5;
   let minCoords = [0, 0];
   const mode = window?.squigglyMode || "distanceTransform";
   const getIndicesSample = (sampleAmount: number, indexLimit: number) => {
@@ -179,7 +181,7 @@ async function inferFromEmbedding(
     let firstDimOffset = topLeft[maybeAdjustedFirstDim];
     let secondDimOffset = topLeft[maybeAdjustedSecondDim];
     function visualizeSampledPoints(sampledPoints: Array<[number, number]>, treeName: string) {
-      if (!window?.visualizeSampledPoints) {
+      if (window?.visualizeSampledPoints === false) {
         return;
       }
 
@@ -257,6 +259,7 @@ async function inferFromEmbedding(
         }
       }
       onnxCoord = new Float32Array([
+        ...onnxCoord,
         ..._.flattenDeep(sampledPointsWithin),
         ..._.flattenDeep(sampledPointsOutside),
         0,
@@ -309,6 +312,114 @@ async function inferFromEmbedding(
         0,
         0,
       ]);
+    } else if (mode === "grid") {
+      // The voxel map has the height in the first dim and the width in the second dim (contrary to conventional dimension arrangement).
+      const twoDimVoxelMap = ndarray(
+        voxelMap.map,
+        [voxelMap.height, voxelMap.width],
+        [1, voxelMap.height],
+      );
+      const distanceTransformed: NdArray<Uint8Array> = signedDist(twoDimVoxelMap) as any;
+      const min = _.min(distanceTransformed.data) || -1;
+      const max = _.max(distanceTransformed.data) || 1;
+      const maxLimit = Math.max(max * 0.1, 3);
+      const minLimit = Math.min(min * 0.3, -1);
+      const getPointsAwayFromBorder = (x: number, y: number) => {
+        if (x < 1 || x > voxelMap.width - 2 || y < 1 || y > voxelMap.height - 2) {
+          return null;
+        }
+        const yDerivation =
+          (distanceTransformed.get(y + 1, x) - distanceTransformed.get(y - 1, x)) / 2;
+        const xDerivation =
+          (distanceTransformed.get(y, x + 1) - distanceTransformed.get(y, x - 1)) / 2;
+        const nextPointOutsideLimitInDirection = (xDirection: number, yDirection: number) => {
+          let xInsideBorder = x;
+          let yInsideBorder = y;
+          let distanceValue = distanceTransformed.get(
+            Math.round(yInsideBorder),
+            Math.round(xInsideBorder),
+          );
+          const isStillInBounds = () =>
+            xInsideBorder > 0 &&
+            xInsideBorder < voxelMap.width - 1 &&
+            yInsideBorder > 0 &&
+            yInsideBorder < voxelMap.height - 1;
+          const isStillNearBorder = () => distanceValue > minLimit && distanceValue < maxLimit;
+          while (isStillNearBorder() && isStillInBounds()) {
+            xInsideBorder += xDirection;
+            yInsideBorder += yDirection;
+            distanceValue = distanceTransformed.get(
+              Math.round(yInsideBorder),
+              Math.round(xInsideBorder),
+            );
+          }
+          return [xInsideBorder, yInsideBorder];
+        };
+        // return format: [<outside drawn area>, <inside drawn area>]
+        return [
+          nextPointOutsideLimitInDirection(xDerivation, yDerivation),
+          nextPointOutsideLimitInDirection(-xDerivation, -yDerivation),
+        ];
+      };
+
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          const x = clamp(0, Math.floor((voxelMap.width / (gridSize - 1)) * i), voxelMap.width - 1);
+          const y = clamp(
+            0,
+            Math.floor((voxelMap.height / (gridSize - 1)) * j),
+            voxelMap.height - 1,
+          );
+          // x and y are swapped because of the dimension arrangement of the voxel map (see comment above).
+          const distanceValue = distanceTransformed.get(y, x);
+          const isValueCloseToBorder = distanceValue > minLimit && distanceValue < maxLimit;
+          if (isValueCloseToBorder) {
+            const points = getPointsAwayFromBorder(x, y);
+            if (points) {
+              pushCoords(
+                sampledPointsOutside,
+                points[0][0] + firstDimOffset,
+                points[0][1] + secondDimOffset,
+              );
+              pushCoords(
+                sampledPointsWithin,
+                points[1][0] + firstDimOffset,
+                points[1][1] + secondDimOffset,
+              );
+              continue;
+            }
+          }
+          if (distanceValue <= 0) {
+            pushCoords(sampledPointsWithin, x + firstDimOffset, y + secondDimOffset);
+          } else {
+            pushCoords(sampledPointsOutside, x + firstDimOffset, y + secondDimOffset);
+          }
+        }
+      }
+      onnxCoord = new Float32Array([
+        ...onnxCoord,
+        ..._.flattenDeep(sampledPointsWithin),
+        ..._.flattenDeep(sampledPointsOutside),
+        0,
+        0,
+      ]);
+      // Location: 3187, 3938, 833
+      visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_grid");
+      visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_grid");
+      console.log(
+        "sampledPointsWithin",
+        sampledPointsWithin.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
+      console.log(
+        "sampledPointsOutside",
+        sampledPointsOutside.map(([x, y]) => [
+          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
+          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
+        ]),
+      );
     } else if (mode === "distanceTransform") {
       const twoDimVoxelMap = ndarray(
         voxelMap.map,
@@ -319,7 +430,7 @@ async function inferFromEmbedding(
       const min = _.min(distanceTransformed.data) || -1;
       const max = _.max(distanceTransformed.data) || 1;
       const maxLowerLimit = Math.max(max * 0.1, 3);
-      const maxUpperLimit = Math.min(Math.max(max * 0.4, 4), 7);
+      const maxUpperLimit = Math.max(max * 0.3, 7);
       const minLimit = Math.min(min * 0.3, -1);
       let pointsInMaskCount = 0;
       let outsidePointsInMaskCount = 0;
@@ -368,12 +479,12 @@ async function inferFromEmbedding(
         }
       }
       onnxCoord = new Float32Array([
+        ...onnxCoord,
         ..._.flattenDeep(sampledPointsWithin),
         ..._.flattenDeep(sampledPointsOutside),
         0,
         0,
       ]);
-      // Location: 3187, 3938, 833
       visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_distanceTransform");
       visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_distanceTransform");
       console.log(
@@ -391,7 +502,7 @@ async function inferFromEmbedding(
         ]),
       );
       console.log("width", voxelMap.width, "height", voxelMap.height);
-      // TODO: Visualize transformed distance map
+      // Visualize transformed distance map
       let cvs = (document.getElementById("mask-123") ||
         document.createElement("canvas")) as any as HTMLCanvasElement;
       let ctx = cvs.getContext("2d");
@@ -419,13 +530,12 @@ async function inferFromEmbedding(
     }
   }
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
-  // TODO: Get mask into correct value range.
-  // TODO: Check whether using two fixed points from distance transform might be better than the bounding box as input points
   let onnxLabel = new Float32Array([2, 3]);
-  if (voxelMap && (mode === "random" || mode === "distanceTransform")) {
+  if (voxelMap && (mode === "random" || mode === "distanceTransform" || mode === "grid")) {
     onnxLabel = new Float32Array([
+      ...onnxLabel,
       ...Array(sampledPointsWithin.length).fill(1),
-      ...Array(sampledPointsOutside.length).fill(-1),
+      ...Array(sampledPointsOutside.length).fill(0),
       -1,
     ]);
   } else if (voxelMap && mode === "mask") {

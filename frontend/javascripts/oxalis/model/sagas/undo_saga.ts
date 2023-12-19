@@ -647,8 +647,9 @@ function* applyAndGetRevertingVolumeBatch(volumeUndoState: VolumeUndoState): Sag
     // saved in an VolumeUndoState.
     allBucketSnapshotsForCurrentState.push(bucket.getSnapshot());
 
-    // todop: should this block?
-    bucket.restoreToSnapshot(bucketSnapshot);
+    // todop: don't block sequentially in this loop, but instead
+    // block at the end of the loop?
+    yield* call([bucket, bucket.restoreToSnapshot], bucketSnapshot);
   }
 
   const activeVolumeTracing = yield* select((state) =>

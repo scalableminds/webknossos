@@ -1,6 +1,6 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
-import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import type { Vector2, Vector3, OrthoView, ContourMode } from "oxalis/constants";
+import type { BucketDataArray, BucketSnapshot } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
@@ -299,20 +299,10 @@ export const setContourTracingModeAction = (mode: ContourMode) =>
     mode,
   } as const);
 
-export const addBucketToUndoAction = (
-  zoomedBucketAddress: BucketAddress,
-  bucketData: BucketDataArray,
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
-  pendingOperations: Array<(arg0: BucketDataArray) => void>,
-  tracingId: string,
-) =>
+export const addBucketToUndoAction = (bucketSnapshot: BucketSnapshot) =>
   ({
     type: "ADD_BUCKET_TO_UNDO",
-    zoomedBucketAddress,
-    bucketData,
-    maybeUnmergedBucketLoadedPromise,
-    pendingOperations: pendingOperations.slice(),
-    tracingId,
+    bucketSnapshot,
   } as const);
 
 export const importVolumeTracingAction = () =>

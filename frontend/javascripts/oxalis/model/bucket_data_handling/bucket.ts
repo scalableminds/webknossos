@@ -16,6 +16,11 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import {
+  compressTypedArray,
+  decompressToTypedArray,
+  uint8ToTypedBuffer,
+} from "../helpers/bucket_compression";
 
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -126,6 +131,156 @@ export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
 
+// todop: move somewhere else?
+function mergeDataWithBackendDataInPlace(
+  originalData: BucketDataArray,
+  backendData: BucketDataArray,
+  pendingOperations: Array<(arg0: BucketDataArray) => void>,
+) {
+  if (originalData.length !== backendData.length) {
+    throw new Error("Cannot merge data arrays with differing lengths");
+  }
+
+  // Transfer backend to originalData
+  // The `set` operation is not problematic, since the BucketDataArray types
+  // won't be mixed (either, they are BigInt or they aren't)
+  // @ts-ignore
+  originalData.set(backendData);
+
+  for (const op of pendingOperations) {
+    op(originalData);
+  }
+}
+
+// todop: move somewhere else?
+export class BucketSnapshot {
+  zoomedAddress: BucketAddress;
+  pendingOperations: PendingOperation[];
+  tracingId: string;
+  needsMergeWithBackendData: boolean;
+  elementClass: ElementClass;
+
+  // A copy of the bucket's data. Either stored
+  // uncompressed:
+  dataClone: BucketDataArray | null;
+  // ... or compressed:
+  compressedData: Uint8Array | null = null;
+
+  // A pending promise of the unmerged backend data. Once the promise
+  // is fulfilled, it will be set to null.
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  // Afterwards, the backend data is either stored
+  // uncompressed:
+  backendBucketData: BucketDataArray | null = null;
+  // ... or compressed:
+  compressedBackendData: Uint8Array | null = null;
+
+  constructor(
+    zoomedAddress: BucketAddress,
+    dataClone: BucketDataArray,
+    maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
+    pendingOperations: PendingOperation[],
+    tracingId: string,
+    elementClass: ElementClass,
+  ) {
+    this.zoomedAddress = zoomedAddress;
+    this.dataClone = dataClone;
+    this.maybeUnmergedBucketLoadedPromise = maybeUnmergedBucketLoadedPromise;
+    this.pendingOperations = pendingOperations;
+    this.tracingId = tracingId;
+    this.elementClass = elementClass;
+
+    this.needsMergeWithBackendData = maybeUnmergedBucketLoadedPromise != null;
+
+    this.startCompression();
+  }
+
+  private startCompression() {
+    if (this.dataClone != null) {
+      compressTypedArray(this.dataClone).then((compressedData) => {
+        this.compressedData = compressedData;
+        this.dataClone = null;
+      });
+    }
+    if (this.maybeUnmergedBucketLoadedPromise == null) {
+      return;
+    }
+    this.maybeUnmergedBucketLoadedPromise.then((backendBucketData) => {
+      // Once the backend data is fetched, do not directly merge it with the local data
+      // as this operation is only needed, when the volume action is undone. Additionally merging is more
+      // expensive than saving the backend data. Thus the data is only merged when it is needed.
+      this.backendBucketData = backendBucketData;
+      this.maybeUnmergedBucketLoadedPromise = null;
+      compressTypedArray(backendBucketData).then((compressedBackendData) => {
+        this.backendBucketData = null;
+        this.compressedBackendData = compressedBackendData;
+      });
+    });
+  }
+
+  private async getLocalData(): Promise<BucketDataArray> {
+    if (this.dataClone != null) {
+      return this.dataClone;
+    }
+    if (this.compressedData == null) {
+      throw new Error("BucketSnapshot has neither data nor compressedData.");
+    }
+    return await decompressToTypedArray(this.compressedData, this.elementClass);
+  }
+
+  private isBackendDataAvailable() {
+    return this.backendBucketData != null || this.compressedBackendData != null;
+  }
+
+  private async getBackendData(): Promise<BucketDataArray> {
+    if (this.backendBucketData != null) {
+      return this.backendBucketData;
+    }
+    if (this.compressedBackendData == null) {
+      throw new Error("getBackendData was called even though no backend data exists.");
+    }
+    return await decompressToTypedArray(this.compressedBackendData, this.elementClass);
+  }
+
+  async getDataForRestore(): Promise<{
+    newData: BucketDataArray;
+    newPendingOperations: PendingOperation[];
+  }> {
+    // todop: clarify case with
+    //        this.needsMergeWithBackendData && !isBackendDataAvailable...
+    if (this.needsMergeWithBackendData && this.isBackendDataAvailable()) {
+      const [decompressedBucketData, decompressedBackendData] = await Promise.all([
+        this.getLocalData(),
+        this.getBackendData(),
+      ]);
+      mergeDataWithBackendDataInPlace(
+        decompressedBucketData,
+        decompressedBackendData,
+        this.pendingOperations,
+      );
+      return {
+        newData: decompressedBucketData,
+        newPendingOperations: [],
+      };
+    }
+
+    // Either, no merge is necessary (e.g., because the snapshot was already
+    // created with the merged data) or the backend data hasn't arrived yet.
+    // In both cases, simply return the available data.
+    // If back-end data needs to be merged, this will happen within Bucket.receiveData?
+    const newData = await this.getLocalData();
+
+    // todop: right after the above await, could it happen that the back-end data is now available?
+
+    return {
+      newData,
+      newPendingOperations: this.pendingOperations,
+    };
+  }
+}
+
+type PendingOperation = (arg0: BucketDataArray) => void;
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -141,7 +296,7 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
-  pendingOperations: Array<(arg0: BucketDataArray) => void> = [];
+  pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
   accessed: boolean;
   data: BucketDataArray | null | undefined;
@@ -323,7 +478,7 @@ export class DataBucket {
     return dataClone;
   }
 
-  async label_DEPRECATED(labelFunc: (arg0: BucketDataArray) => void): Promise<void> {
+  async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
     /*
      * It's not recommended to use this method (repeatedly), as it can be
      * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
@@ -349,6 +504,17 @@ export class DataBucket {
     }
 
     bucketsAlreadyInUndoState.add(this);
+
+    Store.dispatch(
+      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
+      // this bucket could be added to multiple undo batches while it's fetched. All entries
+      // need to have the corresponding promise for the undo to work correctly.
+      addBucketToUndoAction(this.getSnapshot()),
+    );
+  }
+
+  getSnapshot(): BucketSnapshot {
+    // todop: this potentially creates data via getOrCreateData. do we want this?
     const dataClone = this.getCopyOfData();
 
     if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
@@ -361,18 +527,20 @@ export class DataBucket {
       });
     }
 
-    Store.dispatch(
-      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-      // this bucket could be added to multiple undo batches while it's fetched. All entries
-      // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(
-        this.zoomedAddress,
-        dataClone,
-        this.maybeUnmergedBucketLoadedPromise,
-        this.pendingOperations,
-        this.getTracingId(),
-      ),
+    return new BucketSnapshot(
+      this.zoomedAddress,
+      dataClone,
+      this.maybeUnmergedBucketLoadedPromise,
+      this.pendingOperations.slice(),
+      this.getTracingId(),
+      this.elementClass,
     );
+  }
+
+  async restoreToSnapshot(snapshot: BucketSnapshot): Promise<void> {
+    const { newData, newPendingOperations } = await snapshot.getDataForRestore();
+    // Set the new bucket data. This will add the bucket directly to the pushqueue, too.
+    this.setData(newData, newPendingOperations);
   }
 
   hasData(): boolean {
@@ -389,23 +557,12 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
+  setData(newData: BucketDataArray, newPendingOperations: Array<PendingOperation>) {
     this.data = newData;
     this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-  }
-
-  uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    return arrayBuffer != null
-      ? new TypedArrayClass(
-          arrayBuffer.buffer,
-          arrayBuffer.byteOffset,
-          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        )
-      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {
@@ -577,7 +734,7 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: Uint8Array | null | undefined): void {
-    const data = this.uint8ToTypedBuffer(arrayBuffer);
+    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {

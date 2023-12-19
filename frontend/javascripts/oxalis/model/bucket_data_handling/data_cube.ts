@@ -710,20 +710,6 @@ class DataCube {
     };
   }
 
-  setBucketData(
-    zoomedAddress: BucketAddress,
-    data: BucketDataArray,
-    newPendingOperations: Array<(arg0: BucketDataArray) => void>,
-  ) {
-    const bucket = this.getOrCreateBucket(zoomedAddress);
-
-    if (bucket.type === "null") {
-      return;
-    }
-
-    bucket.setData(data, newPendingOperations);
-  }
-
   triggerPushQueue() {
     this.pushQueue.push();
   }

@@ -17,7 +17,7 @@ trait DataFinder {
       val voxelOffset = scaledX + scaledY + scaledZ
       if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Vec3Int(x, y, z)
     }
-    Vec3Int(0, 0, 0)
+    Vec3Int.zeros
   }
 
   def getPositionOfNonZeroData(data: Array[Byte],

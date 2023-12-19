@@ -1,8 +1,8 @@
 package security
 
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.api.repositories.AuthenticatorRepository
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import play.silhouette.api.LoginInfo
+import play.silhouette.api.repositories.AuthenticatorRepository
+import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -28,8 +28,8 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       _ <- tokenDAO.updateValues(
         oldAuthenticatorSQL._id,
         newAuthenticator.id,
-        Instant.fromJoda(newAuthenticator.lastUsedDateTime),
-        Instant.fromJoda(newAuthenticator.expirationDateTime),
+        Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime),
+        Instant.fromZonedDateTime(newAuthenticator.expirationDateTime),
         newAuthenticator.idleTimeout
       )
       updated <- findOneByValue(newAuthenticator.id)

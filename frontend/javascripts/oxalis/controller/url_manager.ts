@@ -274,9 +274,12 @@ class UrlManager {
     for (const layerName of Object.keys(state.localSegmentationData)) {
       const { meshes: localMeshes, currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
-      const meshes = Utils.values(localMeshes)
-        .filter(({ isVisible }) => isVisible)
-        .map(mapMeshInfoToUrlMeshDescriptor);
+      const meshes =
+        localMeshes != null
+          ? Utils.values(localMeshes as Record<number, MeshInformation>)
+              .filter(({ isVisible }) => isVisible)
+              .map(mapMeshInfoToUrlMeshDescriptor)
+          : [];
 
       if (currentMeshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = {

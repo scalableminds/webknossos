@@ -27,7 +27,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
-      router,
+      () => router,
       errorHandler,
       httpConfiguration,
       filters
@@ -43,7 +43,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
         JsonNotFound(
           f"This WEBKNOSSOS instance does not yet support this API version. The requested API version is higher than the current API version $CURRENT_API_VERSION.")
       })
-    } else if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
+    } else if (request.uri.matches("^(/api/|/data/|/tracings/|/\\.well-known/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
       Some(assetWithCsp(request))

@@ -7,9 +7,11 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...HEAD)
-
-- If your deployment starts FossilDB separately, make sure to upgrade to version 0.1.27 (build master__484). Note that with the upgraded version, the database contents are automatically migrated. A downgrade to an older FossilDB version is not possible afterwards (creating an additional backup of the FossilDB data directory is advised)
-- WEBKNOSSOS now sets the Content-Security-Policy (CSP) HTTP response header restricting which dynamic resources are allowed to load. Please update the `application.conf` - `play.filters.csp.directives` key if you'd like to change the default CSP. The default CSP is suited for WEBKNOSSOS development. For production follow the comments next to the respective directives in the `application.conf`, i.e. remove 'unsafe-inline' from the script-src, remove ws://localhost:9002 from the connect-src, add the URLs of all external datastores to the connect-src, and add the host domain to the connect-src. [#7367](https://github.com/scalableminds/webknossos/pull/7367) and [#7450](https://github.com/scalableminds/webknossos/pull/7450)
-- 
+- The config `setting play.http.secret.key` (secret random string) now requires a minimum length of 32 bytes.
+- If your setup contains webknossos-workers, postgres evolution 110 introduces the column `supportedJobCommands`. This needs to be filled in manually for your workers. Currently available job commands are `compute_mesh_file`, `compute_segment_index_file`, `convert_to_wkw`, `export_tiff`, `find_largest_segment_id`, `infer_nuclei`, `infer_neurons`, `materialize_volume_annotation`, `render_animation`. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
+- If your setup contains webknossos-workers,  postgres evolution 110 introduces the columns `maxParallelHighPriorityJobs` and `maxParallelLowPriorityJobs`. Make sure to set those values to match what you want for your deployment. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
+- If your setup contains webknossos-workers, you may want to add the new available worker job `compute_segment_index_file` to the `supportedJobCommands` column of one or more of your workers. [#7493](https://github.com/scalableminds/webknossos/pull/7493)
 
 ### Postgres Evolutions:
+
+- [110-worker-config.sql](conf/evolutions/110-worker-config.sql)

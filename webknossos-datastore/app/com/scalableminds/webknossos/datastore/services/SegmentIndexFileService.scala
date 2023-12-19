@@ -114,7 +114,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                                                                   datasetName,
                                                                                   dataLayerName)
         //TODO: Mapping
-        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions)
+        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions.toSeq)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {

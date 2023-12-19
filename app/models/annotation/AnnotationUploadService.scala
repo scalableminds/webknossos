@@ -11,7 +11,6 @@ import files.TempFileService
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
-import models.dataset.WKRemoteDataStoreClient
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider

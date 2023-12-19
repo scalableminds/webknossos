@@ -47,19 +47,18 @@ const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
 );
 type VolumeUndoBuckets = Array<BucketSnapshot>;
-type VolumeAnnotationBatch = {
-  buckets: VolumeUndoBuckets;
-  segments: SegmentMap;
-  segmentGroups: SegmentGroup[];
-  tracingId: string;
-};
 type SkeletonUndoState = {
   type: "skeleton";
   data: SkeletonTracing;
 };
 type VolumeUndoState = {
   type: "volume";
-  data: VolumeAnnotationBatch;
+  data: {
+    buckets: VolumeUndoBuckets;
+    segments: SegmentMap;
+    segmentGroups: SegmentGroup[];
+    tracingId: string;
+  };
 };
 type BoundingBoxUndoState = {
   type: "bounding_box";
@@ -323,10 +322,8 @@ export function* manageUndoStates(): Saga<never> {
         const { bucketSnapshot } = addBucketToUndoAction;
         // The bucket's (old) state should be added to the undo
         // stack so that we can revert to its previous version.
-        addBucketSnapshotToList(
-          bucketSnapshot,
-          volumeInfoById[bucketSnapshot.tracingId].currentVolumeUndoBuckets,
-        );
+        const volumeInfo = volumeInfoById[bucketSnapshot.tracingId];
+        volumeInfo.currentVolumeUndoBuckets.push(bucketSnapshot);
       } else if (finishAnnotationStrokeAction) {
         // FINISH_ANNOTATION_STROKE was dispatched which marks the end
         // of a volume transaction.
@@ -518,18 +515,6 @@ function getBoundingBoxToUndoState(
   return null;
 }
 
-function addBucketSnapshotToList(
-  bucketSnapshot: BucketSnapshot,
-  undoBucketList: VolumeUndoBuckets,
-): void {
-  // The given bucket data is compressed, wrapped into a UndoBucket instance
-  // and appended to the passed VolumeAnnotationBatch.
-  // If backend data is being downloaded (MaybeUnmergedBucketLoadedPromise exists),
-  // the backend data will also be compressed and attached to the UndoBucket.
-
-  undoBucketList.push(bucketSnapshot);
-}
-
 function shouldAddToUndoStack(
   currentUserAction: Action,
   previousAction: Action | null | undefined,
@@ -622,8 +607,7 @@ function* applyStateOfStack(
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, `Performing ${direction}...`);
-    const volumeBatchToApply = stateToRestore.data;
-    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
+    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, stateToRestore);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
   } else if (stateToRestore.type === "bounding_box") {
@@ -641,12 +625,9 @@ function* applyStateOfStack(
   }
 }
 
-function* applyAndGetRevertingVolumeBatch(
-  volumeAnnotationBatch: VolumeAnnotationBatch,
-): Saga<VolumeUndoState> {
-  // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
-  // another VolumeAnnotationBatch) for reverting the undo operation.
-  const segmentationLayer = Model.getSegmentationTracingLayer(volumeAnnotationBatch.tracingId);
+function* applyAndGetRevertingVolumeBatch(volumeUndoState: VolumeUndoState): Saga<VolumeUndoState> {
+  // Applies a VolumeUndoState and returns a new VolumeUndoState for reverting the undo operation.
+  const segmentationLayer = Model.getSegmentationTracingLayer(volumeUndoState.data.tracingId);
 
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
@@ -655,7 +636,7 @@ function* applyAndGetRevertingVolumeBatch(
   const { cube } = segmentationLayer;
   const allBucketSnapshotsForCurrentState: VolumeUndoBuckets = [];
 
-  for (const bucketSnapshot of volumeAnnotationBatch.buckets) {
+  for (const bucketSnapshot of volumeUndoState.data.buckets) {
     const bucket = cube.getOrCreateBucket(bucketSnapshot.zoomedAddress);
 
     if (bucket.type === "null") {
@@ -664,14 +645,14 @@ function* applyAndGetRevertingVolumeBatch(
 
     // Prepare a snapshot of the bucket's current data so that it can be
     // saved in an VolumeUndoState.
-    yield* call(addBucketSnapshotToList, bucket.getSnapshot(), allBucketSnapshotsForCurrentState);
+    allBucketSnapshotsForCurrentState.push(bucket.getSnapshot());
 
     // todop: should this block?
     bucket.restoreToSnapshot(bucketSnapshot);
   }
 
   const activeVolumeTracing = yield* select((state) =>
-    getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
+    getVolumeTracingById(state.tracing, volumeUndoState.data.tracingId),
   );
   // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
@@ -680,12 +661,12 @@ function* applyAndGetRevertingVolumeBatch(
   // re-assign the group ids if segments belong to non-existent groups.
   yield* put(
     setSegmentGroupsAction(
-      volumeAnnotationBatch.segmentGroups,
-      volumeAnnotationBatch.tracingId,
+      volumeUndoState.data.segmentGroups,
+      volumeUndoState.data.tracingId,
       true,
     ),
   );
-  yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
+  yield* put(setSegmentsAction(volumeUndoState.data.segments, volumeUndoState.data.tracingId));
   cube.triggerPushQueue();
   return {
     type: "volume",
@@ -693,7 +674,7 @@ function* applyAndGetRevertingVolumeBatch(
       buckets: allBucketSnapshotsForCurrentState,
       segments: currentSegments,
       segmentGroups: currentSegmentGroups,
-      tracingId: volumeAnnotationBatch.tracingId,
+      tracingId: volumeUndoState.data.tracingId,
     },
   };
 }

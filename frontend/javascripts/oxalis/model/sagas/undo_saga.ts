@@ -35,13 +35,13 @@ import {
   setSegmentsAction,
   UpdateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { BucketSnapshot } from "oxalis/model/bucket_data_handling/bucket";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { UNDO_HISTORY_SIZE } from "oxalis/model/sagas/save_saga_constants";
 import { Model } from "oxalis/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import { actionChannel, call, delay, put, take } from "typed-redux-saga";
+import BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
@@ -606,7 +606,7 @@ function* applyStateOfStack(
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, `Performing ${direction}...`);
-    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, stateToRestore);
+    const currentVolumeState = yield* call(applyAndGetRevertingVolumeUndoState, stateToRestore);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
   } else if (stateToRestore.type === "bounding_box") {
@@ -624,7 +624,9 @@ function* applyStateOfStack(
   }
 }
 
-function* applyAndGetRevertingVolumeBatch(volumeUndoState: VolumeUndoState): Saga<VolumeUndoState> {
+function* applyAndGetRevertingVolumeUndoState(
+  volumeUndoState: VolumeUndoState,
+): Saga<VolumeUndoState> {
   // Applies a VolumeUndoState and returns a new VolumeUndoState for reverting the undo operation.
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeUndoState.data.tracingId);
 

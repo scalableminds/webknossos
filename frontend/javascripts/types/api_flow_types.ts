@@ -35,6 +35,14 @@ export type ElementClass =
   | "int16"
   | "int32"
   | "int64";
+
+export type BucketDataArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Float32Array
+  | BigUint64Array;
+
 export type APIMapping = {
   readonly parent?: string;
   readonly name: string;

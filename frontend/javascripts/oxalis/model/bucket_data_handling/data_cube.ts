@@ -1,7 +1,7 @@
 import _ from "lodash";
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";

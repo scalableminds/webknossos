@@ -46,7 +46,6 @@ import { actionChannel, call, delay, put, take } from "typed-redux-saga";
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
 );
-type VolumeUndoBuckets = Array<BucketSnapshot>;
 type SkeletonUndoState = {
   type: "skeleton";
   data: SkeletonTracing;
@@ -54,7 +53,7 @@ type SkeletonUndoState = {
 type VolumeUndoState = {
   type: "volume";
   data: {
-    buckets: VolumeUndoBuckets;
+    buckets: BucketSnapshot[];
     segments: SegmentMap;
     segmentGroups: SegmentGroup[];
     tracingId: string;
@@ -151,7 +150,7 @@ export function* manageUndoStates(): Saga<never> {
       // operation (e.g., brushing). After a volume operation, the set is added
       // to the stack and cleared afterwards. This means the set is always
       // empty unless a volume operation is ongoing.
-      currentVolumeUndoBuckets: VolumeUndoBuckets;
+      currentBucketSnapshots: BucketSnapshot[];
       // The "old" segment list that needs to be added to the next volume undo stack
       // entry so that that segment list can be restored upon undo.
       prevSegments: SegmentMap;
@@ -167,7 +166,7 @@ export function* manageUndoStates(): Saga<never> {
   const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
-      currentVolumeUndoBuckets: [],
+      currentBucketSnapshots: [],
       // Segments and SegmentGroups are always handled as immutable. So, no need to copy. If there's no volume
       // tracing, prevSegments can remain empty as it's not needed.
       prevSegments: volumeTracing.segments,
@@ -184,15 +183,15 @@ export function* manageUndoStates(): Saga<never> {
       volumeInfoById[volumeTracing.tracingId].prevSegmentGroups = volumeTracing.segmentGroups;
     }
   }
-  function* areCurrentVolumeUndoBucketsEmpty() {
-    // Check that currentVolumeUndoBuckets is empty for all layers (see above for an
+  function* areCurrentBucketSnapshotsEmpty() {
+    // Check that currentBucketSnapshots is empty for all layers (see above for an
     // explanation of this invariant).
     // In case the invariant is violated for some reason, we forbid undo/redo.
     // The case can be provoked by brushing and hitting ctrl+z without lifting the
     // mouse button.
     const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
     for (const volumeTracing of volumeTracings) {
-      if (volumeInfoById[volumeTracing.tracingId].currentVolumeUndoBuckets.length > 0) {
+      if (volumeInfoById[volumeTracing.tracingId].currentBucketSnapshots.length > 0) {
         return false;
       }
     }
@@ -246,7 +245,7 @@ export function* manageUndoStates(): Saga<never> {
         reason: messages["undo.import_volume_tracing"],
       } as WarnUndoState);
     } else if (undo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+      if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
         yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
         continue;
       }
@@ -263,7 +262,7 @@ export function* manageUndoStates(): Saga<never> {
         );
 
         // Since the current segments map changed, we need to update our reference to it.
-        // Note that we don't need to do this for currentVolumeUndoBuckets, as this
+        // Note that we don't need to do this for currentBucketSnapshots, as this
         // was and is empty, anyway (due to the constraint we checked above).
         yield* call(setPrevSegmentsAndGroupsToCurrent);
       }
@@ -274,7 +273,7 @@ export function* manageUndoStates(): Saga<never> {
 
       yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+      if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
         yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
         continue;
       }
@@ -323,7 +322,7 @@ export function* manageUndoStates(): Saga<never> {
         // The bucket's (old) state should be added to the undo
         // stack so that we can revert to its previous version.
         const volumeInfo = volumeInfoById[bucketSnapshot.tracingId];
-        volumeInfo.currentVolumeUndoBuckets.push(bucketSnapshot);
+        volumeInfo.currentBucketSnapshots.push(bucketSnapshot);
       } else if (finishAnnotationStrokeAction) {
         // FINISH_ANNOTATION_STROKE was dispatched which marks the end
         // of a volume transaction.
@@ -335,7 +334,7 @@ export function* manageUndoStates(): Saga<never> {
         undoStack.push({
           type: "volume",
           data: {
-            buckets: volumeInfo.currentVolumeUndoBuckets,
+            buckets: volumeInfo.currentBucketSnapshots,
             segments: volumeInfo.prevSegments,
             segmentGroups: volumeInfo.prevSegmentGroups,
             tracingId: activeVolumeTracing.tracingId,
@@ -344,7 +343,7 @@ export function* manageUndoStates(): Saga<never> {
         // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
         volumeInfo.prevSegments = activeVolumeTracing.segments;
         volumeInfo.prevSegmentGroups = activeVolumeTracing.segmentGroups;
-        volumeInfo.currentVolumeUndoBuckets = [];
+        volumeInfo.currentBucketSnapshots = [];
       } else if (userBoundingBoxAction) {
         const boundingBoxUndoState = getBoundingBoxToUndoState(
           userBoundingBoxAction,
@@ -634,7 +633,7 @@ function* applyAndGetRevertingVolumeBatch(volumeUndoState: VolumeUndoState): Sag
   }
 
   const { cube } = segmentationLayer;
-  const allBucketSnapshotsForCurrentState: VolumeUndoBuckets = [];
+  const allBucketSnapshotsForCurrentState: BucketSnapshot[] = [];
 
   for (const bucketSnapshot of volumeUndoState.data.buckets) {
     const bucket = cube.getOrCreateBucket(bucketSnapshot.zoomedAddress);

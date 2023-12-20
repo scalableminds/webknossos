@@ -1305,9 +1305,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 
   const areSegmentStatisticsAvailable =
-    hasNoFallbackLayer &&
-    volumeTracing?.hasSegmentIndex &&
-    isHoveredSegmentOrMesh;
+    hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

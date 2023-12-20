@@ -1085,7 +1085,8 @@ class SegmentsView extends React.Component<Props, State> {
       visibleSegmentationLayer == null ||
       !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex) {
+      !this.props.activeVolumeTracing?.hasSegmentIndex
+    ) {
       //in this case there is a fallback layer
       return null;
     }

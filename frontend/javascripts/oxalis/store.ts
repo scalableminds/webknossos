@@ -581,6 +581,7 @@ export type OxalisState = {
       // The `segments` here should only be used for non-annotation volume
       // layers.
       readonly segments: SegmentMap;
+      readonly selectedIds: { segments: number[]; group: number | null };
       readonly connectomeData: ConnectomeData;
     }
   >;

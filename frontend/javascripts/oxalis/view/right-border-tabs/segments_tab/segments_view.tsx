@@ -141,6 +141,7 @@ type StateProps = {
   hasVolumeTracing: boolean;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
+  selectedIds: { segments: number[], group: number|null },
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   activeVolumeTracing: VolumeTracing | null | undefined;
   allowUpdate: boolean;
@@ -173,6 +174,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
+  const selectedIds = visibleSegmentationLayer != null ? state.localSegmentationData[visibleSegmentationLayer.name].selectedIds : {segments: [], group: null};
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
@@ -184,6 +187,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     hasVolumeTracing: state.tracing.volumes.length > 0,
     segments,
     segmentGroups,
+    selectedIds,
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
@@ -292,7 +296,6 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
-  selectedIds: { segments: number[]; group: number | null };
   activeMeshJobId: string | null | undefined;
   activeDropdownSegmentId: number | null | undefined;
   activeDropdownGroupId: number | null | undefined;
@@ -372,7 +375,6 @@ class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
     renamingCounter: 0,
-    selectedIds: { segments: [], group: null },
     activeMeshJobId: null,
     activeDropdownSegmentId: null,
     activeDropdownGroupId: null,

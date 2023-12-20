@@ -55,7 +55,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type: "null" = "null";
+  readonly type: "null" = "null";
 
   hasData(): boolean {
     return false;
@@ -124,8 +124,9 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type: "data" = "data";
-  elementClass: ElementClass;
+  readonly type: "data" = "data";
+  readonly elementClass: ElementClass;
+  readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -143,7 +144,6 @@ export class DataBucket {
   accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;

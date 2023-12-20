@@ -6,11 +6,11 @@ import { compressTypedArray, decompressToTypedArray } from "../helpers/bucket_co
 export type PendingOperation = (arg0: BucketDataArray) => void;
 
 export default class BucketSnapshot {
-  zoomedAddress: BucketAddress;
-  pendingOperations: PendingOperation[];
-  tracingId: string;
-  needsMergeWithBackendData: boolean;
-  elementClass: ElementClass;
+  readonly zoomedAddress: BucketAddress;
+  readonly pendingOperations: PendingOperation[];
+  readonly tracingId: string;
+  readonly needsMergeWithBackendData: boolean;
+  readonly elementClass: ElementClass;
 
   // A copy of the bucket's data. Either stored
   // uncompressed:

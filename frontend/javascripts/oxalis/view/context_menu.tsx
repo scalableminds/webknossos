@@ -1162,27 +1162,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
         contextMenuPosition == null ||
         volumeTracing == null ||
         !hasNoFallbackLayer ||
-        !volumeTracing.hasSegmentIndex ||
-        props.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
+        !volumeTracing.hasSegmentIndex
       ) {
         return [];
       } else {
+        const state = Store.getState();
         const tracingId = volumeTracing.tracingId;
-        const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+        const tracingStoreUrl = state.tracing.tracingStore.url;
         const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
         const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = Store.getState().dataset.dataSource.scale;
+        const dataSetScale = state.dataset.dataSource.scale;
+        const additionalCoordinates = state.flycam.additionalCoordinates;
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           [segmentIdAtPosition],
+          additionalCoordinates
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           [segmentIdAtPosition],
+          additionalCoordinates
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(
           boundingBoxInRequestedMag,
@@ -1304,8 +1307,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const areSegmentStatisticsAvailable =
     hasNoFallbackLayer &&
     volumeTracing?.hasSegmentIndex &&
-    isHoveredSegmentOrMesh &&
-    props.additionalCoordinates == null; // TODO change once statistics are available for nd-datasets
+    isHoveredSegmentOrMesh;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

@@ -962,13 +962,14 @@ export function getSegmentVolumes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ): Promise<number[]> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
       {
-        data: { mag, segmentIds, additionalCoordinates },
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
       },
     ),
   );
@@ -979,13 +980,14 @@ export function getSegmentBoundingBoxes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
       {
-        data: { mag, segmentIds, additionalCoordinates },
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
       },
     ),
   );

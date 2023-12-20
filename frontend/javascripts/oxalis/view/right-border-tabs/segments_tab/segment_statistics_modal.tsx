@@ -5,13 +5,14 @@ import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { Segment } from "oxalis/store";
+import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
 import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
 import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { useSelector } from "react-redux";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -87,7 +88,8 @@ export function SegmentStatisticsModal({
 }: Props) {
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = Store.getState().dataset.dataSource.scale;
+  const dataSetScale = useSelector((state: OxalisState) =>state.dataset.dataSource.scale);
+  const additionalCoordinates = useSelector((state: OxalisState) =>state.flycam.additionalCoordinates);
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
@@ -97,12 +99,14 @@ export function SegmentStatisticsModal({
           tracingId,
           layersFinestResolution,
           segments.map((segment) => segment.id),
+          additionalCoordinates
         ),
         getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           segments.map((segment) => segment.id),
+          additionalCoordinates
         ),
       ]).then((response) => {
         const segmentSizes = response[0];

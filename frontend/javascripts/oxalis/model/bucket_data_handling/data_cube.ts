@@ -309,7 +309,7 @@ class DataCube {
       for (let i = 0; i < this.buckets.length; i++) {
         this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
 
-        if (this.buckets[this.bucketIterator].shouldCollect()) {
+        if (this.buckets[this.bucketIterator].mayBeGarbageCollected()) {
           foundCollectibleBucket = true;
           break;
         }
@@ -359,10 +359,17 @@ class DataCube {
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      // If a bucket is requested, collect it independently of the predicateFn,
-      // because the pullQueue was already cleared (meaning the bucket is in a
-      // requested state, but will never be filled with data).
+      bucket._breakMaybe();
+      // Even if the predicateFn doesn't say that a bucket should be
+      // collected, we collect REQUESTED buckets because the pullQueue
+      // was already cleared above. This means that the bucket is in a
+      // requested state, but will never be filled with data.
+      // todop: who takes care of re-adding these buckets to the pullqueue
+      // if their loading priority was -1?
+      // todop: doublecheck this logic against all possible states.
       if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
+        // todop: can it happen that buckets are collected that don't want
+        // to be collected? we should prevent this.
         this.collectBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);
@@ -378,6 +385,10 @@ class DataCube {
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
+      // todop: can it happen that destroy is called even though the
+      // bucket is not collected? GC should avoid this and a force-reload
+      // will ensure a saved state. however, there might be a race condition
+      // here?
       bucket.destroy();
       cube.data.delete(bucketIndex);
     }

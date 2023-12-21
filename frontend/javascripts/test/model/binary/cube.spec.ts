@@ -214,7 +214,7 @@ test("Garbage Collection should only keep 3 buckets when possible", (t) => {
   cube.getOrCreateBucket([3, 3, 3, 0]);
   t.is(cube.buckets.length, 3);
 });
-test("Garbage Collection should not collect buckets with shouldCollect() == false", (t) => {
+test("Garbage Collection should not collect buckets with mayBeGarbageCollected() == false", (t) => {
   const { cube } = t.context;
   cube.BUCKET_COUNT_SOFT_LIMIT = 3;
   const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);
@@ -223,7 +223,7 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   cube.getOrCreateBucket([1, 1, 1, 0]);
   cube.getOrCreateBucket([2, 2, 2, 0]);
   cube.getOrCreateBucket([3, 3, 3, 0]);
-  t.is(b1.shouldCollect(), false);
+  t.is(b1.mayBeGarbageCollected(), false);
   const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
   t.deepEqual(addresses, [
     [0, 0, 0, 0, []],

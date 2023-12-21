@@ -18,6 +18,7 @@ import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { uint8ToTypedBuffer } from "../helpers/bucket_compression";
 import BucketSnapshot, { PendingOperation } from "./bucket_snapshot";
+import { getVolumeTracingById } from "../accessors/volumetracing_accessor";
 
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -178,6 +179,7 @@ export class DataBucket {
     } else {
       this.throttledTriggerLabeled = _.noop;
     }
+    this._breakMaybe();
   }
 
   once(event: string, callback: (...args: any[]) => any): () => void {
@@ -224,7 +226,7 @@ export class DataBucket {
     ];
   }
 
-  shouldCollect(): boolean {
+  mayBeGarbageCollected(): boolean {
     const collect =
       !this.accessed &&
       !this.dirty &&
@@ -234,6 +236,7 @@ export class DataBucket {
   }
 
   destroy(): void {
+    this._breakMaybe();
     // Since we rely on the GC to collect buckets, we
     // can easily have references to buckets which prohibit GC.
     // As a countermeasure, we set the data attribute to null
@@ -352,12 +355,55 @@ export class DataBucket {
       // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
       // this bucket could be added to multiple undo batches while it's fetched. All entries
       // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(this.getSnapshot()),
+      addBucketToUndoAction(this.getSnapshot("MUTATION")),
     );
   }
 
-  getSnapshot(): BucketSnapshot {
-    // todop: this potentially creates data via getOrCreateData. do we want this?
+  getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
+    // getSnapshot is called in two use cases:
+    // 1) The user mutates data.
+    //    If this.data is null, it will be allocated and the bucket will be added
+    //    to the pullQueue and temporalBucketManager.
+    // 2) The user uses undo/redo which will restore the bucket to another snapshot.
+    //    Before this restoration is done, the current version is snapshotted.
+    //    In that case, data must not be null, as it's important that we don't
+    //    initiate a new request from the back-end. If we did this, we would depend
+    //    on the correct version being fetched. Correct would be the most recent
+    //    version, but older snapshots might depend on another version.
+
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
+      throw new Error("Unexpected getSnapshot call.");
+      // this scenario can happen when
+      // - the user hits undo and an older version of this bucket should be restored.
+      // - however, this bucket was gc'ed and has no local changes
+      // in this scenario:
+      // - there are no unsaved changes.
+      // - when restoring the snapshot, the version of the bucket should be loaded
+      //   that was stored at the backend at the current time.
+      // This "if" avoids that getCopyOfData() is called.
+      // The consequences of that would be (and were in older versions):
+      // - getOrCreateData()
+      // - this.temporalBucketManager.addBucket(this);
+      // - pullBucket()
+      // Thus, the newest version of this bucket would be requested.
+      // When the user hits undo, getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT") is called before restoreToSnapshot.
+      // This means, that the newest bucket data would be fetched asynchronously
+      // and then it would overwrite the mutation in restoreToSnapshot.
+
+      // const volumeTracing = getVolumeTracingById(Store.getState().tracing, this.getTracingId());
+      // const version = volumeTracing.version;
+
+      // return new BucketSnapshot(
+      //   this.zoomedAddress,
+      //   null,
+      //   null,
+      //   null,
+      //   this.getTracingId(),
+      //   this.elementClass,
+      //   this.versionAtRequestTime,
+      // );
+    }
+
     const dataClone = this.getCopyOfData();
 
     if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
@@ -382,9 +428,24 @@ export class DataBucket {
   }
 
   async restoreToSnapshot(snapshot: BucketSnapshot): Promise<void> {
-    const { newData, newPendingOperations } = await snapshot.getDataForRestore();
+    // This function is async, but can still finish offline, because
+    // getDataForRestore only needs to wait for decompression in the webworker.
+    const { newData, newPendingOperations, needsMergeWithBackendData } =
+      await snapshot.getDataForRestore();
     // Set the new bucket data. This will add the bucket directly to the pushqueue, too.
     this.setData(newData, newPendingOperations);
+
+    // needsMergeWithBackendData should be irrelevant. if the snapshot is complete,
+    // the bucket should also be loaded.
+    // if it's not complete, the bucket should already be requested.
+
+    if (this.state === BucketStateEnum.UNREQUESTED) {
+      this._logMaybe(
+        "setData was called but state is still unrequested. will probably be overwritten?",
+      );
+    } else {
+      this._logMaybe("setData was called. state==", this.state);
+    }
   }
 
   hasData(): boolean {
@@ -549,10 +610,11 @@ export class DataBucket {
   }
 
   markAsPulled(versionAtRequestTime: number | null): void {
-    // todop: rename to markAsRequested
+    // todop (only renaming): rename to markAsRequested
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.versionAtRequestTime = versionAtRequestTime;
+        this._breakMaybe();
         this.state = BucketStateEnum.REQUESTED;
         break;
       }
@@ -580,6 +642,9 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: Uint8Array | null | undefined): void {
+    if (this.data != null) {
+      this._logMaybe("bucket.receiveData was called, but this.data already exists.");
+    }
     const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -612,6 +677,7 @@ export class DataBucket {
           this.data = data;
         }
         this.invalidateValueSet();
+        this._breakMaybe();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -742,8 +808,22 @@ export class DataBucket {
   // Example usage:
   // bucket._logMaybe("Data of problematic bucket", bucket.data)
   _logMaybe = (...args: any[]) => {
-    if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
-      console.log(...args);
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    // console.log(addressStr, ...args);
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      console.log(addressStr, ...args);
+    }
+  };
+
+  // debug position:
+  // 619, 989, 533
+  //
+  //
+
+  _breakMaybe = () => {
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      debugger;
     }
   };
 

@@ -1427,6 +1427,7 @@ class DataApi {
     layerName: string,
     predicateFn?: (bucket: DataBucket) => boolean,
   ): Promise<void> {
+    const truePredicate = () => true;
     await Promise.all(
       Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
@@ -1434,7 +1435,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectBucketsIf(predicateFn || (() => true));
+          dataLayer.cube.collectBucketsIf(predicateFn || truePredicate);
           dataLayer.layerRenderingManager.refresh();
         }
       }),

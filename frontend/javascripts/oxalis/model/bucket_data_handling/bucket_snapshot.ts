@@ -22,6 +22,10 @@ export default class BucketSnapshot {
   // ... or compressed:
   compressedData: Uint8Array | null = null;
 
+  // todop (perf): multiple bucketsnapshots might refer to the same
+  // maybeUnmergedBucketLoadedPromise. however, they will all
+  // compress/decompress the data independently (== redundantly).
+  // this could be optimized
   // A pending promise of the unmerged backend data. Once the promise
   // is fulfilled, it will be set to null.
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
@@ -103,22 +107,29 @@ export default class BucketSnapshot {
   async getDataForRestore(): Promise<{
     newData: BucketDataArray;
     newPendingOperations: PendingOperation[];
+    needsMergeWithBackendData: boolean;
   }> {
+    // It's important that local data is retrieved before deciding
+    // whether a merge can be done here. Otherwise, there might be
+    // a race condition where the back end data is received by the
+    // bucket while this function doesn't get a hold of it.
+    // In other words, Bucket.receiveData() will happen before
+    // this function here returns.
+    const newData = await this.getLocalData();
+
     // todop: clarify case with
     //        this.needsMergeWithBackendData && !isBackendDataAvailable...
-    if (this.needsMergeWithBackendData && this.isBackendDataAvailable()) {
-      const [decompressedBucketData, decompressedBackendData] = await Promise.all([
-        this.getLocalData(),
-        this.getBackendData(),
-      ]);
-      mergeDataWithBackendDataInPlace(
-        decompressedBucketData,
-        decompressedBackendData,
-        this.pendingOperations,
-      );
+    const { needsMergeWithBackendData } = this;
+    if (needsMergeWithBackendData && this.isBackendDataAvailable()) {
+      const decompressedBackendData = await this.getBackendData();
+      // The following code mutates newData without using it
+      // actually which is a bit fishy.
+      mergeDataWithBackendDataInPlace(newData, decompressedBackendData, this.pendingOperations);
       return {
-        newData: decompressedBucketData,
+        newData,
         newPendingOperations: [],
+        // We just merged it
+        needsMergeWithBackendData: false,
       };
     }
 
@@ -126,13 +137,11 @@ export default class BucketSnapshot {
     // created with the merged data) or the backend data hasn't arrived yet.
     // In both cases, simply return the available data.
     // If back-end data needs to be merged, this will happen within Bucket.receiveData?
-    const newData = await this.getLocalData();
-
-    // todop: right after the above await, could it happen that the back-end data is now available?
 
     return {
       newData,
       newPendingOperations: this.pendingOperations,
+      needsMergeWithBackendData,
     };
   }
 }

@@ -201,6 +201,12 @@ export type Annotation = {
 };
 type TracingBase = {
   readonly createdTimestamp: number;
+  // This is the version that the front-end considers as
+  // most recently saved. Usually, this will be identical
+  // to the version stored in the back-end. Only if another
+  // actor has saved a newer version to the front-end, the
+  // versions won't match (=> conflict).
+  // Unsaved changes don't change this version field.
   readonly version: number;
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;

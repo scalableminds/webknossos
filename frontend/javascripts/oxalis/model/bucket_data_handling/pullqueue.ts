@@ -6,6 +6,7 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import { asAbortable, sleep } from "libs/utils";
+import { getVolumeTracingById } from "../accessors/volumetracing_accessor";
 
 export type PullQueueItem = {
   priority: number;
@@ -30,8 +31,14 @@ class PullQueue {
   abortController: AbortController;
   consecutiveErrorCount: number;
   isRetryScheduled: boolean;
+  tracingId: string | null;
 
-  constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
+  constructor(
+    cube: DataCube,
+    layerName: string,
+    datastoreInfo: DataStoreInfo,
+    tracingId: string | null,
+  ) {
     this.cube = cube;
     this.layerName = layerName;
     this.datastoreInfo = datastoreInfo;
@@ -43,10 +50,18 @@ class PullQueue {
     this.consecutiveErrorCount = 0;
     this.isRetryScheduled = false;
     this.abortController = new AbortController();
+    this.tracingId = tracingId;
   }
 
   pull(): void {
     // Start to download some buckets
+
+    let version = null;
+    if (this.tracingId != null) {
+      const volumeTracing = getVolumeTracingById(Store.getState().tracing, this.tracingId);
+      version = volumeTracing.version;
+    }
+
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
       const batch = [];
 
@@ -56,7 +71,7 @@ class PullQueue {
 
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
-          bucket.markAsPulled();
+          bucket.markAsPulled(version);
         }
       }
 
@@ -71,11 +86,10 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  async pullBatch(batch: Array<BucketAddress>): Promise<void> {
+  private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
     const { dataset } = Store.getState();
-    // Measuring the time until response arrives to select appropriate preloading strategy
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
@@ -134,8 +148,8 @@ class PullQueue {
         // Continue to process the pull queue without delay.
         this.pull();
       } else {
-        // The current batch failed and we schedule a retry. However,
-        // parallel batches might fail, too, and also schedule a retry.
+        // The current batch failed and we want to schedule a retry. However,
+        // parallel batches might fail, too, and also want to schedule a retry.
         // To avoid that pull() is called X times in Y seconds, we only
         // initiate a retry after a sleep if no concurrent invocation
         // "claimed" the `isRetryScheduled` boolean.
@@ -161,9 +175,11 @@ class PullQueue {
   ): void {
     const bucket = this.cube.getBucket(bucketAddress);
 
-    if (bucket.type === "data") {
-      bucket.receiveData(bucketData);
+    if (bucket.type != "data") {
+      return;
     }
+
+    bucket.receiveData(bucketData);
   }
 
   add(item: PullQueueItem): void {

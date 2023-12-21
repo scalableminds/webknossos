@@ -127,6 +127,8 @@ export class DataBucket {
   readonly type: "data" = "data";
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
+  versionAtRequestTime: number | null = null;
+  // todop: or should it be versionAtInstantiationTime ?
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -376,6 +378,7 @@ export class DataBucket {
       this.pendingOperations.slice(),
       this.getTracingId(),
       this.elementClass,
+      this.versionAtRequestTime,
     );
   }
 
@@ -464,6 +467,7 @@ export class DataBucket {
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
     this.cube.pushQueue.insert(this);
+    console.log("bucketLabeled");
     this.trigger("bucketLabeled");
   }
 
@@ -546,9 +550,11 @@ export class DataBucket {
     this.invalidateValueSet();
   }
 
-  markAsPulled(): void {
+  markAsPulled(versionAtRequestTime: number | null): void {
+    // todop: rename to markAsRequested
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
+        this.versionAtRequestTime = versionAtRequestTime;
         this.state = BucketStateEnum.REQUESTED;
         break;
       }

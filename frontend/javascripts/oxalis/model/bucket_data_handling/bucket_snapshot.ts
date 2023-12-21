@@ -11,6 +11,10 @@ export default class BucketSnapshot {
   readonly tracingId: string;
   readonly needsMergeWithBackendData: boolean;
   readonly elementClass: ElementClass;
+  // The version at which the annotation was when the
+  // snapshot was created.
+  // todop: should it default to null?
+  readonly version: number | null;
 
   // A copy of the bucket's data. Either stored
   // uncompressed:
@@ -34,6 +38,7 @@ export default class BucketSnapshot {
     pendingOperations: PendingOperation[],
     tracingId: string,
     elementClass: ElementClass,
+    version: number | null,
   ) {
     this.zoomedAddress = zoomedAddress;
     this.dataClone = dataClone;
@@ -41,6 +46,7 @@ export default class BucketSnapshot {
     this.pendingOperations = pendingOperations;
     this.tracingId = tracingId;
     this.elementClass = elementClass;
+    this.version = version;
 
     this.needsMergeWithBackendData = maybeUnmergedBucketLoadedPromise != null;
 

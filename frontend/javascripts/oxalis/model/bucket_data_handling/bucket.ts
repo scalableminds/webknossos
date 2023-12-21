@@ -112,9 +112,8 @@ export const getConstructorForElementClass = (
   }
 };
 export const NULL_BUCKET = new NullBucket();
-// The type is used within the DataBucket class which is why
-// we have to define it here.
 export type Bucket = DataBucket | NullBucket;
+
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
 // FINISH_ANNOTATION_STROKE).
@@ -467,8 +466,7 @@ export class DataBucket {
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
     this.cube.pushQueue.insert(this);
-    console.log("bucketLabeled");
-    this.trigger("bucketLabeled");
+    this.throttledTriggerLabeled();
   }
 
   applyVoxelMap(

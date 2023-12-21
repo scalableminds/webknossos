@@ -477,7 +477,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           hasTracing
             ? [
                 <AsyncButton
-                  className="narrow"
+                  className="narrow zero-vertical-align"
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
                   onClick={this.handleUndo}
@@ -487,7 +487,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   <i className="fas fa-undo" aria-hidden="true" />
                 </AsyncButton>,
                 <AsyncButton
-                  className="narrow hide-on-small-screen"
+                  className="narrow hide-on-small-screen zero-vertical-align"
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
                   onClick={this.handleRedo}

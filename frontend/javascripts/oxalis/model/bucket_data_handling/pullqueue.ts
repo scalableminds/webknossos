@@ -24,14 +24,14 @@ const MAX_RETRY_DELAY = 5000;
 
 class PullQueue {
   cube: DataCube;
-  priorityQueue: PriorityQueue<PullQueueItem>;
-  batchCount: number;
   layerName: string;
   datastoreInfo: DataStoreInfo;
-  abortController: AbortController;
-  consecutiveErrorCount: number;
-  isRetryScheduled: boolean;
   tracingId: string | null;
+  private priorityQueue: PriorityQueue<PullQueueItem>;
+  private fetchingBatchCount: number;
+  private abortController: AbortController;
+  private consecutiveErrorCount: number;
+  private isRetryScheduled: boolean;
 
   constructor(
     cube: DataCube,
@@ -46,7 +46,7 @@ class PullQueue {
       // small priorities take precedence
       comparator: (b, a) => b.priority - a.priority,
     });
-    this.batchCount = 0;
+    this.fetchingBatchCount = 0;
     this.consecutiveErrorCount = 0;
     this.isRetryScheduled = false;
     this.abortController = new AbortController();
@@ -62,7 +62,10 @@ class PullQueue {
       version = volumeTracing.version;
     }
 
-    while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
+    while (
+      this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
+      this.priorityQueue.length > 0
+    ) {
       const batch = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
@@ -88,7 +91,7 @@ class PullQueue {
 
   private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
-    this.batchCount++;
+    this.fetchingBatchCount++;
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
@@ -142,7 +145,7 @@ class PullQueue {
       } else {
         this.consecutiveErrorCount = 0;
       }
-      this.batchCount--;
+      this.fetchingBatchCount--;
 
       if (!hasErrored) {
         // Continue to process the pull queue without delay.
@@ -183,6 +186,9 @@ class PullQueue {
   }
 
   add(item: PullQueueItem): void {
+    // Theoretically, this queue could contain duplicates.
+    // However pull() will check that a bucket really needs
+    // a request to avoid redundant fetches.
     this.priorityQueue.queue(item);
   }
 

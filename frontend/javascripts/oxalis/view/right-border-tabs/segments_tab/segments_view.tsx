@@ -1081,14 +1081,15 @@ class SegmentsView extends React.Component<Props, State> {
 
   getShowSegmentStatistics = (id: number): ItemType => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    // TODO change once statistics are available for nd-datasets
+    const hasAdditionalCoordinates = (this.props.flycam.additionalCoordinates?.length || 0) > 0;
     if (
       visibleSegmentationLayer == null ||
-      !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
       !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      this.props.flycam.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
+      hasAdditionalCoordinates
     ) {
-      //in this case there is a fallback layer
+      // In this case there is a fallback layer or an ND annotation.
       return null;
     }
     return {

@@ -109,6 +109,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1163,7 +1164,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         volumeTracing == null ||
         !hasNoFallbackLayer ||
         !volumeTracing.hasSegmentIndex ||
-        props.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
+        hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
         return [];
       } else {
@@ -1305,7 +1306,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     hasNoFallbackLayer &&
     volumeTracing?.hasSegmentIndex &&
     isHoveredSegmentOrMesh &&
-    props.additionalCoordinates == null; // TODO change once statistics are available for nd-datasets
+    !hasAdditionalCoordinates(props.additionalCoordinates); // TODO change once statistics are available for nd-datasets
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

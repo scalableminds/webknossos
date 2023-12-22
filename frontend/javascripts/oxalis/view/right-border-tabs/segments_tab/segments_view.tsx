@@ -49,6 +49,7 @@ import {
 import {
   getAdditionalCoordinatesAsString,
   getPosition,
+  hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
@@ -1081,13 +1082,12 @@ class SegmentsView extends React.Component<Props, State> {
 
   getShowSegmentStatistics = (id: number): ItemType => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    // TODO change once statistics are available for nd-datasets
-    const hasAdditionalCoordinates = (this.props.flycam.additionalCoordinates?.length || 0) > 0;
     if (
       visibleSegmentationLayer == null ||
       visibleSegmentationLayer.fallbackLayer != null ||
       !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      hasAdditionalCoordinates
+      // TODO change once statistics are available for nd-datasets
+      hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)
     ) {
       // In this case there is a fallback layer or an ND annotation.
       return null;

@@ -1154,7 +1154,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const hasNoFallbackLayer = visibleSegmentationLayer != null && !hasFallbackLayer(layer);
+  const hasNoFallbackLayer =
+    visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (

@@ -116,6 +116,7 @@ function ensureValidScaleOnInferredDataSource(
     // If one of the data sources is null, return the other.
     const potentialSource = savedDataSourceOnServer || inferredDataSource;
     if (potentialSource && "dataLayers" in potentialSource) {
+      // @ts-ignore scale does not exist?
       return potentialSource;
     } else {
       return null;

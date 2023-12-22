@@ -70,6 +70,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
   getResolutionInfo,
+  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -1153,10 +1154,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const hasNoFallbackLayer =
-    visibleSegmentationLayer != null &&
-    "fallbackLayer" in visibleSegmentationLayer &&
-    visibleSegmentationLayer.fallbackLayer == null;
+  const hasNoFallbackLayer = visibleSegmentationLayer != null && !hasFallbackLayer(layer);
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (

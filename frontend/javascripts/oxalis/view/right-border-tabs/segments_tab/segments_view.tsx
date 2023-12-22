@@ -45,6 +45,7 @@ import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
+  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -1517,9 +1518,7 @@ class SegmentsView extends React.Component<Props, State> {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
-      visibleSegmentationLayer != null &&
-      "fallbackLayer" in visibleSegmentationLayer &&
-      visibleSegmentationLayer.fallbackLayer == null;
+      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
     if (
       hasNoFallbackLayer &&
       this.props.hasVolumeTracing &&

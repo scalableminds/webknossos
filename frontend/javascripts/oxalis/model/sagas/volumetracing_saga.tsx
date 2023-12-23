@@ -70,6 +70,7 @@ import type {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  setSelectedSegmentsOrGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -95,7 +96,7 @@ import {
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import { Model, api } from "oxalis/singletons";
+import { Model, Store, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -782,6 +783,23 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 }
 
+export function* handleClickedSegment(): Saga<void> {
+  yield* takeEvery("CLICK_SEGMENT", updateClickedSegments)
+}
+
+function* updateClickedSegments(action: ClickSegmentAction): Saga<void>{
+  // if length of selected ids is 1, update
+  console.log("clicked segment ", action)
+  const {segmentId, layerName} = action;
+  const clickedSegmentId = segmentId;
+  if(layerName == null) return;
+  const selectedSegmentsOrGroup = yield* select(state => state.localSegmentationData[layerName].selectedIds)
+  const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
+  if(numberOfSelectedSegments < 2) {
+    yield* put(setSelectedSegmentsOrGroupsAction([clickedSegmentId], null, layerName))
+    }
+}
+
 export function* maintainHoveredSegmentId(): Saga<void> {
   yield* takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
@@ -881,6 +899,7 @@ export default [
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,
+  handleClickedSegment,
   maintainHoveredSegmentId,
   listenToMinCut,
   listenToQuickSelect,

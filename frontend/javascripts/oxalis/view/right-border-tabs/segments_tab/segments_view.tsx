@@ -79,6 +79,7 @@ import {
   deleteSegmentDataAction,
   setActiveCellAction,
   updateSegmentAction,
+  setSelectedSegmentsOrGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -173,9 +174,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     visibleSegmentationLayer != null
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
-
-  const selectedIds = visibleSegmentationLayer != null ? state.localSegmentationData[visibleSegmentationLayer.name].selectedIds : {segments: [], group: null};
-
+  
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
@@ -187,7 +186,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     hasVolumeTracing: state.tracing.volumes.length > 0,
     segments,
     segmentGroups,
-    selectedIds,
+    selectedIds: getOrInitializeSelectedSegmentsOrGroup(visibleSegmentationLayer, state),
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
@@ -210,6 +209,21 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
   };
 };
+
+const getOrInitializeSelectedSegmentsOrGroup = (visibleSegmentationLayer: APISegmentationLayer|null|undefined, state: OxalisState)=>{
+
+  const nothingSelectedObject = {segments: [], group: null};
+  if(visibleSegmentationLayer==null){
+    return nothingSelectedObject;
+  }
+  const selectedIds = state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
+  if(selectedIds == null){
+    Store.dispatch(setSelectedSegmentsOrGroupsAction(nothingSelectedObject.segments, nothingSelectedObject.group, visibleSegmentationLayer.name));
+    return nothingSelectedObject;
+  }
+  return selectedIds;
+
+}
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setHoveredSegmentId(segmentId: number | null | undefined) {
@@ -449,6 +463,10 @@ class SegmentsView extends React.Component<Props, State> {
     }
     const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    console.log("selectedIdsForCaseDistinction", selectedIdsForCaseDistinction)
+    console.log("selectedIdsForState", selectedIdsForState)
+    if(visibleSegmentationLayer==null) return;//TODO is this correct?
     if (
       selectedIdsForCaseDistinction.group != null &&
       selectedIdsForCaseDistinction.segments.length > 0
@@ -459,21 +477,21 @@ class SegmentsView extends React.Component<Props, State> {
           content: `You have ${selectedIdsForCaseDistinction.segments.length} selected segments. Do you really want to select this group?
         This will deselect all selected segments.`,
           onOk: () => {
-            this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
+            Store.dispatch(setSelectedSegmentsOrGroupsAction([], selectedIdsForState.group, visibleSegmentationLayer.name))
+            //this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
           },
           onCancel() {},
         });
       } else {
-        // if only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
-        // this behaviour is imitated from the skeleton tab.
-        this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
+        // If only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
+        // This behaviour is imitated from the skeleton tab.
+        const selectedIds = this.getSegmentOrGroupIdsForKeys([key]);
+        Store.dispatch(setSelectedSegmentsOrGroupsAction(selectedIds.segments, selectedIds.group, visibleSegmentationLayer.name))
+        //this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
       }
       return;
     }
-
-    this.setState({
-      selectedIds: selectedIdsForState,
-    });
+    Store.dispatch(setSelectedSegmentsOrGroupsAction(selectedIdsForState.segments, selectedIdsForState.group, visibleSegmentationLayer?.name));
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -481,7 +499,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (segments == null) {
       return { prevProps: nextProps };
     }
-    let updateStateObject;
+    let updateStateObject: Partial<State> | null = null;
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
     const rootGroup = {
       name: "Root",
@@ -518,12 +536,12 @@ class SegmentsView extends React.Component<Props, State> {
 
       const newSegmentIds = new Set(segments.map((segment) => segment.id));
       const newGroupIds = new Set(segmentGroups.map((group) => group.groupId));
-      const oldSelectedGroupId = prevState.selectedIds.group;
+      // const oldSelectedGroupId = prevState.selectedIds.group; TODO
       updateStateObject = {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        selectedIds: {
+/*         selectedIds: {
           // Ensure that the ids of previously selected segments are removed
           // if these segments don't exist anymore.
           segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
@@ -531,7 +549,7 @@ class SegmentsView extends React.Component<Props, State> {
             oldSelectedGroupId != null && newGroupIds.has(oldSelectedGroupId)
               ? oldSelectedGroupId
               : null,
-        },
+        }, */
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -683,9 +701,16 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onSelectSegment = (segment: Segment) => {
-    this.setState({
-      selectedIds: { segments: [segment.id], group: null },
-    });
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    if(visibleSegmentationLayer ==  null){
+      Toast.info(
+        <React.Fragment>
+          Cannot select segment, because there is no visible segmentation layer.
+        </React.Fragment>,
+      );
+      return;
+    }
+    Store.dispatch(setSelectedSegmentsOrGroupsAction([segment.id], null, visibleSegmentationLayer.name))
 
     if (!segment.somePosition) {
       Toast.info(
@@ -1191,7 +1216,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
-    return this.state.selectedIds != null
+    return this.props.selectedIds != null
       ? {
           key: "moveHere",
           onClick: () => {
@@ -1200,7 +1225,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.props.updateSegments(
-              this.state.selectedIds.segments,
+              this.props.selectedIds.segments,
               { groupId },
               this.props.visibleSegmentationLayer.name,
               true,
@@ -1209,7 +1234,7 @@ class SegmentsView extends React.Component<Props, State> {
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
-          label: `Move active ${pluralize("segment", this.state.selectedIds.segments.length)} here`,
+          label: `Move active ${pluralize("segment", this.props.selectedIds.segments.length)} here`,
         }
       : null;
   };
@@ -1292,9 +1317,8 @@ class SegmentsView extends React.Component<Props, State> {
       Store.dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name)),
     );
     // manually reset selected segments
-    this.setState({
-      selectedIds: { segments: [], group: null },
-    });
+
+    Store.dispatch(setSelectedSegmentsOrGroupsAction([], null, visibleSegmentationLayer.name));
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
@@ -1347,15 +1371,15 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.state.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
+    return this.props.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
   };
 
   getSelectedItemKeys = () => {
-    const mappedIdsToKeys = this.state.selectedIds.segments.map(
+    const mappedIdsToKeys = this.props.selectedIds.segments.map(
       (segmentId) => `segment-${segmentId}`,
     );
-    if (this.state.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(`group-${this.state.selectedIds.group}`);
+    if (this.props.selectedIds.group != null) {
+      return mappedIdsToKeys.concat(`group-${this.props.selectedIds.group}`);
     }
     return mappedIdsToKeys;
   };
@@ -1597,7 +1621,7 @@ class SegmentsView extends React.Component<Props, State> {
                     mapId={mapId}
                     segment={segment}
                     centeredSegmentId={centeredSegmentId}
-                    selectedSegmentIds={this.state.selectedIds.segments}
+                    selectedSegmentIds={this.props.selectedIds.segments}
                     activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}

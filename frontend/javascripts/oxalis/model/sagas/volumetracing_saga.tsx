@@ -787,7 +787,7 @@ export function* handleClickedSegment(): Saga<void> {
   yield* takeEvery("CLICK_SEGMENT", updateClickedSegments)
 }
 
-function* updateClickedSegments(action: ClickSegmentAction): Saga<void>{
+export function* updateClickedSegments(action: ClickSegmentAction): Saga<void>{
   // if length of selected ids is 1, update
   console.log("clicked segment ", action)
   const {segmentId, layerName} = action;

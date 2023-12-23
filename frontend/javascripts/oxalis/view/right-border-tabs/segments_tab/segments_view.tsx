@@ -424,6 +424,14 @@ class SegmentsView extends React.Component<Props, State> {
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
       );
     }
+    if (this.tree?.current == null) {
+      return;
+    }
+    if(this.props.selectedIds.segments.length === 1){
+      const selectedId = this.props.selectedIds.segments[0];
+      this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      console.log("scroll to", selectedId) // This is working for newly added segments, but were not scrolling yet in that case
+    }
   }
 
   componentWillUnmount() {

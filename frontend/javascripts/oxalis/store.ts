@@ -570,7 +570,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string, //layerName
     {
-      //for meshes, the string represents additional coordinates, number is the segment ID.
+      // For meshes, the string represents additional coordinates, number is the segment ID.
       // The undefined types were added to enforce null checks when using this structure.
       readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;

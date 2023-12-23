@@ -23,7 +23,12 @@ class AsyncRedirect extends React.PureComponent<Props> {
     if (newPath.startsWith(location.origin)) {
       // The link is absolute which react-router does not support
       // apparently. See https://stackoverflow.com/questions/42914666/react-router-external-link
-      location.replace(newPath);
+      if (this.props.pushToHistory) {
+        location.assign(newPath);
+      } else {
+        location.replace(newPath);
+      }
+      return;
     }
 
     if (this.props.pushToHistory) {

@@ -182,6 +182,7 @@ function RadioButtonWithTooltip({
   disabledTitle,
   disabled,
   onClick,
+  onOpenChange,
   ...props
 }: {
   title: string | React.ReactNode;
@@ -194,10 +195,9 @@ function RadioButtonWithTooltip({
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <Tooltip title={disabled ? disabledTitle : title} onOpenChange={props.onOpenChange}>
+    <Tooltip title={disabled ? disabledTitle : title} onOpenChange={onOpenChange}>
       <Radio.Button
         disabled={disabled}
-        {...props}
         onClick={(evt) => {
           if (document.activeElement) {
             (document.activeElement as HTMLElement).blur();
@@ -206,6 +206,7 @@ function RadioButtonWithTooltip({
             onClick(evt);
           }
         }}
+        {...props}
       />
     </Tooltip>
   );
@@ -215,6 +216,7 @@ function ToolRadioButton({
   name,
   description,
   disabledExplanation,
+  onOpenChange,
   ...props
 }: {
   name: string;
@@ -231,6 +233,7 @@ function ToolRadioButton({
     <RadioButtonWithTooltip
       title={`${name} – ${description}`}
       disabledTitle={`${name} – ${disabledExplanation}`}
+      onOpenChange={onOpenChange}
       {...props}
     />
   );

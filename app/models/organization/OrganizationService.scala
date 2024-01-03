@@ -132,7 +132,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
     for {
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ = logger.info(s"found ${datastores.length} datastores!")
       _ <- Future.sequence(datastores.map(sendRPCToDataStore))
     } yield ()
   }

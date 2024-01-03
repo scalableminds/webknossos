@@ -128,7 +128,7 @@ For manual conversion, we provide the following software tools and libraries:
 
 ### Composing Datasets
 New datasets can also be composed from existing ones.
-This feature allows to combine layers of already added datasets together to create a new dataset.
+This feature allows to combine layers from previously added datasets to create a new dataset.
 During compositions, transforms can optionally be defined in case the datasets are not in the same coordinate system.
 There are three different ways to compose a new dataset:
 

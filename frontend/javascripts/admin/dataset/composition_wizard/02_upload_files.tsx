@@ -83,7 +83,7 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
           fileList={fileList}
           onChange={handleChange}
           beforeUpload={() => false}
-          maxCount={2}
+          maxCount={wizardContext.composeMode === "BIG_WARP" ? 1 : 2}
           multiple
         >
           <p className="ant-upload-drag-icon">

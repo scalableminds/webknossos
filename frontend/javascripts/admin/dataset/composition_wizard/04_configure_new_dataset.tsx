@@ -85,7 +85,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const handleSubmit = async () => {
     if (activeUser == null) {
-      throw new Error("Cannot upload dataset without being logged in.");
+      throw new Error("Cannot create dataset without being logged in.");
     }
     const layers = form.getFieldValue(["layers"]);
 
@@ -126,7 +126,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             <AllowedTeamsFormItem
               isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
               selectedTeams={selectedTeams}
-              setSelectedTeams={(selectedTeams) => setSelectedTeams(selectedTeams)}
+              setSelectedTeams={setSelectedTeams}
               formRef={formRef}
             />
           </Col>
@@ -135,7 +135,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         <FormItemWithInfo
           name="targetFolderId"
           label="Target Folder"
-          info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+          info="The folder in which the dataset will be created. The dataset can be moved after creation. Note that teams that have access to the specified folder will be able to see the created dataset."
           valuePropName="folderId"
           rules={[
             {
@@ -188,7 +188,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
           <Button onClick={onPrev}>Back</Button>
 
           <Button type="primary" htmlType="submit" loading={isLoading} style={{ marginLeft: 8 }}>
-            Upload
+            Create Dataset
           </Button>
         </FormItem>
       </Form>

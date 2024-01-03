@@ -10,6 +10,7 @@ import { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import React from "react";
 import { tryToFetchDatasetsByName, WizardComponentProps, WizardContext, FileList } from "./common";
+import ErrorHandling from "libs/error_handling";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;
 
@@ -49,6 +50,7 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
         Toast.error(
           "An error occurred while importing the uploaded files. See the Browser's console for more details.",
         );
+        ErrorHandling.notify(exception as Error);
         console.error(exception);
       }
     }

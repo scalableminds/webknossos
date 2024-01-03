@@ -294,7 +294,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-      _ <- bool2Fox(teamIdsValidated.forall(teamId => userTeams.map(_._id).contains(teamId))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- bool2Fox(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
       _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIdsValidated)
     } yield ()

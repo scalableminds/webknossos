@@ -50,6 +50,12 @@ export default function AsyncSelect<
       notFoundContent={fetching ? <Spin size="small" /> : null}
       {...props}
       options={options}
+      // Clear suggestions after the user selected one to avoid confusion.
+      // Otherwise, the user could click into the select field and the old
+      // suggestions would be shown (from the typed string that is now gone).
+      // The user might think that these are all available entries. However,
+      // inputting a new string will show new suggestions.
+      onSelect={() => setOptions([])}
     />
   );
 }

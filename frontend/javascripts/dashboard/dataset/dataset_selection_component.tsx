@@ -28,7 +28,7 @@ export default function DatasetSelectionComponent({
     <AsyncSelect
       mode="multiple"
       value={datasetValues}
-      placeholder="Select dataset"
+      placeholder="Type to search and select dataset(s)..."
       fetchOptions={fetchDatasets}
       onChange={(newValue) => {
         setDatasetValues(newValue as DatasetSelectionValue[]);

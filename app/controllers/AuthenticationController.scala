@@ -619,7 +619,7 @@ class AuthenticationController @Inject()(
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))

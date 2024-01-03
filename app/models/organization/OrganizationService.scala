@@ -3,6 +3,7 @@ package models.organization
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 
 import javax.inject.Inject
@@ -22,12 +23,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
-                                    userService: UserService,
                                     rpc: RPC,
                                     initialDataService: InitialDataService,
                                     conf: WkConf,
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
 
@@ -116,7 +117,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- initialDataService.insertLocalDataStoreIfEnabled()
     } yield organization
 
-  def createOrganizationFolder(organizationName: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationName: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .addQueryString("token" -> dataStoreToken, "organizationName" -> organizationName)
@@ -125,6 +126,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
     for {
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      _ = logger.info(s"found ${datastores.length} datastores!")
       _ <- Future.sequence(datastores.map(sendRPCToDataStore))
     } yield ()
   }

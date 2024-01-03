@@ -372,9 +372,10 @@ class DataSourceController @Inject()(
     implicit request =>
       accessTokenService
         .validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName), token) {
-          val newOrganizationFolder = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
-          newOrganizationFolder.mkdirs()
-          if (newOrganizationFolder.isDirectory)
+          val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
+          logger.info(s"creating organization dir at ${newOrganizationDirectory}")
+          newOrganizationDirectory.mkdirs()
+          if (newOrganizationDirectory.isDirectory)
             Ok
           else
             BadRequest

@@ -4,6 +4,7 @@ import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
@@ -17,7 +18,7 @@ import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -50,6 +51,8 @@ class InitialDataService @Inject()(userService: UserService,
                                    publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
                                    storeModules: StoreModules,
+                                   organizationService: OrganizationService,
+                                   bearerTokenAuthenticatorService: BearerTokenAuthenticatorService,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -150,6 +153,7 @@ Samplecountry
       _ <- assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
+      _ <- createOrganizationDirectory()
       _ <- insertTeams()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
       _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
@@ -325,4 +329,9 @@ Samplecountry
         }
       }
     } else Fox.successful(())
+
+  private def createOrganizationDirectory(): Fox[Unit] = {
+    logger.info("calling createOrganizationDirectory...")
+    organizationService.createOrganizationDirectory(defaultOrganization.name, RpcTokenHolder.webknossosToken) ?~> "organization.folderCreation.failed"
+  }
 }

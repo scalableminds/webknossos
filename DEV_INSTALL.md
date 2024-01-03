@@ -130,7 +130,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 First, install all frontend dependencies via
 
 ```bash
-yarn install
+yarn install --ignore-engines
 ```
 
 Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing WEBKNOSSOS, you can safely ignore this error.

@@ -66,6 +66,7 @@ class AuthenticationController @Inject()(
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
+    initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -601,6 +602,7 @@ class AuthenticationController @Inject()(
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
+                    _ <- initialDataService.insertLocalDataStoreIfEnabled()
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"

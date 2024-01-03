@@ -4,7 +4,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import controllers.InitialDataService
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
@@ -24,7 +23,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
                                     rpc: RPC,
-                                    initialDataService: InitialDataService,
                                     conf: WkConf,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -77,13 +75,22 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
     val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = requestingUser.toFox.flatMap(user =>
       multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
 
-    Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
+    // If at least one of the conditions is fulfilled, success is returned.
+    Fox
+      .sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser))
+      .map(_.headOption)
+      .toFox
   }
+
+  def assertNoOrganizationsPresent: Fox[Unit] =
+    for {
+      organizations <- organizationDAO.findAll(GlobalAccessContext)
+      _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
+    } yield ()
 
   def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
     for {
@@ -114,7 +121,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
-      _ <- initialDataService.insertLocalDataStoreIfEnabled()
     } yield organization
 
   def createOrganizationDirectory(organizationName: String, dataStoreToken: String): Fox[Unit] = {

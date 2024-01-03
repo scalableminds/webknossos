@@ -148,7 +148,7 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
-      _ <- assertNoOrganizationsPresent
+      _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
       _ <- createOrganizationDirectory()
@@ -164,12 +164,6 @@ Samplecountry
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
       _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
-    } yield ()
-
-  def assertNoOrganizationsPresent: Fox[Unit] =
-    for {
-      organizations <- organizationDAO.findAll
-      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =

@@ -4,7 +4,6 @@ import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
@@ -52,7 +51,6 @@ class InitialDataService @Inject()(userService: UserService,
                                    organizationDAO: OrganizationDAO,
                                    storeModules: StoreModules,
                                    organizationService: OrganizationService,
-                                   bearerTokenAuthenticatorService: BearerTokenAuthenticatorService,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {

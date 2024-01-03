@@ -10,7 +10,7 @@ import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
+import models.user.{Invite, MultiUserDAO, User, UserDAO}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 

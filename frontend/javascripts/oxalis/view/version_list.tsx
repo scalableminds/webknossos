@@ -236,10 +236,10 @@ function VersionList(props: Props) {
   });
   const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings = _.flattenDepth(
-    Object.entries(groupedAndChunkedVersions),
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
+    Object.entries(groupedAndChunkedVersions) as any,
     2,
-  ) as Array<string | APIUpdateActionBatch[]>;
+  );
 
   useEffect(() => {
     // The initially loaded page could be quite short (e.g., if

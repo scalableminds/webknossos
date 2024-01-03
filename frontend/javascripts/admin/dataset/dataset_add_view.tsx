@@ -152,7 +152,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
       label: (
         <span>
           <CopyOutlined />
-          Compose from existing datasets
+          Compose From Existing Datasets
         </span>
       ),
       key: DatasetAddType.COMPOSE,

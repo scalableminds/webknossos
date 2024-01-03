@@ -38,5 +38,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that the Segment Statistics feature was not available in the context menu of segment groups and in the context menu of the data viewports. [#7510](https://github.com/scalableminds/webknossos/pull/7510)
 
 ### Removed
+- Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)
 
 ### Breaking Changes

@@ -68,7 +68,8 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
           Please upload two NML files that contain landmarks that you created with WEBKNOSSOS. Note
           that the dataset that belongs to the first NML will be transformed to the dataset that
           belongs to the second NML file. The skeletons in the NML files should have exactly one
-          node per tree.
+          node per tree. The n-th tree of the first NML is aligned with the n-th tree of the second
+          NML.
         </p>
       )}
 

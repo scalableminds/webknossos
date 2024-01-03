@@ -58,11 +58,20 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
 
   return (
     <div>
-      <p>
-        {wizardContext.composeMode === "BIG_WARP"
-          ? "Please upload one CSV file that was exported by BigWarp."
-          : "Please upload two NML files that contain landmarks that you created with WEBKNOSSOS."}
-      </p>
+      {wizardContext.composeMode === "BIG_WARP" ? (
+        <p>
+          Please upload one CSV file that was exported by BigWarp. Note that the first dataset
+          referenced by the CSV file will be transformed to the second referenced dataset.
+        </p>
+      ) : (
+        <p>
+          Please upload two NML files that contain landmarks that you created with WEBKNOSSOS. Note
+          that the dataset that belongs to the first NML will be transformed to the dataset that
+          belongs to the second NML file. The skeletons in the NML files should have exactly one
+          node per tree.
+        </p>
+      )}
+
       <div>
         <p>
           Landmark files ({wizardContext.composeMode === "BIG_WARP" ? "1 CSV file" : "2 NML files"}

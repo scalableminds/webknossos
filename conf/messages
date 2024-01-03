@@ -348,3 +348,5 @@ segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOS
 segmentAnything.noUri=No Uri for SAM server configured.
 segmentAnything.getData.failed=Failed to get image data to send to SAM server.
 segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.
+
+shortLink.notFound=No shortlink with this key could be found

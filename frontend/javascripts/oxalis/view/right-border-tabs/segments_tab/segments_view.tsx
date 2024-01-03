@@ -45,10 +45,12 @@ import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
+  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
   getPosition,
+  hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
@@ -1083,12 +1085,12 @@ class SegmentsView extends React.Component<Props, State> {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (
       visibleSegmentationLayer == null ||
-      !("fallbackLayer" in visibleSegmentationLayer) ||
       visibleSegmentationLayer.fallbackLayer != null ||
       !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      this.props.flycam.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
+      // TODO change once statistics are available for nd-datasets
+      hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)
     ) {
-      //in this case there is a fallback layer
+      // In this case there is a fallback layer or an ND annotation.
       return null;
     }
     return {
@@ -1516,9 +1518,7 @@ class SegmentsView extends React.Component<Props, State> {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
-      visibleSegmentationLayer != null &&
-      "fallbackLayer" in visibleSegmentationLayer &&
-      visibleSegmentationLayer.fallbackLayer == null;
+      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
     if (
       hasNoFallbackLayer &&
       this.props.hasVolumeTracing &&

@@ -61,7 +61,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: @error-color !important;
+    background-color: var(--ant-color-error-bg) !important;
   }
 }
 
@@ -88,13 +88,13 @@ body {
     }
   }
   .ant-avatar {
-    border: 1px solid @blue-zircon;
+    border: 1px solid var(--color-blue-zircon);
     background: transparent;
     transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
     cursor: pointer;
     &:hover {
-      background-color: @blue-zircon;
-      color: @black;
+      background-color: var(--color-blue-zircon);
+      color: var(--color-black);
     }
   }
   .switch-organization-icon {
@@ -106,7 +106,7 @@ body {
     height: 12px;
     line-height: 12px;
     font-size: 12px;
-    color: @blue-zircon;
+    color: var(--color-blue-zircon);
   }
 }
 
@@ -246,7 +246,7 @@ i.without-icon-margin,
   left: 0;
   width: 100%;
   height: 100%;
-  background: @body-background;
+  background: var(--ant-color-bg-base);
   z-index: 300;
 }
 
@@ -274,7 +274,7 @@ i.without-icon-margin,
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: @border-color-base;
+  background-color: var(--ant-color-border);
 }
 .brain-loading-bar:before {
   display: block;
@@ -283,7 +283,7 @@ i.without-icon-margin,
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: @text-color-secondary;
+  background-color: var(--ant-color-text)-secondary;
   animation: loading 1.5s ease infinite;
 }
 
@@ -328,7 +328,7 @@ i.without-icon-margin,
   bottom: 0;
   left: 0;
   padding: 2.5em 0;
-  background: @modal-mask-bg;
+  background: var(--ant-color-bg-mask);
   text-align: center;
   z-index: 1000;
 }
@@ -337,7 +337,7 @@ i.without-icon-margin,
   top: 100px;
   width: 400px;
   height: 250px;
-  background: @modal-header-bg;
+  background: var(--ant-modal-content-bg);
   border-radius: 4px;
   margin: 0 auto;
 }
@@ -349,23 +349,23 @@ i.without-icon-margin,
   padding: 20px;
   border-width: 2px;
   border-radius: 2px;
-  border-color: fade(@text-color-secondary, 30%);
+  border-color: var(--ant-color-border-secondary);
   border-style: dashed;
-  background-color: @component-background;
-  color: @text-color;
+  background-color: var(--ant-color-bg-container);
+  color: var(--ant-color-text);
   font-size: 16px;
   outline: none;
   transition: border 0.24s ease-in-out;
   cursor: pointer;
 
   &.dataset-upload-dropzone-active {
-    border-color: @primary-color;
+    border-color: var(--ant-color-border);
   }
   &.dataset-upload-dropzone-accept {
-    border-color: @success-color;
+    border-color: var(--ant-color-success-border);
   }
   &.dataset-upload-dropzone-reject {
-    border-color: @error-color;
+    border-color: var(--ant-color-error-border);
   }
 }
 
@@ -376,13 +376,13 @@ i.without-icon-margin,
 .crosslink-box {
   padding: 20px;
   margin: 20px;
-  background: @component-background;
-  box-shadow: @box-shadow-base;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
   border-radius: 3px;
 }
 
 .webknossos-welcome-toast {
-  background-color: @primary-color;
+  background-color: var(--ant-color-primary);
   color: white;
 
   .logo {
@@ -451,7 +451,7 @@ i.without-icon-margin,
   min-width: 1300px;
 
   .tasks-header {
-    border-bottom: 1px solid @border-color-base;
+    border-bottom: 1px solid var(--ant-color-border);
   }
 
   .task-panel {
@@ -515,7 +515,7 @@ i.without-icon-margin,
 
     .log-content {
       position: relative;
-      background-color: @component-background;
+      background-color: var(--ant-color-bg-container);
       width: 100%;
       height: 500px;
       overflow-y: auto;
@@ -548,10 +548,10 @@ i.without-icon-margin,
         font-size: @log-font-size;
         line-height: @log-line-height;
         overflow-wrap: break-word;
-        color: @text-color;
+        color: var(--ant-color-text);
       }
       &:hover {
-        background-color: @dropdown-selected-bg;
+        background-color: var(--ant-control-item-bg-hover);
       }
     }
 
@@ -562,7 +562,7 @@ i.without-icon-margin,
       width: 100%;
       height: 100%;
       z-index: 1001;
-      background: @body-background;
+      background: var(--ant-color-bg-base);
       padding-top: 8px;
 
       .log-tab-header {
@@ -577,7 +577,7 @@ i.without-icon-margin,
   }
   .react-flow {
     .react-flow__minimap {
-      background-color: @component-background;
+      background-color: var(--ant-color-bg-container);
     }
 
     .controls {
@@ -609,11 +609,11 @@ i.without-icon-margin,
 }
 
 .valid-drop-target {
-  background-color: @blue-4;
+  background-color: var(--ant-blue-4);
 }
 
 .highlight-folder-sidebar {
-  background-color: @table-selected-row-hover-bg;
+  background-color: var(--ant-table-row-selected-hover-bg);
 }
 
 .sidebar-label {
@@ -627,7 +627,7 @@ i.without-icon-margin,
   & {
     height: 100%;
     min-height: calc(100vh - var(--navbar-height));
-    background: @background-blue-neurons;
+    background: var(--background-blue-neurons);
   }
 
   .login-content {
@@ -636,7 +636,7 @@ i.without-icon-margin,
     padding: 80px;
 
     h3 {
-      color: @black; // always enforce dark text color to prevent dark mode bugs
+      color: var(--color-black); // always enforce dark text color to prevent dark mode bugs
     }
 
     @media @smartphones {
@@ -659,7 +659,7 @@ i.without-icon-margin,
     }
 
     .ant-checkbox + span {
-      color: @black;
+      color: var(--color-black);
     }
   }
 }

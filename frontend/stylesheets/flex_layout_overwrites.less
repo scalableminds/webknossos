@@ -7,11 +7,11 @@
 }
 .flexlayout__tab_border,
 .flexlayout__tabset-selected {
-  background-color: @body-background !important;
+  background-color: var(--ant-color-bg-base) !important;
 }
 
 .flexlayout__tabset_tabbar_outer_top {
-  border-color: @border-color-base;
+  border-color: var(--ant-color-border);
 }
 
 .flexlayout__border_left {
@@ -27,14 +27,14 @@
 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
-  background-color: rgba(@text-color, 0.4);
+  background-color: rgba(var(--ant-color-text), 0.4);
 }
 .flexlayout__splitter {
   z-index: 21;
-  background-color: rgba(@text-color, 0.1);
+  background-color: rgba(var(--ant-color-text), 0.1);
   &::before {
     content: "";
-    background-color: rgba(@text-color, 0);
+    background-color: rgba(var(--ant-color-text), 0);
   }
 }
 
@@ -79,26 +79,26 @@
   &:hover {
     cursor: move;
   }
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
 
   .flexlayout__tab_button_content {
-    background-color: @body-background;
-    color: rgba(@text-color, 0.65);
+    background-color: var(--ant-color-bg-base);
+    color: rgba(var(--ant-color-text), 0.65);
     border-bottom: 1px solid transparent;
   }
   &.flexlayout__tab_button--selected {
-    background-color: @body-background;
+    background-color: var(--ant-color-bg-base);
     .flexlayout__tab_button_content {
-      background-color: @body-background;
-      color: @link-color;
+      background-color: var(--ant-color-bg-base);
+      color: var(--antd);
     }
   }
   &:hover {
-    background-color: @body-background;
+    background-color: var(--ant-color-bg-base);
     .flexlayout__tab_button_content {
-      background-color: @body-background;
-      color: @link-color;
-      border-bottom: 1px solid @link-color;
+      background-color: var(--ant-color-bg-base);
+      color: var(--ant-color-link);
+      border-bottom: 1px solid var(--ant-color-link);
     }
   }
 }

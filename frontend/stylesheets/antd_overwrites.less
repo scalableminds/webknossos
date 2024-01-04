@@ -23,7 +23,7 @@ p {
 .ant-layout-sider,
 .ant-collapse-borderless,
 .ant-layout {
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
 }
 
 .ant-layout-header {
@@ -267,10 +267,10 @@ label.ant-checkbox-wrapper {
   line-height: 0;
 }
 
-.ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
-.ant-list-empty-text {
-  color: fade(@text-color, 50%);
-}
+// .ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
+// .ant-list-empty-text {
+//   color: fade(var(--ant-color-text), 50%);
+// }
 
 .action-bar {
   // UI for additional coordinates should always be in dark mode

@@ -55,7 +55,7 @@
 .rst__row.group-type,
 .rst__row.tree-type {
   .rst__moveHandle:hover:before {
-    color: @text-color;
+    color: var(--ant-color-text);
     content: "\f0b2";
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
@@ -65,7 +65,7 @@
     top: 2px;
     // Hide the circle/group icon by covering it
     // with a opaque background
-    background-color: @body-background;
+    background-color: var(--ant-color-bg-base);
     padding: 0 1px;
   }
 }
@@ -77,15 +77,15 @@
 // Highlight the row when hovering and show the group settings icon for groups
 .rst__rowLabel {
   border-radius: 2px;
-  color: @text-color;
+  color: var(--ant-color-text);
   height: 24px;
   line-height: 24px;
   .group-actions-icon {
     display: none;
   }
   &:hover {
-    background-color: @blue-1;
-    color: @text-color;
+    background-color: var(--ant-blue-1);
+    color: var(--ant-color-text);
     cursor: pointer;
     .group-actions-icon {
       display: inline-block;
@@ -96,7 +96,7 @@
 .rst__rowSearchMatch {
   outline: none;
   .rst__rowLabel {
-    background-color: @blue-3;
+    background-color: var(--ant-blue-3);
   }
 }
 
@@ -104,7 +104,7 @@
 .rst__collapseButton,
 .rst__expandButton {
   background: none;
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
   -webkit-box-shadow: none;
   box-shadow: none;
   &:before {
@@ -141,6 +141,6 @@
 .rst__lineChildren {
   &:before,
   &:after {
-    background-color: @border-color-base;
+    background-color: var(--ant-color-border);
   }
 }

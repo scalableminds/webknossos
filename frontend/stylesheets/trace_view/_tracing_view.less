@@ -31,13 +31,13 @@
   height: 100%;
 
   &.PLANE_XY {
-    border-color: @xyRed;
+    border-color: var(--color-xy-viewport);
   }
   &.PLANE_YZ {
-    border-color: @yzBlue;
+    border-color: var(--color-yz-viewport);
   }
   &.PLANE_XZ {
-    border-color: @xzGreen;
+    border-color: var(--color-xz-viewport);
   }
   &.TDView {
     border-color: white;
@@ -72,13 +72,13 @@
       margin-right: 5px;
     }
     &:nth-child(2) .colored-dot {
-      background-color: @xyRed;
+      background-color: var(--color-xy-viewport);
     }
     &:nth-child(3) .colored-dot {
-      background-color: @yzBlue;
+      background-color: var(--color-yz-viewport);
     }
     &:nth-child(4) .colored-dot {
-      background-color: @xzGreen;
+      background-color: var(--color-xz-viewport);
     }
   }
 }
@@ -136,9 +136,9 @@
 .node-context-menu {
   z-index: 1000;
   border-radius: 6px;
-  color: @text-color;
-  background: @component-background;
-  box-shadow: @box-shadow-base;
+  color: var(--ant-color-text);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
 
   .node-context-menu-item {
     clear: both;
@@ -199,8 +199,8 @@
 }
 
 #version-restore-sider {
-  box-shadow: @box-shadow-base;
-  border-left: 1px solid @border-color-base;
+  box-shadow: var(--ant-box-shadow);
+  border-left: 1px solid var(--ant-color-border);
   padding-top: 15px;
   position: fixed;
   right: 0;
@@ -215,21 +215,21 @@
 
   .version-entry-header {
     .ant-avatar {
-      color: @text-color;
+      color: var(--ant-color-text);
       background-color: transparent;
     }
   }
   .version-entry {
     padding: 3px;
     &:hover:not(.active-version-entry) {
-      background-color: @blue-1;
+      background-color: var(--ant-blue-1);
     }
   }
   .version-entry-indented {
     padding-left: 40px;
   }
   .active-version-entry {
-    background-color: @blue-2;
+    background-color: var(--ant-blue-2);
   }
 
   .close-button > i {
@@ -249,7 +249,7 @@
   vertical-align: middle;
   line-height: 24px;
   font-weight: bold;
-  color: @primary-color;
+  color: var(--ant-color-primary);
 }
 
 .keyboard-key-icon-small {
@@ -331,8 +331,8 @@ img.keyboard-mouse-icon:first-child {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
-  @primary-border: @primary-color;
-  @hover-border: @blue-zircon;
+  @primary-border: var(--ant-color-primary);
+  @hover-border: var(--color-blue-zircon);
 
   background-color: @layout-header-background;
   color: rgba(255, 255, 255, 0.67);
@@ -361,106 +361,106 @@ img.keyboard-mouse-icon:first-child {
     border-left: 1px #666879 solid;
   }
 
-  .ant-select-arrow,
-  .ant-badge-dot {
-    // Fix
-    //   - arrow in select-box
-    //   - dot on create-cell button
-    // which disappears on hover otherwise
-    z-index: 1;
-  }
+  // .ant-select-arrow,
+  // .ant-badge-dot {
+  //   // Fix
+  //   //   - arrow in select-box
+  //   //   - dot on create-cell button
+  //   // which disappears on hover otherwise
+  //   z-index: 1;
+  // }
 
-  .ant-btn,
-  .ant-input,
-  .ant-input-number,
-  .ant-radio-button-wrapper,
-  .ant-select > .ant-select-selector {
-    background-color: @dark-bg;
-    color: @dark-fg !important;
-    border-color: @dark-border;
+  // .ant-btn,
+  // .ant-input,
+  // .ant-input-number,
+  // .ant-radio-button-wrapper,
+  // .ant-select > .ant-select-selector {
+  //   background-color: @dark-bg;
+  //   color: @dark-fg !important;
+  //   border-color: @dark-border;
 
-    &:hover {
-      border-color: @hover-border !important;
-      z-index: 1 !important;
-    }
+  //   &:hover {
+  //     border-color: @hover-border !important;
+  //     z-index: 1 !important;
+  //   }
 
-    &:not(:first-child):hover::before {
-      background-color: @hover-border !important;
-    }
+  //   &:not(:first-child):hover::before {
+  //     background-color: @hover-border !important;
+  //   }
 
-    &.ant-btn-disabled,
-    &.ant-input-disabled,
-    &.ant-input-number-disabled,
-    &.ant-radio-button-wrapper-disabled,
-    &.ant-select-selector-disabled {
-      color: fade(@dark-fg, 50%);
-      border-color: @dark-border !important;
+  //   &.ant-btn-disabled,
+  //   &.ant-input-disabled,
+  //   &.ant-input-number-disabled,
+  //   &.ant-radio-button-wrapper-disabled,
+  //   &.ant-select-selector-disabled {
+  //     color: fade(@dark-fg, 50%);
+  //     border-color: @dark-border !important;
 
-      &:hover::before {
-        background-color: @dark-border !important;
-      }
-    }
-  }
+  //     &:hover::before {
+  //       background-color: @dark-border !important;
+  //     }
+  //   }
+  // }
 
-  .ant-btn[disabled],
-  .ant-btn[disabled]:hover {
-    color: fade(@dark-fg, 50%) !important;
-    border-color: @dark-border !important;
-    background-color: @dark-bg !important;
-  }
+  // .ant-btn[disabled],
+  // .ant-btn[disabled]:hover {
+  //   color: fade(@dark-fg, 50%) !important;
+  //   border-color: @dark-border !important;
+  //   background-color: @dark-bg !important;
+  // }
 
-  .ant-select-arrow {
-    color: @dark-fg;
-  }
+  // .ant-select-arrow {
+  //   color: @dark-fg;
+  // }
 
-  .ant-btn-primary {
-    background-color: @primary-color !important;
-  }
+  // .ant-btn-primary {
+  //   background-color: var(--ant-color-primary) !important;
+  // }
 
-  // Radio button
-  .ant-radio-button-wrapper:first-child {
-    border-left: 1px solid @dark-border;
-    &:hover {
-      border-left: 1px solid @hover-border;
-    }
-  }
+  // // Radio button
+  // .ant-radio-button-wrapper:first-child {
+  //   border-left: 1px solid @dark-border;
+  //   &:hover {
+  //     border-left: 1px solid @hover-border;
+  //   }
+  // }
 
-  .ant-radio-button-wrapper-checked,
-  .ant-radio-button-wrapper-checked:first-child {
-    border-color: @primary-border;
-    color: @primary-border;
+  // .ant-radio-button-wrapper-checked,
+  // .ant-radio-button-wrapper-checked:first-child {
+  //   border-color: @primary-border;
+  //   color: @primary-border;
 
-    &::before {
-      background-color: @primary-border !important;
-    }
-  }
+  //   &::before {
+  //     background-color: @primary-border !important;
+  //   }
+  // }
 
-  .ant-radio-button-wrapper:not(:first-child)::before {
-    background-color: @dark-border;
-  }
+  // .ant-radio-button-wrapper:not(:first-child)::before {
+  //   background-color: @dark-border;
+  // }
 
-  .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
-    border-right-color: @primary-border;
-  }
+  // .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
+  //   border-right-color: @primary-border;
+  // }
 
-  // Primary button in button group
-  .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
-    border-right-color: @dark-border;
-    border-left-color: @dark-border;
-  }
+  // // Primary button in button group
+  // .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
+  //   border-right-color: @dark-border;
+  //   border-left-color: @dark-border;
+  // }
 
-  .ant-btn-danger {
-    background: @error-color;
+  // .ant-btn-danger {
+  //   background: var(--ant-color-error-bg);
 
-    &:hover {
-      background: @error-color;
-      color: white;
-    }
-  }
+  //   &:hover {
+  //     background: var(--ant-color-error-bg);
+  //     color: white;
+  //   }
+  // }
 
   // Settings icon
   .highlight-togglable-button.ant-btn {
-    background-color: @primary-color !important;
+    background-color: var(--ant-color-primary) !important;
     &:not(:hover) {
       border-color: @primary-border !important;
     }
@@ -492,7 +492,7 @@ img.keyboard-mouse-icon:first-child {
   // on mobile does not work or the icon bleeds some white background
   // into the top navbar.
   z-index: 999;
-  color: @text-color-secondary;
+  color: var(--ant-color-text)-secondary;
   i {
     font-size: 15px !important;
     margin: 0;

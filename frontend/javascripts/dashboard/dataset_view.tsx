@@ -376,7 +376,7 @@ function GlobalSearchHeader({
       <div style={{ float: "right" }}>
         <Select
           options={SEARCH_OPTIONS}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {
               setActiveFolderId(null);

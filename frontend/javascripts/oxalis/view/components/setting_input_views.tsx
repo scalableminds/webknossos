@@ -661,7 +661,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
               defaultValue={value.toString()}
               size="small"
-              dropdownMatchSelectWidth={false}
+              popupMatchSelectWidth={false}
               options={this.props.options}
               disabled={this.props.disabled}
             />

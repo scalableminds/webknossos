@@ -1,5 +1,5 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { Modal, Input, Button, Row, Col, Dropdown } from "antd";
+import { Modal, Input, Button, Row, Col, Dropdown, Space } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
@@ -68,7 +68,7 @@ function _ShareViewDatasetModalView(props: Props) {
             Zarr Link
           </Col>
           <Col span={18}>
-            <Input.Group compact>
+            <Space.Compact>
               <Input
                 style={{
                   width: "85%",
@@ -86,7 +86,7 @@ function _ShareViewDatasetModalView(props: Props) {
                   Copy
                 </Button>
               </Dropdown>
-            </Input.Group>
+            </Space.Compact>
             <div
               style={{
                 marginBottom: 12,

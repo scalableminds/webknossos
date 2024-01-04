@@ -12,6 +12,7 @@ import {
   Tooltip,
   Alert,
   Select,
+  Space,
 } from "antd";
 import {
   LoadingOutlined,
@@ -211,7 +212,7 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Input.Group compact style={{ display: "flex" }}>
+    <Space.Compact style={{ display: "flex" }}>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -220,7 +221,7 @@ function DatasetView(props: Props) {
           </Badge>
         </Button>
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   ) : (
     searchBox
   );

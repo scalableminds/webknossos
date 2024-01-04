@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse } from "antd";
+import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
 import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -123,7 +123,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
           </span>
         }
       >
-        <Input.Group compact>
+        <Space.Compact>
           <Input
             value={getSharingLink()}
             onClick={handleSelectCode}
@@ -161,7 +161,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
               </AsyncButton>
             </Tooltip>
           )}
-        </Input.Group>
+        </Space.Compact>
       </FormItemWithInfo>
       {getUserAccessList()}
     </div>

@@ -1,4 +1,4 @@
-import { Input, Tooltip } from "antd";
+import { Space, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -117,8 +117,7 @@ class DatasetPositionView extends PureComponent<Props> {
           display: "flex",
         }}
       >
-        <Input.Group
-          compact
+        <Space.Compact
           style={{
             whiteSpace: "nowrap",
           }}
@@ -140,10 +139,9 @@ class DatasetPositionView extends PureComponent<Props> {
             allowDecimals
           />
           <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
-        </Input.Group>
+        </Space.Compact>
         {isArbitraryMode ? (
-          <Input.Group
-            compact
+          <Space.Compact
             style={{
               whiteSpace: "nowrap",
               marginLeft: 10,
@@ -169,7 +167,7 @@ class DatasetPositionView extends PureComponent<Props> {
               }}
               allowDecimals
             />
-          </Input.Group>
+          </Space.Compact>
         ) : null}
       </div>
     );

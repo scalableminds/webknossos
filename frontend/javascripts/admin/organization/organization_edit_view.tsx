@@ -1,6 +1,6 @@
 import React from "react";
 import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton, Typography } from "antd";
+import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton, Typography, Space } from "antd";
 import {
   MailOutlined,
   TagOutlined,
@@ -175,7 +175,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             }}
           >
             <FormItem label="Organization ID">
-              <Input.Group compact>
+              <Space.Compact>
                 <Input
                   prefix={<IdcardOutlined />}
                   value={this.props.organization.name}
@@ -189,7 +189,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   onClick={this.handleCopyNameButtonClicked}
                   icon={<CopyOutlined className="without-icon-margin" />}
                 />
-              </Input.Group>
+              </Space.Compact>
             </FormItem>
             <FormItem label="Organization Owner">
               <Input

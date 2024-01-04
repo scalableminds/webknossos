@@ -9,6 +9,7 @@ import {
   Col,
   RadioChangeEvent,
   Tooltip,
+  Space,
 } from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
@@ -530,7 +531,7 @@ export function CopyableSharingLink({
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
 
   return (
-    <Input.Group compact>
+    <Space.Compact>
       <Tooltip title="When enabled, the link is shortened automatically.">
         <Button
           type={showShortLink ? "primary" : "default"}
@@ -556,7 +557,7 @@ export function CopyableSharingLink({
       >
         Copy
       </Button>
-    </Input.Group>
+    </Space.Compact>
   );
 }
 

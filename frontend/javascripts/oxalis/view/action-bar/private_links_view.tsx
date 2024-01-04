@@ -175,7 +175,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Input.Group compact className="no-borders">
+    <Space.Compact className="no-borders">
       <Input
         value={baseUrl}
         size="small"
@@ -191,7 +191,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
       <Dropdown menu={copyLayerUrlMenu}>
         <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   );
 }
 

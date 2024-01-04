@@ -66,7 +66,7 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
         marginTop: 4,
         marginBottom: 12,
         fontSize: 12,
-        color: "var(--ant-text-secondary)",
+        color: "var(--ant-color-text-secondary)",
       }}
     >
       {children}

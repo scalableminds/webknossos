@@ -222,7 +222,7 @@ function positionToString(
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
-  const lineColor = "var(--ant-text-secondary)";
+  const lineColor = "var(--ant-color-text-secondary)";
   const mouseIconStyle = { margin: 0, marginLeft: -2, height: 18 };
 
   const mapNameToShortcutIcon = (name: string) => {

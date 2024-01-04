@@ -202,7 +202,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 14,
             lineHeight: "18px",
-            color: "var(--ant-text-secondary)",
+            color: "var(--ant-color-text-secondary)",
             margin: 0,
           }}
         >

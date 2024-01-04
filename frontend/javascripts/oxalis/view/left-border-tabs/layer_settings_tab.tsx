@@ -872,7 +872,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   transition: "transform 0.5s ease 0s",
                   color: layerConfiguration.isInverted
                     ? "var(--ant-primary)"
-                    : "var(--ant-text-secondary)",
+                    : "var(--ant-color-text-secondary)",
                 }}
               />
             </div>

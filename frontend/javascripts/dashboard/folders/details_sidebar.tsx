@@ -253,7 +253,7 @@ function FolderDetails({
                 fontSize: 16,
                 marginTop: 2,
                 marginLeft: 2,
-                color: "var(--ant-text-secondary)",
+                color: "var(--ant-color-text-secondary)",
               }}
             >
               <EditOutlined onClick={() => setFolderIdForEditModal(folder.id)} />

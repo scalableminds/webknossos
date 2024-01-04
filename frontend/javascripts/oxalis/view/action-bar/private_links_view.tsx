@@ -182,7 +182,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         style={{
           width: "90%",
           background: "transparent",
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
         }}
         readOnly
         disabled
@@ -251,7 +251,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   if (linkItem.expirationDateTime == null) {
     return (
       <Dropdown menu={expirationMenu}>
-        <Space style={{ color: "var(--ant-text-secondary)" }}>
+        <Space style={{ color: "var(--ant-color-text-secondary)" }}>
           Add Expiration Date
           <DownOutlined />
         </Space>
@@ -311,7 +311,9 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
         now.endOf("day").to(expirationDate.endOf("day"));
-  return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
+  return (
+    <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
+  );
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {

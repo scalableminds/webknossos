@@ -1,6 +1,17 @@
 import React from "react";
 import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton, Typography, Space } from "antd";
+import {
+  Form,
+  Button,
+  Card,
+  Input,
+  Row,
+  FormInstance,
+  Col,
+  Skeleton,
+  Typography,
+  Space,
+} from "antd";
 import {
   MailOutlined,
   TagOutlined,

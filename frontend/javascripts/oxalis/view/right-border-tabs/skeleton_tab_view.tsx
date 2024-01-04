@@ -894,7 +894,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     </ButtonComponent>
                   </Dropdown>
                 </Space.Compact>
-                <Space.Compact  className="compact-icons compact-items">
+                <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"

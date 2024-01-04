@@ -72,7 +72,7 @@ export default function PresentModernControls() {
       </div>
       <p
         style={{
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
           fontSize: 12,
           textAlign: "center",
           margin: "8px auto",

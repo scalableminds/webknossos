@@ -91,6 +91,7 @@ const imgStyleForSpaceyIcons = {
   height: 19,
   lineHeight: 10,
   marginTop: -2,
+  verticalAlign: "middle",
 };
 
 function getSkeletonToolHint(
@@ -297,14 +298,22 @@ function OverwriteModeSwitch({
         style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
-        <img src="/assets/images/overwrite-all.svg" alt="Overwrite All Icon" />
+        <img
+          src="/assets/images/overwrite-all.svg"
+          alt="Overwrite All Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
         style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
-        <img src="/assets/images/overwrite-empty.svg" alt="Overwrite Empty Icon" />
+        <img
+          src="/assets/images/overwrite-empty.svg"
+          alt="Overwrite Empty Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );
@@ -1018,6 +1027,7 @@ export default function ToolbarView() {
                 alt="Trace Tool Icon"
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
+                  ...imgStyleForSpaceyIcons,
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.TRACE ? multiSliceAnnotationInfoIcon : null}
@@ -1099,10 +1109,8 @@ export default function ToolbarView() {
             src="/assets/images/quick-select-tool.svg"
             alt="Quick Select Icon"
             style={{
-              height: 20,
-              width: 20,
-              marginTop: -1,
               opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+              ...imgStyleForSpaceyIcons,
             }}
           />
         </ToolRadioButton>
@@ -1423,7 +1431,11 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.AREA_MEASUREMENT}
       >
-        <img src="/assets/images/area-measurement.svg" alt="Measurement Tool Icon" />
+        <img
+          src="/assets/images/area-measurement.svg"
+          alt="Measurement Tool Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

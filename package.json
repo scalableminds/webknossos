@@ -71,7 +71,7 @@
     "tmp": "0.0.33",
     "ts-loader": "^9.4.1",
     "typescript": "^5.3.0",
-    "typescript-coverage-report": "^0.6.4",
+    "typescript-coverage-report": "^0.8.0",
     "webpack": "^5.74.0",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.7.3"

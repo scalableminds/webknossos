@@ -4,7 +4,7 @@ import ReactDOM from "react-dom";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
-import { message } from "antd";
+import { message, App, ConfigProvider, theme } from "antd";
 
 import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
@@ -110,7 +110,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         The fix is inspired by:
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
-              <Router />
+              <ConfigProvider
+                theme={{ algorithm: theme.defaultAlgorithm, cssVar: { key: "antd-app-theme" } }}
+              >
+                <App>
+                  <Router />
+                </App>
+              </ConfigProvider>
             </DndProvider>
           </QueryClientProvider>
         </Provider>

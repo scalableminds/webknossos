@@ -17,7 +17,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
   );
   return (
     <Modal
-      visible
+      open
       title="Merger mode enabled"
       closable={false}
       width={600}

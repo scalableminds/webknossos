@@ -239,8 +239,7 @@
   },
   "resolutions": {
     "**/mini-store": "^1.1.0",
-    "**/redux": "3.7.2",
-    "**/rc-tree": "^5.7.12"
+    "**/redux": "3.7.2"
   },
   "ava": {
     "files": [

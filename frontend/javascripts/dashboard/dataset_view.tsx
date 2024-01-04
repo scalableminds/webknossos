@@ -404,7 +404,7 @@ function GlobalSearchHeader({
         <SearchOutlined />
         Search Results for &quot;{searchQuery}&quot;
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
             (only showing the first {SEARCH_RESULTS_LIMIT} results)
           </span>
         ) : null}

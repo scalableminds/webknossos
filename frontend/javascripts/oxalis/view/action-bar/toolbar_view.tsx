@@ -329,7 +329,7 @@ function VolumeInterpolationButton() {
     (state: OxalisState) => state.userConfiguration.interpolationMode,
   );
 
-  const onInterpolateClick = (e: React.MouseEvent<HTMLButtonElement> | null) => {
+  const onInterpolateClick = (e: React.MouseEvent<HTMLElement> | null) => {
     e?.currentTarget.blur();
     dispatch(interpolateSegmentationLayerAction());
   };

@@ -205,8 +205,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.fill(activeRegion);
   };
 
-  onThresholdChange = ([firstVal, secVal]: [number, number]) => {
+  onThresholdChange = (values: number[]) => {
     const { layerName } = this.props;
+    const [firstVal, secVal] = values;
 
     if (firstVal < secVal) {
       this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
@@ -275,7 +276,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           max={maxRange}
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
-          onAfterChange={this.onThresholdChange}
+          onChangeComplete={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tooltip={{ formatter: this.tipFormatter }}
           style={{

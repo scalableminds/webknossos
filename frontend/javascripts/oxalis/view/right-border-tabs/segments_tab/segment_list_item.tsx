@@ -174,7 +174,7 @@ const getMakeSegmentActiveMenuItem = (
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
-      <Tooltip title={title} trigger={isEditingDisabled ? "" : "hover"}>
+      <Tooltip title={title} trigger={isEditingDisabled ? undefined : "hover"}>
         Activate Segment ID
       </Tooltip>
     ),

@@ -164,7 +164,7 @@ async function inferFromEmbedding(
   const sampleAmount = 15;
   const gridSize = 5;
   let minCoords = [0, 0];
-  const mode = window?.squigglyMode || "distanceTransform";
+  const mode = window?.squigglyMode || "grid";
   const getIndicesSample = (sampleAmount: number, indexLimit: number) => {
     const indices = [];
     while (indices.length < sampleAmount && indices.length < indexLimit) {
@@ -181,7 +181,10 @@ async function inferFromEmbedding(
     let firstDimOffset = topLeft[maybeAdjustedFirstDim];
     let secondDimOffset = topLeft[maybeAdjustedSecondDim];
     function visualizeSampledPoints(sampledPoints: Array<[number, number]>, treeName: string) {
-      if (window?.visualizeSampledPoints === false) {
+      if (
+        window?.visualizeSampledPoints === undefined ||
+        window?.visualizeSampledPoints === false
+      ) {
         return;
       }
 
@@ -262,8 +265,6 @@ async function inferFromEmbedding(
         ...onnxCoord,
         ..._.flattenDeep(sampledPointsWithin),
         ..._.flattenDeep(sampledPointsOutside),
-        0,
-        0,
       ]);
       visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_random");
       visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_random");
@@ -309,8 +310,6 @@ async function inferFromEmbedding(
         ...onnxCoord,
         topLeft[maybeAdjustedFirstDim] + minCoords[0],
         topLeft[maybeAdjustedSecondDim] + minCoords[1],
-        0,
-        0,
       ]);
     } else if (mode === "grid") {
       // The voxel map has the height in the first dim and the width in the second dim (contrary to conventional dimension arrangement).
@@ -400,8 +399,6 @@ async function inferFromEmbedding(
         ...onnxCoord,
         ..._.flattenDeep(sampledPointsWithin),
         ..._.flattenDeep(sampledPointsOutside),
-        0,
-        0,
       ]);
       // Location: 3187, 3938, 833
       visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_grid");
@@ -482,28 +479,11 @@ async function inferFromEmbedding(
         ...onnxCoord,
         ..._.flattenDeep(sampledPointsWithin),
         ..._.flattenDeep(sampledPointsOutside),
-        0,
-        0,
       ]);
       visualizeSampledPoints(sampledPointsWithin, "sampledPointsWithin_distanceTransform");
       visualizeSampledPoints(sampledPointsOutside, "sampledPointsOutside_distanceTransform");
-      console.log(
-        "sampledPointsWithin",
-        sampledPointsWithin.map(([x, y]) => [
-          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
-          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
-        ]),
-      );
-      console.log(
-        "sampledPointsOutside",
-        sampledPointsOutside.map(([x, y]) => [
-          embeddingBoxInTargetMag.min[maybeAdjustedFirstDim] + x,
-          embeddingBoxInTargetMag.min[maybeAdjustedSecondDim] + y,
-        ]),
-      );
-      console.log("width", voxelMap.width, "height", voxelMap.height);
       // Visualize transformed distance map
-      let cvs = (document.getElementById("mask-123") ||
+      /* let cvs = (document.getElementById("mask-123") ||
         document.createElement("canvas")) as any as HTMLCanvasElement;
       let ctx = cvs.getContext("2d");
       if (ctx) {
@@ -524,7 +504,7 @@ async function inferFromEmbedding(
         ctx.putImageData(imgData, 0, 0);
       }
       cvs.id = "mask-123";
-      document.body.appendChild(cvs);
+      document.body.appendChild(cvs);*/
     } else {
       throw new Error("Unknown squiggly mode");
     }
@@ -536,17 +516,14 @@ async function inferFromEmbedding(
       ...onnxLabel,
       ...Array(sampledPointsWithin.length).fill(1),
       ...Array(sampledPointsOutside.length).fill(0),
-      -1,
     ]);
   } else if (voxelMap && mode === "mask") {
-    onnxLabel = new Float32Array([...onnxLabel, 1, -1]);
+    onnxLabel = new Float32Array([...onnxLabel, 1]);
   }
 
   const onnxHasMaskInput =
     voxelMap != null && mode === "mask" ? new Float32Array([1]) : new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
-  console.log("onnxCoord", onnxCoord);
-  console.log("onnxLabel", onnxLabel);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
     point_coords: new ort.Tensor("float32", onnxCoord, [1, onnxCoord.length / 2, 2]),
@@ -561,20 +538,20 @@ async function inferFromEmbedding(
   // @ts-ignore
   const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
-  const maskAreaData = [];
+  // const maskAreaData = [];
   // Fill the mask data with a for loop (slicing/mapping would incur additional
   // data copies).
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
-    const x = idx % EMBEDDING_SIZE[0];
+    /*const x = idx % EMBEDDING_SIZE[0];
     const y = Math.floor(idx / EMBEDDING_SIZE[0]);
     if (x >= onnxCoord[0] && x < onnxCoord[2] && y >= onnxCoord[1] && y < onnxCoord[3]) {
       maskAreaData.push(masks.data[idx + startOffset]);
-      /*const xInArea = x - onnxCoord[0];
+      const xInArea = x - onnxCoord[0];
       const yInArea = y - onnxCoord[1];
       const idxInArea = xInArea + yInArea * (onnxCoord[2]- onnxCoord[0]);
-      maskAreaData[idxInArea] = masks.data[idx + startOffset];*/
-    }
+      maskAreaData[idxInArea] = masks.data[idx + startOffset];
+    } */
     maskData[idx] = (masks.data[idx + startOffset] as number) > 0 ? 1 : 0;
   }
 

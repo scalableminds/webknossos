@@ -47,7 +47,7 @@ import { clamp, map3, take2 } from "libs/utils";
 import { APIDataLayer, APIDataset } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { createTemporaryVolumeAnnotation, labelWithVoxelBuffer2D } from "./volume/helpers";
 import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
 import {
   getDefaultValueRangeOfLayer,
@@ -520,15 +520,15 @@ export function* finalizeQuickSelect(
   if (quickSelectGeometry) {
     quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   }
-  const volumeLayer = yield* call(
-    createVolumeLayer,
+  const temporaryVolumeAnnotation = yield* call(
+    createTemporaryVolumeAnnotation,
     volumeTracing,
     activeViewport,
     labeledResolution,
     boundingBoxMag1.min[thirdDim],
   );
-  const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
-    V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+  const voxelBuffer2D = temporaryVolumeAnnotation.createVoxelBuffer2D(
+    V2.floor(temporaryVolumeAnnotation.globalCoordToMag2DFloat(boundingBoxMag1.min)),
     size[firstDim],
     size[secondDim],
   );

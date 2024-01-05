@@ -21,7 +21,9 @@ import sampleVoxelMapToResolution, {
 import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { Model } from "oxalis/singletons";
-import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import TemporaryVolumeAnnotation, {
+  VoxelBuffer2D,
+} from "oxalis/model/volumetracing/temporary_volume_annotation";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -271,13 +273,18 @@ export function* labelWithVoxelBuffer2D(
   );
 }
 
-export function* createVolumeLayer(
+export function* createTemporaryVolumeAnnotation(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledResolution: Vector3,
   thirdDimValue?: number,
-): Saga<VolumeLayer> {
+): Saga<TemporaryVolumeAnnotation> {
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
+  return new TemporaryVolumeAnnotation(
+    volumeTracing.tracingId,
+    planeId,
+    thirdDimValue,
+    labeledResolution,
+  );
 }

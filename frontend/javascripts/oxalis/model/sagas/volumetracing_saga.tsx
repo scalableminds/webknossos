@@ -89,7 +89,7 @@ import {
   updateVolumeTracing,
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import TemporaryVolumeAnnotation from "oxalis/model/volumetracing/temporary_volume_annotation";
 import { Model } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
@@ -525,7 +525,7 @@ export function* floodFill(): Saga<void> {
 }
 
 export function* finishLayer(
-  layer: VolumeLayer,
+  layer: TemporaryVolumeAnnotation,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,

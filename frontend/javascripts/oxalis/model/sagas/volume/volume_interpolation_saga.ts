@@ -34,7 +34,7 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelBuffer2D } from "oxalis/model/volumetracing/temporary_volume_annotation";
 import { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";

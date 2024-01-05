@@ -4,7 +4,10 @@ import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_ha
 import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import {
+  VoxelNeighborQueue2D,
+  VoxelNeighborQueue3D,
+} from "oxalis/model/volumetracing/temporary_volume_annotation";
 import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";

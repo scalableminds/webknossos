@@ -19,7 +19,7 @@ import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions, { DimensionIndices } from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
-import { VoxelBuffer2D } from "../volumetracing/volumelayer";
+import { VoxelBuffer2D } from "../volumetracing/temporary_volume_annotation";
 import { signedDist } from "./volume/volume_interpolation_saga";
 import { Store } from "oxalis/singletons";
 import { clamp } from "libs/utils";

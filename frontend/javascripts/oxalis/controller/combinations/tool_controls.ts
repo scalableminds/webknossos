@@ -62,7 +62,7 @@ import {
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
 import Dimensions from "oxalis/model/dimensions";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import TemporaryVolumeAnnotation from "oxalis/model/volumetracing/temporary_volume_annotation";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 export type ActionDescriptor = {
@@ -796,7 +796,7 @@ export class AreaQuickSelectTool {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isDrawingBounds = false;
   static volumeTracing: VolumeTracing | null | undefined = null;
-  static volumeLayer: VolumeLayer | null | undefined = null;
+  static temporaryVolumeAnnotation: TemporaryVolumeAnnotation | null | undefined = null;
   static getPlaneMouseControls(
     _planeId: OrthoView,
     planeView: PlaneView,
@@ -822,7 +822,7 @@ export class AreaQuickSelectTool {
         this.initialPlane = plane;
         const position = V3.floor(calculateGlobalPos(state, pos));
         const thirdDimValue = position[Dimensions.thirdDimensionForPlane(plane)];
-        this.volumeLayer = new VolumeLayer(
+        this.temporaryVolumeAnnotation = new TemporaryVolumeAnnotation(
           this.volumeTracing.tracingId,
           plane,
           thirdDimValue,
@@ -841,7 +841,7 @@ export class AreaQuickSelectTool {
           MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
           return;
         }
-        if (id == null || !this.volumeTracing || !this.volumeLayer) {
+        if (id == null || !this.volumeTracing || !this.temporaryVolumeAnnotation) {
           return;
         }
         if (!this.isDrawingBounds) {
@@ -859,7 +859,7 @@ export class AreaQuickSelectTool {
         const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
         quickSelectAreaGeometry.addEdgePoint(position);
         Store.dispatch(addToContour(position));
-        this.volumeLayer.addContour(position);
+        this.temporaryVolumeAnnotation.addContour(position);
       },
       leftMouseUp: () => {
         const cleanUp = () => {
@@ -869,7 +869,7 @@ export class AreaQuickSelectTool {
           this.isDrawingBounds = false;
         };
         const state = Store.getState();
-        if (!this.isDrawingBounds || !this.volumeLayer) {
+        if (!this.isDrawingBounds || !this.temporaryVolumeAnnotation) {
           return;
         }
         if (
@@ -882,11 +882,11 @@ export class AreaQuickSelectTool {
           return;
         }
         // Stop drawing area and close the drawn area if still measuring.
-        const voxelMap = this.volumeLayer.getFillingVoxelBuffer2D(
+        const voxelMap = this.temporaryVolumeAnnotation.getFillingVoxelBuffer2D(
           AnnotationToolEnum.AREA_QUICK_SELECT,
         );
         const voxelMapBBox =
-          this.volumeLayer.getLabeledBoundingBox() ||
+          this.temporaryVolumeAnnotation.getLabeledBoundingBox() ||
           new BoundingBox({ min: [0, 0, 0], max: [0, 0, 0] });
         Store.dispatch(computeQuickSelectForAreaAction(voxelMap, voxelMapBBox));
         cleanUp();
@@ -922,7 +922,7 @@ export class AreaQuickSelectTool {
     quickSelectAreaGeometry.resetAndHide();
     this.isDrawingBounds = false;
     this.initialPlane = OrthoViews.PLANE_XY;
-    this.volumeLayer = null;
+    this.temporaryVolumeAnnotation = null;
     this.volumeTracing = null;
   }
 }

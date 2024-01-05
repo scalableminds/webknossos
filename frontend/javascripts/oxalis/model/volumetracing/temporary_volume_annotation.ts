@@ -20,7 +20,7 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
   of painted (binary) voxels. It is used by the
-  VolumeLayer class to describe how volume operations
+  TemporaryVolumeAnnotation class to describe how volume operations
   should be applied.
  */
 export class VoxelBuffer2D {
@@ -141,12 +141,11 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
   }
 }
 
-class VolumeLayer {
+class TemporaryVolumeAnnotation {
   /*
-  From the outside, the VolumeLayer accepts only global positions. Internally,
-  these are converted to the actual used resolution (activeResolution).
-  Therefore, members of this class are in the resolution space of
-  `activeResolution`.
+  From the outside, the TemporaryVolumeAnnotation accepts only global positions. 
+  Internally, these are converted to the actual used resolution (activeResolution).
+  Therefore, members of this class are in the resolution space of activeResolution`.
   */
   volumeTracingId: string;
   plane: OrthoView;
@@ -593,4 +592,4 @@ export function getFast3DCoordinateHelper(
     }
   }
 }
-export default VolumeLayer;
+export default TemporaryVolumeAnnotation;

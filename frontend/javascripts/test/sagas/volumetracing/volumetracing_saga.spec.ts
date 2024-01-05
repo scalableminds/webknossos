@@ -34,7 +34,8 @@ const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 
-const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
+const TemporaryVolumeAnnotation =
+  require("oxalis/model/volumetracing/temporary_volume_annotation").default;
 
 const {
   serverVolumeToClientVolumeTracing,
@@ -242,8 +243,13 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   );
   saga.next(); // advance from the put action
 
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
+  const temporaryVolumeAnnotation = new TemporaryVolumeAnnotation(
+    volumeTracing.tracingId,
+    OrthoViews.PLANE_XY,
+    10,
+    [1, 1, 1],
+  );
+  saga.next(temporaryVolumeAnnotation);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
   saga.next(addToLayerActionFn([1, 2, 3]));
@@ -252,8 +258,8 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   saga.next(OrthoViews.PLANE_XY);
   saga.next(addToLayerActionFn([3, 4, 5]));
   saga.next(OrthoViews.PLANE_XY);
-  t.deepEqual(volumeLayer.minCoord, [-1, 0, 1]);
-  t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
+  t.deepEqual(temporaryVolumeAnnotation.minCoord, [-1, 0, 1]);
+  t.deepEqual(temporaryVolumeAnnotation.maxCoord, [5, 6, 7]);
 });
 
 test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
@@ -292,8 +298,13 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   );
   saga.next(); // advance from the put action
 
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
+  const temporaryVolumeAnnotation = new TemporaryVolumeAnnotation(
+    volumeTracing.tracingId,
+    OrthoViews.PLANE_XY,
+    10,
+    [1, 1, 1],
+  );
+  saga.next(temporaryVolumeAnnotation);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
   saga.next(addToLayerActionFn([1, 2, 3]));
@@ -304,7 +315,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
     saga.next(finishEditingAction),
     call(
       finishLayer,
-      volumeLayer,
+      temporaryVolumeAnnotation,
       AnnotationToolEnum.TRACE,
       ContourModeEnum.DRAW,
       OverwriteModeEnum.OVERWRITE_ALL,
@@ -348,8 +359,13 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   );
   saga.next(); // advance from the put action
 
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
+  const temporaryVolumeAnnotation = new TemporaryVolumeAnnotation(
+    volumeTracing.tracingId,
+    OrthoViews.PLANE_XY,
+    10,
+    [1, 1, 1],
+  );
+  saga.next(temporaryVolumeAnnotation);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
   saga.next(addToLayerActionFn([1, 2, 3]));
@@ -360,7 +376,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     saga.next(finishEditingAction),
     call(
       finishLayer,
-      volumeLayer,
+      temporaryVolumeAnnotation,
       AnnotationToolEnum.TRACE,
       ContourModeEnum.DELETE,
       OverwriteModeEnum.OVERWRITE_ALL,

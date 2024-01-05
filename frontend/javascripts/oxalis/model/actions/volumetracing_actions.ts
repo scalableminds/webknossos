@@ -8,7 +8,7 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 import { QuickSelectRectangleGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { VoxelBuffer2D } from "../volumetracing/volumelayer";
+import { VoxelBuffer2D } from "../volumetracing/temporary_volume_annotation";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;

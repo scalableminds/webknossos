@@ -43,7 +43,7 @@ import Request from "libs/request";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
@@ -503,46 +503,12 @@ function LoggedInAvatar({
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
 
-  const setSelectedTheme = async (theme: APIUserTheme) => {
-    let newTheme = theme;
+  const setSelectedTheme = async (newTheme: APIUserTheme) => {
+    if (newTheme === "auto") newTheme = Utils.getSystemColorTheme();
 
-    if (newTheme === "auto") {
-      newTheme =
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    }
-
-    const styleEl = document.getElementById("primary-stylesheet") as HTMLLinkElement;
-    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
-    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
-
-    if (oldTheme !== newTheme) {
-      const newStyleEl = styleEl.cloneNode();
-      const parentEl = styleEl.parentNode;
-
-      if (parentEl != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
-        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
-        newStyleEl.addEventListener(
-          "load",
-          () => {
-            parentEl.removeChild(styleEl);
-          },
-          {
-            once: true,
-          },
-        );
-        parentEl.insertBefore(newStyleEl, styleEl);
-        Store.dispatch(setThemeAction(newTheme));
-      }
-    }
-
-    if (selectedTheme !== theme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+    if (selectedTheme !== newTheme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
+      Store.dispatch(setThemeAction(newTheme));
       Store.dispatch(setActiveUserAction(newUser));
     }
   };

@@ -8,6 +8,11 @@
     --color-yz-viewport: #5660ff;
     --color-xz-viewport: var(--color-blue-zircon);
     --navbar-height: 48px;
-    --background-blue-neurons: url(/assets/images/background_neurons_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
+}
+
+.ant-app {
+    // attach these variables to the antd <App> component otherwise these `--ant` variables are not in scope yet 
+    // the <App> component is expect to be there only one and very high level in the DOM tree
     --background-blue-organelles: url(/assets/images/background_mixed_cells_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
+    --background-blue-neurons: url(/assets/images/background_neurons_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
 }

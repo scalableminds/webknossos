@@ -1,9 +1,9 @@
-import { Provider } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import React from "react";
 import ReactDOM from "react-dom";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import UnthrottledStore, { startSagas } from "oxalis/store";
+import UnthrottledStore, { OxalisState, startSagas } from "oxalis/store";
 import { message, App, ConfigProvider, theme } from "antd";
 
 import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
@@ -27,6 +27,10 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+import { APIUserTheme } from "types/api_flow_types";
+import { getSystemColorTheme } from "libs/utils";
+
+import "../stylesheets/main.less";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -88,6 +92,31 @@ async function loadOrganization() {
   }
 }
 
+function getTheme(userTheme: APIUserTheme) {
+  if (userTheme === "auto") {
+    userTheme = getSystemColorTheme();
+  }
+
+  if (userTheme === "dark") {
+    return theme.darkAlgorithm;
+  }
+
+  return theme.defaultAlgorithm;
+}
+
+function GlobalThemeProvider() {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const antdTheme = activeUser == null ? getTheme("auto") : getTheme(activeUser.selectedTheme);
+
+  return (
+    <ConfigProvider theme={{ algorithm: antdTheme, cssVar: { key: "antd-app-theme" } }}>
+      <App className={antdTheme === theme.darkAlgorithm ? "dark-theme" : undefined}>
+        <Router />
+      </App>
+    </ConfigProvider>
+  );
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,
@@ -110,13 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         The fix is inspired by:
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
-              <ConfigProvider
-                theme={{ algorithm: theme.defaultAlgorithm, cssVar: { key: "antd-app-theme" } }}
-              >
-                <App>
-                  <Router />
-                </App>
-              </ConfigProvider>
+              <GlobalThemeProvider />
             </DndProvider>
           </QueryClientProvider>
         </Provider>

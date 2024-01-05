@@ -54,6 +54,7 @@ case class WebknossosAdHocMeshRequest(
     scale: Vec3Double,
     mapping: Option[String] = None,
     mappingType: Option[String] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     findNeighbors: Boolean = true
 ) {
   def cuboid(dataLayer: DataLayer): Cuboid =

@@ -1033,13 +1033,34 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
-
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      OME-Zarr 0.4+ (NGFF) datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
                   <li>Single-file images (tif, czi, nifti, raw)</li>
 
                   <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html#conversion-with-webknossos-org">
+                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
                   our documentation
                 </a>{" "}
                 to learn more.

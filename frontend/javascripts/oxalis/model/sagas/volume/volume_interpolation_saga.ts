@@ -37,7 +37,11 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/temporary_volume_annotation";
 import { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
-import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import {
+  createTemporaryVolumeAnnotation,
+  getBoundingBoxForViewport,
+  labelWithVoxelBuffer2D,
+} from "./helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -366,22 +370,23 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     targetOffsetW < adaptedInterpolationRange[1];
     targetOffsetW++
   ) {
-    const interpolationLayer = yield* call(
-      createVolumeLayer,
+    const temporaryVolumeInterpolationAnnotation = yield* call(
+      createTemporaryVolumeAnnotation,
       volumeTracing,
       activeViewport,
       labeledResolution,
       relevantBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * targetOffsetW,
     );
-    interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
-      V2.floor(
-        interpolationLayer.globalCoordToMag2DFloat(
-          V3.add(relevantBoxMag1.min, transpose([0, 0, targetOffsetW])),
+    interpolationVoxelBuffers[targetOffsetW] =
+      temporaryVolumeInterpolationAnnotation.createVoxelBuffer2D(
+        V2.floor(
+          temporaryVolumeInterpolationAnnotation.globalCoordToMag2DFloat(
+            V3.add(relevantBoxMag1.min, transpose([0, 0, targetOffsetW])),
+          ),
         ),
-      ),
-      size[firstDim],
-      size[secondDim],
-    );
+        size[firstDim],
+        size[secondDim],
+      );
   }
 
   // These two variables will be initialized with binary masks (representing whether

@@ -863,7 +863,7 @@ export default function ToolbarView() {
 
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   // Ensure that no volume-tool is selected when being in merger mode.
-  // Even though, the volume toolbar is disabled, the user can still cycle through
+  // Even though the volume toolbar is disabled, the user can still cycle through
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];

@@ -42,6 +42,7 @@ export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAct
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
+export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
@@ -85,6 +86,7 @@ export type VolumeTracingAction =
   | SetSegmentsAction
   | UpdateSegmentAction
   | RemoveSegmentAction
+  | DeleteSegmentDataAction
   | SetSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
@@ -186,7 +188,7 @@ export const finishEditingAction = () =>
 export const setActiveCellAction = (
   segmentId: number,
   somePosition?: Vector3,
-  someAdditionalCoordinates?: AdditionalCoordinate[],
+  someAdditionalCoordinates?: AdditionalCoordinate[] | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
@@ -198,7 +200,7 @@ export const setActiveCellAction = (
 export const clickSegmentAction = (
   segmentId: number,
   somePosition: Vector3,
-  someAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   layerName?: string,
 ) =>
   ({
@@ -241,6 +243,20 @@ export const removeSegmentAction = (
     type: "REMOVE_SEGMENT",
     segmentId,
     layerName,
+    timestamp,
+  } as const);
+
+export const deleteSegmentDataAction = (
+  segmentId: number,
+  layerName: string,
+  callback?: () => void,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "DELETE_SEGMENT_DATA",
+    segmentId,
+    layerName,
+    callback,
     timestamp,
   } as const);
 

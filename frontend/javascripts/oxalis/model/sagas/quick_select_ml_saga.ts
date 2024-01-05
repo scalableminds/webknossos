@@ -575,7 +575,7 @@ async function inferFromEmbedding(
       const idxInArea = xInArea + yInArea * (onnxCoord[2]- onnxCoord[0]);
       maskAreaData[idxInArea] = masks.data[idx + startOffset];*/
     }
-    maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
+    maskData[idx] = (masks.data[idx + startOffset] as number) > 0 ? 1 : 0;
   }
 
   const size = embeddingBoxInTargetMag.getSize();

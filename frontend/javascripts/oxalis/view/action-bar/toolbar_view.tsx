@@ -216,7 +216,6 @@ function ToolRadioButton({
   name,
   description,
   disabledExplanation,
-  onOpenChange,
   ...props
 }: {
   name: string;
@@ -233,7 +232,6 @@ function ToolRadioButton({
     <RadioButtonWithTooltip
       title={`${name} – ${description}`}
       disabledTitle={`${name} – ${disabledExplanation}`}
-      onOpenChange={onOpenChange}
       {...props}
     />
   );

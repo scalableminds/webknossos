@@ -1,4 +1,4 @@
-import { Col, ConfigProvider, Row, theme } from "antd";
+import { Col, Row } from "antd";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
@@ -28,14 +28,12 @@ function LoginView({ history, redirect }: Props) {
   };
 
   return (
-    <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
       <Row justify="center" align="middle" className="login-view">
         <Col className="login-content">
           <h3>Login</h3>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
         </Col>
       </Row>
-    </ConfigProvider>
   );
 }
 

@@ -54,6 +54,7 @@ import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItem
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner } from "maintenance_banner";
+import { getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
 
@@ -504,7 +505,7 @@ function LoggedInAvatar({
       : organizationName;
 
   const setSelectedTheme = async (newTheme: APIUserTheme) => {
-    if (newTheme === "auto") newTheme = Utils.getSystemColorTheme();
+    if (newTheme === "auto") newTheme = getSystemColorTheme();
 
     if (selectedTheme !== newTheme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);

@@ -10,7 +10,7 @@ import Constants, {
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 import constants from "oxalis/constants";
-import { getSystemColorTheme } from "libs/utils";
+import { getSystemColorTheme } from "theme";
 
 const defaultViewportRect = {
   top: 0,

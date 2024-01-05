@@ -3,7 +3,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject, Theme } from "oxalis/store";
+import type { BoundingBoxObject } from "oxalis/store";
 import type {
   Vector3,
   Vector4,
@@ -1175,13 +1175,4 @@ export function getFileExtension(fileName: string): string {
   const filenameParts = fileName.split(".");
   const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
   return fileExtension;
-}
-
-export function getSystemColorTheme(): Theme {
-  // @ts-ignore
-  return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-    // @ts-ignore
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
 }

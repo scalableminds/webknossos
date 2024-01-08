@@ -1128,7 +1128,7 @@ export async function getJobs(): Promise<APIJob[]> {
           annotationId: job.commandArgs.annotation_id,
           annotationType: job.commandArgs.annotation_type,
           mergeSegments: job.commandArgs.merge_segments,
-          state: adaptJobState(job.command, job.state, job.manualState),
+          state: adaptJobState(job.state, job.manualState),
           manualState: job.manualState,
           result: job.returnValue,
           resultLink: job.resultLink,
@@ -1155,7 +1155,7 @@ export async function getJob(jobId: string): Promise<APIJob> {
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
     mergeSegments: job.commandArgs.merge_segments,
-    state: adaptJobState(job.command, job.state, job.manualState),
+    state: adaptJobState(job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
     resultLink: job.resultLink,
@@ -1164,21 +1164,14 @@ export async function getJob(jobId: string): Promise<APIJob> {
 }
 
 function adaptJobState(
-  command: string,
   celeryState: APIJobCeleryState,
   manualState: APIJobManualState,
 ): APIJobState {
   if (manualState) {
     return manualState;
-  } else if (celeryState === "FAILURE" && isManualPassJobType(command)) {
-    return "MANUAL";
   }
 
   return celeryState || "UNKNOWN";
-}
-
-function isManualPassJobType(command: string) {
-  return ["convert_to_wkw"].includes(command);
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {

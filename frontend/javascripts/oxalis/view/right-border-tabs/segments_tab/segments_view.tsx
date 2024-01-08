@@ -610,16 +610,6 @@ class SegmentsView extends React.Component<Props, State> {
           break;
         }
 
-        case "MANUAL": {
-          Toast.info(
-            "The computation of a mesh file for this dataset didn't finish properly. The job will be handled by an admin shortly. Please check back here soon.",
-          );
-          this.setState({
-            activeMeshJobId: null,
-          });
-          break;
-        }
-
         default: {
           break;
         }

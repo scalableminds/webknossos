@@ -801,7 +801,7 @@ export function MaterializeVolumeAnnotationModal({
             "fallbackLayer" in segmentationLayer && segmentationLayer.fallbackLayer != null
               ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
               : null;
-          const baseSegmentationName = getBaseSegmentationName(segmentationLayer); // <- zeile ist falsch, nur fallback layer name nehmen, falls vorhanden, sonst null lassen.
+          const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
           return startMaterializingVolumeAnnotationJob(
             dataset.owningOrganization,
             dataset.name,

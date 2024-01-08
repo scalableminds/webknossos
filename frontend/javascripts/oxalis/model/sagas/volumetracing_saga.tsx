@@ -347,7 +347,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     if (!wroteVoxelsBox.value) {
       const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
-      if (overwriteMode == OverwriteModeEnum.OVERWRITE_EMPTY)
+      if (overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY)
         yield* call(
           [Toast, Toast.warning],
           "No voxels were changed. You might want to change the overwrite-mode to 'Overwrite All'. Otherwise, only empty voxels will be changed.",

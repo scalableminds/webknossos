@@ -9,7 +9,6 @@ import Constants, {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Toast from "libs/toast";
 import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";

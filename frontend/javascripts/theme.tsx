@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { App, ConfigProvider, theme } from "antd";
 import { APIUserTheme } from "types/api_flow_types";
 import type { OxalisState, Theme } from "oxalis/store";
+import window from "libs/window";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore

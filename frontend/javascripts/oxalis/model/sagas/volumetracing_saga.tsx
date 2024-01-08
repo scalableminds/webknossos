@@ -789,7 +789,7 @@ export function* handleClickedSegment(): Saga<void> {
 
 export function* updateClickedSegments(action: ClickSegmentAction): Saga<void>{
   // if length of selected ids is 1, update
-  console.log("clicked segment ", action)
+  console.log("clicked segment ", action) //TODO remove
   const {segmentId, layerName} = action;
   const clickedSegmentId = segmentId;
   if(layerName == null) return;

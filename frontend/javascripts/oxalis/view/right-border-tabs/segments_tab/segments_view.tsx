@@ -427,10 +427,10 @@ class SegmentsView extends React.Component<Props, State> {
     if (this.tree?.current == null) {
       return;
     }
-    if(this.props.selectedIds.segments.length === 1){
+    if(this.props.selectedIds.segments.length === 1 && prevProps.selectedIds !== this.props.selectedIds){
       const selectedId = this.props.selectedIds.segments[0];
       this.tree.current.scrollTo({ key: `segment-${selectedId}` });
-      console.log("scroll to", selectedId) // This is working for newly added segments, but were not scrolling yet in that case
+      console.log("scroll to", `segment-${selectedId}`, this.tree.current) // This is working for newly added segments, but were not scrolling yet in that case
     }
   }
 

@@ -292,7 +292,7 @@ script.name.invalid.characters=Script name is invalid. Please use only letters, 
 serialization.failed=Failed to serialize data.
 
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
-initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
+organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.

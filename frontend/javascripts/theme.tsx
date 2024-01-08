@@ -1,8 +1,8 @@
-import { App, ConfigProvider, theme } from "antd";
-import { OxalisState, Theme } from "oxalis/store";
 import React from "react";
 import { useSelector } from "react-redux";
+import { App, ConfigProvider, theme } from "antd";
 import { APIUserTheme } from "types/api_flow_types";
+import type { OxalisState, Theme } from "oxalis/store";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore

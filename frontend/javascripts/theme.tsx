@@ -1,17 +1,8 @@
-import { ConfigProvider, theme } from "antd";
+import { App, ConfigProvider, theme } from "antd";
 import { OxalisState, Theme } from "oxalis/store";
 import React from "react";
 import { useSelector } from "react-redux";
 import { APIUserTheme } from "types/api_flow_types";
-
-const globalToken = theme.getDesignToken();
-
-const componentCustomizations = {
-  Input: {
-    activeBg: globalToken.colorBgBase,
-    algorithm: true,
-  },
-};
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -24,17 +15,21 @@ export function getSystemColorTheme(): Theme {
 
 export function getAntdTheme(userTheme: APIUserTheme) {
   let algorithm = theme.defaultAlgorithm;
+  let token = {};
 
   if (userTheme === "auto") {
     userTheme = getSystemColorTheme();
   }
 
   if (userTheme === "dark") {
-    console.log("dark")
     algorithm = theme.darkAlgorithm;
-  }
 
-  return { algorithm, components: componentCustomizations };
+    // use a very dark grey instead of pure black as base color for dark mode
+    token = { colorBgBase: "rgb(20, 20, 20)" };
+  }
+  // In case you want customize individual components, adapt the antd design tokens and return them here,
+  // e.g., components: { Input: {<designToken>: ...}
+  return { algorithm, token };
 }
 
 export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {
@@ -42,13 +37,21 @@ export default function GlobalThemeProvider({ children }: { children?: React.Rea
   const antdTheme =
     activeUser == null ? getAntdTheme("auto") : getAntdTheme(activeUser.selectedTheme);
 
-  console.log(antdTheme)
+  console.log(antdTheme);
 
   return (
     <ConfigProvider theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}>
-      <div className={antdTheme.algorithm === theme.darkAlgorithm ? "dark-theme" : undefined}>
-        {children}
-      </div>
+      <App>
+        <div
+          className={antdTheme.algorithm === theme.darkAlgorithm ? "dark-theme" : undefined}
+          style={{
+            background: "var(--ant-color-bg-base)",
+            height: "calc(100vh - var(--navbar-height))",
+          }}
+        >
+          {children}
+        </div>
+      </App>
     </ConfigProvider>
   );
 }

@@ -144,7 +144,7 @@ type StateProps = {
   hasVolumeTracing: boolean;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
-  selectedIds: { segments: number[], group: number|null },
+  selectedIds: { segments: number[]; group: number | null };
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   activeVolumeTracing: VolumeTracing | null | undefined;
   allowUpdate: boolean;
@@ -176,7 +176,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     visibleSegmentationLayer != null
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
-  
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
@@ -212,20 +212,27 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const getOrInitializeSelectedSegmentsOrGroup = (visibleSegmentationLayer: APISegmentationLayer|null|undefined, state: OxalisState)=>{
-
-  const nothingSelectedObject = {segments: [], group: null};
-  if(visibleSegmentationLayer==null){
+const getOrInitializeSelectedSegmentsOrGroup = (
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined,
+  state: OxalisState,
+) => {
+  const nothingSelectedObject = { segments: [], group: null };
+  if (visibleSegmentationLayer == null) {
     return nothingSelectedObject;
   }
   const selectedIds = state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
-  if(selectedIds == null){
-    Store.dispatch(setSelectedSegmentsOrGroupsAction(nothingSelectedObject.segments, nothingSelectedObject.group, visibleSegmentationLayer.name));
+  if (selectedIds == null) {
+    Store.dispatch(
+      setSelectedSegmentsOrGroupsAction(
+        nothingSelectedObject.segments,
+        nothingSelectedObject.group,
+        visibleSegmentationLayer.name,
+      ),
+    );
     return nothingSelectedObject;
   }
   return selectedIds;
-
-}
+};
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setHoveredSegmentId(segmentId: number | null | undefined) {
@@ -424,14 +431,20 @@ class SegmentsView extends React.Component<Props, State> {
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
       );
     }
-    if (this.tree?.current == null) {
-      return;
-    }
-    if(this.props.selectedIds.segments.length === 1 && prevProps.selectedIds !== this.props.selectedIds){
-      const selectedId = this.props.selectedIds.segments[0];
-      this.tree.current.scrollTo({ key: `segment-${selectedId}` });
-      console.log("scroll to", `segment-${selectedId}`, this.tree.current) // This is working for newly added segments, but were not scrolling yet in that case
-    }
+    //TODO not yet in DOM
+    setTimeout(() => {
+      if (this.tree?.current == null) {
+        return;
+      }
+      if (
+        this.props.selectedIds.segments.length === 1 &&
+        prevProps.selectedIds !== this.props.selectedIds
+      ) {
+        const selectedId = this.props.selectedIds.segments[0];
+        this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+        console.log("scroll to", `segment-${selectedId}`, this.tree.current); // This is working for newly added segments, but were not scrolling yet in that case
+      }
+    }, 100);
   }
 
   componentWillUnmount() {
@@ -474,9 +487,9 @@ class SegmentsView extends React.Component<Props, State> {
     const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    console.log("selectedIdsForCaseDistinction", selectedIdsForCaseDistinction)
-    console.log("selectedIdsForState", selectedIdsForState)
-    if(visibleSegmentationLayer==null) return;//TODO is this correct?
+    console.log("selectedIdsForCaseDistinction", selectedIdsForCaseDistinction);
+    console.log("selectedIdsForState", selectedIdsForState);
+    if (visibleSegmentationLayer == null) return; //TODO is this correct?
     if (
       selectedIdsForCaseDistinction.group != null &&
       selectedIdsForCaseDistinction.segments.length > 0
@@ -487,7 +500,13 @@ class SegmentsView extends React.Component<Props, State> {
           content: `You have ${selectedIdsForCaseDistinction.segments.length} selected segments. Do you really want to select this group?
         This will deselect all selected segments.`,
           onOk: () => {
-            Store.dispatch(setSelectedSegmentsOrGroupsAction([], selectedIdsForState.group, visibleSegmentationLayer.name))
+            Store.dispatch(
+              setSelectedSegmentsOrGroupsAction(
+                [],
+                selectedIdsForState.group,
+                visibleSegmentationLayer.name,
+              ),
+            );
             //this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
           },
           onCancel() {},
@@ -496,12 +515,24 @@ class SegmentsView extends React.Component<Props, State> {
         // If only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
         // This behaviour is imitated from the skeleton tab.
         const selectedIds = this.getSegmentOrGroupIdsForKeys([key]);
-        Store.dispatch(setSelectedSegmentsOrGroupsAction(selectedIds.segments, selectedIds.group, visibleSegmentationLayer.name))
+        Store.dispatch(
+          setSelectedSegmentsOrGroupsAction(
+            selectedIds.segments,
+            selectedIds.group,
+            visibleSegmentationLayer.name,
+          ),
+        );
         //this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
       }
       return;
     }
-    Store.dispatch(setSelectedSegmentsOrGroupsAction(selectedIdsForState.segments, selectedIdsForState.group, visibleSegmentationLayer?.name));
+    Store.dispatch(
+      setSelectedSegmentsOrGroupsAction(
+        selectedIdsForState.segments,
+        selectedIdsForState.group,
+        visibleSegmentationLayer?.name,
+      ),
+    );
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -551,7 +582,7 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-/*         selectedIds: {
+        /*         selectedIds: {
           // Ensure that the ids of previously selected segments are removed
           // if these segments don't exist anymore.
           segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
@@ -712,7 +743,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   onSelectSegment = (segment: Segment) => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if(visibleSegmentationLayer ==  null){
+    if (visibleSegmentationLayer == null) {
       Toast.info(
         <React.Fragment>
           Cannot select segment, because there is no visible segmentation layer.
@@ -720,7 +751,9 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
-    Store.dispatch(setSelectedSegmentsOrGroupsAction([segment.id], null, visibleSegmentationLayer.name))
+    Store.dispatch(
+      setSelectedSegmentsOrGroupsAction([segment.id], null, visibleSegmentationLayer.name),
+    );
 
     if (!segment.somePosition) {
       Toast.info(

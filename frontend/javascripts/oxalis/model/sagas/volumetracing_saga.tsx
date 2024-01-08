@@ -29,6 +29,7 @@ import {
   getDatasetBoundingBox,
   getMaximumSegmentIdForLayer,
   getResolutionInfo,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -68,6 +69,7 @@ import type {
   DeleteSegmentDataAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  clickSegmentAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
   setSelectedSegmentsOrGroupsAction,
@@ -735,6 +737,7 @@ function* ensureSegmentExists(
         !doesSegmentExist,
       ),
     );
+    yield* call(updateClickedSegments, action);
   }
 }
 
@@ -783,21 +786,29 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 }
 
-export function* handleClickedSegment(): Saga<void> {
-  yield* takeEvery("CLICK_SEGMENT", updateClickedSegments)
-}
-
-export function* updateClickedSegments(action: ClickSegmentAction): Saga<void>{
+export function* updateClickedSegments(
+  action: ClickSegmentAction | SetActiveCellAction,
+): Saga<void> {
   // if length of selected ids is 1, update
-  console.log("clicked segment ", action) //TODO remove
-  const {segmentId, layerName} = action;
+  console.log("clicked segment ", action); //TODO remove
+  const { segmentId } = action;
+  let layerName: string | undefined;
+  if (action instanceof clickSegmentAction) {
+    layerName = (action as ClickSegmentAction).layerName;
+  } else {
+    // TODO test me
+    const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+    layerName = segmentationLayer?.name;
+  }
   const clickedSegmentId = segmentId;
-  if(layerName == null) return;
-  const selectedSegmentsOrGroup = yield* select(state => state.localSegmentationData[layerName].selectedIds)
+  if (layerName == null) return;
+  const selectedSegmentsOrGroup = yield* select(
+    (state) => state.localSegmentationData[layerName as string]?.selectedIds,
+  );
   const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
-  if(numberOfSelectedSegments < 2) {
-    yield* put(setSelectedSegmentsOrGroupsAction([clickedSegmentId], null, layerName))
-    }
+  if (numberOfSelectedSegments < 2) {
+    yield* put(setSelectedSegmentsOrGroupsAction([clickedSegmentId], null, layerName));
+  }
 }
 
 export function* maintainHoveredSegmentId(): Saga<void> {
@@ -899,7 +910,6 @@ export default [
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,
-  handleClickedSegment,
   maintainHoveredSegmentId,
   listenToMinCut,
   listenToQuickSelect,

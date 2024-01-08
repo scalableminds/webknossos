@@ -9,6 +9,7 @@ import Constants, {
   Vector2,
   Vector3,
 } from "oxalis/constants";
+import Toast from "libs/toast";
 import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
@@ -166,11 +167,11 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
-): Saga<void> {
+): Saga<boolean> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  if (!allowUpdate) return;
-  if (voxelBuffer.isEmpty()) return;
+  if (!allowUpdate) return false;
+  if (voxelBuffer.isEmpty()) return false;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const activeCellId = volumeTracing.activeCellId;
   const segmentationLayer = yield* call(
@@ -196,9 +197,7 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
+  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
       min,
@@ -245,7 +244,7 @@ export function* labelWithVoxelBuffer2D(
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
+  const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
@@ -255,20 +254,25 @@ export function* labelWithVoxelBuffer2D(
     shouldOverwrite,
     overwritableValue,
   );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
+
+  if (wroteVoxels) {
+    // thirdDimensionOfSlice needs to be provided in global coordinates
+    const thirdDimensionOfSlice =
+      topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingResolutions(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      newCellIdValue,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  return wroteVoxels;
 }
 
 export function* createVolumeLayer(

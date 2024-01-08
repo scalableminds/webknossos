@@ -21,6 +21,7 @@ import Constants, {
   FillModeEnum,
   OrthoViews,
   Unicode,
+  OverwriteModeEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
@@ -108,6 +109,8 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 
+const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
+
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
@@ -172,6 +175,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    let wroteVoxels = false;
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -245,14 +249,15 @@ export function* editVolumeLayerAsync(): Saga<any> {
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     if (isBrushTool(activeTool)) {
-      yield* call(
-        labelWithVoxelBuffer2D,
-        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        initialViewport,
-      );
+      wroteVoxels =
+        (yield* call(
+          labelWithVoxelBuffer2D,
+          currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
+          contourTracingMode,
+          overwriteMode,
+          labeledZoomStep,
+          initialViewport,
+        )) || wroteVoxels;
     }
 
     let lastPosition = startEditingAction.position;
@@ -290,38 +295,41 @@ export function* editVolumeLayerAsync(): Saga<any> {
         );
 
         if (rectangleVoxelBuffer2D) {
-          yield* call(
+          wroteVoxels =
+            (yield* call(
+              labelWithVoxelBuffer2D,
+              rectangleVoxelBuffer2D,
+              contourTracingMode,
+              overwriteMode,
+              labeledZoomStep,
+              activeViewport,
+            )) || wroteVoxels;
+        }
+
+        wroteVoxels =
+          (yield* call(
             labelWithVoxelBuffer2D,
-            rectangleVoxelBuffer2D,
+            currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
             activeViewport,
-          );
-        }
-
-        yield* call(
-          labelWithVoxelBuffer2D,
-          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
-          contourTracingMode,
-          overwriteMode,
-          labeledZoomStep,
-          activeViewport,
-        );
+          )) || wroteVoxels;
       }
 
       lastPosition = addToLayerAction.position;
     }
 
-    yield* call(
-      finishLayer,
-      currentLayer,
-      activeTool,
-      contourTracingMode,
-      overwriteMode,
-      labeledZoomStep,
-      initialViewport,
-    );
+    wroteVoxels =
+      (yield* call(
+        finishLayer,
+        currentLayer,
+        activeTool,
+        contourTracingMode,
+        overwriteMode,
+        labeledZoomStep,
+        initialViewport,
+      )) || wroteVoxels;
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(
@@ -335,6 +343,18 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+
+    if (!wroteVoxels) {
+      const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+      if (overwriteMode == OverwriteModeEnum.OVERWRITE_EMPTY)
+        yield* call(
+          [Toast, Toast.warning],
+          "No voxels were changed. You might want to change the overwrite-mode to 'Overwrite All'. Otherwise, only empty voxels will be changed.",
+          { key: OVERWRITE_EMPTY_WARNING_KEY },
+        );
+    } else {
+      yield* call([Toast, Toast.close], OVERWRITE_EMPTY_WARNING_KEY);
+    }
   }
 }
 
@@ -537,13 +557,14 @@ export function* finishLayer(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   activeViewport: OrthoView,
-): Saga<void> {
+): Saga<boolean> {
   if (layer == null || layer.isEmpty()) {
-    return;
+    return false;
   }
 
+  let wroteVoxels = false;
   if (isVolumeDrawingTool(activeTool)) {
-    yield* call(
+    wroteVoxels = yield* call(
       labelWithVoxelBuffer2D,
       layer.getFillingVoxelBuffer2D(activeTool),
       contourTracingMode,
@@ -554,6 +575,7 @@ export function* finishLayer(
   }
 
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
+  return wroteVoxels;
 }
 export function* ensureToolIsAllowedInResolution(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");

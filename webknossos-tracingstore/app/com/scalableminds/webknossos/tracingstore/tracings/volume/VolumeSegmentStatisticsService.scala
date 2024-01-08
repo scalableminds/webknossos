@@ -44,7 +44,12 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                mag,
                                                                additionalCoordinates,
                                                                AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
-      volumeData <- getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions, userToken)
+      volumeData <- getVolumeDataForPositions(tracing,
+                                              tracingId,
+                                              mag,
+                                              bucketPositions,
+                                              additionalCoordinates,
+                                              userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
       volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
     } yield volumeInVx
@@ -70,8 +75,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(bucketPosition =>
-        extendBouningBoxByData(tracing, tracingId, mag, segmentId, boundingBoxMutable, bucketPosition, userToken))
+      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(
+        bucketPosition =>
+          extendBoundingBoxByData(tracing,
+                                  tracingId,
+                                  mag,
+                                  segmentId,
+                                  boundingBoxMutable,
+                                  bucketPosition,
+                                  additionalCoordinates,
+                                  userToken))
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
         BoundingBox.empty
@@ -99,15 +112,21 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         .map(vec3IntFromProto)
     }
 
-  private def extendBouningBoxByData(tracing: VolumeTracing,
-                                     tracingId: String,
-                                     mag: Vec3Int,
-                                     segmentId: Long,
-                                     mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                     bucketPosition: Vec3Int,
-                                     userToken: Option[String]): Fox[Unit] =
+  private def extendBoundingBoxByData(tracing: VolumeTracing,
+                                      tracingId: String,
+                                      mag: Vec3Int,
+                                      segmentId: Long,
+                                      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
+                                      bucketPosition: Vec3Int,
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                      userToken: Option[String]): Fox[Unit] =
     for {
-      bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), userToken)
+      bucketData <- getVolumeDataForPositions(tracing,
+                                              tracingId,
+                                              mag,
+                                              Seq(bucketPosition),
+                                              additionalCoordinates,
+                                              userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(
         bucketData,
         elementClassFromProto(tracing.elementClass))
@@ -145,13 +164,20 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                         tracingId: String,
                                         mag: Vec3Int,
                                         bucketPositions: ListOfVec3IntProto,
+                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                         userToken: Option[String]): Fox[Array[Byte]] =
-    getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions.values.map(vec3IntFromProto), userToken)
+    getVolumeDataForPositions(tracing,
+                              tracingId,
+                              mag,
+                              bucketPositions.values.map(vec3IntFromProto),
+                              additionalCoordinates,
+                              userToken)
 
   private def getVolumeDataForPositions(tracing: VolumeTracing,
                                         tracingId: String,
                                         mag: Vec3Int,
                                         bucketPositions: Seq[Vec3Int],
+                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                         userToken: Option[String]): Fox[Array[Byte]] = {
     val dataRequests = bucketPositions.map { position =>
       WebKnossosDataRequest(
@@ -161,7 +187,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         fourBit = Some(false),
         applyAgglomerate = None,
         version = None,
-        additionalCoordinates = None
+        additionalCoordinates = additionalCoordinates
       )
     }.toList
     for {

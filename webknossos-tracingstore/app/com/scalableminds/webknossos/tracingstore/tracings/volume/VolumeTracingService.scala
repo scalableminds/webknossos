@@ -10,16 +10,10 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelpe
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinate,
-  BucketPosition,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  WebknossosAdHocMeshRequest
-}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._

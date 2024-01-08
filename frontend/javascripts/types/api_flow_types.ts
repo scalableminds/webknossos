@@ -620,7 +620,7 @@ export type APIFeatureToggles = {
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
+export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
   "CONVERT_TO_WKW" = "convert_to_wkw",
   "EXPORT_TIFF" = "export_tiff",
@@ -647,7 +647,7 @@ export type APIJob = {
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
   readonly state: APIJobState;
-  readonly manualState: string;
+  readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;

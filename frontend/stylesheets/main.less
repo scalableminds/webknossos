@@ -175,7 +175,8 @@ i {
   margin-right: 5px;
 }
 
-.ant-btn-icon-only > .anticon {
+// Buttons with just an icon, e.g. on annotation dashboard 
+.ant-btn-icon-only .anticon {
   margin-right: 0;
 }
 
@@ -634,13 +635,8 @@ i.without-icon-margin,
   }
 
   .login-content {
-    background-color: white;
     width: 600px;
     padding: 80px;
-
-    h3 {
-      color: var(--color-black); // always enforce dark text color to prevent dark mode bugs
-    }
 
     @media @smartphones {
       padding: 20px;
@@ -661,9 +657,6 @@ i.without-icon-margin,
       background-size: cover;
     }
 
-    .ant-checkbox + span {
-      color: var(--color-black);
-    }
   }
 }
 

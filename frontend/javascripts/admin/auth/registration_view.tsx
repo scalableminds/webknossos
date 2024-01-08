@@ -82,10 +82,12 @@ function RegistrationViewGeneric() {
   return (
     <Spin spinning={isLoading}>
       <Row justify="center" align="middle" className="login-view">
-        <Col className="login-content drawing-signup" style={{ width: 1000 }}>
-          <h3>Sign Up</h3>
-          {content}
-          <Link to="/auth/login">Already have an account? Login instead.</Link>
+        <Col>
+          <Card className="login-content drawing-signup" style={{ width: 1000 }}>
+            <h3>Sign Up</h3>
+            {content}
+            <Link to="/auth/login">Already have an account? Login instead.</Link>
+          </Card>
         </Col>
       </Row>
     </Spin>

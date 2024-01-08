@@ -344,7 +344,7 @@ img.keyboard-mouse-icon:first-child {
     bottom: 0px;
     right: 0px;
     position: absolute;
-    height: @footer-height;
+    height: var(--footer-height);
     overflow: hidden;
     font-size: 11px;
     text-align: center;
@@ -504,7 +504,7 @@ img.keyboard-mouse-icon:first-child {
   left: 0px;
   top: 0px;
   right: 0px;
-  height: calc(100% - @footer-height);
+  height: calc(100% - var(--footer-height));
   position: absolute;
   overflow: hidden;
 }
@@ -600,7 +600,7 @@ img.keyboard-mouse-icon:first-child {
   /* The navbar and footer have a higher z-value than the context menu and
      should not be covered by the context menu overlay. At the same time
      the overlay serves as the container for the css-sticky context menu. */
-  height: calc(100% - var(--navbar-height) - @footer-height);
+  height: calc(100% - var(--navbar-height) - var(--footer-height));
   position: absolute;
   /* The context menu needs a higher z-value than flexlayout__tab_button_content.
      Otherwise the tab title covers the context menu. */

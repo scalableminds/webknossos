@@ -103,12 +103,14 @@ class VolumeTracingService @Inject()(
                                             bucketPosition: BucketPosition,
                                             bucketBytes: Array[Byte],
                                             previousBucketBytesBox: Box[Array[Byte]],
-                                            elementClass: ElementClassProto): Fox[Unit] =
+                                            elementClass: ElementClassProto,
+                                            mappingName: Option[String]): Fox[Unit] =
     volumeSegmentIndexService.updateFromBucket(segmentIndexBuffer,
                                                bucketPosition,
                                                bucketBytes,
                                                previousBucketBytesBox,
-                                               elementClass) ?~> "volumeSegmentIndex.update.failed"
+                                               elementClass,
+                                               mappingName) ?~> "volumeSegmentIndex.update.failed"
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],
@@ -186,6 +188,7 @@ class VolumeTracingService @Inject()(
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
+      tracing <- find(tracingId)
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
           previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
@@ -193,7 +196,8 @@ class VolumeTracingService @Inject()(
                                   bucketPosition,
                                   action.data,
                                   previousBucketBytes,
-                                  volumeTracing.elementClass) ?~> "failed to update segment index"
+                                  volumeTracing.elementClass,
+                                  tracing.mappingName) ?~> "failed to update segment index"
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()
@@ -212,8 +216,15 @@ class VolumeTracingService @Inject()(
         val mag = vec3IntFromProto(resolution)
         for {
           fallbackLayer <- getFallbackLayer(tracingId)
-          bucketPositionsRaw <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer, tracingId, a.id, mag, None, userToken)
+          tracing <- find(tracingId)
+          bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+            fallbackLayer,
+            tracingId,
+            a.id,
+            mag,
+            None,
+            tracing.mappingName,
+            userToken)
           bucketPositions = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_ * mag * DataLayer.bucketLength)
@@ -232,7 +243,8 @@ class VolumeTracingService @Inject()(
                                         bucketPosition,
                                         filteredBytes,
                                         Some(data),
-                                        volumeTracing.elementClass)
+                                        volumeTracing.elementClass,
+                                        tracing.mappingName)
               } yield ()
           }
         } yield ()
@@ -277,7 +289,8 @@ class VolumeTracingService @Inject()(
                                        bucketPosition,
                                        dataAfterRevert,
                                        Full(dataBeforeRevert),
-                                       sourceTracing.elementClass))
+                                       sourceTracing.elementClass,
+                                       sourceTracing.mappingName))
                 } yield ()
               case Empty =>
                 for {
@@ -288,7 +301,8 @@ class VolumeTracingService @Inject()(
                                        bucketPosition,
                                        dataAfterRevert,
                                        Full(dataBeforeRevert),
-                                       sourceTracing.elementClass))
+                                       sourceTracing.elementClass,
+                                       sourceTracing.mappingName))
                 } yield ()
               case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
             }
@@ -339,7 +353,12 @@ class VolumeTracingService @Inject()(
               for {
                 _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
                 _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-                  updateSegmentIndex(segmentIndexBuffer, bucketPosition, bytes, Empty, tracing.elementClass))
+                  updateSegmentIndex(segmentIndexBuffer,
+                                     bucketPosition,
+                                     bytes,
+                                     Empty,
+                                     tracing.elementClass,
+                                     tracing.mappingName))
               } yield ()
             }
             _ <- segmentIndexBuffer.flush()
@@ -375,7 +394,12 @@ class VolumeTracingService @Inject()(
           for {
             _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
             _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-              updateSegmentIndex(segmentIndexBuffer, bucketPosition, bytes, Empty, tracing.elementClass))
+              updateSegmentIndex(segmentIndexBuffer,
+                                 bucketPosition,
+                                 bytes,
+                                 Empty,
+                                 tracing.elementClass,
+                                 tracing.mappingName))
           } yield ()
         }
       }
@@ -513,7 +537,12 @@ class VolumeTracingService @Inject()(
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
               _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
-                updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, sourceTracing.elementClass))
+                updateSegmentIndex(segmentIndexBuffer,
+                                   bucketPosition,
+                                   bucketData,
+                                   Empty,
+                                   sourceTracing.elementClass,
+                                   sourceTracing.mappingName))
             } yield ()
           } else Fox.successful(())
       }
@@ -763,7 +792,12 @@ class VolumeTracingService @Inject()(
           for {
             _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache, mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
-              updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClass))
+              updateSegmentIndex(segmentIndexBuffer,
+                                 bucketPosition,
+                                 bucketBytes,
+                                 Empty,
+                                 elementClass,
+                                 tracings.headOption.flatMap(_.mappingName)))
           } yield ()
         }
         _ <- segmentIndexBuffer.flush()
@@ -791,7 +825,12 @@ class VolumeTracingService @Inject()(
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           processedBucketCount += 1
-          updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketData, Empty, tracing.elementClass)
+          updateSegmentIndex(segmentIndexBuffer,
+                             bucketPosition,
+                             bucketData,
+                             Empty,
+                             tracing.elementClass,
+                             tracing.mappingName)
       }
       _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
       updateGroup = UpdateActionGroup[VolumeTracing](
@@ -866,7 +905,8 @@ class VolumeTracingService @Inject()(
                                           bucketPosition,
                                           bucketBytes,
                                           previousBucketBytes,
-                                          tracing.elementClass) ?~> "failed to update segment index"
+                                          tracing.elementClass,
+                                          tracing.mappingName) ?~> "failed to update segment index"
                 } yield ()
               }
             } yield ()

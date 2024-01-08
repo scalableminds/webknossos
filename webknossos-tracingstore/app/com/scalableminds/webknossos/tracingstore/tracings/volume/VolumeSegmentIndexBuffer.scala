@@ -38,11 +38,11 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   def put(segmentId: Long, mag: Vec3Int, segmentPositions: ListOfVec3IntProto): Unit =
     segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag)) = segmentPositions
 
-  def getWithFallback(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
+  def getWithFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
     val key = segmentIndexKey(tracingId, segmentId, mag)
     segmentIndexBuffer.get(key) match {
       case Some(positions) => Fox.successful(positions)
-      case None            => getFallback(segmentId, mag)
+      case None            => getFallback(segmentId, mag, mappingName)
     }
   }
 
@@ -53,7 +53,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       }
     } yield ()
 
-  private def getFallback(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext) = {
+  private def getFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(implicit ec: ExecutionContext) = {
     val key = segmentIndexKey(tracingId, segmentId, mag)
     for {
       fossilDbData <- volumeSegmentIndexClient
@@ -62,7 +62,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         .fillEmpty(ListOfVec3IntProto.of(Seq()))
       layerData <- fallbackLayer match {
         case Some(layer) if fossilDbData.length == 0 =>
-          remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, userToken)
+          remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, userToken)
         case _ => Fox.successful(Seq.empty)
       }
       combined = fossilDbData.values.map(vec3IntFromProto) ++ layerData

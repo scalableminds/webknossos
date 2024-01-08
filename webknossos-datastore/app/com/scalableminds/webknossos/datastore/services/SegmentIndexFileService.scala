@@ -74,17 +74,19 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        datasetName: String,
                        dataLayerName: String,
                        segmentId: Long,
-                       mag: Vec3Int)(implicit m: MessagesProvider): Fox[Long] = {
+                       mag: Vec3Int,
+                       dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
 
     def getDataForBucketPositions(dataSource: datasource.DataSource,
                                   dataLayer: DataLayer,
                                   mag: Vec3Int,
-                                  bucketPositions: Seq[Vec3Int]): Fox[Array[Byte]] = {
+                                  bucketPositions: Seq[Vec3Int],
+                                  dataLayerMapping: Option[String]): Fox[Array[Byte]] = {
       val dataRequests = bucketPositions.map { position =>
         DataServiceDataRequest(
           dataSource = dataSource,
           dataLayer = dataLayer,
-          dataLayerMapping = None,
+          dataLayerMapping = dataLayerMapping,
           cuboid = Cuboid(
             VoxelPosition(position.x * DataLayer.bucketLength,
                           position.y * DataLayer.bucketLength,
@@ -113,8 +115,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   datasetName,
                                                                                   dataLayerName)
-        //TODO: Mapping
-        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions.toSeq)
+        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions.toSeq, dataLayerMapping)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {

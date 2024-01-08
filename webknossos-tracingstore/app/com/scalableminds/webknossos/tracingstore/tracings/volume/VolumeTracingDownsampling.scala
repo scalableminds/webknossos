@@ -66,7 +66,8 @@ trait VolumeTracingDownsampling
                                    bucketPosition: BucketPosition,
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
-                                   elementClass: ElementClassProto): Fox[Unit]
+                                   elementClass: ElementClassProto,
+                                   mappingName: Option[String]): Fox[Unit]
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
@@ -99,6 +100,7 @@ trait VolumeTracingDownsampling
         requiredMag
       }
       fallbackLayer <- tracingService.getFallbackLayer(tracingId)
+      tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         tracing.version,
@@ -113,7 +115,8 @@ trait VolumeTracingDownsampling
                                bucketPosition,
                                bucketDataMapMutable(bucketPosition),
                                Empty,
-                               tracing.elementClass))
+                               tracing.elementClass,
+                               tracing.mappingName))
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()

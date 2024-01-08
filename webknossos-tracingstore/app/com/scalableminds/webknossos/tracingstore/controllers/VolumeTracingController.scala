@@ -454,10 +454,12 @@ class VolumeTracingController @Inject()(
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
+          tracing <- tracingService.find(tracingId)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentVolume(tracingId,
                                                             segmentId,
                                                             request.body.mag,
+                                                            tracing.mappingName,
                                                             urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentVolumes))
@@ -468,10 +470,12 @@ class VolumeTracingController @Inject()(
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
+          tracing <- tracingService.find(tracingId)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
                                                                  segmentId,
                                                                  request.body.mag,
+                                                                 tracing.mappingName,
                                                                  urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
@@ -489,12 +493,14 @@ class VolumeTracingController @Inject()(
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
           cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           fallbackLayer <- tracingService.getFallbackLayer(tracingId)
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,
                                                                    tracingId,
                                                                    segmentId,
                                                                    magParsed,
                                                                    None,
+                                                                   mappingName = tracing.mappingName,
                                                                    urlOrHeaderToken(token, request))
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)

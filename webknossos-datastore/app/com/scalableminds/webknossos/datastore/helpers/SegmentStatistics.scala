@@ -9,7 +9,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long])
+case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long], mappingName: Option[String])
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }

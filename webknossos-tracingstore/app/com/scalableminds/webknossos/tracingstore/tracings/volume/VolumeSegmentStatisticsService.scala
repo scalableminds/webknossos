@@ -18,19 +18,26 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     extends ProtoGeometryImplicits
     with SegmentStatistics {
 
-  def getSegmentVolume(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Long] =
-    calculateSegmentVolume(segmentId, mag, getTypedDataForSegmentIndex(tracingId, userToken))
+  def getSegmentVolume(tracingId: String,
+                       segmentId: Long,
+                       mag: Vec3Int,
+                       mappingName: Option[String],
+                       userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
+    calculateSegmentVolume(segmentId, mag, getTypedDataForSegmentIndex(tracingId, mappingName, userToken))
 
-  def getSegmentBoundingBox(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(tracingId: String,
+                            segmentId: Long,
+                            mag: Vec3Int,
+                            mappingName: Option[String],
+                            userToken: Option[String])(implicit ec: ExecutionContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(segmentId,
                                 mag,
-                                getBucketPositions(tracingId, userToken),
+                                getBucketPositions(tracingId, mappingName, userToken),
                                 getTypedDataForBucketPosition(tracingId, userToken))
 
-  private def getTypedDataForSegmentIndex(tracingId: String, userToken: Option[String])(segmentId: Long, mag: Vec3Int)(
-      implicit ec: ExecutionContext) =
+  private def getTypedDataForSegmentIndex(tracingId: String, mappingName: Option[String], userToken: Option[String])(
+      segmentId: Long,
+      mag: Vec3Int)(implicit ec: ExecutionContext) =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
@@ -40,6 +47,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                segmentId,
                                                                mag,
                                                                None,
+                                                               mappingName,
                                                                userToken)
       volumeData <- getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions, userToken)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
@@ -55,8 +63,9 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         elementClassFromProto(tracing.elementClass))
     } yield dataTyped
 
-  private def getBucketPositions(tracingId: String, userToken: Option[String])(segmentId: Long, mag: Vec3Int)(
-      implicit ec: ExecutionContext) =
+  private def getBucketPositions(tracingId: String, mappingName: Option[String], userToken: Option[String])(
+      segmentId: Long,
+      mag: Vec3Int)(implicit ec: ExecutionContext) =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
@@ -66,6 +75,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                segmentId,
                                                                mag,
                                                                None,
+                                                               mappingName,
                                                                userToken)
     } yield allBucketPositions
 

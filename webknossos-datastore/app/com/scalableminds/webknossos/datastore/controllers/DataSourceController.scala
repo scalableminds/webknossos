@@ -579,7 +579,8 @@ class DataSourceController @Inject()(
                                                              dataSetName,
                                                              dataLayerName,
                                                              request.body.segmentIds.head,
-                                                             request.body.mag)
+                                                             request.body.mag,
+                                                             request.body.mappingName)
         } yield Ok(volume.toString)
       }
     }

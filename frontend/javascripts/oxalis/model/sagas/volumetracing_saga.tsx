@@ -104,6 +104,7 @@ import {
   applyLabeledVoxelMapToAllMissingResolutions,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
+  BooleanBox,
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
@@ -175,7 +176,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
-    let wroteVoxels = false;
+    const wroteVoxelsBox = { value: false };
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -249,15 +250,15 @@ export function* editVolumeLayerAsync(): Saga<any> {
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     if (isBrushTool(activeTool)) {
-      wroteVoxels =
-        (yield* call(
-          labelWithVoxelBuffer2D,
-          currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
-          contourTracingMode,
-          overwriteMode,
-          labeledZoomStep,
-          initialViewport,
-        )) || wroteVoxels;
+      yield* call(
+        labelWithVoxelBuffer2D,
+        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
+        contourTracingMode,
+        overwriteMode,
+        labeledZoomStep,
+        initialViewport,
+        wroteVoxelsBox,
+      );
     }
 
     let lastPosition = startEditingAction.position;
@@ -295,41 +296,41 @@ export function* editVolumeLayerAsync(): Saga<any> {
         );
 
         if (rectangleVoxelBuffer2D) {
-          wroteVoxels =
-            (yield* call(
-              labelWithVoxelBuffer2D,
-              rectangleVoxelBuffer2D,
-              contourTracingMode,
-              overwriteMode,
-              labeledZoomStep,
-              activeViewport,
-            )) || wroteVoxels;
-        }
-
-        wroteVoxels =
-          (yield* call(
+          yield* call(
             labelWithVoxelBuffer2D,
-            currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
+            rectangleVoxelBuffer2D,
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
             activeViewport,
-          )) || wroteVoxels;
+            wroteVoxelsBox,
+          );
+        }
+
+        yield* call(
+          labelWithVoxelBuffer2D,
+          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
+          contourTracingMode,
+          overwriteMode,
+          labeledZoomStep,
+          activeViewport,
+          wroteVoxelsBox,
+        );
       }
 
       lastPosition = addToLayerAction.position;
     }
 
-    wroteVoxels =
-      (yield* call(
-        finishLayer,
-        currentLayer,
-        activeTool,
-        contourTracingMode,
-        overwriteMode,
-        labeledZoomStep,
-        initialViewport,
-      )) || wroteVoxels;
+    yield* call(
+      finishLayer,
+      currentLayer,
+      activeTool,
+      contourTracingMode,
+      overwriteMode,
+      labeledZoomStep,
+      initialViewport,
+      wroteVoxelsBox,
+    );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
       updateSegmentAction(
@@ -344,7 +345,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
-    if (!wroteVoxels) {
+    if (!wroteVoxelsBox.value) {
       const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
       if (overwriteMode == OverwriteModeEnum.OVERWRITE_EMPTY)
         yield* call(
@@ -557,25 +558,25 @@ export function* finishLayer(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   activeViewport: OrthoView,
-): Saga<boolean> {
+  wroteVoxelsBox: BooleanBox,
+): Saga<void> {
   if (layer == null || layer.isEmpty()) {
-    return false;
+    return;
   }
 
-  let wroteVoxels = false;
   if (isVolumeDrawingTool(activeTool)) {
-    wroteVoxels = yield* call(
+    yield* call(
       labelWithVoxelBuffer2D,
       layer.getFillingVoxelBuffer2D(activeTool),
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
       activeViewport,
+      wroteVoxelsBox,
     );
   }
 
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
-  return wroteVoxels;
 }
 export function* ensureToolIsAllowedInResolution(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");

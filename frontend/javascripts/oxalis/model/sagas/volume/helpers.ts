@@ -35,6 +35,10 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   }
 }
 
+export type BooleanBox = {
+  value: boolean;
+};
+
 export function* getBoundingBoxForViewport(
   position: Vector3,
   currentViewport: OrthoView,
@@ -167,11 +171,12 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
-): Saga<boolean> {
+  wroteVoxelsBox?: BooleanBox,
+): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  if (!allowUpdate) return false;
-  if (voxelBuffer.isEmpty()) return false;
+  if (!allowUpdate) return;
+  if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const activeCellId = volumeTracing.activeCellId;
   const segmentationLayer = yield* call(
@@ -272,7 +277,9 @@ export function* labelWithVoxelBuffer2D(
     );
   }
 
-  return wroteVoxels;
+  if (wroteVoxelsBox != null) {
+    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+  }
 }
 
 export function* createVolumeLayer(

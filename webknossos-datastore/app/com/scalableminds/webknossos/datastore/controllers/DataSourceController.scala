@@ -145,7 +145,6 @@ class DataSourceController @Inject()(
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- dataSourceService.checkInbox(false)
               _ <- remoteWebKnossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
@@ -451,8 +450,8 @@ class DataSourceController @Inject()(
               accessTokenService.assertUserAccess(
                 UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
                 userToken))
-          _ <- composeService.composeDataset(request.body, userToken)
-          _ <- dataSourceService.checkInbox(verbose = false)
+          dataSource <- composeService.composeDataset(request.body, userToken)
+          _ <- dataSourceRepository.updateDataSource(dataSource)
         } yield Ok
       }
     }

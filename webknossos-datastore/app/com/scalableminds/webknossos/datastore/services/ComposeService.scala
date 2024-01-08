@@ -87,7 +87,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     dataBaseDir.resolve(organizationName).resolve(name)
 
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Unit] =
+      implicit ec: ExecutionContext): Fox[DataSource] =
     for {
       _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
 
@@ -104,7 +104,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSource <- createDatasource(composeRequest, composeRequest.organizationName)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
-    } yield ()
+    } yield dataSource
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {

@@ -24,6 +24,7 @@ import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
+import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
@@ -272,11 +273,12 @@ class UrlManager {
     }
 
     for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { meshes: localMeshes, currentMeshFile } = state.localSegmentationData[layerName];
+      const { currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
+      const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
       const meshes =
         localMeshes != null
-          ? Utils.values(localMeshes as Record<number, MeshInformation>)
+          ? Utils.values(localMeshes)
               .filter(({ isVisible }) => isVisible)
               .map(mapMeshInfoToUrlMeshDescriptor)
           : [];

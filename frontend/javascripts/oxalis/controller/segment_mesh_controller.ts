@@ -64,8 +64,8 @@ export default class SegmentMeshController {
     );
   }
 
-  constructMesh(segmentId: number, geometry: THREE.BufferGeometry) {
-    const color = this.getColorObjectForSegment(segmentId);
+  constructMesh(segmentId: number, layerName: string, geometry: THREE.BufferGeometry) {
+    const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
     });
@@ -127,7 +127,7 @@ export default class SegmentMeshController {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const mesh = this.constructMesh(segmentationId, geometry);
+    const mesh = this.constructMesh(segmentationId, layerName, geometry);
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
@@ -179,7 +179,7 @@ export default class SegmentMeshController {
   }
 
   setMeshColor(id: number, layerName: string): void {
-    const color = this.getColorObjectForSegment(id);
+    const color = this.getColorObjectForSegment(id, layerName);
     //  if in nd-dataset, set the color for all additional coordinates
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentationId)) {
       const meshDataForOneSegment = recordsOfLayers[layerName][id];
@@ -192,8 +192,8 @@ export default class SegmentMeshController {
     }
   }
 
-  getColorObjectForSegment(segmentId: number) {
-    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId);
+  getColorObjectForSegment(segmentId: number, layerName: string) {
+    const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
     const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
     return color;
   }

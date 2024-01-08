@@ -3,13 +3,10 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  InboxDataSource,
-  InboxDataSourceLike,
-  UnusableInboxDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike, UnusableInboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.uploading.{CancelUploadInformation, ComposeRequest, ComposeService, ReserveUploadInformation, UploadInformation, UploadService}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages

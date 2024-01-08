@@ -1,7 +1,5 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.uploading
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
@@ -14,13 +12,16 @@ import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common._
 import net.liftweb.common.Box.tryo
+import net.liftweb.common._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(

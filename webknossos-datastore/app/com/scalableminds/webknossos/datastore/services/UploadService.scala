@@ -65,9 +65,9 @@ object CancelUploadInformation {
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
-    extends SymlinkHelper(dataSourceService)
-    with DataSetDeleter
+                              exploreLocalLayerService: ExploreLocalLayerService,
+                              datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+    extends DataSetDeleter
     with DirectoryConstants
     with FoxImplicits
     with LazyLogging {
@@ -95,6 +95,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___file___${fileName}___chunkSet"
 
   cleanUpOrphanUploads()
+
+  override def dataBaseDir: Path = dataSourceService.dataBaseDir
 
   def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
@@ -237,7 +239,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
           case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+        _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }

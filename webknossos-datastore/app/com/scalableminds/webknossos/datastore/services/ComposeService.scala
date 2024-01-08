@@ -31,21 +31,21 @@ case class ComposeRequest(
     targetFolderId: String,
     organizationName: String,
     scale: Vec3Double,
-    layers: Seq[ComposeLayer]
+    layers: Seq[ComposeRequestLayer]
 )
 
 object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
-case class ComposeLayer(
+case class ComposeRequestLayer(
     datasetId: DataLayerId,
     sourceName: String,
     newName: String,
     transformations: Seq[CoordinateTransformation]
 )
 
-object ComposeLayer {
-  implicit val composeLayerFormat: OFormat[ComposeLayer] = Json.format[ComposeLayer]
+object ComposeRequestLayer {
+  implicit val composeLayerFormat: OFormat[ComposeRequestLayer] = Json.format[ComposeRequestLayer]
 }
 
 case class DataLayerId(name: String, owningOrganization: String)
@@ -54,7 +54,8 @@ object DataLayerId {
   implicit val dataLayerIdFormat: OFormat[DataLayerId] = Json.format[DataLayerId]
 }
 
-class SymlinkHelper(dataSourceService: DataSourceService)(implicit ec: ExecutionContext) extends FoxImplicits {
+class DatasetSymlinkService @Inject()(dataSourceService: DataSourceService)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
   def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
@@ -76,10 +77,11 @@ class SymlinkHelper(dataSourceService: DataSourceService)(implicit ec: Execution
 }
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               dataSourceService: DataSourceService,
-                               remoteWebKnossosClient: DSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
-    extends SymlinkHelper(dataSourceService)(ec)
-    with FoxImplicits {
+                               remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                               datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
+
+  val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
   private def uploadDirectory(organizationName: String, name: String): Path =
     dataBaseDir.resolve(organizationName).resolve(name)
@@ -104,7 +106,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield ()
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeLayer, uploadDir: Path): Fox[DataLayer] =
+  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {
       dataSourceId <- Fox.successful(
         DataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
@@ -121,7 +123,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                     composeLayer.sourceName,
                                                     Some(composeLayer.newName))
       layerIsRemote = isLayerRemote(dataSourceId, composeLayer.sourceName)
-      _ <- Fox.runIf(!layerIsRemote)(addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
+      _ <- Fox.runIf(!layerIsRemote)(
+        datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
         case l: PrecomputedDataLayer =>
           l.copy(name = composeLayer.newName,

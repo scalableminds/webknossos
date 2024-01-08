@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for blosc compressed N5 datasets. [#7465](https://github.com/scalableminds/webknossos/pull/7465)
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 - Added thumbnails to the dashboard dataset list. [#7479](https://github.com/scalableminds/webknossos/pull/7479)
+- Added the option to configure the name of the output segmentation layer in the neuron inferral job. [#7472](https://github.com/scalableminds/webknossos/pull/7472)
 - Adhoc mesh rendering is now available for ND datasets.[#7394](https://github.com/scalableminds/webknossos/pull/7394)
 - When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
 

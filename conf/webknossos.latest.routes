@@ -229,7 +229,7 @@ POST          /projects/:id/transferActiveTasks                                 
 
 # Statistics
 GET           /statistics/webknossos                                                            controllers.StatisticsController.webknossos(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
+GET           /statistics/users                                                                 controllers.StatisticsController.busiestUsers(interval: String, start: Option[Long], end: Option[Long], limit: Int, onlyCountTasks: Boolean)
 
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list()

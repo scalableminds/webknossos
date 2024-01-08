@@ -13,21 +13,20 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-case class TimeSpanRequest(users: List[String], start: Instant, end: Instant)
-object TimeSpanRequest { implicit val timeSpanRequest: OFormat[TimeSpanRequest] = Json.format[TimeSpanRequest] }
-
 case class TimeSpan(
     _id: ObjectId,
     _user: ObjectId,
     _annotation: Option[ObjectId],
-    time: Long,
+    durationMillis: Long,
     lastUpdate: Instant,
     numberOfUpdates: Long = 0,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
   def addTime(duration: FiniteDuration, timestamp: Instant): TimeSpan =
-    this.copy(lastUpdate = timestamp, time = time + duration.toMillis, numberOfUpdates = this.numberOfUpdates + 1)
+    this.copy(lastUpdate = timestamp,
+              durationMillis = durationMillis + duration.toMillis,
+              numberOfUpdates = this.numberOfUpdates + 1)
 }
 
 object TimeSpan {
@@ -42,7 +41,7 @@ object TimeSpan {
     Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
   def fromTimestamp(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
-    TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
+    TimeSpan(ObjectId.generate, _user, _annotation, durationMillis = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
 
@@ -66,7 +65,10 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  def findAllByUser(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[List[TimeSpan]] =
+  def findAllByUser(userId: ObjectId,
+                    start: Option[Instant],
+                    end: Option[Instant],
+                    onlyCountTasks: Boolean): Fox[List[TimeSpan]] = // TODO: onlyCountTasks
     for {
       r <- run(
         Timespans
@@ -79,9 +81,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[JsValue] = {
-    val startOrZero = start.getOrElse(Instant.zero)
-    val endOrMax = end.getOrElse(Instant.max)
+  def findAllByUserWithTask(userId: ObjectId, start: Instant, end: Instant, onlyCountTasks: Boolean): Fox[JsValue] = // TODO onlyCountTasks
     for {
       tuples <- run(q"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         from webknossos.timespans_ ts
@@ -91,11 +91,10 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
                         where ts._user = $userId
                         and ts.time > 0
-                        and ts.created >= $startOrZero
-                        and ts.created < $endOrMax
+                        and ts.created >= $start
+                        and ts.created < $end
                         """.as[(Long, Instant, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
-  }
 
   private def formatTimespanTuples(tuples: Vector[(Long, Instant, String, String, String, String, String, String)]) = {
 
@@ -141,7 +140,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         q"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
-                values(${t._id}, ${t._user}, ${t._annotation}, ${t.time}, ${t.lastUpdate},
+                values(${t._id}, ${t._user}, ${t._annotation}, ${t.durationMillis}, ${t.lastUpdate},
                 ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
@@ -151,7 +150,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 set
                   _user = ${t._user},
                   _annotation = ${t._annotation},
-                  time = ${t.time},
+                  time = ${t.durationMillis},
                   lastUpdate = ${t.lastUpdate},
                   numberOfUpdates = ${t.numberOfUpdates},
                   isDeleted = ${t.isDeleted}

@@ -244,7 +244,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       result <- run(q"""SELECT $columns
                         FROM $existingCollectionName
-                        WHERE _id in
+                        WHERE _id IN
                           (SELECT _user FROM webknossos.annotation_contributors WHERE _annotation = $annotationId)
                         AND NOT isUnlisted
                         AND $accessQuery""".as[UsersRow])

@@ -12,7 +12,7 @@ import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
@@ -43,32 +43,28 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   def loggedTimeOfUser[T](user: User,
                           groupingF: TimeSpan => T,
+                          onlyCountTasks: Boolean,
                           start: Option[Instant] = None,
                           end: Option[Instant] = None): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
-    }
+      timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id, start, end, onlyCountTasks).futureBox
+    } yield sumTimespansPerInterval(groupingF, timeSpansBox)
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T,
                                start: Option[Instant] = None,
                                end: Option[Instant] = None,
                                organizationId: ObjectId): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- timeSpanDAO.findAll(start, end, organizationId).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
+      timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAll(start, end, organizationId).futureBox
+    } yield sumTimespansPerInterval(groupingF, timeSpansBox)
+
+  private def sumTimespansPerInterval[T](groupingF: TimeSpan => T,
+                                         timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
+    timeSpansBox match {
+      case Full(timeSpans) =>
+        timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.durationMillis).millis).toMap
+      case _ =>
+        Map.empty[T, Duration]
     }
 
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
@@ -150,7 +146,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       // do nothing, this is not a stored annotation
     }
 
-  def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
+  private def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(
+      implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)

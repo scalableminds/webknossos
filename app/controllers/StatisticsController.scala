@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
 import models.dataset.DatasetDAO
 import models.task.TaskDAO
-import models.user.time.{TimeSpan, TimeSpanService}
+import models.user.time.{Day, Interval, Month, TimeSpan, TimeSpanService, Week}
 import models.user.{UserDAO, UserService}
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
@@ -27,12 +27,13 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
-  private val intervalHandler = Map(
-    "month" -> TimeSpan.groupByMonth _,
-    "week" -> TimeSpan.groupByWeek _
+  private val intervalHandler: Map[String, TimeSpan => Interval] = Map(
+    "month" -> TimeSpan.groupByMonth,
+    "week" -> TimeSpan.groupByWeek,
+    "day" -> TimeSpan.groupByDay
   )
 
-  private def intervalTracingTimeJson[T <: models.user.time.Interval](times: Map[T, Duration]) = times.map {
+  private def intervalTracingTimeJson[T <: Interval](times: Map[T, Duration]) = times.map {
     case (interval, duration) =>
       Json.obj(
         "start" -> interval.start.toString,
@@ -72,15 +73,22 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
       }
     }
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int): Action[AnyContent] =
+  def busiestUsers(interval: String,
+                   start: Option[Long],
+                   end: Option[Long],
+                   limit: Int,
+                   onlyCountTasks: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
         handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
         users <- userDAO.findAll //Access query ensures only users of own orga are shown
         notUnlistedUsers = users.filter(!_.isUnlisted)
-        usersWithTimes <- Fox.serialCombined(notUnlistedUsers)(user =>
-          timeSpanService.loggedTimeOfUser(user, handler, start.map(Instant(_)), end.map(Instant(_))).map(user -> _))
+        usersWithTimes <- Fox.serialCombined(notUnlistedUsers)(
+          user =>
+            timeSpanService
+              .loggedTimeOfUser(user, handler, onlyCountTasks, start.map(Instant(_)), end.map(Instant(_)))
+              .map(user -> _))
         data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
         json <- Fox.combined(data.map {
           case (user, times) =>

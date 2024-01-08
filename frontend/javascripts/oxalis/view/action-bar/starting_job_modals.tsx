@@ -575,14 +575,15 @@ function StartJobForm(props: StartJobFormProps) {
       // copied over from the original dataset to the output dataset.
       // Therefore, this name is available as the name for the output layer name.
       // That is why that layer is filtered out here.
-      const currentSelectedVolumeLayerName = form.getFieldValue("layerName") || initialLayerName;
+      const currentSelectedVolumeLayerName = chooseSegmentationLayer
+        ? form.getFieldValue("layerName") || initialLayerName
+        : undefined;
       return (
         getReadableNameOfVolumeLayer(layer, tracing) !== currentSelectedVolumeLayerName &&
         layer.name !== currentSelectedVolumeLayerName
       );
     })
     .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
-
   return (
     <Form
       onFinish={startJob}
@@ -672,9 +673,14 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
-          return Promise.resolve();
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: colorLayer,
+        selectedBoundingBox,
+        outputSegmentationLayerName,
+      }) => {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+          return;
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
@@ -683,6 +689,7 @@ export function NeuronSegmentationForm() {
           dataset.name,
           colorLayer.name,
           bbox,
+          outputSegmentationLayerName,
           newDatasetName,
         );
       }}
@@ -788,10 +795,13 @@ export function MaterializeVolumeAnnotationModal({
           outputSegmentationLayerName,
         }) => {
           if (outputSegmentationLayerName == null) {
-            return Promise.resolve();
+            return;
           }
-          const volumeLayerName = getReadableNameOfVolumeLayer(segmentationLayer, tracing);
-          const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+          const volumeLayerName =
+            "fallbackLayer" in segmentationLayer && segmentationLayer.fallbackLayer != null
+              ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
+              : null;
+          const baseSegmentationName = getBaseSegmentationName(segmentationLayer); // <- zeile ist falsch, nur fallback layer name nehmen, falls vorhanden, sonst null lassen.
           return startMaterializingVolumeAnnotationJob(
             dataset.owningOrganization,
             dataset.name,

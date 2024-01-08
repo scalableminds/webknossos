@@ -216,6 +216,7 @@ class JobsController @Inject()(
                          dataSetName: String,
                          layerName: String,
                          bbox: String,
+                         outputSegmentationLayerName: String,
                          newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -234,6 +235,7 @@ class JobsController @Inject()(
             "dataset_name" -> dataSetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
+            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "webknossos_token" -> RpcTokenHolder.webknossosToken,
             "bbox" -> bbox,
           )

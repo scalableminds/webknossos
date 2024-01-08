@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.user._
-import models.user.time.TimeSpanDAO
+import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -19,9 +19,26 @@ import scala.concurrent.ExecutionContext
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
+                               timeSpanService: TimeSpanService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
+
+  def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
+      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+      loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
+    } yield {
+      JsonOk(
+        Json.obj("loggedTime" ->
+          loggedTimeAsMap.map {
+            case (paymentInterval, duration) =>
+              Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+          }))
+    }
+  }
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =

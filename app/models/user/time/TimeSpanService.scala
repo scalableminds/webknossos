@@ -56,21 +56,6 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
-  def loggedTimeOfAnnotation[T](annotationId: ObjectId,
-                                groupingF: TimeSpan => T,
-                                start: Option[Instant] = None,
-                                end: Option[Instant] = None): Fox[Map[T, Duration]] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
-    }
-
   def loggedTimePerInterval[T](groupingF: TimeSpan => T,
                                start: Option[Instant] = None,
                                end: Option[Instant] = None,

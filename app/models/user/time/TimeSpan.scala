@@ -124,19 +124,6 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  def findAllByAnnotation(annotationId: ObjectId, start: Option[Instant], end: Option[Instant]): Fox[List[TimeSpan]] =
-    for {
-      r <- run(
-        Timespans
-          .filter(
-            r =>
-              notdel(r) && r._Annotation === annotationId.id && (r.created >= start
-                .getOrElse(Instant.zero)
-                .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
-          .result)
-      parsed <- parseAll(r)
-    } yield parsed
-
   def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] = {
     val startOrZero = start.getOrElse(Instant.zero)
     val endOrMax = end.getOrElse(Instant.max)

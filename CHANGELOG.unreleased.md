@@ -41,5 +41,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where dataset managers were not allowed to assign teams to new datasets that they are only member of. This already worked while editing the dataset later, but not during upload. [#7518](https://github.com/scalableminds/webknossos/pull/7518)
 
 ### Removed
+- Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)
 
 ### Breaking Changes

@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { App, ConfigProvider, theme } from "antd";
 import { APIUserTheme } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken } from "antd/lib/theme/interface";
+
+const ColorWKBlue = "#5660ff"; // WK ~blue/purple
+const ColorWKBlack = "rgb(20, 20, 20)";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -18,7 +21,7 @@ export function getSystemColorTheme(): Theme {
 export function getAntdTheme(userTheme: APIUserTheme) {
   let algorithm = theme.defaultAlgorithm;
   let token: Partial<AliasToken> = {
-    colorPrimary: "#5660ff", // WK ~blue/purple
+    colorPrimary: ColorWKBlue,
   };
 
   if (userTheme === "auto") {
@@ -29,7 +32,7 @@ export function getAntdTheme(userTheme: APIUserTheme) {
     algorithm = theme.darkAlgorithm;
 
     // use a very dark grey instead of pure black as base color for dark mode
-    token = { ...token, colorBgBase: "rgb(20, 20, 20)" };
+    token = { ...token, colorBgBase: ColorWKBlack };
   }
   // In case you want customize individual components, adapt the antd design tokens and return them here,
   // e.g., components: { Input: {<designToken>: ...}
@@ -40,14 +43,22 @@ export default function GlobalThemeProvider({ children }: { children?: React.Rea
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const antdTheme =
     activeUser == null ? getAntdTheme("auto") : getAntdTheme(activeUser.selectedTheme);
+  const isDarkMode = antdTheme.algorithm === theme.darkAlgorithm;
 
-  console.log(antdTheme);
+  useEffect(() => {
+    // body is outside of the ReactDOM, so we have to manually update it
+    if (isDarkMode) {
+      document.body.style.backgroundColor = ColorWKBlack;
+    } else {
+      document.body.style.backgroundColor = "white";
+    }
+  }, [isDarkMode]);
 
   return (
     <ConfigProvider theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}>
       <App>
         <div
-          className={antdTheme.algorithm === theme.darkAlgorithm ? "dark-theme" : undefined}
+          className={isDarkMode ? "dark-theme" : undefined}
           style={{
             background: "var(--ant-color-bg-base)",
             height: "calc(100vh - var(--navbar-height))",

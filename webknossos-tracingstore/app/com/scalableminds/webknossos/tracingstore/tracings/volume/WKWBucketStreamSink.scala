@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WK
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.tools.ByteUtils
-import com.scalableminds.webknossos.wrap.{BlockType, WKWFile, WKWHeader}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{BlockType, WKWFile, WKWHeader}
 
 import java.io.DataOutputStream
 import scala.concurrent.{ExecutionContext, Future}

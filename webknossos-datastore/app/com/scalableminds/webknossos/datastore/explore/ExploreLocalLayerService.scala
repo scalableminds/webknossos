@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrDataLayer
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets

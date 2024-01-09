@@ -39,7 +39,6 @@ class Application @Inject()(actorSystem: ActorSystem,
         Ok(
           Json.obj(
             "webknossos" -> Json.toJson(webknossos.BuildInfo.toMap.view.mapValues(_.toString).toMap),
-            "webknossos-wrap" -> Json.toJson(webknossoswrap.BuildInfo.toMap.view.mapValues(_.toString).toMap),
             "schemaVersion" -> schemaVersion.toOption,
             "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
             "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled

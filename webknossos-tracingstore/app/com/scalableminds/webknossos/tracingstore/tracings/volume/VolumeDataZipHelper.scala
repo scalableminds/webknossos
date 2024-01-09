@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.wrap.WKWFile
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo

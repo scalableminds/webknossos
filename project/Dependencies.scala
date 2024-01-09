@@ -45,8 +45,6 @@ object Dependencies {
     "io.grpc" % "grpc-services" % grpcVersion,
     // Streaming JSON parsing. import com.google.gson
     "com.google.code.gson" % "gson" % "2.10.1",
-    // Reading wkw files. import com.scalableminds.webknossos.wrap
-    "com.scalableminds" %% "webknossos-wrap" % "1.1.23",
     // Play WS Http client, used for RPC calls. import play.api.libs.ws
     ws,
     // Dependency Injection. import javax.inject.Inject

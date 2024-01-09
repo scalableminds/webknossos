@@ -10,10 +10,10 @@ class StandaloneDatastore @Inject()() extends Controller {
   def buildInfo: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(
       addRemoteOriginHeaders(
-        Ok(Json.obj(
-          "webknossosDatastore" -> Json.toJson(webknossosDatastore.BuildInfo.toMap.view.mapValues(_.toString).toMap),
-          "webknossos-wrap" -> Json.toJson(webknossoswrap.BuildInfo.toMap.view.mapValues(_.toString).toMap)
-        ))
+        Ok(
+          Json.obj(
+            "webknossosDatastore" -> Json.toJson(webknossosDatastore.BuildInfo.toMap.view.mapValues(_.toString).toMap)
+          ))
       ))
   }
 }

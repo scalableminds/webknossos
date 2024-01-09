@@ -4,7 +4,7 @@ import java.nio.file.{Path, Paths}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
-import com.scalableminds.webknossos.wrap.VoxelType
+import com.scalableminds.webknossos.datastore.dataformats.wkw.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
 
 trait WKWDataFormatHelper {

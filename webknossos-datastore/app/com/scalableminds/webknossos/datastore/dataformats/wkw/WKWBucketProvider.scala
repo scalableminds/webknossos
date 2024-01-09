@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import com.scalableminds.webknossos.wrap.WKWFile
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import net.liftweb.common.{Empty, Failure, Full}
 
 import java.nio.file.Path

@@ -1,7 +1,7 @@
 import { Modal } from "antd";
 import React from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, TreeType } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getNodeAndTree,
@@ -50,6 +50,7 @@ type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
 type SetTreeColorAction = ReturnType<typeof setTreeColorAction>;
 type ShuffleAllTreeColorsAction = ReturnType<typeof shuffleAllTreeColorsAction>;
+type SetTreeTypeAction = ReturnType<typeof setTreeTypeAction>;
 type CreateCommentAction = ReturnType<typeof createCommentAction>;
 type DeleteCommentAction = ReturnType<typeof deleteCommentAction>;
 type SetTracingAction = ReturnType<typeof setTracingAction>;
@@ -97,6 +98,7 @@ export type SkeletonTracingAction =
   | SetTreeNameAction
   | SelectNextTreeAction
   | SetTreeColorAction
+  | SetTreeTypeAction
   | ShuffleTreeColorAction
   | ShuffleAllTreeColorsAction
   | SetTreeColorIndexAction
@@ -427,6 +429,13 @@ export const setTreeColorAction = (treeId: number, color: Vector3) =>
 export const shuffleAllTreeColorsAction = () =>
   ({
     type: "SHUFFLE_ALL_TREE_COLORS",
+  } as const);
+
+export const setTreeTypeAction = (treeId: number, treeType: TreeType) =>
+  ({
+    type: "SET_TREE_TYPE",
+    treeId,
+    treeType,
   } as const);
 
 export const createCommentAction = (commentText: string, nodeId?: number, treeId?: number) =>

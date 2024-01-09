@@ -21,7 +21,7 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import { TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -54,6 +54,7 @@ import {
   toggleInactiveTreesAction,
   shuffleAllTreeColorsAction,
   setTreeEdgeVisibilityAction,
+  setTreeTypeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -91,6 +92,7 @@ type Props = OwnProps & {
   onToggleHideInactiveTrees: () => void;
   onShuffleAllTreeColors: () => void;
   onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
+  onSetTreeType: (treeId: number, type: TreeTypeEnum) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -567,6 +569,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
       const isEditingDisabled = !this.props.allowUpdate;
+      const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
@@ -620,9 +623,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.props.onToggleHideInactiveTrees();
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
-              title: "Hide/Show all other trees",
+              title: "Hide/Show All Other Trees",
               icon: <i className="fas fa-eye" />,
-              label: "Hide/Show all other trees",
+              label: "Hide/Show All Other Trees",
             },
             {
               key: "hideTreeEdges",
@@ -631,10 +634,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.props.onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
-              title: "Hide/Show edges of this tree",
+              title: "Hide/Show Edges of This Tree",
               icon: <span className="hide-tree-edges-icon" />,
-              label: "Hide/Show edges of this tree",
+              label: "Hide/Show Edges of This Tree",
             },
+            isAgglomerateSkeleton
+              ? {
+                  key: "convertToNormalSkeleton",
+                  onClick: () => {
+                    this.props.onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                    this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+                  },
+                  title: "Convert to Normal Skeleton",
+                  icon: <span className="fas fa-clipboard-check" />,
+                  label: "Convert to Normal Skeleton",
+                }
+              : null,
           ],
         };
       };
@@ -837,6 +852,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onShuffleAllTreeColors() {
     dispatch(shuffleAllTreeColorsAction());
+  },
+
+  onSetTreeType(treeId: number, type: TreeType) {
+    dispatch(setTreeTypeAction(treeId, type));
   },
 });
 

@@ -83,7 +83,6 @@ import {
   clickSegmentAction,
   performMinCutAction,
   setActiveCellAction,
-  setSelectedSegmentsOrGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";

@@ -92,7 +92,6 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
-  TreeMap,
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
@@ -221,46 +220,30 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 const getOrInitializeSelectedSegmentsOrGroup = (
   visibleSegmentationLayer: APISegmentationLayer | null | undefined,
   state: OxalisState,
-  segments: SegmentMap | null | undefined,
-  segmentGroups: Array<SegmentGroup>,
+  visibleSegments: SegmentMap | null | undefined,
+  visibleSegmentGroups: Array<SegmentGroup>,
 ) => {
   const nothingSelectedObject = { segments: [], group: null };
   if (visibleSegmentationLayer == null) {
     return nothingSelectedObject;
   }
-  const maybeSelectedIds = state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
-
-  if (maybeSelectedIds == null) {
-    // initialize empty objects for this layer
-    Store.dispatch(
-      setSelectedSegmentsOrGroupsAction(
-        nothingSelectedObject.segments,
-        nothingSelectedObject.group,
-        visibleSegmentationLayer.name,
-      ),
-    );
-    return nothingSelectedObject;
-  }
+  const { segments, group } =
+    state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
+  if (segments.length === 0 && group == null) return nothingSelectedObject;
 
   // Ensure that the ids of previously selected segments are removed
   // if these segments don't exist anymore.
-  const currentSegmentIds = new Set(segments?.map((segment) => segment.id));
-  const currentGroupIdsWithoutRootGroup = new Set(segmentGroups.map((group) => group.groupId));
-  const currentGroupIds =
-    currentGroupIdsWithoutRootGroup.size == 0
-      ? currentGroupIdsWithoutRootGroup
-      : currentGroupIdsWithoutRootGroup.add(MISSING_GROUP_ID);
-  const maybeSelectedGroup = maybeSelectedIds.group;
+  const currentSegmentIds = new Set(visibleSegments?.map((segment) => segment.id));
+  const currentGroupIdsWithoutRootGroup = new Set(
+    visibleSegmentGroups.map((group) => group.groupId),
+  );
+  const currentGroupIds = currentGroupIdsWithoutRootGroup.add(MISSING_GROUP_ID);
   const selectedIds = {
-    segments: maybeSelectedIds.segments.filter((id) => currentSegmentIds.has(id)),
-    group:
-      maybeSelectedGroup != null && currentGroupIds.has(maybeSelectedGroup)
-        ? maybeSelectedGroup
-        : null,
+    segments: segments.filter((id) => currentSegmentIds.has(id)),
+    group: group != null && currentGroupIds.has(group) ? group : null,
   };
   const haveSegmentsOrGroupsBeenRemovedFromList =
-    selectedIds.segments.length !== maybeSelectedIds.segments.length ||
-    selectedIds.group !== maybeSelectedIds.group;
+    selectedIds.segments.length !== segments.length || selectedIds.group !== group;
   if (haveSegmentsOrGroupsBeenRemovedFromList) {
     Store.dispatch(
       setSelectedSegmentsOrGroupsAction(

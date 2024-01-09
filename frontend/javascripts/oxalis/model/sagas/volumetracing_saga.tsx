@@ -29,7 +29,6 @@ import {
   getDatasetBoundingBox,
   getMaximumSegmentIdForLayer,
   getResolutionInfo,
-  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -69,7 +68,6 @@ import type {
   DeleteSegmentDataAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  clickSegmentAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
   setSelectedSegmentsOrGroupsAction,
@@ -98,7 +96,7 @@ import {
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import { Model, Store, api } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";

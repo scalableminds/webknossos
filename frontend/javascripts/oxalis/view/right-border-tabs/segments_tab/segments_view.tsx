@@ -92,6 +92,7 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
+  TreeMap,
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
@@ -188,7 +189,12 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     hasVolumeTracing: state.tracing.volumes.length > 0,
     segments,
     segmentGroups,
-    selectedIds: getOrInitializeSelectedSegmentsOrGroup(visibleSegmentationLayer, state),
+    selectedIds: getOrInitializeSelectedSegmentsOrGroup(
+      visibleSegmentationLayer,
+      state,
+      segments,
+      segmentGroups,
+    ),
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
@@ -215,13 +221,17 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 const getOrInitializeSelectedSegmentsOrGroup = (
   visibleSegmentationLayer: APISegmentationLayer | null | undefined,
   state: OxalisState,
+  segments: SegmentMap | null | undefined,
+  segmentGroups: Array<SegmentGroup>,
 ) => {
   const nothingSelectedObject = { segments: [], group: null };
   if (visibleSegmentationLayer == null) {
     return nothingSelectedObject;
   }
-  const selectedIds = state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
-  if (selectedIds == null) {
+  const maybeSelectedIds = state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
+
+  if (maybeSelectedIds == null) {
+    // initialize empty objects for this layer
     Store.dispatch(
       setSelectedSegmentsOrGroupsAction(
         nothingSelectedObject.segments,
@@ -230,6 +240,35 @@ const getOrInitializeSelectedSegmentsOrGroup = (
       ),
     );
     return nothingSelectedObject;
+  }
+
+  // Ensure that the ids of previously selected segments are removed
+  // if these segments don't exist anymore.
+  const currentSegmentIds = new Set(segments?.map((segment) => segment.id));
+  const currentGroupIdsWithoutRootGroup = new Set(segmentGroups.map((group) => group.groupId));
+  const currentGroupIds =
+    currentGroupIdsWithoutRootGroup.size == 0
+      ? currentGroupIdsWithoutRootGroup
+      : currentGroupIdsWithoutRootGroup.add(MISSING_GROUP_ID);
+  const maybeSelectedGroup = maybeSelectedIds.group;
+  const selectedIds = {
+    segments: maybeSelectedIds.segments.filter((id) => currentSegmentIds.has(id)),
+    group:
+      maybeSelectedGroup != null && currentGroupIds.has(maybeSelectedGroup)
+        ? maybeSelectedGroup
+        : null,
+  };
+  const haveSegmentsOrGroupsBeenRemovedFromList =
+    selectedIds.segments.length !== maybeSelectedIds.segments.length ||
+    selectedIds.group !== maybeSelectedIds.group;
+  if (haveSegmentsOrGroupsBeenRemovedFromList) {
+    Store.dispatch(
+      setSelectedSegmentsOrGroupsAction(
+        selectedIds.segments,
+        selectedIds.group,
+        visibleSegmentationLayer.name,
+      ),
+    );
   }
   return selectedIds;
 };
@@ -574,23 +613,10 @@ class SegmentsView extends React.Component<Props, State> {
       visitAllItems(generatedGroupTree, (item: SegmentHierarchyNode) => {
         searchableTreeItemList.push(item);
       });
-
-      const newSegmentIds = new Set(segments.map((segment) => segment.id));
-      const newGroupIds = new Set(segmentGroups.map((group) => group.groupId));
-      // const oldSelectedGroupId = prevState.selectedIds.group; TODO
       updateStateObject = {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        /*         selectedIds: {
-          // Ensure that the ids of previously selected segments are removed
-          // if these segments don't exist anymore.
-          segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
-          group:
-            oldSelectedGroupId != null && newGroupIds.has(oldSelectedGroupId)
-              ? oldSelectedGroupId
-              : null,
-        }, */
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {

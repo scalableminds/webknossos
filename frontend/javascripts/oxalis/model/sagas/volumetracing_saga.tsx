@@ -793,10 +793,9 @@ export function* updateClickedSegments(
   console.log("clicked segment ", action); //TODO remove
   const { segmentId } = action;
   let layerName: string | undefined;
-  if (action instanceof clickSegmentAction) {
+  if (action.type === "CLICK_SEGMENT") {
     layerName = (action as ClickSegmentAction).layerName;
   } else {
-    // TODO test me
     const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
     layerName = segmentationLayer?.name;
   }

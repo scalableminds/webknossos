@@ -787,8 +787,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
   };
 
-  const maybeFocusSegment=()=>{
-
+  const maybeFocusSegment = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
@@ -801,12 +800,14 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     const selectedSegmentsOrGroup = state.localSegmentationData[layerName].selectedIds;
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
-    if(numberOfSelectedSegments < 2) {
+    if (numberOfSelectedSegments < 2) {
       // This action is dispatched because the behaviour is identical click on a segment.
       // Note that the updated position is where the segment was clicked to open the context menu.
-      Store.dispatch(clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName))
-      }
-  }
+      Store.dispatch(
+        clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+      );
+    }
+  };
 
   const computeMeshAdHoc = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
@@ -978,7 +979,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,
     label: "Focus in Segment List",
-  }
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -1009,7 +1010,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 },
                 label: (
                   <>
-                    Select Segment ({segmentIdAtPosition}){" "}
+                    Activate Segment ({segmentIdAtPosition}){" "}
                     {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
                   </>
                 ),

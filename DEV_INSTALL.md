@@ -26,7 +26,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
-* [node.js 16 or 18](http://nodejs.org/download/)
+* [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 

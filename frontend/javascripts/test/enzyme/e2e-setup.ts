@@ -90,6 +90,10 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
 });
 const { window } = jsdom;
 
+// JSDOM does not support matchMedia yet which is why we mock it.
+// https://github.com/jsdom/jsdom/issues/3522
+window.matchMedia = () => false;
+
 function copyProps(src: any, target: any) {
   const props: Record<string, any> = {};
   Object.getOwnPropertyNames(src)

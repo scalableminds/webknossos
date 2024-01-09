@@ -2,8 +2,9 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { App, ConfigProvider, theme } from "antd";
 import { APIUserTheme } from "types/api_flow_types";
-import type { OxalisState, Theme } from "oxalis/store";
 import window from "libs/window";
+import type { OxalisState, Theme } from "oxalis/store";
+import type { AliasToken } from "antd/lib/theme/interface";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -16,7 +17,9 @@ export function getSystemColorTheme(): Theme {
 
 export function getAntdTheme(userTheme: APIUserTheme) {
   let algorithm = theme.defaultAlgorithm;
-  let token = {};
+  let token: Partial<AliasToken> = {
+    colorPrimary: "#5660ff", // WK ~blue/purple
+  };
 
   if (userTheme === "auto") {
     userTheme = getSystemColorTheme();
@@ -26,7 +29,7 @@ export function getAntdTheme(userTheme: APIUserTheme) {
     algorithm = theme.darkAlgorithm;
 
     // use a very dark grey instead of pure black as base color for dark mode
-    token = { colorBgBase: "rgb(20, 20, 20)" };
+    token = { ...token, colorBgBase: "rgb(20, 20, 20)" };
   }
   // In case you want customize individual components, adapt the antd design tokens and return them here,
   // e.g., components: { Input: {<designToken>: ...}

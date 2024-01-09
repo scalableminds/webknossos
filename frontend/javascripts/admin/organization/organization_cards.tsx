@@ -132,7 +132,7 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
         marginBottom: 20,
       }}
       bodyStyle={{
-        background: "#5660ff",
+        background: "var(--color-wk-blue)",
         color: "white",
       }}
     >

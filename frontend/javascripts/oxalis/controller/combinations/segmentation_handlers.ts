@@ -83,16 +83,8 @@ export function handleClickSegment(clickPosition: Point2) {
   const globalPosition = calculateGlobalPos(state, clickPosition);
   const segmentId = getSegmentIdForPosition(globalPosition);
   const { additionalCoordinates } = state.flycam;
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
 
   if (segmentId > 0) {
-    Store.dispatch(
-      clickSegmentAction(
-        segmentId,
-        globalPosition,
-        additionalCoordinates,
-        visibleSegmentationLayer?.name,
-      ),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, globalPosition, additionalCoordinates));
   }
 }

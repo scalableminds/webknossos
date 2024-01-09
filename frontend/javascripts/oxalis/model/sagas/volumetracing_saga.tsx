@@ -735,6 +735,9 @@ function* ensureSegmentExists(
         !doesSegmentExist,
       ),
     );
+
+    // Call this method here instead of an extra saga to make sure that
+    // the segment update is already finished in the store.
     yield* call(updateClickedSegments, action);
   }
 }
@@ -787,18 +790,14 @@ function* updateHoveredSegmentId(): Saga<void> {
 export function* updateClickedSegments(
   action: ClickSegmentAction | SetActiveCellAction,
 ): Saga<void> {
-  // if length of selected ids is 1, update
-  console.log("clicked segment ", action); //TODO remove
+  // If one or zero segments are selected, update selected segments in store
+  // Otherwise, the multiselection is kept.
   const { segmentId } = action;
   let layerName: string | undefined;
-  if (action.type === "CLICK_SEGMENT") {
-    layerName = (action as ClickSegmentAction).layerName;
-  } else {
-    const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
-    layerName = segmentationLayer?.name;
-  }
-  const clickedSegmentId = segmentId;
+  const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+  layerName = segmentationLayer?.name;
   if (layerName == null) return;
+  const clickedSegmentId = segmentId;
   const selectedSegmentsOrGroup = yield* select(
     (state) => state.localSegmentationData[layerName as string]?.selectedIds,
   );

@@ -6,6 +6,7 @@
   color: unset;
 }
 .flexlayout__tab_border,
+.flexlayout__tabset_tabbar_outer_top,
 .flexlayout__tabset-selected {
   background-color: var(--ant-color-bg-base) !important;
 }
@@ -27,14 +28,17 @@
 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
-  background-color: rgba(var(--ant-color-text), 0.4);
+  // background-color: rgba(var(--ant-color-text), 0.4);
+  background-color: var(--ant-color-text)
 }
 .flexlayout__splitter {
   z-index: 21;
-  background-color: rgba(var(--ant-color-text), 0.1);
+  // background-color: rgba(var(--ant-color-text), 0.1);
+  background-color: var(--ant-color-text);
   &::before {
     content: "";
-    background-color: rgba(var(--ant-color-text), 0);
+    // background-color: rgba(var(--ant-color-text), 0);
+    background-color: var(--ant-color-bg-base);
   }
 }
 
@@ -83,14 +87,15 @@
 
   .flexlayout__tab_button_content {
     background-color: var(--ant-color-bg-base);
-    color: rgba(var(--ant-color-text), 0.65);
+    // color: rgba(var(--ant-color-text), 0.65);
+    color: var(--ant-color-text-secondary);
     border-bottom: 1px solid transparent;
   }
   &.flexlayout__tab_button--selected {
     background-color: var(--ant-color-bg-base);
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
-      color: var(--antd);
+      color: var(--ant-color-link);
     }
   }
   &:hover {
@@ -110,7 +115,7 @@
 
 .flexlayout__outline_rect,
 .flexlayout__outline_rect_edge {
-  border-color: rgba(24, 144, 255, 0.85) !important;
+  border-color: var(--color-wk-blue) !important;
 }
 
 // Reverse the direction of the buttons in the tabset bar to be able to position elements on the right.

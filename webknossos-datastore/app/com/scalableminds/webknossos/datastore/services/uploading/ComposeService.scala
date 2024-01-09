@@ -4,7 +4,10 @@ import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{PrecomputedDataLayer, PrecomputedSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}

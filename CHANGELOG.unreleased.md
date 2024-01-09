@@ -17,6 +17,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 - Added thumbnails to the dashboard dataset list. [#7479](https://github.com/scalableminds/webknossos/pull/7479)
 - Adhoc mesh rendering is now available for ND datasets.[#7394](https://github.com/scalableminds/webknossos/pull/7394)
+- When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
+
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
@@ -36,7 +38,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where meshes (or chunks of them) were always colored white, if they were loaded while the corresponding segmentation layer was disabled. [#7507](https://github.com/scalableminds/webknossos/pull/7507)
 - Fixed a race condition when opening a short link, that would sometimes lead to an error toast. [#7507](https://github.com/scalableminds/webknossos/pull/7507)
 - Fixed that the Segment Statistics feature was not available in the context menu of segment groups and in the context menu of the data viewports. [#7510](https://github.com/scalableminds/webknossos/pull/7510)
+- Fixed a bug where dataset managers were not allowed to assign teams to new datasets that they are only member of. This already worked while editing the dataset later, but not during upload. [#7518](https://github.com/scalableminds/webknossos/pull/7518)
+- Fixed regression in proofreading tool when automatic mesh loading was disabled and a merge/split operation was performed. [#7534](https://github.com/scalableminds/webknossos/pull/7534)
+- Fixed that last dimension value in ND dataset was not loaded. [#7535](https://github.com/scalableminds/webknossos/pull/7535)
 
 ### Removed
+- Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)
 
 ### Breaking Changes

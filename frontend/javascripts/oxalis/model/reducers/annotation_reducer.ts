@@ -258,10 +258,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         additionalCoordinates,
         layerName,
       );
-      if (maybeMeshes == null) {
-        throw Error("No mesh data found in state.localSegmentationData.");
-      }
-      if (maybeMeshes[segmentId] == null) {
+      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+        // No meshes exist for the segment id. No need to do anything.
         return state;
       }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;

@@ -15,7 +15,7 @@ import net.liftweb.common.Full
 import security.URLSharing
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class OpenGraphTags(
     title: Option[String],
@@ -45,7 +45,19 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
-                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] =
+                                                                      ctx: DBAccessContext): Future[OpenGraphTags] =
+    for {
+      tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).futureBox
+      // In any error case, fall back to default, so the html template does not break
+      tags = tagsBox match {
+        case Full(tags) => tags
+        case _          => defaultTags(OpenGraphPageType.unknown)
+      }
+    } yield tags
+
+  private def getOpenGraphTagsImpl(uriPath: String, sharingToken: Option[String])(
+      implicit ec: ExecutionContext,
+      ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
       (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
       ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)

@@ -140,6 +140,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
   "SHUFFLE_ALL_TREE_COLORS",
+  "SET_TREE_TYPE",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",

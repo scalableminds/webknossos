@@ -20,8 +20,11 @@ export function getSystemColorTheme(): Theme {
 
 export function getAntdTheme(userTheme: APIUserTheme) {
   let algorithm = theme.defaultAlgorithm;
+
+  // Ant Design Customizations
   let token: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
+    fontFamily: "\"Nunito\", \"Monospaced Number\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;"
   };
 
   if (userTheme === "auto") {

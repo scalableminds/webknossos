@@ -1837,7 +1837,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
     if (dragNode.type === "segment") {
       // Segment(s) were dragged onto/next to a segment or group.
-      // It is possible to drag a segment that was not selected. In that case, the other selected segments are moved aswell.
+      // It is possible to drag a segment that was not selected. In that case, the selected segments are moved aswell.
       const selectedSegmentIds = this.state.selectedIds.segments;
       this.props.updateSegments(
         [dragNode.id, ...selectedSegmentIds],

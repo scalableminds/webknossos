@@ -3,6 +3,10 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import com.google.common.io.{LittleEndianDataInputStream => DataInputStream}
 import com.scalableminds.util.tools.BoxImplicits
 import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
+import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
 import org.apache.commons.io.IOUtils
 
 import java.io._
@@ -14,8 +18,6 @@ object BlockType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value
 
   def isCompressed(blockType: BlockType.Value): Boolean = blockType == LZ4 || blockType == LZ4HC
-
-  def isUncompressed(blockType: BlockType.Value): Boolean = blockType == Raw
 }
 
 object VoxelType extends Enumeration(1) {
@@ -43,7 +45,7 @@ case class WKWHeader(
     voxelType: VoxelType.Value,
     numBytesPerVoxel: Int,
     jumpTable: Array[Long]
-) {
+) extends DatasetHeader {
 
   def dataOffset: Long = jumpTable.head
 
@@ -101,6 +103,24 @@ case class WKWHeader(
       output.write(jumpTableBuffer.array)
     }
   }
+
+  override def datasetShape: Array[Int] = ???
+
+  override def chunkSize: Array[Int] = Array(32, 32, 32) // TODO: channels
+
+  override def dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
+
+  override def dataType: String = ???
+
+  override def fill_value: Either[String, Number] = Right(0)
+
+  override def order: ArrayOrder = ArrayOrder.F
+
+  override def resolvedDataType: ArrayDataType = ???
+
+  override def compressorImpl: Compressor = ???
+
+  override def voxelOffset: Array[Int] = Array(0, 0, 0)
 }
 
 object WKWHeader extends BoxImplicits {

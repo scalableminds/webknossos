@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -30,7 +30,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
-import io.swagger.annotations._
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
@@ -52,7 +51,6 @@ import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@Api
 class AnnotationIOController @Inject()(
     nmlWriter: NmlWriter,
     annotationDAO: AnnotationDAO,
@@ -79,27 +77,18 @@ class AnnotationIOController @Inject()(
 
   private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
 
-  @ApiOperation(
-    value =
-      """Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
-Expects:
- - As file attachment:
-    - Any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
-    - If multiple annotations are uploaded, they are merged into one.
-       - This is not supported if any of the annotations has multiple volume layers.
- - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
-   - If "true": in merged annotation, create tree group wrapping the trees of each file
-   - If "false": in merged annotation, rename trees with the respective file name as prefix""",
-    nickname = "annotationUpload"
-  )
-  @ApiResponses(
-    Array(
-      new ApiResponse(
-        code = 200,
-        message =
-          "JSON object containing annotation information about the newly created annotation, including the assigned id"),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
+  /* Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
+     Expects:
+      - As file attachment:
+         - Any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
+         - If multiple annotations are uploaded, they are merged into one.
+            - This is not supported if any of the annotations has multiple volume layers.
+      - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
+        - If "true": in merged annotation, create tree group wrapping the trees of each file
+        - If "false": in merged annotation, rename trees with the respective file name as prefix
+     Returns:
+        JSON object containing annotation information about the newly created annotation, including the assigned id
+   */
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
       log() {
@@ -310,28 +299,13 @@ Expects:
     )
   }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
-  @ApiResponses(
-    Array(
-      new ApiResponse(
-        code = 200,
-        message =
-          "NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip"
-      ),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def download(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
-      @ApiParam(
-        value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
-      id: String,
-      skeletonVersion: Option[Long],
-      volumeVersion: Option[Long],
-      skipVolumeData: Option[Boolean],
-      volumeDataZipFormat: Option[String]): Action[AnyContent] =
+  // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
+  def download(typ: String,
+               id: String,
+               skeletonVersion: Option[Long],
+               volumeVersion: Option[Long],
+               skipVolumeData: Option[Boolean],
+               volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
@@ -357,15 +331,7 @@ Expects:
       } yield result
     }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def downloadWithoutType(@ApiParam(value = "Id of the stored annotation")
-                          id: String,
+  def downloadWithoutType(id: String,
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
                           skipVolumeData: Option[Boolean],

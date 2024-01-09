@@ -45,9 +45,6 @@ object JsonHelper extends BoxImplicits with LazyLogging {
         logger.warn(
           s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
-      case e: com.fasterxml.jackson.databind.JsonMappingException =>
-        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
-        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
       case e: Exception =>
         logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")

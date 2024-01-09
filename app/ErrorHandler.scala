@@ -1,4 +1,4 @@
-import com.mohiva.play.silhouette.api.actions.SecuredErrorHandler
+import play.silhouette.api.actions.SecuredErrorHandler
 import javax.inject._
 import play.api.http.DefaultHttpErrorHandler
 import play.api._

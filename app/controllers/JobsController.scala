@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
@@ -88,7 +88,8 @@ class JobsController @Inject()(
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      job <- jobDAO.findOne(ObjectId(id))
+      idValidated <- ObjectId.fromString(id)
+      job <- jobDAO.findOne(idValidated) ?~> "job.notFound"
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -126,7 +127,7 @@ class JobsController @Inject()(
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> dataSetName,
             "scale" -> scale,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken
+            "webknossos_token" -> RpcTokenHolder.webknossosToken
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -161,6 +162,28 @@ class JobsController @Inject()(
       } yield Ok(js)
     }
 
+  def runComputeSegmentIndexFileJob(organizationName: String, dataSetName: String, layerName: String,
+  ): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.segmentIndexFile.notAllowed.organization" ~> FORBIDDEN
+        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataset.notFound",
+          dataSetName) ~> NOT_FOUND
+        command = JobCommand.compute_segment_index_file
+        commandArgs = Json.obj(
+          "organization_name" -> organizationName,
+          "dataset_name" -> dataSetName,
+          "segmentation_layer_name" -> layerName,
+        )
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
   def runInferNucleiJob(organizationName: String,
                         dataSetName: String,
                         layerName: String,
@@ -181,7 +204,7 @@ class JobsController @Inject()(
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
             "new_dataset_name" -> newDatasetName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "webknossos_token" -> RpcTokenHolder.webknossosToken,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -211,7 +234,7 @@ class JobsController @Inject()(
             "dataset_name" -> dataSetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "webknossos_token" -> RpcTokenHolder.webknossosToken,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
@@ -285,7 +308,7 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "webknossos_token" -> RpcTokenHolder.webknossosToken,
             "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,

@@ -34,7 +34,7 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     }
 
     const deleteDataset = await confirmAsync({
-      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${dataset.name}?`,
+      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${dataset.name}? Note that the name of a dataset is not guaranteed to be free to use afterwards.`,
       okText: "Yes, Delete Dataset on Disk now",
     });
 

@@ -38,7 +38,8 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   def put(segmentId: Long, mag: Vec3Int, segmentPositions: ListOfVec3IntProto): Unit =
     segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag)) = segmentPositions
 
-  def getWithFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
+  def getWithFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(
+      implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
     val key = segmentIndexKey(tracingId, segmentId, mag)
     segmentIndexBuffer.get(key) match {
       case Some(positions) => Fox.successful(positions)

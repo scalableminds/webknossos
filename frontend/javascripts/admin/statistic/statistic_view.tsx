@@ -16,7 +16,7 @@ type TimeEntry = {
 };
 type State = {
   graphData: {
-    tracingTimes: TimeEntry[];
+    timeGroupedByInterval: TimeEntry[];
   };
   timeEntries: Array<{
     tracingTimes: TimeEntry[];

@@ -4,7 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationType
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -41,7 +41,7 @@ object TimeSpan {
   def groupByDay(timeSpan: TimeSpan): Day =
     Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
-  def fromTimestamp(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
+  def fromInstant(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
     TimeSpan(ObjectId.generate, _user, _annotation, durationMillis = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
@@ -66,40 +66,43 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  def findAllByUser(userId: ObjectId,
-                    start: Option[Instant],
-                    end: Option[Instant],
-                    onlyCountTasks: Boolean): Fox[List[TimeSpan]] = // TODO: onlyCountTasks
+  def findAllByUser(userId: ObjectId): Fox[List[TimeSpan]] =
     for {
-      r <- run(
-        Timespans
-          .filter(
-            r =>
-              notdel(r) && r._User === userId.id && (r.created >= start
-                .getOrElse(Instant.zero)
-                .toSql) && r.created <= end.getOrElse(Instant.max).toSql)
-          .result)
+      r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Instant, end: Instant, onlyCountTasks: Boolean): Fox[JsValue] = // TODO onlyCountTasks
+  def findAllByUserWithTask(userId: ObjectId,
+                            start: Instant,
+                            end: Instant,
+                            onlyCountTasks: Boolean,
+                            projectIdsOpt: Option[List[ObjectId]]): Fox[JsValue] = {
+    val projectQuery = projectIdsFilterQuery(projectIdsOpt)
+    val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"true"
     for {
-      tuples <- run(q"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
-                        from webknossos.timespans_ ts
-                        join webknossos.annotations_ a on ts._annotation = a._id
-                        join webknossos.tasks_ t on a._task = t._id
-                        join webknossos.projects_ p on t._project = p._id
-                        join webknossos.taskTypes_ tt on t._taskType = tt._id
-                        where ts._user = $userId
-                        and ts.time > 0
-                        and ts.created >= $start
-                        and ts.created < $end
-                        """.as[(Long, Instant, String, String, String, String, String, String)])
+      tuples <- run(
+        q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+                        FROM webknossos.timespans_ ts
+                        JOIN webknossos.annotations_ a on ts._annotation = a._id
+                        LEFT JOIN webknossos.tasks_ t on a._task = t._id
+                        LEFT JOIN webknossos.projects_ p on t._project = p._id
+                        LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
+                        WHERE ts._user = $userId
+                        AND ts.time > 0
+                        AND ts.created >= $start
+                        AND ts.created < $end
+                        AND $projectQuery
+                        AND $onlyCountTasksQuery
+                        """
+          .as[(Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])])
     } yield formatTimespanTuples(tuples)
+  }
 
-  private def formatTimespanTuples(tuples: Vector[(Long, Instant, String, String, String, String, String, String)]) = {
+  private def formatTimespanTuples(tuples: Vector[
+    (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])]) = {
 
-    def formatTimespanTuple(tuple: (Long, Instant, String, String, String, String, String, String)) = {
+    def formatTimespanTuple(
+        tuple: (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])) = {
       def formatDuration(millis: Long): String = {
         // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
         // only hours, min and sec are important in this scenario
@@ -124,7 +127,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  def findAll(start: Option[Instant], end: Option[Instant], organizationId: ObjectId): Fox[List[TimeSpan]] = {
+  def findAllByOrganization(start: Option[Instant],
+                            end: Option[Instant],
+                            organizationId: ObjectId): Fox[List[TimeSpan]] = {
     val startOrZero = start.getOrElse(Instant.zero)
     val endOrMax = end.getOrElse(Instant.max)
     for {
@@ -137,6 +142,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield parsed
   }
 
+  private def projectIdsFilterQuery(projectIdsOpt: Option[List[ObjectId]]): SqlToken =
+    projectIdsOpt match {
+      case None => q"true" // Query did not filter by project, include all
+      case Some(projectIds) if projectIds.isEmpty =>
+        q"false" // Query did filter by project, but list was empty, return nothing
+      case Some(projectIds) => q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
+    }
+
   def timeSummedSearch(start: Instant,
                        end: Instant,
                        users: List[ObjectId],
@@ -144,12 +157,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                        projectIdsOpt: Option[List[ObjectId]]): Fox[List[JsObject]] =
     if (users.isEmpty) Fox.successful(List.empty)
     else {
-      val projectQuery = projectIdsOpt match {
-        case None => q"true" // Query did not filter by project, include all
-        case Some(projectIds) if projectIds.isEmpty =>
-          q"false" // Query did filter by project, but list was empty, return nothing
-        case Some(projectIds) => q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
-      }
+      val projectQuery = projectIdsFilterQuery(projectIdsOpt)
       val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"true"
       val query =
         q"""

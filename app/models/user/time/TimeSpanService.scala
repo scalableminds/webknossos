@@ -41,25 +41,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
-  def loggedTimeOfUser[T](user: User,
-                          groupingF: TimeSpan => T,
-                          onlyCountTasks: Boolean,
-                          start: Option[Instant] = None,
-                          end: Option[Instant] = None): Fox[Map[T, Duration]] =
-    for {
-      timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id, start, end, onlyCountTasks).futureBox
-    } yield sumTimespansPerInterval(groupingF, timeSpansBox)
-
-  def loggedTimePerInterval[T](groupingF: TimeSpan => T,
-                               start: Option[Instant] = None,
-                               end: Option[Instant] = None,
-                               organizationId: ObjectId): Fox[Map[T, Duration]] =
-    for {
-      timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAll(start, end, organizationId).futureBox
-    } yield sumTimespansPerInterval(groupingF, timeSpansBox)
-
-  private def sumTimespansPerInterval[T](groupingF: TimeSpan => T,
-                                         timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
+  def sumTimespansPerInterval[T](groupingF: TimeSpan => T, timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
     timeSpansBox match {
       case Full(timeSpans) =>
         timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.durationMillis).millis).toMap
@@ -84,7 +66,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       var timeSpansToUpdate: List[(TimeSpan, Instant)] = List()
 
       def createNewTimeSpan(timestamp: Instant, _user: ObjectId, annotation: Option[Annotation]) = {
-        val timeSpan = TimeSpan.fromTimestamp(timestamp, _user, annotation.map(_._id))
+        val timeSpan = TimeSpan.fromInstant(timestamp, _user, annotation.map(_._id))
         timeSpansToInsert = timeSpan :: timeSpansToInsert
         timeSpan
       }

@@ -62,7 +62,7 @@ PUT           /users/:id/novelUserExperienceInfos                               
 PUT           /users/:id/selectedTheme                                                          controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/annotations                                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String, onlyCountTasks: Option[Boolean])
+GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String)
 
 # Team
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
@@ -248,8 +248,8 @@ POST          /termsOfService/accept                                            
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
 # Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.timeSpansOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
+GET           /time/allusers/:year/:month                                                       controllers.TimeController.timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+GET           /time/userlist/:year/:month                                                       controllers.TimeController.timeSpansOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, onlyCountTasks: Option[Boolean], projectIds: Option[String])
 
 GET           /time/groupedByInterval                                                           controllers.TimeController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])

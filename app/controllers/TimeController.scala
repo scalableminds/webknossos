@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.user._
 import models.user.time.{Interval, TimeSpan, TimeSpanDAO, TimeSpanService}
+import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
@@ -25,16 +26,15 @@ class TimeController @Inject()(userService: UserService,
     extends Controller
     with FoxImplicits {
 
-  def userLoggedTime(userId: String, onlyCountTasks: Option[Boolean] // defaults to false
-  ): Action[AnyContent] =
+  // Called by webknossos-libs client. Sums monthly. Includes exploratives
+  def userLoggedTime(userId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user,
-                                                            TimeSpan.groupByMonth,
-                                                            onlyCountTasks.getOrElse(false))
+        timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).futureBox
+        loggedTimeAsMap = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth, timeSpansBox)
       } yield {
         JsonOk(
           Json.obj("loggedTime" ->
@@ -45,31 +45,18 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  def timeSpansOfAllUsers(year: Int,
-                          month: Int,
-                          startDay: Option[Int],
-                          endDay: Option[Int],
-                          onlyCountTasks: Option[Boolean] // defaults to true
-  ): Action[AnyContent] =
+  // Legacy, called by braintracing
+  def timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         users <- userDAO.findAll
         filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
-        js <- getTimeSpansOfUsersForMonthJs(filteredUsers,
-                                            year,
-                                            month,
-                                            startDay,
-                                            endDay,
-                                            onlyCountTasks.getOrElse(true))
+        js <- getTimeSpansOfUsersForMonthJs(filteredUsers, year, month, startDay, endDay)
       } yield Ok(js)
     }
 
-  def timeSpansOfUsers(userString: String,
-                       year: Int,
-                       month: Int,
-                       startDay: Option[Int],
-                       endDay: Option[Int],
-                       onlyCountTasks: Option[Boolean] // defaults to true
+  // Legacy, called by braintracing
+  def timeSpansOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int],
   ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -79,7 +66,7 @@ class TimeController @Inject()(userService: UserService,
             .toList
             .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- getTimeSpansOfUsersForMonthJs(users, year, month, startDay, endDay, onlyCountTasks.getOrElse(true))
+        js <- getTimeSpansOfUsersForMonthJs(users, year, month, startDay, endDay)
       } yield Ok(js)
     }
 
@@ -91,10 +78,15 @@ class TimeController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
+        projectIdsValidated <- parseProjectIdsOpt(projectIds)
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- getUserTimeSpansJs(user, Instant(startDate), Instant(endDate), onlyCountTasks.getOrElse(true))
+        js <- getUserTimeSpansJs(user,
+                                 Instant(startDate),
+                                 Instant(endDate),
+                                 onlyCountTasks.getOrElse(true),
+                                 projectIdsValidated)
       } yield Ok(js)
     }
 
@@ -102,8 +94,7 @@ class TimeController @Inject()(userService: UserService,
                                             year: Int,
                                             month: Int,
                                             startDay: Option[Int],
-                                            endDay: Option[Int],
-                                            onlyCountTasks: Boolean): Fox[JsValue] = {
+                                            endDay: Option[Int]): Fox[JsValue] = {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
@@ -125,32 +116,42 @@ class TimeController @Inject()(userService: UserService,
     endDate.set(Calendar.MILLISECOND, 999)
 
     for {
-      userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(user =>
-        getUserTimeSpansJs(user, Instant.fromCalendar(startDate), Instant.fromCalendar(endDate), onlyCountTasks))
+      userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(
+        user =>
+          getUserTimeSpansJs(user,
+                             Instant.fromCalendar(startDate),
+                             Instant.fromCalendar(endDate),
+                             onlyCountTasks = true,
+                             projectIdsOpt = None))
     } yield Json.toJson(userTimeSpansJsList)
   }
 
-  private def getUserTimeSpansJs(user: User, start: Instant, end: Instant, onlyCountTasks: Boolean): Fox[JsObject] =
+  private def getUserTimeSpansJs(user: User,
+                                 start: Instant,
+                                 end: Instant,
+                                 onlyCountTasks: Boolean,
+                                 projectIdsOpt: Option[List[ObjectId]]): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
-      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, onlyCountTasks)
+      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, onlyCountTasks, projectIdsOpt)
     } yield Json.obj("user" -> userJs, "timelogs" -> timeSpansJs)
 
+  // Used for graph on statistics page. Always includes explorative annotations
   def timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      intervalHandler.get(interval) match {
-        case Some(handler) =>
+      intervalGroupingFunctions.get(interval) match {
+        case Some(intervalGroupingFunction) =>
           for {
             organizationId <- Fox.successful(request.identity._organization)
             _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
-            times <- timeSpanService.loggedTimePerInterval(handler,
-                                                           start.map(Instant(_)),
-                                                           end.map(Instant(_)),
-                                                           organizationId)
+            timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO
+              .findAllByOrganization(start.map(Instant(_)), end.map(Instant(_)), organizationId)
+              .futureBox
+            timesGrouped = timeSpanService.sumTimespansPerInterval(intervalGroupingFunction, timeSpansBox)
           } yield {
             Ok(
               Json.obj(
-                "timeGroupedByInterval" -> times.map {
+                "timeGroupedByInterval" -> timesGrouped.map {
                   case (interval, duration) =>
                     Json.obj(
                       "start" -> interval.start.toString,
@@ -166,7 +167,7 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  private val intervalHandler: Map[String, TimeSpan => Interval] = Map(
+  private val intervalGroupingFunctions: Map[String, TimeSpan => Interval] = Map(
     "month" -> TimeSpan.groupByMonth,
     "week" -> TimeSpan.groupByWeek,
     "day" -> TimeSpan.groupByDay

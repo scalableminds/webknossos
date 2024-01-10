@@ -92,7 +92,7 @@ class TimeController @Inject()(userService: UserService,
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- getUserTimeSpansJs(user, Instant(startDate), Instant(endDate))
+        js <- getUserTimeSpansJs(user, Instant(startDate), Instant(endDate), onlyCountTasks.getOrElse(true))
       } yield Ok(js)
     }
 
@@ -124,14 +124,14 @@ class TimeController @Inject()(userService: UserService,
 
     for {
       userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(user =>
-        getUserTimeSpansJs(user, Instant.fromCalendar(startDate), Instant.fromCalendar(endDate)))
+        getUserTimeSpansJs(user, Instant.fromCalendar(startDate), Instant.fromCalendar(endDate), onlyCountTasks))
     } yield Json.toJson(userTimeSpansJsList)
   }
 
-  private def getUserTimeSpansJs(user: User, start: Instant, end: Instant): Fox[JsObject] =
+  private def getUserTimeSpansJs(user: User, start: Instant, end: Instant, onlyCountTasks: Boolean): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
-      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end)
+      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, onlyCountTasks)
     } yield Json.obj("user" -> userJs, "timelogs" -> timeSpansJs)
 
 }

@@ -33,16 +33,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
     "day" -> TimeSpan.groupByDay
   )
 
-  private def intervalTracingTimeJson[T <: Interval](times: Map[T, Duration]) = times.map {
-    case (interval, duration) =>
-      Json.obj(
-        "start" -> interval.start.toString,
-        "end" -> interval.end.toString,
-        "tracingTime" -> duration.toMillis
-      )
-  }
-
-  def webknossos(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
+  def timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       intervalHandler.get(interval) match {
         case Some(handler) =>
@@ -53,20 +44,19 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                                            start.map(Instant(_)),
                                                            end.map(Instant(_)),
                                                            organizationId)
-            numberOfUsers <- userDAO.countAllForOrganization(organizationId)
-            numberOfDatasets <- datasetDAO.countAllForOrganization(organizationId)
-            numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
-            numberOfAssignments <- taskDAO.countAllPendingInstancesForOrganization(organizationId)
           } yield {
             Ok(
               Json.obj(
-                "name" -> "webknossos",
-                "tracingTimes" -> intervalTracingTimeJson(times),
-                "numberOfUsers" -> numberOfUsers,
-                "numberOfDatasets" -> numberOfDatasets,
-                "numberOfAnnotations" -> numberOfAnnotations,
-                "numberOfOpenAssignments" -> numberOfAssignments
-              ))
+                "timeGroupedByInterval" -> times.map {
+                  case (interval, duration) =>
+                    Json.obj(
+                      "start" -> interval.start.toString,
+                      "end" -> interval.end.toString,
+                      "tracingTime" -> duration.toMillis
+                    )
+                },
+              )
+            )
           }
         case _ =>
           Fox.successful(BadRequest(Messages("statistics.interval.invalid")))
@@ -97,7 +87,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
             } yield {
               Json.obj(
                 "user" -> userJs,
-                "tracingTimes" -> intervalTracingTimeJson(times)
+                "tracingTimes" -> Json.arr()
               )
             }
           case _ => Fox.failure("serialization.failed")

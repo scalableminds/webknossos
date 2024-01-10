@@ -62,7 +62,7 @@ PUT           /users/:id/novelUserExperienceInfos                               
 PUT           /users/:id/selectedTheme                                                          controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/annotations                                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String)
+GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String, onlyCountTasks: Option[Boolean])
 
 # Team
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
@@ -227,10 +227,6 @@ PATCH         /projects/:id/resume                                              
 GET           /projects/:id/usersWithActiveTasks                                                controllers.ProjectController.usersWithActiveTasks(id:String)
 POST          /projects/:id/transferActiveTasks                                                 controllers.ProjectController.transferActiveTasks(id:String)
 
-# Statistics
-GET           /statistics/webknossos                                                            controllers.StatisticsController.webknossos(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                                 controllers.StatisticsController.busiestUsers(interval: String, start: Option[Long], end: Option[Long], limit: Int, onlyCountTasks: Boolean)
-
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list()
 POST          /organizations                                                                    controllers.OrganizationController.create()
@@ -252,9 +248,13 @@ POST          /termsOfService/accept                                            
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
 # Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/user/:userId                                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
+GET           /time/userlist/:year/:month                                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
+GET           /time/user/:userId                                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long, onlyCountTasks: Option[Boolean])
+
+GET           /time/groupedByInterval                                                           controllers.StatisticsController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])
+GET           /statistics/users                                                                 controllers.StatisticsController.busiestUsers(interval: String, start: Option[Long], end: Option[Long], limit: Int, onlyCountTasks: Boolean)
+
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

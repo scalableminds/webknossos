@@ -15,18 +15,14 @@ type TimeEntry = {
   tracingTime: number;
 };
 type State = {
-  achievements: {
-    numberOfUsers: number;
-    numberOfDatasets: number;
-    numberOfAnnotations: number;
-    pendingInstances: number;
+  graphData: {
     tracingTimes: TimeEntry[];
   };
   timeEntries: Array<{
     tracingTimes: TimeEntry[];
     user: APIUser;
   }>;
-  isAchievementsLoading: boolean;
+  isGraphDataLoading: boolean;
   isTimeEntriesLoading: boolean;
   startDate: dayjs.Dayjs;
   endDate: dayjs.Dayjs;
@@ -42,22 +38,18 @@ type GoogleCharts = {
 
 class StatisticView extends React.PureComponent<{}, State> {
   state: State = {
-    isAchievementsLoading: true,
+    isGraphDataLoading: true,
     isTimeEntriesLoading: true,
     startDate: dayjs().startOf("week"),
     endDate: dayjs().endOf("week"),
     timeEntries: [],
-    achievements: {
-      numberOfUsers: 0,
-      numberOfDatasets: 0,
-      numberOfAnnotations: 0,
-      pendingInstances: 0,
-      tracingTimes: [],
+    graphData: {
+      timeGroupedByInterval: [],
     },
   };
 
   componentDidMount() {
-    this.fetchAchievementData();
+    this.fetchGraphData();
     this.fetchTimeEntryData();
   }
 
@@ -65,25 +57,25 @@ class StatisticView extends React.PureComponent<{}, State> {
     return date.unix() * 1000;
   }
 
-  async fetchAchievementData() {
-    const achievementsURL = "/api/statistics/webknossos?interval=week";
-    const achievements = await Request.receiveJSON(achievementsURL);
-    achievements.tracingTimes.sort(
+  async fetchGraphData() {
+    const graphDataURL = "/api/time/groupedByInterval?interval=week";
+    const graphData = await Request.receiveJSON(graphDataURL);
+    graphData.timeGroupedByInterval.sort(
       // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'dateString1' implicitly has an 'a... Remove this comment to see the full error message
       ({ start: dateString1 }, { start: dateString2 }) =>
         // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
         new Date(dateString2) - new Date(dateString1),
     );
     this.setState({
-      isAchievementsLoading: false,
-      achievements,
+      isGraphDataLoading: false,
+      graphData,
     });
   }
 
   async fetchTimeEntryData() {
     const timeEntriesURL = `/api/statistics/users?interval=week&start=${this.toTimestamp(
       this.state.startDate,
-    )}&end=${this.toTimestamp(this.state.endDate)}&limit=5`;
+    )}&end=${this.toTimestamp(this.state.endDate)}&limit=5&onlyCountTasks=false`;
     const timeEntries = await Request.receiveJSON(timeEntriesURL);
     this.setState({
       isTimeEntriesLoading: false,
@@ -94,7 +86,7 @@ class StatisticView extends React.PureComponent<{}, State> {
   selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
     const chart = chartWrapper.getChart();
     const indicies = chart.getSelection()[0];
-    const startDate = this.state.achievements.tracingTimes[indicies.row].start;
+    const startDate = this.state.graphData.timeGroupedByInterval[indicies.row].start;
     this.setState(
       {
         startDate: dayjs(startDate),
@@ -121,7 +113,7 @@ class StatisticView extends React.PureComponent<{}, State> {
         role: "tooltip",
       },
     ];
-    const rows = this.state.achievements.tracingTimes.map((item) => {
+    const rows = this.state.graphData.timeGroupedByInterval.map((item) => {
       const duration = Utils.roundTo(dayjs.duration(item.tracingTime).asHours(), 2);
       return [
         new Date(item.start),
@@ -139,7 +131,7 @@ class StatisticView extends React.PureComponent<{}, State> {
         <Row gutter={16}>
           <Col span={16}>
             <Card title="Overall Weekly Annotation Time">
-              <Spin spinning={this.state.isAchievementsLoading} size="large">
+              <Spin spinning={this.state.isGraphDataLoading} size="large">
                 {rows.length > 0 ? (
                   // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                   <Chart
@@ -179,30 +171,6 @@ class StatisticView extends React.PureComponent<{}, State> {
                     }}
                   />
                 ) : null}
-              </Spin>
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card title="Achievements">
-              <Spin spinning={this.state.isAchievementsLoading} size="large">
-                <ul>
-                  <li>
-                    <div style={listStyle}>Number of Users</div>
-                    {this.state.achievements.numberOfUsers}
-                  </li>
-                  <li>
-                    <div style={listStyle}>Number of Datasets</div>
-                    {this.state.achievements.numberOfDatasets}
-                  </li>
-                  <li>
-                    <div style={listStyle}>Number of Annotations</div>
-                    {this.state.achievements.numberOfAnnotations}
-                  </li>
-                  <li>
-                    <div style={listStyle}>Number of Pending Task Instances</div>
-                    {this.state.achievements.pendingInstances}
-                  </li>
-                </ul>
               </Spin>
             </Card>
           </Col>

@@ -11,6 +11,7 @@ import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import React from "react";
 import { tryToFetchDatasetsByName, WizardComponentProps, WizardContext, FileList } from "./common";
 import ErrorHandling from "libs/error_handling";
+import * as Utils from "libs/utils";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;
 
@@ -67,9 +68,10 @@ export default function UploadFiles({ wizardContext, setWizardContext }: WizardC
         <p>
           Please upload two NML files that contain landmarks that you created with WEBKNOSSOS. Note
           that the dataset that belongs to the first NML will be transformed to the dataset that
-          belongs to the second NML file. The skeletons in the NML files should have exactly one
-          node per tree. The n-th tree of the first NML is aligned with the n-th tree of the second
-          NML.
+          belongs to the second NML file. The skeletons in the NML files should match each other
+          exactly. This means that both NMLs should contain the same amount of trees and that the
+          n-th tree of the first and second NML should have the same amount of nodes, as these will
+          be aligned with each other.
         </p>
       )}
 
@@ -167,26 +169,28 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Could not extract dataset names.");
   }
 
-  const nodes1 = Array.from(
-    values(trees1)
-      .map((tree) => Array.from(tree.nodes.values())[0])
-      .values(),
-  );
-  const nodes2 = Array.from(
-    values(trees2)
-      .map((tree) => Array.from(tree.nodes.values())[0])
-      .values(),
-  );
+  if (Object.keys(trees1).length !== Object.keys(trees2).length) {
+    throw new SoftError("The two NML files should have the same tree count.");
+  }
 
-  for (const [node1, node2] of _.zip(nodes1, nodes2)) {
-    if ((node1 == null) !== (node2 == null)) {
-      throw new SoftError(
-        "A tree was empty while its corresponding tree wasn't. Ensure that the NML structures match each other.",
-      );
+  for (const [tree1, tree2] of _.zip(Utils.values(trees1), Utils.values(trees2))) {
+    if (tree1 == null || tree2 == null) {
+      // Satisfy TS. This should not happen, as we checked before that both tree collections
+      // have the same size.
+      throw new SoftError("A tree was unexpectedly parsed as null. Please try again");
     }
-    if (node1 != null && node2 != null) {
-      sourcePoints.push(node1.position);
-      targetPoints.push(node2.position);
+    const nodes1 = Array.from(tree1.nodes.values());
+    const nodes2 = Array.from(tree2.nodes.values());
+    for (const [node1, node2] of _.zip(nodes1, nodes2)) {
+      if ((node1 == null) !== (node2 == null)) {
+        throw new SoftError(
+          `Tree ${tree1.treeId} and tree ${tree2.treeId} don't have the same amount of trees. Ensure that the NML structures match each other.`,
+        );
+      }
+      if (node1 != null && node2 != null) {
+        sourcePoints.push(node1.position);
+        targetPoints.push(node2.position);
+      }
     }
   }
 

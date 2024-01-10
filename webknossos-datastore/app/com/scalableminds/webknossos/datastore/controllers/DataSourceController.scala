@@ -551,19 +551,19 @@ class DataSourceController @Inject()(
 
   def getSegmentIndex(token: Option[String],
                       organizationName: String,
-                      dataSetName: String,
+                      datasetName: String,
                       dataLayerName: String,
                       segmentId: String,
                       mag: String,
                       cubeSize: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
           cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
-                                                                          dataSetName,
+                                                                          datasetName,
                                                                           dataLayerName,
                                                                           segmentId.toLong)
           bucketPositions = topLefts
@@ -577,34 +577,45 @@ class DataSourceController @Inject()(
 
   def getSegmentVolume(token: Option[String],
                        organizationName: String,
-                       dataSetName: String,
+                       datasetName: String,
                        dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          _ <- Fox.successful(())
-          _ <- Fox.box2Fox(segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName)) ?~> "segmentIndexFile.notFound" //TODO: Dont use head, get all volumes
-          volume <- segmentIndexFileService.getSegmentVolume(organizationName,
-                                                             dataSetName,
-                                                             dataLayerName,
-                                                             request.body.segmentIds.head,
-                                                             request.body.mag,
-                                                             request.body.mappingName)
-        } yield Ok(volume.toString)
+          _ <- Fox.box2Fox(segmentIndexFileService.getSegmentIndexFile(organizationName, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound" //TODO: Dont use head, get all volumes
+          volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            segmentIndexFileService.getSegmentVolume(
+              organizationName,
+              datasetName,
+              dataLayerName,
+              segmentId,
+              request.body.mag,
+              request.body.mappingName
+            )
+          }
+        } yield Ok(Json.toJson(volumes))
       }
     }
 
   def getSegmentBoundingBox(token: Option[String],
                             organizationName: String,
-                            dataSetName: String,
+                            datasetName: String,
                             dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          _ <- Fox.successful(())
-        } yield Ok("Not implemented yet")
+          _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationName, datasetName, dataLayerName)
+          boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            segmentIndexFileService.getSegmentBoundingBox(organizationName,
+                                                          datasetName,
+                                                          dataLayerName,
+                                                          segmentId,
+                                                          request.body.mag,
+                                                          request.body.mappingName)
+          }
+        } yield Ok(Json.toJson(boxes))
       }
     }
 

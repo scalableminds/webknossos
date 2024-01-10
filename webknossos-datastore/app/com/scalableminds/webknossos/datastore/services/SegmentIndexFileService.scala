@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.SegmentStatistics
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -78,36 +79,6 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        mag: Vec3Int,
                        dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
 
-    def getDataForBucketPositions(dataSource: datasource.DataSource,
-                                  dataLayer: DataLayer,
-                                  mag: Vec3Int,
-                                  bucketPositions: Seq[Vec3Int],
-                                  dataLayerMapping: Option[String]): Fox[Array[Byte]] = {
-      val dataRequests = bucketPositions.map { position =>
-        DataServiceDataRequest(
-          dataSource = dataSource,
-          dataLayer = dataLayer,
-          dataLayerMapping = dataLayerMapping,
-          cuboid = Cuboid(
-            VoxelPosition(position.x * DataLayer.bucketLength,
-                          position.y * DataLayer.bucketLength,
-                          position.z * DataLayer.bucketLength,
-                          mag),
-            DataLayer.bucketLength,
-            DataLayer.bucketLength,
-            DataLayer.bucketLength
-          ),
-          settings = DataServiceRequestSettings(halfByte = false,
-                                                appliedAgglomerate = None,
-                                                version = None,
-                                                additionalCoordinates = None),
-        )
-      }.toList
-      for {
-        (data, _) <- binaryDataServiceHolder.binaryDataService.handleDataRequests(dataRequests)
-      } yield data
-    }
-
     def getTypedDataForSegment(organizationName: String, datasetName: String, dataLayerName: String)(
         segmentId: Long,
         mag: Vec3Int)(implicit m: MessagesProvider) =
@@ -119,16 +90,85 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         data <- getDataForBucketPositions(dataSource,
                                           dataLayer,
                                           mag,
-                                          bucketPositions.map(_ / (mag / fileMag)).distinct.toSeq,
+                                          bucketPositions.map(_ / fileMag).distinct.toSeq,
                                           dataLayerMapping)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {
-      _ <- Fox.successful(())
       volume <- calculateSegmentVolume(segmentId,
                                        mag,
                                        getTypedDataForSegment(organizationName, datasetName, dataLayerName))
     } yield volume
+  }
+
+  def getSegmentBoundingBox(organizationName: String,
+                            datasetName: String,
+                            dataLayerName: String,
+                            segmentId: Long,
+                            mag: Vec3Int,
+                            dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[BoundingBox] = {
+
+    def getBucketPositions(organizationName: String, datasetName: String, dataLayerName: String)(segmentId: Long,
+                                                                                                 mag: Vec3Int) =
+      for {
+        (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+        bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag)).distinct.toSeq
+      } yield ListOfVec3IntProto.of(bucketPositions.map(vec3IntToProto))
+
+    def getTypedDataForBucketPosition(organizationName: String, datasetName: String, dataLayerName: String)(
+        bucketPosition: Vec3Int,
+        mag: Vec3Int)(implicit m: MessagesProvider) =
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  datasetName,
+                                                                                  dataLayerName)
+        data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), dataLayerMapping)
+        dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
+      } yield dataTyped
+
+    for {
+
+      bb <- calculateSegmentBoundingBox(
+        segmentId,
+        mag,
+        getBucketPositions(organizationName, datasetName, dataLayerName),
+        getTypedDataForBucketPosition(organizationName, datasetName, dataLayerName)
+      )
+    } yield bb
+
+  }
+
+  def assertSegmentIndexFileExists(organizationName: String, datasetName: String, dataLayerName: String) =
+    Fox.box2Fox(getSegmentIndexFile(organizationName, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound"
+
+  private def getDataForBucketPositions(dataSource: datasource.DataSource,
+                                        dataLayer: DataLayer,
+                                        mag: Vec3Int,
+                                        mag1BucketPositions: Seq[Vec3Int],
+                                        dataLayerMapping: Option[String]): Fox[Array[Byte]] = {
+    val dataRequests = mag1BucketPositions.map { position =>
+      DataServiceDataRequest(
+        dataSource = dataSource,
+        dataLayer = dataLayer,
+        dataLayerMapping = dataLayerMapping,
+        cuboid = Cuboid(
+          VoxelPosition(position.x * DataLayer.bucketLength,
+                        position.y * DataLayer.bucketLength,
+                        position.z * DataLayer.bucketLength,
+                        mag),
+          DataLayer.bucketLength,
+          DataLayer.bucketLength,
+          DataLayer.bucketLength
+        ),
+        settings = DataServiceRequestSettings(halfByte = false,
+                                              appliedAgglomerate = None,
+                                              version = None,
+                                              additionalCoordinates = None),
+      )
+    }.toList
+    for {
+      (data, _) <- binaryDataServiceHolder.binaryDataService.handleDataRequests(dataRequests)
+    } yield data
   }
 
 }

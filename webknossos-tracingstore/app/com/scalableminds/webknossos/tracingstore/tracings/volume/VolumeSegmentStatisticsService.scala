@@ -67,7 +67,6 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       segmentId: Long,
       mag: Vec3Int)(implicit ec: ExecutionContext) =
     for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,

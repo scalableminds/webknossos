@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.helpers.SegmentStatisticsParameters
@@ -9,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSourceLike,
   UnusableInboxDataSource
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -559,16 +560,25 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          topLefts <- segmentIndexFileService.readSegmentIndex(organizationName,
-                                                               dataSetName,
-                                                               dataLayerName,
-                                                               segmentId.toLong)
-          // TODO: Use mag and cubeSize
-        } yield Ok(Json.toJson(topLefts))
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
+          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
+          (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
+                                                                          dataSetName,
+                                                                          dataLayerName,
+                                                                          segmentId.toLong)
+          bucketPositions = topLefts
+            .map(_.scale(DataLayer.bucketLength)) // map indices to positions
+            .map(_ / (magParsed / fileMag))
+            .map(_ / cubeSizeParsed) // map positions to cube indices
+            .distinct
+        } yield Ok(Json.toJson(bucketPositions))
       }
     }
 
-  def getSegmentVolume(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String) =
+  def getSegmentVolume(token: Option[String],
+                       organizationName: String,
+                       dataSetName: String,
+                       dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
@@ -588,7 +598,7 @@ class DataSourceController @Inject()(
   def getSegmentBoundingBox(token: Option[String],
                             organizationName: String,
                             dataSetName: String,
-                            dataLayerName: String) =
+                            dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {

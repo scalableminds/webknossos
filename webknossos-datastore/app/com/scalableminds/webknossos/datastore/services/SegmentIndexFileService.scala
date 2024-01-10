@@ -46,12 +46,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   def readSegmentIndex(organizationName: String,
                        datasetName: String,
                        dataLayerName: String,
-                       segmentId: Long): Fox[Array[Vec3Int]] =
+                       segmentId: Long): Fox[(Array[Vec3Int], Vec3Int)] =
     for {
       segmentIndexPath <- getSegmentIndexFile(organizationName, datasetName, dataLayerName).toFox
       segmentIndex = meshFileCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
       nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
+      mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
       bucketIndex = hashFunction(segmentId) % nBuckets
       bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
       bucketStart = bucketOffsets(0)
@@ -68,7 +69,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         .uint16() // Read datatype from attributes?
         .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
 
-    } yield topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt)))
+    } yield (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
 
   def getSegmentVolume(organizationName: String,
                        datasetName: String,
@@ -111,11 +112,15 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         segmentId: Long,
         mag: Vec3Int)(implicit m: MessagesProvider) =
       for {
-        bucketPositions <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+        (bucketPositions, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   datasetName,
                                                                                   dataLayerName)
-        data <- getDataForBucketPositions(dataSource, dataLayer, mag, bucketPositions.toSeq, dataLayerMapping)
+        data <- getDataForBucketPositions(dataSource,
+                                          dataLayer,
+                                          mag,
+                                          bucketPositions.map(_ / (mag / fileMag)).distinct.toSeq,
+                                          dataLayerMapping)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {

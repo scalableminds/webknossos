@@ -375,42 +375,47 @@ class VolumeTracingService @Inject()(
     if (tracing.version != 0L) {
       Failure("Tracing has already been edited.")
     } else {
-
       val dataLayer = volumeTracingLayer(tracingId, tracing)
       val savedResolutions = new mutable.HashSet[Vec3Int]()
-      // TODO: Validate that remote fallback layer is not relevant here
-      val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
+      for {
+        resolutionSetFox <- for {
+          fallbackLayer <- getFallbackLayer(tracingId)
+          segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                             volumeSegmentIndexClient,
                                                             tracing.version,
                                                             remoteDatastoreClient,
-                                                            None,
+                                                            fallbackLayer,
                                                             userToken)
-
-      val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
-        if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
-          Fox.successful(())
-        } else {
-          savedResolutions.add(bucketPosition.mag)
-          for {
-            _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
-            _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-              updateSegmentIndex(segmentIndexBuffer,
-                                 bucketPosition,
-                                 bytes,
-                                 Empty,
-                                 tracing.elementClass,
-                                 tracing.mappingName))
-          } yield ()
+          unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
+            if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
+              Fox.successful(())
+            } else {
+              savedResolutions.add(bucketPosition.mag)
+              for {
+                _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
+                _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  updateSegmentIndex(segmentIndexBuffer,
+                                     bucketPosition,
+                                     bytes,
+                                     Empty,
+                                     tracing.elementClass,
+                                     tracing.mappingName))
+              } yield ()
+            }
+          }
+        } yield {
+          if (savedResolutions.isEmpty) {
+            val resolutionSet = resolutionSetFromZipfile(initialData)
+            Fox.successful(resolutionSet)
+          } else {
+            for {
+              _ <- unzipResult.toFox
+              _ <- segmentIndexBuffer.flush()
+            } yield savedResolutions.toSet
+          }
         }
-      }
-      if (savedResolutions.isEmpty) {
-        val resolutionSet = resolutionSetFromZipfile(initialData)
-        Fox.successful(resolutionSet)
-      } else
-        for {
-          _ <- unzipResult.toFox
-          _ <- segmentIndexBuffer.flush()
-        } yield savedResolutions.toSet
+        resolutionSet <- resolutionSetFox
+      } yield resolutionSet
     }
 
   def allDataZip(tracingId: String,

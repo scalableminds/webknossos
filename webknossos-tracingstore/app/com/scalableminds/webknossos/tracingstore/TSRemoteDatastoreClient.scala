@@ -124,14 +124,14 @@ class TSRemoteDatastoreClient @Inject()(
                         segmentId: Long,
                         mag: Vec3Int,
                         mappingName: Option[String],
-                        userToken: Option[String]): Fox[Seq[Vec3Int]] = //TODO: Use mag
+                        userToken: Option[String]): Fox[Seq[Vec3Int]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
         .addQueryStringOptional("token", userToken)
         .addQueryString("mag" -> mag.toMagLiteral())
         .addQueryStringOptional("mappingName", mappingName)
-        .addQueryString("cubeSize" -> "TODO")
+        .addQueryString("cubeSize" -> "32,32,32")
         .silent
         .getWithJsonResponse[Seq[Vec3Int]]
     } yield result

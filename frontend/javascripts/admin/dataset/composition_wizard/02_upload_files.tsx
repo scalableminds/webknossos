@@ -4,7 +4,7 @@ import Upload, { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { SoftError, values } from "libs/utils";
+import { SoftError } from "libs/utils";
 import _ from "lodash";
 import { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";

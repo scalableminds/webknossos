@@ -68,8 +68,8 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findAllByUser(userId: ObjectId): Fox[List[TimeSpan]] =
     for {
-      r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id).result)
-      parsed <- Fox.combined(r.toList.map(parse))
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _user = $userId".as[TimespansRow])
+      parsed <- parseAll(r)
     } yield parsed
 
   def findAllByUserWithTask(userId: ObjectId,
@@ -78,10 +78,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                             onlyCountTasks: Boolean,
                             projectIdsOpt: Option[List[ObjectId]]): Fox[JsValue] = {
     val projectQuery = projectIdsFilterQuery(projectIdsOpt)
-    val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"true"
+    val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"TRUE"
     for {
-      tuples <- run(
-        q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+      tuples <- run(q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         FROM webknossos.timespans_ ts
                         JOIN webknossos.annotations_ a on ts._annotation = a._id
                         LEFT JOIN webknossos.tasks_ t on a._task = t._id
@@ -93,8 +92,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         AND ts.created < $end
                         AND $projectQuery
                         AND $onlyCountTasksQuery
-                        """
-          .as[(Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])])
+            """.as[(Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])])
     } yield formatTimespanTuples(tuples)
   }
 
@@ -133,10 +131,12 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val startOrZero = start.getOrElse(Instant.zero)
     val endOrMax = end.getOrElse(Instant.max)
     for {
-      r <- run(q"""select ${columnsWithPrefix("t.")} from $existingCollectionName t
-              join webknossos.users u on t._user = u._id
-              where t.created >= $startOrZero and t.created <= $endOrMax
-              and u._organization = $organizationId
+      r <- run(q"""SELECT ${columnsWithPrefix("t.")}
+                   FROM $existingCollectionName t
+                   JOIN webknossos.users u on t._user = u._id
+                   WHERE t.created >= $startOrZero
+                   AND t.created <= $endOrMax
+                   AND u._organization = $organizationId
           """.as[TimespansRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -144,9 +144,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def projectIdsFilterQuery(projectIdsOpt: Option[List[ObjectId]]): SqlToken =
     projectIdsOpt match {
-      case None => q"true" // Query did not filter by project, include all
+      case None => q"TRUE" // Query did not filter by project, include all
       case Some(projectIds) if projectIds.isEmpty =>
-        q"false" // Query did filter by project, but list was empty, return nothing
+        q"FALSE" // Query did filter by project, but list was empty, return nothing
       case Some(projectIds) => q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
     }
 
@@ -158,7 +158,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (users.isEmpty) Fox.successful(List.empty)
     else {
       val projectQuery = projectIdsFilterQuery(projectIdsOpt)
-      val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"true"
+      val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"TRUE"
       val query =
         q"""
           SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time)
@@ -195,22 +195,22 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(t: TimeSpan): Fox[Unit] =
     for {
       _ <- run(
-        q"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
-                values(${t._id}, ${t._user}, ${t._annotation}, ${t.durationMillis}, ${t.lastUpdate},
+        q"""INSERT INTO webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
+                VALUES(${t._id}, ${t._user}, ${t._annotation}, ${t.durationMillis}, ${t.lastUpdate},
                 ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def updateOne(t: TimeSpan): Fox[Unit] =
     for { //note that t.created is skipped
-      _ <- run(q"""update webknossos.timespans
-                set
-                  _user = ${t._user},
-                  _annotation = ${t._annotation},
-                  time = ${t.durationMillis},
-                  lastUpdate = ${t.lastUpdate},
-                  numberOfUpdates = ${t.numberOfUpdates},
-                  isDeleted = ${t.isDeleted}
-                where _id = ${t._id}
+      _ <- run(q"""UPDATE webknossos.timespans
+                   SET
+                    _user = ${t._user},
+                    _annotation = ${t._annotation},
+                    time = ${t.durationMillis},
+                    lastUpdate = ${t.lastUpdate},
+                    numberOfUpdates = ${t.numberOfUpdates},
+                    isDeleted = ${t.isDeleted}
+                  WHERE _id = ${t._id}
         """.asUpdate)
     } yield ()
 }

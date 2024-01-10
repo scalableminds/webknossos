@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId

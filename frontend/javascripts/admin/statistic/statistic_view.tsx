@@ -122,10 +122,6 @@ class StatisticView extends React.PureComponent<{}, State> {
         ${duration}h`,
       ];
     });
-    const listStyle = {
-      width: 200,
-      display: "inline-block",
-    };
     return (
       <div className="statistics container">
         <Row gutter={16}>

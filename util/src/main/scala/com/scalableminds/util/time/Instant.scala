@@ -12,9 +12,7 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 case class Instant(epochMillis: Long) extends Ordered[Instant] {
   override def toString: String = DateTimeFormatter.ISO_INSTANT.format(toJavaInstant)
 
-  def toJavaInstant: java.time.Instant = java.time.Instant.ofEpochMilli(epochMillis)
-
-  def toJodaDateTime: org.joda.time.DateTime = new org.joda.time.DateTime(epochMillis)
+  private def toJavaInstant: java.time.Instant = java.time.Instant.ofEpochMilli(epochMillis)
 
   def toZonedDateTime: ZonedDateTime = ZonedDateTime.ofInstant(toJavaInstant, ZoneId.systemDefault())
 
@@ -33,15 +31,15 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   override def compare(that: Instant): Int =
     this.epochMillis.compare(that.epochMillis)
 
-  def dayOfMonth: Int = toJodaDateTime.getDayOfMonth
+  def dayOfMonth: Int = toZonedDateTime.getDayOfMonth
 
-  def monthOfYear: Int = toJodaDateTime.getMonthOfYear
+  def monthOfYear: Int = toZonedDateTime.getMonthValue
 
-  def year: Int = toJodaDateTime.getYear
+  def year: Int = toZonedDateTime.getYear
 
-  def weekOfWeekyear: Int = toJodaDateTime.getWeekOfWeekyear
+  def weekOfWeekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 
-  def weekyear: Int = toJodaDateTime.getWeekyear
+  def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
 object Instant extends FoxImplicits {
@@ -55,8 +53,6 @@ object Instant extends FoxImplicits {
 
   def fromString(instantLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
     fromStringSync(instantLiteral).toFox
-
-  def fromJoda(jodaDateTime: org.joda.time.DateTime): Instant = Instant(jodaDateTime.getMillis)
 
   def fromZonedDateTime(zonedDateTime: ZonedDateTime): Instant = Instant(zonedDateTime.toInstant.toEpochMilli)
 

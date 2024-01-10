@@ -765,10 +765,12 @@ export function addEventListenerWithDelegation(
   handlerFunc: (...args: Array<any>) => any,
   options: Record<string, any> = {},
 ) {
-  const wrapperFunc = function (event: Event) {
-    // @ts-ignore
-    for (let { target } = event; target && target !== this; target = target.parentNode) {
-      // @ts-ignore
+  const wrapperFunc = function (this: HTMLElement | Document, event: Event) {
+    for (
+      let { target } = event;
+      target && target !== this && target instanceof Element;
+      target = target.parentNode
+    ) {
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
         break;

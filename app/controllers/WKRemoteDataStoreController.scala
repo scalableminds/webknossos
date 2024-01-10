@@ -76,7 +76,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           dataSet <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
           _ <- datasetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
-          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
+          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
         } yield Ok
       }

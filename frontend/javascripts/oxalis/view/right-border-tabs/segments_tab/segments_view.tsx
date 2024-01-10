@@ -168,6 +168,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   );
 
   const { segments, segmentGroups } = getVisibleSegments(state);
+  console.log("segments: ", segments);
 
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
@@ -453,18 +454,23 @@ class SegmentsView extends React.Component<Props, State> {
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
       );
     }
-    //TODO not yet in DOM
+
+    // Scroll to selected segment.
+    // The selection of the newly added segment, that wasn't in the segment list before,
+    // triggers this function. Technically the segment is now present in the tree due
+    // to the design in the volumetracing_saga, and it can also be found while debugging
+    // this class. But in the scrollTo function, the new segment isn't found right away
+    // in the tree data, thus we need the timeout.
     setTimeout(() => {
       if (this.tree?.current == null) {
         return;
       }
       if (
         this.props.selectedIds.segments.length === 1 &&
-        prevProps.selectedIds !== this.props.selectedIds
+        prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
       ) {
         const selectedId = this.props.selectedIds.segments[0];
         this.tree.current.scrollTo({ key: `segment-${selectedId}` });
-        console.log("scroll to", `segment-${selectedId}`, this.tree.current); // This is working for newly added segments, but were not scrolling yet in that case
       }
     }, 100);
   }
@@ -509,9 +515,7 @@ class SegmentsView extends React.Component<Props, State> {
     const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    console.log("selectedIdsForCaseDistinction", selectedIdsForCaseDistinction);
-    console.log("selectedIdsForState", selectedIdsForState);
-    if (visibleSegmentationLayer == null) return; //TODO is this correct?
+    if (visibleSegmentationLayer == null) return;
     if (
       selectedIdsForCaseDistinction.group != null &&
       selectedIdsForCaseDistinction.segments.length > 0
@@ -529,7 +533,6 @@ class SegmentsView extends React.Component<Props, State> {
                 visibleSegmentationLayer.name,
               ),
             );
-            //this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
           },
           onCancel() {},
         });
@@ -544,7 +547,6 @@ class SegmentsView extends React.Component<Props, State> {
             visibleSegmentationLayer.name,
           ),
         );
-        //this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
       }
       return;
     }

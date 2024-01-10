@@ -1,10 +1,7 @@
 import type { Point2, Vector3 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getMappingInfo,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";

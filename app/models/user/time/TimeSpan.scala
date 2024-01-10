@@ -3,10 +3,11 @@ package models.user.time
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import play.api.libs.json.{JsValue, Json, OFormat}
+import models.annotation.AnnotationType
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
 import javax.inject.Inject
@@ -135,6 +136,53 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
   }
+
+  def timeSummedSearch(start: Instant,
+                       end: Instant,
+                       users: List[ObjectId],
+                       onlyCountTasks: Boolean,
+                       projectIdsOpt: Option[List[ObjectId]]): Fox[List[JsObject]] =
+    if (users.isEmpty) Fox.successful(List.empty)
+    else {
+      val projectQuery = projectIdsOpt match {
+        case None => q"true" // Query did not filter by project, include all
+        case Some(projectIds) if projectIds.isEmpty =>
+          q"false" // Query did filter by project, but list was empty, return nothing
+        case Some(projectIds) => q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
+      }
+      val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"true"
+      val query =
+        q"""
+          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time)
+          FROM webknossos.timespans_ ts
+          JOIN webknossos.annotations_ a ON ts._annotation = a._id
+          JOIN webknossos.users_ u ON ts._user = u._id
+          JOIN webknossos.multiusers_ mu ON u._multiuser = mu._id
+          LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+          LEFT JOIN webknossos.projects_ p ON t._project = p._id
+          WHERE $projectQuery
+          AND $onlyCountTasksQuery
+          AND ts.time > 0
+          AND ts.created >= $start
+          AND ts.created < $end
+          GROUP BY u._id, u.firstName, u.lastName, mu.email
+         """
+      for {
+        tuples <- run(query.as[(ObjectId, String, String, String, Long)])
+      } yield formatSummedSearchTuples(tuples)
+    }
+
+  private def formatSummedSearchTuples(tuples: Seq[(ObjectId, String, String, String, Long)]): List[JsObject] =
+    tuples.map { tuple =>
+      Json.obj(
+        "user" -> Json.obj(
+          "id" -> tuple._1,
+          "firstName" -> tuple._2,
+          "lastName" -> tuple._3,
+        ),
+        "timeMillis" -> tuple._5
+      )
+    }.toList
 
   def insertOne(t: TimeSpan): Fox[Unit] =
     for {

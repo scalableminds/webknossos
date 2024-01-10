@@ -8,7 +8,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.user._
-import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
+import models.user.time.{Interval, TimeSpan, TimeSpanDAO, TimeSpanService}
+import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -44,11 +45,11 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  def getWorkingHoursOfAllUsers(year: Int,
-                                month: Int,
-                                startDay: Option[Int],
-                                endDay: Option[Int],
-                                onlyCountTasks: Option[Boolean] // defaults to true
+  def timeSpansOfAllUsers(year: Int,
+                          month: Int,
+                          startDay: Option[Int],
+                          endDay: Option[Int],
+                          onlyCountTasks: Option[Boolean] // defaults to true
   ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -63,12 +64,12 @@ class TimeController @Inject()(userService: UserService,
       } yield Ok(js)
     }
 
-  def getWorkingHoursOfUsers(userString: String,
-                             year: Int,
-                             month: Int,
-                             startDay: Option[Int],
-                             endDay: Option[Int],
-                             onlyCountTasks: Option[Boolean] // defaults to true
+  def timeSpansOfUsers(userString: String,
+                       year: Int,
+                       month: Int,
+                       startDay: Option[Int],
+                       endDay: Option[Int],
+                       onlyCountTasks: Option[Boolean] // defaults to true
   ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -82,10 +83,11 @@ class TimeController @Inject()(userService: UserService,
       } yield Ok(js)
     }
 
-  def getWorkingHoursOfUser(userId: String,
-                            startDate: Long,
-                            endDate: Long,
-                            onlyCountTasks: Option[Boolean]): Action[AnyContent] =
+  def timeSpansOfUser(userId: String,
+                      startDate: Long,
+                      endDate: Long,
+                      onlyCountTasks: Option[Boolean],
+                      projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
@@ -134,4 +136,64 @@ class TimeController @Inject()(userService: UserService,
       timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, onlyCountTasks)
     } yield Json.obj("user" -> userJs, "timelogs" -> timeSpansJs)
 
+  def timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      intervalHandler.get(interval) match {
+        case Some(handler) =>
+          for {
+            organizationId <- Fox.successful(request.identity._organization)
+            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
+            times <- timeSpanService.loggedTimePerInterval(handler,
+                                                           start.map(Instant(_)),
+                                                           end.map(Instant(_)),
+                                                           organizationId)
+          } yield {
+            Ok(
+              Json.obj(
+                "timeGroupedByInterval" -> times.map {
+                  case (interval, duration) =>
+                    Json.obj(
+                      "start" -> interval.start.toString,
+                      "end" -> interval.end.toString,
+                      "tracingTime" -> duration.toMillis
+                    )
+                },
+              )
+            )
+          }
+        case _ =>
+          Fox.successful(BadRequest(Messages("statistics.interval.invalid")))
+      }
+    }
+
+  private val intervalHandler: Map[String, TimeSpan => Interval] = Map(
+    "month" -> TimeSpan.groupByMonth,
+    "week" -> TimeSpan.groupByWeek,
+    "day" -> TimeSpan.groupByDay
+  )
+
+  def timeSummedUserList(start: Long,
+                         end: Long,
+                         onlyCountTasks: Boolean,
+                         teamId: String,
+                         projectIds: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
+        teamIdValidated <- ObjectId.fromString(teamId)
+        projectIdsValidated <- parseProjectIdsOpt(projectIds)
+        users <- userDAO.findAllByTeams(List(teamIdValidated))
+        notUnlistedUsers = users.filter(!_.isUnlisted)
+        usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
+                                                         Instant(end),
+                                                         notUnlistedUsers.map(_._id),
+                                                         onlyCountTasks,
+                                                         projectIdsValidated)
+      } yield Ok(Json.toJson(usersWithTimesJs))
+    }
+
+  private def parseProjectIdsOpt(projectIdsStr: Option[String]): Fox[Option[List[ObjectId]]] =
+    Fox.runOptional(projectIdsStr) { pidsStr: String =>
+      Fox.serialCombined(pidsStr.split(",").toList)(pid => ObjectId.fromString(pid))
+    }
 }

@@ -248,13 +248,12 @@ POST          /termsOfService/accept                                            
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
 # Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
-GET           /time/user/:userId                                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long, onlyCountTasks: Option[Boolean])
+GET           /time/allusers/:year/:month                                                       controllers.TimeController.timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
+GET           /time/userlist/:year/:month                                                       controllers.TimeController.timeSpansOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int], onlyCountTasks: Option[Boolean])
+GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, onlyCountTasks: Option[Boolean], projectIds: Option[String])
 
-GET           /time/groupedByInterval                                                           controllers.StatisticsController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                                 controllers.StatisticsController.busiestUsers(interval: String, start: Option[Long], end: Option[Long], limit: Int, onlyCountTasks: Boolean)
-
+GET           /time/groupedByInterval                                                           controllers.TimeController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])
+GET           /time/summed/userList                                                             controllers.TimeController.timeSummedUserList(start: Long, end: Long, onlyCountTasks: Boolean, teamId: String, projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

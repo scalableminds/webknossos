@@ -114,8 +114,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
     defaultActiveTabFromHash as DatasetAddType,
   )
     ? (defaultActiveTabFromHash as DatasetAddType)
-    : // todo: revert
-      DatasetAddType.COMPOSE;
+    : DatasetAddType.UPLOAD;
 
   const tabs: TabsProps["items"] = [
     {

@@ -612,9 +612,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.handleMeasureSkeletonLength(tree.treeId, tree.name);
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
-              title: "Measure Skeleton Length",
+              title: "Measure Tree Length",
               icon: <i className="fas fa-ruler" />,
-              label: "Measure Skeleton Length",
+              label: "Measure Tree Length",
             },
             {
               key: "hideTree",
@@ -645,9 +645,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                     this.props.onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
                     this.handleTreeDropdownMenuVisibility(tree.treeId, false);
                   },
-                  title: "Convert to Normal Skeleton",
+                  title: "Convert to Normal Tree",
                   icon: <span className="fas fa-clipboard-check" />,
-                  label: "Convert to Normal Skeleton",
+                  label: "Convert to Normal Tree",
                 }
               : null,
           ],

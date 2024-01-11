@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -697,12 +697,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     return (
       <>
-        <div className="antd-legacy-group">
+        <Space.Compact>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
           {modals}
-        </div>
+        </Space.Compact>
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">

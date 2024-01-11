@@ -1232,41 +1232,35 @@ function ToolSpecificSettings({
   return (
     <>
       {showCreateTreeButton ? (
-        <Space
-          size={0}
-          className="antd-legacy-group"
+        <Space.Compact
           style={{
             marginLeft: 10,
           }}
         >
           <CreateTreeButton />
           <AdditionalSkeletonModesButtons />
-        </Space>
+        </Space.Compact>
       ) : null}
 
       {showNewBoundingBoxButton ? (
-        <Space
-          size={0}
-          className="antd-legacy-group"
+        <Space.Compact
           style={{
             marginLeft: 10,
           }}
         >
           <CreateNewBoundingBoxButton />
-        </Space>
+        </Space.Compact>
       ) : null}
 
       {showCreateCellButton || showChangeBrushSizeButton ? (
-        <Space
-          size={0}
+        <Space.Compact
           style={{
             marginLeft: 12,
           }}
-          className="antd-legacy-group"
         >
           {showCreateCellButton ? <CreateCellButton /> : null}
           {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
-        </Space>
+        </Space.Compact>
       ) : null}
 
       <OverwriteModeSwitch

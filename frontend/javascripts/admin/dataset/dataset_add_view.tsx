@@ -3,7 +3,7 @@ import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
 import { DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -282,13 +282,14 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme)
 
   if (!features().isWkorgInstance) {
     return null;
   }
 
   return (
-    <Sider className="hide-on-small-screen" width={300}>
+    <Sider className="hide-on-small-screen" width={300} theme={theme}>
       {banners[bannerIndex]}
     </Sider>
   );

@@ -56,7 +56,7 @@ function NewAnnotationLink({
         style={{
           marginLeft: 8,
           marginRight: 8,
-          color: "var(--ant-border-base)",
+          color: "var(--ant-color-border)",
         }}
       >
         |

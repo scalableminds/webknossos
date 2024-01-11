@@ -31,7 +31,7 @@ export const ThrottledColorPicker = ({
           marginTop: "12px",
           color: "var(--ant-text)",
           borderRadius: "4px",
-          border: "1px solid var(--ant-border-base)",
+          border: "1px solid var(--ant-border-radius)",
         }}
       />
     </>

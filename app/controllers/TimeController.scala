@@ -1,17 +1,16 @@
 package controllers
 
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.user._
-import models.user.time.{Interval, TimeSpan, TimeSpanDAO, TimeSpanService}
+import models.user.time.{Day, Interval, Month, TimeSpan, TimeSpanDAO, TimeSpanService}
 import net.liftweb.common.Box
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import utils.ObjectId
@@ -51,8 +50,12 @@ class TimeController @Inject()(userService: UserService,
       for {
         users <- userDAO.findAll
         filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
-        js <- getTimeSpansOfUsersForMonthJs(filteredUsers, year, month, startDay, endDay)
-      } yield Ok(js)
+        adaptedYear = adaptTwoDigitYear(year)
+        start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
+        end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
+        userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(filteredUsers)(user =>
+          getUserTimeSpansJs(user, start, end, onlyCountTasks = true, projectIdsOpt = None))
+      } yield Ok(Json.toJson(userTimeSpansJsList))
     }
 
   // Legacy, called by braintracing
@@ -66,9 +69,21 @@ class TimeController @Inject()(userService: UserService,
             .toList
             .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- getTimeSpansOfUsersForMonthJs(users, year, month, startDay, endDay)
-      } yield Ok(js)
+        adaptedYear = adaptTwoDigitYear(year)
+        start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
+        end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
+        userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(user =>
+          getUserTimeSpansJs(user, start, end, onlyCountTasks = true, projectIdsOpt = None))
+      } yield Ok(Json.toJson(userTimeSpansJsList))
     }
+
+  private def adaptTwoDigitYear(possiblyTwoDigitYear: Int): Int = {
+    // Note that this works both for two-digit and four-digit year input
+    val input = new SimpleDateFormat("yy")
+    val output = new SimpleDateFormat("yyyy")
+    val date = input.parse(possiblyTwoDigitYear.toString)
+    output.format(date).toInt
+  }
 
   def timeSpansOfUser(userId: String,
                       startDate: Long,
@@ -89,42 +104,6 @@ class TimeController @Inject()(userService: UserService,
                                  projectIdsValidated)
       } yield Ok(js)
     }
-
-  private def getTimeSpansOfUsersForMonthJs(users: List[User],
-                                            year: Int,
-                                            month: Int,
-                                            startDay: Option[Int],
-                                            endDay: Option[Int]): Fox[JsValue] = {
-    lazy val startDate = Calendar.getInstance()
-    lazy val endDate = Calendar.getInstance()
-
-    val input = new SimpleDateFormat("yy")
-    val output = new SimpleDateFormat("yyyy")
-    val date = input.parse(year.toString)
-    val fullYear = output.format(date).toInt
-
-    //set them here to first day of selected month so getActualMaximum below will use the correct month entry
-    startDate.set(fullYear, month - 1, 1, 0, 0, 0)
-    endDate.set(fullYear, month - 1, 1, 0, 0, 0)
-
-    val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
-    val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
-
-    startDate.set(fullYear, month - 1, sDay, 0, 0, 0)
-    startDate.set(Calendar.MILLISECOND, 0)
-    endDate.set(fullYear, month - 1, eDay, 23, 59, 59)
-    endDate.set(Calendar.MILLISECOND, 999)
-
-    for {
-      userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(
-        user =>
-          getUserTimeSpansJs(user,
-                             Instant.fromCalendar(startDate),
-                             Instant.fromCalendar(endDate),
-                             onlyCountTasks = true,
-                             projectIdsOpt = None))
-    } yield Json.toJson(userTimeSpansJsList)
-  }
 
   private def getUserTimeSpansJs(user: User,
                                  start: Instant,

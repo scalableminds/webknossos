@@ -53,7 +53,7 @@ const { Sider } = Layout;
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
-  UITheme: Theme
+  UITheme: Theme;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
@@ -480,7 +480,7 @@ function mapStateToProps(state: OxalisState) {
     distanceMeasurementTooltipPosition:
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
-    UITheme: state.uiInformation.theme
+    UITheme: state.uiInformation.theme,
   };
 }
 

@@ -10,7 +10,7 @@ import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admi
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
+import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
 import ErrorHandling from "libs/error_handling";
 import Router from "router";
 import Store from "oxalis/throttled_store";
@@ -29,7 +29,7 @@ import { setActiveOrganizationAction } from "oxalis/model/actions/organization_a
 import checkBrowserFeatures from "libs/browser_feature_check";
 
 import "../stylesheets/main.less";
-import GlobalThemeProvider from "theme";
+import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -61,6 +61,7 @@ async function loadActiveUser() {
       showErrorToast: false,
     });
     Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
     persistQueryClient({
       queryClient: reactQueryClient,

@@ -517,6 +517,7 @@ function LoggedInAvatar({
   const isMultiMember = switchableOrganizations.length > 0;
   return (
     <Menu
+      selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
         paddingTop:

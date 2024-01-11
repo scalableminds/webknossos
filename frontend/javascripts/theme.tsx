@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { App, ConfigProvider, theme } from "antd";
-import { APIUserTheme } from "types/api_flow_types";
+import { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken } from "antd/lib/theme/interface";
@@ -17,7 +17,13 @@ export function getSystemColorTheme(): Theme {
     : "light";
 }
 
-export function getAntdTheme(userTheme: APIUserTheme) {
+export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme {
+  if (activeUser == null || activeUser.selectedTheme === "auto") return getSystemColorTheme();
+
+  return activeUser.selectedTheme;
+}
+
+export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
 
   // Ant Design Customizations
@@ -27,13 +33,8 @@ export function getAntdTheme(userTheme: APIUserTheme) {
       '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
   };
 
-  if (userTheme === "auto") {
-    userTheme = getSystemColorTheme();
-  }
-
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
-
   }
   // In case you want customize individual components, adapt the antd design tokens and return them here,
   // e.g., components: { Input: {<designToken>: ...}
@@ -42,9 +43,9 @@ export function getAntdTheme(userTheme: APIUserTheme) {
 
 export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const antdTheme =
-    activeUser == null ? getAntdTheme("auto") : getAntdTheme(activeUser.selectedTheme);
-  const isDarkMode = antdTheme.algorithm === theme.darkAlgorithm;
+  const userTheme = getThemeFromUser(activeUser);
+  const antdTheme = getAntdTheme(userTheme);
+  const isDarkMode = userTheme === "dark";
 
   useEffect(() => {
     // body is outside of the ReactDOM, so we have to manually update it

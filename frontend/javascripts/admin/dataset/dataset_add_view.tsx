@@ -282,7 +282,7 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme)
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
   if (!features().isWkorgInstance) {
     return null;

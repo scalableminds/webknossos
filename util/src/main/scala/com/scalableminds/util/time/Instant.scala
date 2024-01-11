@@ -58,8 +58,6 @@ object Instant extends FoxImplicits {
 
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
 
-  def fromCalendar(calendarTime: java.util.Calendar): Instant = Instant(calendarTime.getTimeInMillis)
-
   def fromLocalTimeString(localTimeLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
     tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral))
       .map(date => Instant(date.getTime))

@@ -7,7 +7,6 @@ import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken } from "antd/lib/theme/interface";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
-const ColorWKBlack = "rgb(20, 20, 20)";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -35,8 +34,6 @@ export function getAntdTheme(userTheme: APIUserTheme) {
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
 
-    // use a very dark grey instead of pure black as base color for dark mode
-    token = { ...token, colorBgBase: ColorWKBlack };
   }
   // In case you want customize individual components, adapt the antd design tokens and return them here,
   // e.g., components: { Input: {<designToken>: ...}
@@ -52,7 +49,7 @@ export default function GlobalThemeProvider({ children }: { children?: React.Rea
   useEffect(() => {
     // body is outside of the ReactDOM, so we have to manually update it
     if (isDarkMode) {
-      document.body.style.backgroundColor = ColorWKBlack;
+      document.body.style.backgroundColor = "black";
     } else {
       document.body.style.backgroundColor = "white";
     }

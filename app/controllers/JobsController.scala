@@ -4,10 +4,9 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.dataset.DatasetDAO
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
 import models.job._
 import models.organization.OrganizationDAO
-import models.dataset.DataStoreDAO
 import models.user.MultiUserDAO
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -53,6 +52,7 @@ class JobsController @Inject()(
     jobDAO: JobDAO,
     sil: Silhouette[WkEnv],
     datasetDAO: DatasetDAO,
+    datasetService: DatasetService,
     jobService: JobService,
     workerService: WorkerService,
     workerDAO: WorkerDAO,
@@ -198,6 +198,7 @@ class JobsController @Inject()(
           dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataset.notFound",
             dataSetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -227,6 +228,8 @@ class JobsController @Inject()(
           dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataset.notFound",
             dataSetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
@@ -306,6 +309,8 @@ class JobsController @Inject()(
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = JobCommand.materialize_volume_annotation
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,

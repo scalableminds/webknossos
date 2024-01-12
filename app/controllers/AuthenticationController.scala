@@ -1,12 +1,12 @@
 package controllers
 
 import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
-import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import play.silhouette.api.actions.SecuredRequest
+import play.silhouette.api.exceptions.ProviderException
+import play.silhouette.api.services.AuthenticatorResult
+import play.silhouette.api.util.{Credentials, PasswordInfo}
+import play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
@@ -66,6 +66,7 @@ class AuthenticationController @Inject()(
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
+    initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -601,6 +602,7 @@ class AuthenticationController @Inject()(
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
+                    _ <- initialDataService.insertLocalDataStoreIfEnabled()
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
@@ -619,7 +621,7 @@ class AuthenticationController @Inject()(
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))

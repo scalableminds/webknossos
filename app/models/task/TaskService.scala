@@ -1,7 +1,6 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
@@ -41,7 +40,6 @@ class TaskService @Inject()(conf: WkConf,
     } yield {
       Json.obj(
         "id" -> task._id.toString,
-        "formattedHash" -> Formatter.formatHash(task._id.toString),
         "projectId" -> project._id.id,
         "projectName" -> project.name,
         "team" -> team.name,

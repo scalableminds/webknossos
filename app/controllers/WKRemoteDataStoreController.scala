@@ -15,6 +15,7 @@ import mail.{MailchimpClient, MailchimpTag}
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
+import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
 import models.folder.FolderDAO
@@ -46,6 +47,7 @@ class WKRemoteDataStoreController @Inject()(
     jobDAO: JobDAO,
     multiUserDAO: MultiUserDAO,
     credentialDAO: CredentialDAO,
+    annotationDAO: AnnotationDAO,
     mailchimpClient: MailchimpClient,
     slackNotificationService: SlackNotificationService,
     conf: WkConf,
@@ -77,7 +79,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           dataSet <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
           _ <- datasetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
-          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
+          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
         } yield Ok
       }
@@ -189,11 +191,16 @@ class WKRemoteDataStoreController @Inject()(
         existingDataset = datasetDAO
           .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
+
         _ <- existingDataset.flatMap {
           case Full(dataset) =>
-            datasetDAO
-              .deleteDataset(dataset._id)
-              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+            for {
+              annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+              _ = datasetDAO
+                .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+                .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+            } yield ()
+
           case _ => Fox.successful(())
         }
       } yield Ok

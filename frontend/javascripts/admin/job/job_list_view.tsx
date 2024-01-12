@@ -13,7 +13,6 @@ import {
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  ToolTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
@@ -51,11 +50,6 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   CANCELLED: {
     tooltip: "This job was cancelled.",
     icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
-  },
-  MANUAL: {
-    tooltip:
-      "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-    icon: <ToolTwoTone twoToneColor="#d89614" />,
   },
 };
 const refreshInterval = 5000;
@@ -170,6 +164,19 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Segment index file computation for{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
       job.organizationName &&
       job.datasetName &&
@@ -253,7 +260,10 @@ class JobListView extends React.PureComponent<Props, State> {
           Cancel
         </AsyncLink>
       );
-    } else if (job.type === APIJobType.CONVERT_TO_WKW) {
+    } else if (
+      job.type === APIJobType.CONVERT_TO_WKW ||
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE
+    ) {
       return (
         <span>
           {job.resultLink && (

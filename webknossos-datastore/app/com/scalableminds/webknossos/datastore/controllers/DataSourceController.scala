@@ -18,13 +18,11 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
-import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-@Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
@@ -41,7 +39,6 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  @ApiOperation(hidden = true, value = "")
   def read(token: Option[String],
            organizationName: String,
            dataSetName: String,
@@ -64,7 +61,6 @@ class DataSourceController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
       for {
@@ -73,27 +69,6 @@ class DataSourceController @Inject()(
     }
   }
 
-  @ApiOperation(
-    value =
-      """Reserve an upload for a new dataset
-Expects:
- - As JSON object body with keys:
-  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
-  - organization (string): owning organization name
-  - name (string): dataset name
-  - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
-  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
- - As GET parameter:
-  - token (string): datastore token identifying the uploading user
-""",
-    nickname = "datasetReserveUpload"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "reserveUploadInformation",
-                           required = true,
-                           dataTypeClass = classOf[ReserveUploadInformation],
-                           paramType = "body")))
   def reserveUpload(token: Option[String]): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
@@ -108,28 +83,20 @@ Expects:
       }
     }
 
-  @ApiOperation(
-    value = """Upload a byte chunk for a new dataset
-Expects:
- - As file attachment: A raw byte chunk of the dataset
- - As form parameter:
-  - name (string): dataset name
-  - owningOrganization (string): owning organization name
-  - resumableChunkNumber (int): chunk index
-  - resumableChunkSize (int): chunk size in bytes
-  - resumableTotalChunks (string): total chunk count of the upload
-  - totalFileCount (string): total file count of the upload
-  - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
- - As GET parameter:
-  - token (string): datastore token identifying the uploading user
-""",
-    nickname = "datasetUploadChunk"
-  )
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
-      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
-    ))
+  /* Upload a byte chunk for a new dataset
+  Expects:
+    - As file attachment: A raw byte chunk of the dataset
+    - As form parameter:
+    - name (string): dataset name
+    - owningOrganization (string): owning organization name
+    - resumableChunkNumber (int): chunk index
+    - resumableChunkSize (int): chunk size in bytes
+    - resumableTotalChunks (string): total chunk count of the upload
+    - totalFileCount (string): total file count of the upload
+    - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
+    - As GET parameter:
+    - token (string): datastore token identifying the uploading user
+   */
   def uploadChunk(token: Option[String]): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       val uploadForm = Form(
@@ -167,31 +134,6 @@ Expects:
         )
     }
 
-  @ApiOperation(
-    value =
-      """Finish dataset upload, call after all chunks have been uploaded via uploadChunk
-Expects:
- - As JSON object body with keys:
-  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
-  - organization (string): owning organization name
-  - name (string): dataset name
-  - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
- - As GET parameter:
-  - token (string): datastore token identifying the uploading user
-""",
-    nickname = "datasetFinishUpload"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "uploadInformation",
-                           required = true,
-                           dataTypeClass = classOf[UploadInformation],
-                           paramType = "body")))
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "Empty body, upload was successfully finished"),
-      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
-    ))
   def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
       log() {
@@ -214,27 +156,6 @@ Expects:
       }
   }
 
-  @ApiOperation(
-    value = """Cancel a running dataset upload
-Expects:
- - As JSON object body with keys:
-  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
- - As GET parameter:
-  - token (string): datastore token identifying the uploading user
-""",
-    nickname = "datasetCancelUpload"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "cancelUploadInformation",
-                           required = true,
-                           dataTypeClass = classOf[CancelUploadInformation],
-                           paramType = "body")))
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "Empty body, upload was cancelled"),
-      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
-    ))
   def cancelUpload(token: Option[String]): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
@@ -252,9 +173,8 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def explore(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def suggestDatasourceJson(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
         UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
         urlOrHeaderToken(token, request)) {
@@ -280,9 +200,8 @@ Expects:
             ))
         }
       }
-  }
+    }
 
-  @ApiOperation(hidden = true, value = "")
   def listMappings(
       token: Option[String],
       organizationName: String,
@@ -297,7 +216,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def listAgglomerates(
       token: Option[String],
       organizationName: String,
@@ -313,7 +231,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def generateAgglomerateSkeleton(
       token: Option[String],
       organizationName: String,
@@ -335,7 +252,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def agglomerateGraph(
       token: Option[String],
       organizationName: String,
@@ -355,7 +271,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def largestAgglomerateId(
       token: Option[String],
       organizationName: String,
@@ -381,7 +296,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def agglomerateIdsForSegmentIds(
       token: Option[String],
       organizationName: String,
@@ -408,7 +322,6 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def update(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
@@ -422,7 +335,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def add(token: Option[String],
           organizationName: String,
           dataSetName: String,
@@ -456,21 +368,20 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def createOrganizationDirectory(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService
         .validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName), token) {
-          val newOrganizationFolder = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
-          newOrganizationFolder.mkdirs()
-          if (newOrganizationFolder.isDirectory)
+          val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationName")
+          newOrganizationDirectory.mkdirs()
+          if (newOrganizationDirectory.isDirectory) {
+            logger.info(s"Created organization directory at $newOrganizationDirectory")
             Ok
-          else
+          } else
             BadRequest
         }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def measureUsedStorage(token: Option[String],
                          organizationName: String,
                          datasetName: Option[String] = None): Action[AnyContent] =
@@ -492,7 +403,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def reload(token: Option[String],
              organizationName: String,
              dataSetName: String,
@@ -515,7 +425,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def deleteOnDisk(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       val dataSourceId = DataSourceId(dataSetName, organizationName)
@@ -531,7 +440,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def listConnectomeFiles(token: Option[String],
                           organizationName: String,
                           dataSetName: String,
@@ -554,7 +462,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSynapsesForAgglomerates(token: Option[String],
                                  organizationName: String,
                                  dataSetName: String,
@@ -571,7 +478,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSynapticPartnerForSynapses(token: Option[String],
                                     organizationName: String,
                                     dataSetName: String,
@@ -591,7 +497,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSynapsePositions(token: Option[String],
                           organizationName: String,
                           dataSetName: String,
@@ -608,7 +513,6 @@ Expects:
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSynapseTypes(token: Option[String],
                       organizationName: String,
                       dataSetName: String,

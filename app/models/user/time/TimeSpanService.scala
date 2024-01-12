@@ -44,7 +44,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def sumTimespansPerInterval[T](groupingF: TimeSpan => T, timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
     timeSpansBox match {
       case Full(timeSpans) =>
-        timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.durationMillis).millis).toMap
+        timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
       case _ =>
         Map.empty[T, Duration]
     }

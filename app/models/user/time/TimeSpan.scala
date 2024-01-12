@@ -17,16 +17,14 @@ case class TimeSpan(
     _id: ObjectId,
     _user: ObjectId,
     _annotation: Option[ObjectId],
-    durationMillis: Long,
+    time: Long,
     lastUpdate: Instant,
     numberOfUpdates: Long = 0,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
   def addTime(duration: FiniteDuration, timestamp: Instant): TimeSpan =
-    this.copy(lastUpdate = timestamp,
-              durationMillis = durationMillis + duration.toMillis,
-              numberOfUpdates = this.numberOfUpdates + 1)
+    this.copy(lastUpdate = timestamp, time = time + duration.toMillis, numberOfUpdates = this.numberOfUpdates + 1)
 }
 
 object TimeSpan {
@@ -41,7 +39,7 @@ object TimeSpan {
     Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
   def fromInstant(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
-    TimeSpan(ObjectId.generate, _user, _annotation, durationMillis = 0L, lastUpdate = timestamp, created = timestamp)
+    TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
 
@@ -195,7 +193,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         q"""INSERT INTO webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
-                VALUES(${t._id}, ${t._user}, ${t._annotation}, ${t.durationMillis}, ${t.lastUpdate},
+                VALUES(${t._id}, ${t._user}, ${t._annotation}, ${t.time}, ${t.lastUpdate},
                 ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
@@ -205,7 +203,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    SET
                     _user = ${t._user},
                     _annotation = ${t._annotation},
-                    time = ${t.durationMillis},
+                    time = ${t.time},
                     lastUpdate = ${t.lastUpdate},
                     numberOfUpdates = ${t.numberOfUpdates},
                     isDeleted = ${t.isDeleted}

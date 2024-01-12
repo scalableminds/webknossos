@@ -701,7 +701,6 @@ export function* diffVolumeTracing(
         volumeTracing.mappingIsEditable,
         volumeTracing.mappingIsPinned,
       );
-      debugger;
       yield action;
     }
   }

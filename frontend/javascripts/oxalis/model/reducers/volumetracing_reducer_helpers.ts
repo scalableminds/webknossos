@@ -150,8 +150,8 @@ export function setMappingNameReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
   mappingName: string | null | undefined,
-  mappingType: MappingType,
-  isMappingEnabled: boolean = true,
+  _mappingType: MappingType,
+  _isMappingEnabled: boolean = true,
 ) {
   // Editable mappings cannot be disabled or switched for now
   if (volumeTracing.mappingIsEditable) return state;

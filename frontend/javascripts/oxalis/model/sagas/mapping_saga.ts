@@ -129,14 +129,10 @@ function* handleSetMapping(
   oldActiveMappingByLayer: Record<string, ActiveMappingInfo>,
   action: SetMappingAction,
 ): Saga<void> {
-  const {
-    layerName,
-    mappingName,
-    mappingType,
-    mapping: existingMapping,
-    showLoadingIndicator,
-  } = action;
+  // TODO: Undo these changes before merging.
+  const { layerName, mappingName, mapping: existingMapping, showLoadingIndicator } = action;
 
+  const mappingType = "JSON";
   // Editable mappings cannot be disabled or switched for now
   const isEditableMappingActivationAllowed = yield* select((state) =>
     isMappingActivationAllowed(state, mappingName, layerName),

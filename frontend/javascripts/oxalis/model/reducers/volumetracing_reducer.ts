@@ -229,6 +229,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
+    mappingIsPinned: tracing.mappingIsPinned,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
@@ -391,7 +392,7 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsPinned) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
@@ -399,10 +400,20 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_IS_EDITABLE": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      // An editable mapping is always pinned.
+      if (volumeTracing.mappingIsEditable && volumeTracing.mappingIsPinned) return state;
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
+        mappingIsPinned: true,
+      });
+    }
+    case "SET_MAPPING_IS_PINNED": {
+      console.log("pinning mapping", volumeTracing.mappingName);
+      if (volumeTracing.mappingIsPinned) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsPinned: true,
       });
     }
 

@@ -469,10 +469,10 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
-export function hasEditableMapping(
+function getVolumeTracingForLayerName(
   state: OxalisState,
   layerName?: string | null | undefined,
-): boolean {
+): VolumeTracing | null | undefined {
   if (layerName != null) {
     // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
     // as the function will throw an error if layerName is given but a corresponding tracing layer
@@ -480,14 +480,34 @@ export function hasEditableMapping(
     const layer = getSegmentationLayerByName(state.dataset, layerName);
     const tracing = getTracingForSegmentationLayer(state, layer);
 
-    if (tracing == null) return false;
+    if (tracing == null) return null;
   }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
+  return volumeTracing;
+}
+
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
   if (volumeTracing == null) return false;
 
   return !!volumeTracing.mappingIsEditable;
+}
+
+export function isMappingPinned(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsPinned;
 }
 
 export function isMappingActivationAllowed(
@@ -496,8 +516,9 @@ export function isMappingActivationAllowed(
   layerName?: string | null | undefined,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
+  const isActiveMappingPinned = isMappingPinned(state, layerName);
 
-  if (!isEditableMappingActive) return true;
+  if (!isEditableMappingActive && !isActiveMappingPinned) return true;
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 

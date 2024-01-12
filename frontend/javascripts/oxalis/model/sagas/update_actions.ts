@@ -413,10 +413,11 @@ export function serverCreateTracing(timestamp: number) {
 export function updateMappingName(
   mappingName: string | null | undefined,
   isEditable: boolean | undefined,
+  isPinned: boolean | undefined,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable },
+    value: { mappingName, isEditable, isPinned },
   } as const;
 }
 export function splitAgglomerate(

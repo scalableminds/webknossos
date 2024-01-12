@@ -42,6 +42,7 @@ export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
+export type SetMappingIsPinnedAction = ReturnType<typeof setMappingIsPinnedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
@@ -87,6 +88,7 @@ export type VolumeTracingAction =
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetMappingIsEditableAction
+  | SetMappingIsPinnedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | MaybePrefetchEmbeddingAction
@@ -340,6 +342,11 @@ export const dispatchFloodfillAsync = async (
 export const setMappingIsEditableAction = () =>
   ({
     type: "SET_MAPPING_IS_EDITABLE",
+  } as const);
+
+export const setMappingIsPinnedAction = () =>
+  ({
+    type: "SET_MAPPING_IS_PINNED",
   } as const);
 
 export const computeQuickSelectForRectAction = (

@@ -57,6 +57,7 @@ import type {
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
+  setMappingNameAction,
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
@@ -70,6 +71,7 @@ import type {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  setMappingIsPinnedAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -213,6 +215,25 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
+    const activeMappingByLayer = yield* select(
+      (state) => state.temporaryConfiguration.activeMappingByLayer,
+    );
+    const isSomeMappingActive = volumeTracing.tracingId in activeMappingByLayer;
+    if (isSomeMappingActive && !volumeTracing.mappingIsPinned) {
+      // A mapping that is active and is annotated on needs to be pinned to ensure a consistent state in the future.
+      // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
+      const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
+      if (activeMapping.mappingName) {
+        yield* put(
+          setMappingNameAction(
+            volumeTracing.tracingId,
+            activeMapping.mappingName,
+            activeMapping.mappingType,
+          ),
+        );
+        yield* put(setMappingIsPinnedAction());
+      }
+    }
 
     if (isDrawing && activeCellId === 0) {
       yield* call(
@@ -669,8 +690,19 @@ export function* diffVolumeTracing(
       yield removeFallbackLayer();
     }
 
-    if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
-      yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
+    if (
+      // Use single = comparison here to ensure that the mapping name is only updated when the string changes and not when changed from undefined to null.
+      //prevVolumeTracing.mappingName != volumeTracing.mappingName ||
+      prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
+      prevVolumeTracing.mappingIsPinned !== volumeTracing.mappingIsPinned
+    ) {
+      const action = updateMappingName(
+        volumeTracing.mappingName,
+        volumeTracing.mappingIsEditable,
+        volumeTracing.mappingIsPinned,
+      );
+      debugger;
+      yield action;
     }
   }
 }

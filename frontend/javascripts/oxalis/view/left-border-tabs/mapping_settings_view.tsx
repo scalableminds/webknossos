@@ -25,6 +25,7 @@ import * as Utils from "libs/utils";
 import {
   getEditableMappingForVolumeTracingId,
   hasEditableMapping,
+  isMappingPinned,
 } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Option, OptGroup } = Select;
@@ -43,6 +44,7 @@ type StateProps = {
   mappingType: MappingType;
   mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
+  isMappingPinned: boolean;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
@@ -177,6 +179,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
+    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingPinned;
     return (
       <React.Fragment>
         {
@@ -195,7 +198,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   label="ID Mapping"
                   // Assume that the mappings are being loaded if they are null
                   loading={shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null}
-                  disabled={this.props.isEditableMappingActive}
+                  disabled={isDisabled}
                 />
               </div>
 
@@ -214,7 +217,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   {...selectValueProp}
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
-                  disabled={this.props.isEditableMappingActive}
+                  disabled={isDisabled}
                 >
                   {renderCategoryOptions(availableMappings, "JSON")}
                   {renderCategoryOptions(availableAgglomerates, "HDF5")}
@@ -266,6 +269,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     allowUpdate: state.tracing.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
+    isMappingPinned: isMappingPinned(state, ownProps.layerName),
   };
 }
 

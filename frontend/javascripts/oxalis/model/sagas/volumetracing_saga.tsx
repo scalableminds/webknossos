@@ -793,13 +793,12 @@ export function* updateClickedSegments(
   // If one or zero segments are selected, update selected segments in store
   // Otherwise, the multiselection is kept.
   const { segmentId } = action;
-  let layerName: string | undefined;
   const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
-  layerName = segmentationLayer?.name;
+  const layerName = segmentationLayer?.name;
   if (layerName == null) return;
   const clickedSegmentId = segmentId;
   const selectedSegmentsOrGroup = yield* select(
-    (state) => state.localSegmentationData[layerName as string]?.selectedIds,
+    (state) => state.localSegmentationData[layerName]?.selectedIds,
   );
   const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
   if (numberOfSelectedSegments < 2) {

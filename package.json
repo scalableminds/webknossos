@@ -156,7 +156,7 @@
     "@types/three": "^0.142.0",
     "@zip.js/zip.js": "^2.6.81",
     "ansi-to-react": "^6.1.6",
-    "antd": "^4.24.8",
+    "antd": "^4.24.15",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",
@@ -234,7 +234,8 @@
   },
   "resolutions": {
     "**/mini-store": "^1.1.0",
-    "**/redux": "3.7.2"
+    "**/redux": "3.7.2",
+    "**/rc-tree": "^5.7.12"
   },
   "ava": {
     "files": [

@@ -253,7 +253,7 @@ GET           /time/userlist/:year/:month                                       
 GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, onlyCountTasks: Option[Boolean], projectIds: Option[String])
 
 GET           /time/groupedByInterval                                                           controllers.TimeController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])
-GET           /time/summed/userList                                                             controllers.TimeController.timeSummedUserList(start: Long, end: Long, onlyCountTasks: Boolean, teamId: String, projectIds: Option[String])
+GET           /time/summed/userList                                                             controllers.TimeController.timeSummedUserList(start: Long, end: Long, onlyCountTasks: Boolean, teamIds: String, projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

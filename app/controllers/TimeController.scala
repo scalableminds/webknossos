@@ -93,7 +93,7 @@ class TimeController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
-        projectIdsValidated <- parseProjectIdsOpt(projectIds)
+        projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
@@ -155,14 +155,15 @@ class TimeController @Inject()(userService: UserService,
   def timeSummedUserList(start: Long,
                          end: Long,
                          onlyCountTasks: Boolean,
-                         teamId: String,
+                         teamIds: String,
                          projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
-        teamIdValidated <- ObjectId.fromString(teamId)
-        projectIdsValidated <- parseProjectIdsOpt(projectIds)
-        users <- userDAO.findAllByTeams(List(teamIdValidated))
+        teamIdsValidated <- parseObjectIds(teamIds)
+        _ <- bool2Fox(teamIdsValidated.nonEmpty) ?~> "teamListEmpty"
+        projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
+        users <- userDAO.findAllByTeams(teamIdsValidated)
         notUnlistedUsers = users.filter(!_.isUnlisted)
         usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
                                                          Instant(end),
@@ -172,8 +173,6 @@ class TimeController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersWithTimesJs))
     }
 
-  private def parseProjectIdsOpt(projectIdsStr: Option[String]): Fox[Option[List[ObjectId]]] =
-    Fox.runOptional(projectIdsStr) { pidsStr: String =>
-      Fox.serialCombined(pidsStr.split(",").toList)(pid => ObjectId.fromString(pid))
-    }
+  private def parseObjectIds(idsStr: String): Fox[List[ObjectId]] =
+    Fox.serialCombined(idsStr.split(",").toList)(id => ObjectId.fromString(id))
 }

@@ -16,7 +16,7 @@ import models.dataset.explore.{
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -373,14 +373,20 @@ class DatasetController @Inject()(userService: UserService,
     Future.successful(JsonBadRequest(Messages("dataset.type.invalid", typ)))
   }
 
-  def assertValidNewName(organizationName: String, dataSetName: String): Action[AnyContent] =
+  def isValidNewName(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- datasetService.assertValidDatasetName(dataSetName)
-        _ <- datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken"
-      } yield Ok
+        validName <- datasetService.assertValidDatasetName(dataSetName).futureBox
+        nameAlreadyExists <- (datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken").futureBox
+        errors = combineErrors(List(validName, nameAlreadyExists))
+        valid = validName.isDefined && nameAlreadyExists.isDefined
+      } yield
+        errors match {
+          case Some(e) => Ok(Json.obj("isValid" -> valid, "errors" -> e.map(Messages(_))))
+          case None    => Ok(Json.obj("isValid" -> valid))
+        }
     }
 
   def getOrganizationForDataset(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {

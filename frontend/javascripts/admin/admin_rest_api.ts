@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIAnnotationWithTask,
@@ -552,10 +552,10 @@ export function deletePrivateLink(linkId: string): Promise<{
 }
 
 // ### Annotations
-export function getCompactAnnotations(
+export function getAnnotationInfos(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -565,20 +565,16 @@ export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 
-export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
-  return Request.receiveJSON("/api/annotations/shared");
-}
-
 export function getReadableAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -1132,7 +1128,7 @@ export async function getJobs(): Promise<APIJob[]> {
           annotationId: job.commandArgs.annotation_id,
           annotationType: job.commandArgs.annotation_type,
           mergeSegments: job.commandArgs.merge_segments,
-          state: adaptJobState(job.command, job.state, job.manualState),
+          state: adaptJobState(job.state, job.manualState),
           manualState: job.manualState,
           result: job.returnValue,
           resultLink: job.resultLink,
@@ -1159,7 +1155,7 @@ export async function getJob(jobId: string): Promise<APIJob> {
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
     mergeSegments: job.commandArgs.merge_segments,
-    state: adaptJobState(job.command, job.state, job.manualState),
+    state: adaptJobState(job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
     resultLink: job.resultLink,
@@ -1168,21 +1164,14 @@ export async function getJob(jobId: string): Promise<APIJob> {
 }
 
 function adaptJobState(
-  command: string,
   celeryState: APIJobCeleryState,
   manualState: APIJobManualState,
 ): APIJobState {
   if (manualState) {
     return manualState;
-  } else if (celeryState === "FAILURE" && isManualPassJobType(command)) {
-    return "MANUAL";
   }
 
   return celeryState || "UNKNOWN";
-}
-
-function isManualPassJobType(command: string) {
-  return ["convert_to_wkw"].includes(command);
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
@@ -1265,6 +1254,22 @@ export function startComputeMeshFileJob(
 
   return Request.receiveJSON(
     `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?${params}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function startComputeSegmentIndexFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  const params = new URLSearchParams();
+  params.append("layerName", layerName);
+
+  return Request.receiveJSON(
+    `/api/jobs/run/computeSegmentIndexFile/${organizationName}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -2161,6 +2166,7 @@ window.setMaintenance = setMaintenance;
 type MeshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
+  additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
   subsamplingStrides: Vector3;
@@ -2181,6 +2187,7 @@ export function computeAdHocMesh(
 }> {
   const {
     position,
+    additionalCoordinates,
     cubeSize,
     mappingName,
     subsamplingStrides,
@@ -2200,6 +2207,7 @@ export function computeAdHocMesh(
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          additionalCoordinates: additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,

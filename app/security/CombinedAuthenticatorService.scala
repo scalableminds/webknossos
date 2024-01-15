@@ -1,11 +1,11 @@
 package security
 
-import com.mohiva.play.silhouette.api._
-import com.mohiva.play.silhouette.api.crypto.Base64AuthenticatorEncoder
-import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
-import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
-import com.mohiva.play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
-import com.mohiva.play.silhouette.impl.authenticators._
+import play.silhouette.api._
+import play.silhouette.api.crypto.Base64AuthenticatorEncoder
+import play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
+import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
+import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
+import play.silhouette.impl.authenticators._
 import models.user.UserService
 import play.api.mvc._
 import utils.WkConf

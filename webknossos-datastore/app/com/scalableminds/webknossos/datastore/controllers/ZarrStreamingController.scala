@@ -17,14 +17,13 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services._
-import io.swagger.annotations._
+
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
 
-@Api(tags = Array("datastore", "zarr-streaming"))
 class ZarrStreamingController @Inject()(
     dataSourceRepository: DataSourceRepository,
     accessTokenService: DataStoreAccessTokenService,

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
-
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -28,6 +27,11 @@ trait DataSourceImporter {
   protected def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(
       implicit report: DataSourceImportReport[Path]): Box[DataLayer]
 
+  private def wkwFileFilter(path: Path): Boolean = path.getFileName.toString.toLowerCase().endsWith(".wkw")
+
+  def looksLikeWKWDataSource(baseDir: Path): Box[Boolean] =
+    PathUtils.containsFile(baseDir, maxDepth = 3, silent = true, filters = wkwFileFilter)
+
   def exploreDataSource(id: DataSourceId,
                         baseDir: Path,
                         previous: Option[DataSource],
@@ -40,9 +44,17 @@ trait DataSourceImporter {
       }
       GenericDataSource(id,
                         layers,
-                        previous.map(_.scale).getOrElse(Vec3Double(0, 0, 0)),
+                        previous.map(_.scale).getOrElse(Vec3Double.zeros),
                         previous.flatMap(_.defaultViewConfiguration))
     }
+
+  def dummyDataSource(id: DataSourceId,
+                      previous: Option[DataSource],
+                      report: DataSourceImportReport[Path]): Box[DataSource] = {
+    report.warning(_ =>
+      "Automatic suggestions for the datasource-properties.json are not available since the dataset is not in WKW format.")
+    previous.orElse(Some(GenericDataSource(id, List.empty, Vec3Double.zeros)))
+  }
 
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(
       implicit report: DataSourceImportReport[Path]): Category.Value = {

@@ -76,7 +76,6 @@ export const annotation: APIAnnotation = {
   typ: "Explorational",
   teams: [],
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,

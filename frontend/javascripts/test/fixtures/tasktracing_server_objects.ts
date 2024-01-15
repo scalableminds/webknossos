@@ -108,7 +108,6 @@ export const annotation: APIAnnotation = {
     editPosition: [0, 0, 0],
     editRotation: [0, 0, 0],
   },
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,

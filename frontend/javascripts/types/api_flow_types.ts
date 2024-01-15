@@ -439,7 +439,6 @@ export type APIAnnotationInfo = {
   readonly id: string;
   readonly name: string;
   readonly state: string;
-  readonly stats: TracingStats | {}; // todop: unused now?
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -456,7 +455,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     modified,
     id,
     name,
-    stats,
     state,
     tags,
     typ,
@@ -476,7 +474,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
-    stats,
     tags,
     typ,
     owner,

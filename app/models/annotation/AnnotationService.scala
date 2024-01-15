@@ -102,7 +102,7 @@ class AnnotationService @Inject()(
     dataStoreDAO: DataStoreDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
-    annotationRestrictionDefults: AnnotationRestrictionDefaults,
+    annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     conf: WkConf,
@@ -135,7 +135,7 @@ class AnnotationService @Inject()(
   private def createVolumeTracing(
       dataSource: DataSource,
       datasetOrganizationName: String,
-      datasetDatastore: DataStore,
+      datasetDataStore: DataStore,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
@@ -149,7 +149,7 @@ class AnnotationService @Inject()(
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
-      remoteDatastoreClient = dataStoreService.clientFor(datasetDatastore)
+      remoteDatastoreClient = dataStoreService.clientFor(datasetDataStore)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
           remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationName, dataSource.id.name, layer.name)
@@ -887,7 +887,7 @@ class AnnotationService @Inject()(
       userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
-        restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
+        restrictionsOpt.getOrElse(annotationRestrictionDefaults.defaultsFor(annotation)),
         requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)

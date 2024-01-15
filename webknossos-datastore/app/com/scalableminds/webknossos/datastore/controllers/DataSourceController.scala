@@ -22,7 +22,7 @@ import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.libs.Files
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class DataSourceController @Inject()(
@@ -541,11 +541,11 @@ class DataSourceController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         val segmentIndexFileOpt =
           segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName).toOption
-        for {
-          _ <- Fox.successful(())
-          segmentIndexPaths = Seq() ++ segmentIndexFileOpt
-          segmentIndexFiles = segmentIndexPaths.map(_.toString)
-        } yield Ok(Json.toJson(segmentIndexFiles))
+        segmentIndexFileOpt match {
+          case Some(_) =>
+            Future.successful(Ok(Json.toJson(true)))
+          case None => Future.successful(Ok(Json.toJson(false)))
+        }
       }
     }
 

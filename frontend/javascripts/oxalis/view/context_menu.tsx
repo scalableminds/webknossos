@@ -70,7 +70,6 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
   getResolutionInfo,
-  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -1154,14 +1153,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const hasNoFallbackLayer =
-    visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (
         contextMenuPosition == null ||
         volumeTracing == null ||
-        !hasNoFallbackLayer ||
+        visibleSegmentationLayer == null ||
         !volumeTracing.hasSegmentIndex ||
         hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
@@ -1302,7 +1299,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 
   const areSegmentStatisticsAvailable =
-    hasNoFallbackLayer &&
     volumeTracing?.hasSegmentIndex &&
     isHoveredSegmentOrMesh &&
     !hasAdditionalCoordinates(props.additionalCoordinates); // TODO change once statistics are available for nd-datasets

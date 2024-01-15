@@ -1075,7 +1075,6 @@ class SegmentsView extends React.Component<Props, State> {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (
       visibleSegmentationLayer == null ||
-      visibleSegmentationLayer.fallbackLayer != null ||
       !this.props.activeVolumeTracing?.hasSegmentIndex ||
       // TODO change once statistics are available for nd-datasets
       hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)

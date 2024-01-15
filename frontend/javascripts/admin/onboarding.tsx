@@ -174,7 +174,6 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         }}
       >
         <div
-          className="without-icon-margin"
           style={{
             fontSize: 32,
             background: "var(--ant-primary)",

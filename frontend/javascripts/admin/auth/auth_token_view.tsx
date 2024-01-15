@@ -67,10 +67,7 @@ function AuthTokenView() {
                     }}
                     readOnly
                   />
-                  <Button
-                    onClick={copyTokenToClipboard}
-                    icon={<CopyOutlined className="without-icon-margin" />}
-                  />
+                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
                 </Space.Compact>
               </FormItem>
               <FormItem>
@@ -92,10 +89,7 @@ function AuthTokenView() {
                         }}
                         readOnly
                       />
-                      <Button
-                        onClick={copyOrganizationNameToClipboard}
-                        icon={<CopyOutlined className="without-icon-margin" />}
-                      />
+                      <Button onClick={copyOrganizationNameToClipboard} icon={<CopyOutlined />} />
                     </Space.Compact>
                   </FormItem>
                 </Form>

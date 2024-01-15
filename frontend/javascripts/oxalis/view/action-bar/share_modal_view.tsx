@@ -538,7 +538,7 @@ export function CopyableSharingLink({
           onClick={() => setShowShortLink(!showShortLink)}
           style={{ padding: "0px 8px" }}
         >
-          <CompressOutlined className="without-icon-margin" />
+          <CompressOutlined />
         </Button>
       </Tooltip>
       <Input

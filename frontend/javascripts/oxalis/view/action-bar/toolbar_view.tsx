@@ -603,9 +603,7 @@ function BrushPresetButton({
   return (
     <>
       <div style={{ textAlign: "center" }}>
-        <ButtonComponent className="without-icon-margin" onClick={onClick}>
-          {icon}
-        </ButtonComponent>
+        <ButtonComponent onClick={onClick}>{icon}</ButtonComponent>
       </div>
       <div style={{ textAlign: "center" }}>{name}</div>
       <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
@@ -1322,7 +1320,7 @@ function QuickSelectSettingsPopover() {
       <ButtonComponent
         title="Configure Quick Select"
         tooltipPlacement="right"
-        className="narrow without-icon-margin"
+        className="narrow"
         type={isQuickSelectActive ? "primary" : "default"}
         style={{ marginLeft: 12, marginRight: 12 }}
       >
@@ -1376,13 +1374,12 @@ function ProofReadingComponents() {
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
-        className="narrow without-icon-margin"
+        className="narrow"
         style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>
       <ButtonComponent
-        className="without-icon-margin"
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
         style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}

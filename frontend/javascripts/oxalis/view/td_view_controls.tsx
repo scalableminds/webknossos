@@ -59,7 +59,6 @@ function TDViewControls({
                 value={tdViewDisplayPlanes}
                 onChange={onChangeTdViewDisplayPlanes}
                 size="small"
-                className="without-icon-margin"
               >
                 <Tooltip title="Hide Planes">
                   <Radio.Button value={TDViewDisplayModeEnum.NONE}>

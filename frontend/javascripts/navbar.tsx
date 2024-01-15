@@ -476,11 +476,7 @@ function NotificationIcon({
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button
-            onClick={handleShowWhatsNewView}
-            shape="circle"
-            icon={<BellOutlined className="without-icon-margin" />}
-          />
+          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
         </Badge>
       </Tooltip>
     </div>

@@ -196,10 +196,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   readOnly
                   disabled
                 />
-                <Button
-                  onClick={this.handleCopyNameButtonClicked}
-                  icon={<CopyOutlined className="without-icon-margin" />}
-                />
+                <Button onClick={this.handleCopyNameButtonClicked} icon={<CopyOutlined />} />
               </Space.Compact>
             </FormItem>
             <FormItem label="Organization Owner">

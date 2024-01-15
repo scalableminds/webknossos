@@ -1722,7 +1722,7 @@ class SegmentsView extends React.Component<Props, State> {
                       title="Open the search via CTRL + Shift + F"
                       style={{ marginRight: 8 }}
                     >
-                      <SearchOutlined className="without-icon-margin" />
+                      <SearchOutlined />
                     </ButtonComponent>
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}

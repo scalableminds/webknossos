@@ -507,7 +507,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Tooltip title="Copy long ID" placement="bottom">
           <Button
             onClick={copyIdToClipboard}
-            icon={<CopyOutlined className="without-icon-margin" />}
+            icon={<CopyOutlined />}
             style={{
               boxShadow: "none",
               backgroundColor: "transparent",

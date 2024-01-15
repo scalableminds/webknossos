@@ -4,7 +4,7 @@ import org.apache.commons.codec.digest.MurmurHash3
 
 import java.nio.ByteBuffer
 
-trait Hdf5Utils {
+trait Hdf5HashedArrayUtils {
   def getHashFunction(name: String): Long => Long = name match {
     case "identity" => identity
     case "murmurhash3_x64_128" =>

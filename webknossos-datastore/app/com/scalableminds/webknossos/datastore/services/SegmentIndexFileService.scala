@@ -25,13 +25,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                         binaryDataServiceHolder: BinaryDataServiceHolder,
                                         dataSourceRepository: DataSourceRepository)(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with Hdf5Utils
+    with Hdf5HashedArrayUtils
     with SegmentStatistics {
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
-  private val segmentIndexDir = "segment-index"
+  private val segmentIndexDir = "segmentIndex"
   private val segmentIndexFileExtension = "hdf5"
 
-  private lazy val meshFileCache = new Hdf5FileCache(10)
+  private lazy val fileHandleCache = new Hdf5FileCache(10)
 
   def getSegmentIndexFile(organizationName: String, datasetName: String, dataLayerName: String): Box[Path] =
     for {
@@ -50,7 +50,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        segmentId: Long): Fox[(Array[Vec3Int], Vec3Int)] =
     for {
       segmentIndexPath <- getSegmentIndexFile(organizationName, datasetName, dataLayerName).toFox
-      segmentIndex = meshFileCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
+      segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
       nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
       mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
@@ -145,7 +145,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
 
   }
 
-  def assertSegmentIndexFileExists(organizationName: String, datasetName: String, dataLayerName: String) =
+  def assertSegmentIndexFileExists(organizationName: String, datasetName: String, dataLayerName: String): Fox[Path] =
     Fox.box2Fox(getSegmentIndexFile(organizationName, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound"
 
   private def getDataForBucketPositions(dataSource: datasource.DataSource,

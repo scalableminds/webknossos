@@ -84,10 +84,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   def hasSegmentIndexFile(organizationName: String, datasetName: String, layerName: String): Fox[Boolean] =
     for {
-      indexFiles <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName/layers/$layerName/segmentIndex")
+      hasIndexFile <- rpc(
+        s"${dataStore.url}/data/datasets/$organizationName/$datasetName/layers/$layerName/segmentIndex")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .silent
-        .getWithJsonResponse[Seq[String]]
-    } yield indexFiles.nonEmpty
+        .getWithJsonResponse[Boolean]
+    } yield hasIndexFile
 
 }

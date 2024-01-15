@@ -188,7 +188,6 @@ class VolumeTracingService @Inject()(
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
-      tracing <- find(tracingId)
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
           previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
@@ -197,7 +196,7 @@ class VolumeTracingService @Inject()(
                                   action.data,
                                   previousBucketBytes,
                                   volumeTracing.elementClass,
-                                  tracing.mappingName) ?~> "failed to update segment index"
+                                  volumeTracing.mappingName) ?~> "failed to update segment index"
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()
@@ -216,14 +215,13 @@ class VolumeTracingService @Inject()(
         val mag = vec3IntFromProto(resolution)
         for {
           fallbackLayer <- getFallbackLayer(tracingId)
-          tracing <- find(tracingId)
           bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
             fallbackLayer,
             tracingId,
             a.id,
             mag,
             None,
-            tracing.mappingName,
+            volumeTracing.mappingName,
             userToken)
           bucketPositions = bucketPositionsRaw.values
             .map(vec3IntFromProto)
@@ -244,7 +242,7 @@ class VolumeTracingService @Inject()(
                                         filteredBytes,
                                         Some(data),
                                         volumeTracing.elementClass,
-                                        tracing.mappingName)
+                                        volumeTracing.mappingName)
               } yield ()
           }
         } yield ()

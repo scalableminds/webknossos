@@ -179,7 +179,7 @@ object WebknossosSegmentInfo {
 class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
-    with Hdf5Utils
+    with Hdf5HashedArrayUtils
     with ByteUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)

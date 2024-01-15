@@ -23,13 +23,10 @@ object VolumeSegmentIndexService {
   def canHaveSegmentIndex(remoteDatastoreClient: TSRemoteDatastoreClient,
                           fallbackLayer: Option[RemoteFallbackLayer],
                           userToken: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] =
-    for {
-      _ <- Fox.successful(())
-      canHaveSegmentIndex <- fallbackLayer match {
-        case Some(layer) => remoteDatastoreClient.hasSegmentIndexFile(layer, userToken)
-        case None        => Fox.successful(true)
-      }
-    } yield canHaveSegmentIndex
+    fallbackLayer match {
+      case Some(layer) => remoteDatastoreClient.hasSegmentIndexFile(layer, userToken)
+      case None        => Fox.successful(true)
+    }
 }
 
 // Segment-to-Bucket index for volume tracings in FossilDB

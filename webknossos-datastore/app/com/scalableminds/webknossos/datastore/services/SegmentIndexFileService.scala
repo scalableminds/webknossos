@@ -58,19 +58,26 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
-      _ <- bool2Fox(bucketEnd - bucketStart != 0)
-      buckets = segmentIndex.reader
-        .uint64()
-        .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
-      bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
-      _ <- bool2Fox(bucketLocalOffset >= 0)
-      topLeftStart = buckets(bucketLocalOffset)(1)
-      topLeftEnd = buckets(bucketLocalOffset)(2)
-      topLefts = segmentIndex.reader
-        .uint16() // Read datatype from attributes?
-        .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
+      segmentExists = bucketEnd - bucketStart != 0
+      topLefts <- Fox.runIf(segmentExists)(for {
+        _ <- Fox.successful(())
+        buckets = segmentIndex.reader
+          .uint64()
+          .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
+        bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+        _ <- bool2Fox(bucketLocalOffset >= 0)
+        topLeftStart = buckets(bucketLocalOffset)(1)
+        topLeftEnd = buckets(bucketLocalOffset)(2)
+        topLefts = segmentIndex.reader
+          .uint16() // Read datatype from attributes?
+          .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
+      } yield topLefts)
 
-    } yield (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
+    } yield
+      topLefts match {
+        case Some(topLefts) => (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
+        case None           => (Array.empty, mag)
+      }
 
   def getSegmentVolume(organizationName: String,
                        datasetName: String,

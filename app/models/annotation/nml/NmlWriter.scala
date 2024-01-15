@@ -235,7 +235,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
               writer.writeAttribute("name", a.name)
               writer.writeAttribute("index", a.index.toString)
               writer.writeAttribute("min", a.bounds.x.toString)
-              writer.writeAttribute("max", a.bounds.y.toString)
+              writer.writeAttribute("maxExclusive", a.bounds.y.toString)
             }
           })
         }

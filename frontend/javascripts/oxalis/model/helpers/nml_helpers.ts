@@ -273,14 +273,14 @@ function serializeParameters(
 
         ...(additionalAxes.length > 0
           ? serializeTagWithChildren(
-              "additionalCoordinates",
+              "additionalAxes",
               {},
               additionalAxes.map((coord) =>
-                serializeTag("additionalCoordinate", {
+                serializeTag("additionalAxis", {
                   name: coord.name,
                   index: coord.index,
                   min: coord.bounds[0],
-                  max: coord.bounds[1],
+                  maxExclusive: coord.bounds[1],
                 }),
               ),
             )

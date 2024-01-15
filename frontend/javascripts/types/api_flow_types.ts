@@ -8,7 +8,7 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -438,7 +438,7 @@ export type APIAnnotationInfo = {
   readonly id: string;
   readonly name: string;
   readonly state: string;
-  readonly stats: SkeletonTracingStats | {};
+  readonly stats: TracingStats | {};
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation

@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
@@ -11,7 +10,7 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 const AccessorMock = {
-  getStats: () => Maybe.Nothing(),
+  getStats: () => null,
 };
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/accessors/skeletontracing_accessor", AccessorMock);

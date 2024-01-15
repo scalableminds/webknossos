@@ -15,7 +15,7 @@ import {
   getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getCombinedStats } from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -30,7 +30,6 @@ import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracin
 import { getOrganization } from "admin/admin_rest_api";
 import Title from "antd/lib/typography/Title";
 import { MarkdownModal } from "../components/markdown_modal";
-import { getVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 
 type StateProps = {
   annotation: Tracing;
@@ -229,17 +228,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    const statsMaybe = getStats(this.props.annotation);
-    const treeCount = statsMaybe.map((stats) => stats.treeCount).getOrElse(null);
-    const nodeCount = statsMaybe.map((stats) => stats.nodeCount).getOrElse(null);
-    const edgeCount = statsMaybe.map((stats) => stats.edgeCount).getOrElse(null);
-    const branchpointCount = statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null);
-
-    const volumeAnnotations = getVolumeTracings(this.props.annotation);
-    const segmentCount = volumeAnnotations.reduce(
-      (count, volumeAnnotation) => count + volumeAnnotation.segments.entryCount,
-      0,
-    );
+    const stats = getCombinedStats(this.props.annotation);
+    const { treeCount, nodeCount, edgeCount, branchPointCount, segmentCount } = stats;
 
     return (
       <div className="info-tab-block">
@@ -261,7 +251,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     <>
                       <p>Nodes: {nodeCount}</p>
                       <p>Edges: {edgeCount}</p>
-                      <p>Branchpoints: {branchpointCount}</p>
+                      <p>Branchpoints: {branchPointCount}</p>
                     </>
                   }
                 >

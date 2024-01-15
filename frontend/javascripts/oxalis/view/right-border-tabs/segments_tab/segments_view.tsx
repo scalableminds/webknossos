@@ -1079,7 +1079,7 @@ class SegmentsView extends React.Component<Props, State> {
       // TODO change once statistics are available for nd-datasets
       hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)
     ) {
-      // In this case there is a fallback layer or an ND annotation.
+      // In this case we are in an ND annotation.
       return null;
     }
     return {
@@ -1506,10 +1506,8 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentStatisticsModal = (groupId: number) => {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    const hasNoFallbackLayer =
-      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
     if (
-      hasNoFallbackLayer &&
+      visibleSegmentationLayer != null &&
       this.props.hasVolumeTracing &&
       segments != null &&
       segments.length > 0

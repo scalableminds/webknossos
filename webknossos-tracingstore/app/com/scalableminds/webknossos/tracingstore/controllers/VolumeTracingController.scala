@@ -327,11 +327,13 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+            _ <- bool2Fox(tracing.mappingIsPinned.getOrElse(false)) ?~> "annotation.mappingIsPinned"
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(
               baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),
+                                                   isPinned = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))
             _ <- tracingService.handleUpdateGroup(
               tracingId,

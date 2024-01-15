@@ -349,6 +349,7 @@ object DeleteSegmentDataVolumeAction {
 
 case class UpdateMappingNameAction(mappingName: Option[String],
                                    isEditable: Option[Boolean],
+                                   isPinned: Option[Boolean],
                                    actionTimestamp: Option[Long],
                                    actionAuthorId: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -362,7 +363,11 @@ case class UpdateMappingNameAction(mappingName: Option[String],
                               Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))
+    if (tracing.mappingIsPinned.getOrElse(false)) tracing // cannot change mapping name if it is pinned
+    else
+      tracing.copy(mappingName = mappingName,
+                   mappingIsEditable = Some(isEditable.getOrElse(false)),
+                   mappingIsPinned = Some(isPinned.getOrElse(false)))
 }
 
 object UpdateMappingNameAction {

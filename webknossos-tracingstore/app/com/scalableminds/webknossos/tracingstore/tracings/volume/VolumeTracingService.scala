@@ -525,7 +525,6 @@ class VolumeTracingService @Inject()(
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
       buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-      // Duplicate segment index if it exists instead of building a new one?
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       fallbackLayer <- getFallbackLayer(sourceId)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,

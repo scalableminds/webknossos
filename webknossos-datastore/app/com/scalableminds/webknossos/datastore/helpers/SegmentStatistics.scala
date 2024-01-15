@@ -16,13 +16,8 @@ object SegmentStatisticsParameters {
 
 trait SegmentStatistics extends ProtoGeometryImplicits {
 
-  def calculateSegmentVolume(segmentId: Long,
-                             mag: Vec3Int,
-                             getTypedDataForSegment: (Long, Vec3Int) => Fox[Array[UnsignedInteger]]): Fox[Long] =
-    for {
-      dataTyped: Array[UnsignedInteger] <- getTypedDataForSegment(segmentId, mag)
-      volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
-    } yield volumeInVx
+  def calculateSegmentVolume(segmentId: Long, mag: Vec3Int, typedDataForSegment: Array[UnsignedInteger]): Long =
+    typedDataForSegment.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
 
   // Returns the bounding box in voxels in the target mag
   def calculateSegmentBoundingBox(segmentId: Long,

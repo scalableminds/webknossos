@@ -79,6 +79,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         case None           => (Array.empty, mag)
       }
 
+  def topLeftsToBucketPositions(topLefts: Array[Vec3Int], targetMag: Vec3Int, fileMag: Vec3Int): Array[Vec3Int] =
+    topLefts
+      .map(_.scale(DataLayer.bucketLength)) // map indices to positions
+      .map(_ / (targetMag / fileMag))
+      .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
+      .distinct
+
   def getSegmentVolume(organizationName: String,
                        datasetName: String,
                        dataLayerName: String,
@@ -86,9 +93,11 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        mag: Vec3Int,
                        dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
 
-    def getTypedDataForSegment(organizationName: String, datasetName: String, dataLayerName: String)(
-        segmentId: Long,
-        mag: Vec3Int)(implicit m: MessagesProvider) =
+    def getTypedDataForSegment(organizationName: String,
+                               datasetName: String,
+                               dataLayerName: String,
+                               segmentId: Long,
+                               mag: Vec3Int)(implicit m: MessagesProvider) =
       for {
         (bucketPositions, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
@@ -102,9 +111,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
     for {
-      volume <- calculateSegmentVolume(segmentId,
-                                       mag,
-                                       getTypedDataForSegment(organizationName, datasetName, dataLayerName))
+      typedData <- getTypedDataForSegment(organizationName, datasetName, dataLayerName, segmentId, mag)
+      volume = calculateSegmentVolume(segmentId, mag, typedData)
     } yield volume
   }
 

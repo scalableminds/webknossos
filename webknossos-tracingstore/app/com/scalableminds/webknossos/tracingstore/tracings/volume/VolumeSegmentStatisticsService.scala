@@ -23,7 +23,9 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                        mag: Vec3Int,
                        mappingName: Option[String],
                        userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
-    calculateSegmentVolume(segmentId, mag, getTypedDataForSegmentIndex(tracingId, mappingName, userToken))
+    for {
+      typedData <- getTypedDataForSegmentIndex(tracingId, mappingName, userToken, segmentId, mag)
+    } yield calculateSegmentVolume(segmentId, mag, typedData)
 
   def getSegmentBoundingBox(tracingId: String,
                             segmentId: Long,
@@ -35,9 +37,11 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                 getBucketPositions(tracingId, mappingName, userToken),
                                 getTypedDataForBucketPosition(tracingId, userToken))
 
-  private def getTypedDataForSegmentIndex(tracingId: String, mappingName: Option[String], userToken: Option[String])(
-      segmentId: Long,
-      mag: Vec3Int)(implicit ec: ExecutionContext) =
+  private def getTypedDataForSegmentIndex(tracingId: String,
+                                          mappingName: Option[String],
+                                          userToken: Option[String],
+                                          segmentId: Long,
+                                          mag: Vec3Int)(implicit ec: ExecutionContext) =
     for {
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)

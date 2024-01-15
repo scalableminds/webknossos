@@ -61,13 +61,12 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
         .map(_.value)
         .fillEmpty(ListOfVec3IntProto.of(Seq()))
-      layerData <- fallbackLayer match {
+      data <- fallbackLayer match {
         case Some(layer) if fossilDbData.length == 0 =>
           remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, userToken)
-        case _ => Fox.successful(Seq.empty)
+        case _ => Fox.successful(fossilDbData.values.map(vec3IntFromProto))
       }
-      combined = fossilDbData.values.map(vec3IntFromProto) ++ layerData
-    } yield ListOfVec3IntProto(combined.map(vec3IntToProto))
+    } yield ListOfVec3IntProto(data.map(vec3IntToProto))
   }
 
 }

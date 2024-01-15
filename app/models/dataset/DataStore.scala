@@ -77,10 +77,6 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, rpc: RPC)(implicit 
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
-
-  def clientFor(dataStore: DataStore): WKRemoteDataStoreClient =
-    new WKRemoteDataStoreClient(dataStore, rpc)
-
 }
 
 class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

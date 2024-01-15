@@ -131,7 +131,6 @@ class TSRemoteDatastoreClient @Inject()(
         .addQueryStringOptional("token", userToken)
         .addQueryString("mag" -> mag.toMagLiteral())
         .addQueryStringOptional("mappingName", mappingName)
-        .addQueryString("cubeSize" -> "32,32,32")
         .silent
         .getWithJsonResponse[Seq[Vec3Int]]
     } yield result

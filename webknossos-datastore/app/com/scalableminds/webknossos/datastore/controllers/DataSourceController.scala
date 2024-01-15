@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSourceLike,
   UnusableInboxDataSource
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -554,23 +554,17 @@ class DataSourceController @Inject()(
                       datasetName: String,
                       dataLayerName: String,
                       segmentId: String,
-                      mag: String,
-                      cubeSize: String): Action[AnyContent] =
+                      mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
                                                                           datasetName,
                                                                           dataLayerName,
                                                                           segmentId.toLong)
-          bucketPositions = topLefts
-            .map(_.scale(DataLayer.bucketLength)) // map indices to positions
-            .map(_ / (magParsed / fileMag))
-            .map(_ / cubeSizeParsed) // map positions to cube indices
-            .distinct
+          bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, magParsed, fileMag)
         } yield Ok(Json.toJson(bucketPositions))
       }
     }
@@ -583,7 +577,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          _ <- Fox.box2Fox(segmentIndexFileService.getSegmentIndexFile(organizationName, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound" //TODO: Dont use head, get all volumes
+          _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationName, datasetName, dataLayerName)
           volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             segmentIndexFileService.getSegmentVolume(
               organizationName,

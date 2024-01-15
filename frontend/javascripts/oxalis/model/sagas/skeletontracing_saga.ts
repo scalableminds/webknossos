@@ -15,6 +15,7 @@ import {
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
   createNode,
@@ -47,6 +48,7 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -349,7 +351,9 @@ export function* loadAgglomerateSkeletonWithId(
   }
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.tracing), TreeTypeEnum.AGGLOMERATE),
+  );
   const maybeTree = findTreeByName(trees, treeName);
 
   if (maybeTree != null) {
@@ -537,7 +541,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId
+    prevTree.groupId !== tree.groupId ||
+    prevTree.type !== tree.type
   );
 }
 

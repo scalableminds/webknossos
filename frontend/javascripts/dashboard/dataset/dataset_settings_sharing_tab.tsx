@@ -132,13 +132,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
             }}
             readOnly
           />
-          <Button
-            onClick={handleCopySharingLink}
-            style={{
-              width: "10%",
-            }}
-            icon={<CopyOutlined />}
-          >
+          <Button onClick={handleCopySharingLink} icon={<CopyOutlined />}>
             Copy
           </Button>
           {!form.getFieldValue("dataset.isPublic") && (
@@ -150,13 +144,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
                 </span>
               }
             >
-              <AsyncButton
-                onClick={handleRevokeSharingLink}
-                style={{
-                  width: "10%",
-                }}
-                icon={<RetweetOutlined />}
-              >
+              <AsyncButton onClick={handleRevokeSharingLink} icon={<RetweetOutlined />}>
                 Renew
               </AsyncButton>
             </Tooltip>

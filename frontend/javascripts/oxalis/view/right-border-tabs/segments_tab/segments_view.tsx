@@ -939,18 +939,19 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             marginLeft: 8,
           }}
+          className="icon-margin-right"
         >
           Reload from Server
         </ReloadOutlined>
       </Tooltip>
       <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
         <Tooltip title="Add a precomputed mesh file">
-          <PlusOutlined />
+          <PlusOutlined className="icon-margin-right" />
         </Tooltip>
       </Popover>
       {this.state.activeMeshJobId != null ? (
         <Tooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
-          <LoadingOutlined />
+          <LoadingOutlined className="icon-margin-right" />
         </Tooltip>
       ) : null}
       <Tooltip title="Configure ad-hoc mesh computation">

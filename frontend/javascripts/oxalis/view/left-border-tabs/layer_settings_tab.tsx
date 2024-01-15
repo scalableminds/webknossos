@@ -333,7 +333,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         >
-          <ScanOutlined />
+          <ScanOutlined className="icon-margin-right" />
           Jump to data
         </div>
       </Tooltip>
@@ -345,7 +345,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <div onClick={() => this.reloadLayerData(layerName)}>
-          <ReloadOutlined />
+          <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
       </Tooltip>
@@ -364,6 +364,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               cursor: "pointer",
               color: isInEditMode ? "var(--ant-primary)" : undefined,
             }}
+            className="icon-margin-right"
           />
           {isInEditMode ? "Stop editing" : "Edit"} histogram range
         </div>
@@ -440,6 +441,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               cursor: "pointer",
               transform: "rotate(90deg)",
             }}
+            className="icon-margin-right"
           />
           Clip histogram
         </div>
@@ -738,7 +740,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
               placement="left"
             >
-              <InfoCircleOutlined />
+              <InfoCircleOutlined className="icon-margin-right" />
             </Tooltip>
             {canBeMadeEditable ? (
               <Tooltip

@@ -414,7 +414,7 @@ function Infos() {
             totalDownloadedByteCount,
           )} of Image Data (after decompression)`}
         >
-          <DownloadOutlined />
+          <DownloadOutlined className="icon-margin-right" />
           {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
         </Tooltip>
       </span>

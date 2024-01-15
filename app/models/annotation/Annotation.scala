@@ -298,9 +298,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  private def parseObjectIdArray(objectIdArray: String): Seq[ObjectId] =
-    Option(objectIdArray).map(_.split(",").map(id => ObjectId(id))).getOrElse(Array[ObjectId]()).toSeq
-
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
@@ -322,9 +319,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           u.firstname,
           u.lastname,
           a.othersmayedit,
-          STRING_AGG(t._id, ',') AS team_ids,
-          STRING_AGG(t.name, ',') AS team_names,
-          STRING_AGG(t._organization, ',') AS team_orgs,
+          ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+          ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+          ARRAY_REMOVE(ARRAY_AGG(t._organization), null) AS team_orgs,
           a.modified,
           a.statistics,
           a.tags,
@@ -334,9 +331,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           a.visibility,
           a.tracingtime,
           o.name,
-          STRING_AGG(al.tracingid, ',') AS tracing_ids,
-          STRING_AGG(al.name, ',') AS tracing_names,
-          STRING_AGG(al.typ :: varchar, ',') AS tracing_typs
+          ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
+          ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
+          ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs
       FROM webknossos.annotations as a
                LEFT JOIN webknossos.users_ u
                          ON u._id = a._user
@@ -389,9 +386,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             ownerFirstName = r._5,
             ownerLastName = r._6,
             othersMayEdit = r._7,
-            teamIds = parseObjectIdArray(r._8),
-            teamNames = Option(r._9).map(_.split(",")).getOrElse(Array[String]()).toSeq,
-            teamOrganizationIds = parseObjectIdArray(r._10),
+            teamIds = parseArrayLiteral(r._8).map(ObjectId(_)),
+            teamNames = parseArrayLiteral(r._9),
+            teamOrganizationIds = parseArrayLiteral(r._10).map(ObjectId(_)),
             modified = r._11,
             stats = Json.parse(r._12).validate[JsObject].getOrElse(Json.obj()),
             tags = parseArrayLiteral(r._13).toSet,
@@ -401,9 +398,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             visibility = AnnotationVisibility.fromString(r._17).getOrElse(AnnotationVisibility.Internal),
             tracingTime = Option(r._18),
             organizationName = r._19,
-            tracingIds = Option(r._20).map(_.split(",")).getOrElse(Array[String]()).toSeq,
-            annotationLayerNames = Option(r._21).map(_.split(",")).getOrElse(Array[String]()).toSeq,
-            annotationLayerTypes = Option(r._22).map(_.split(",")).getOrElse(Array[String]()).toSeq
+            tracingIds = parseArrayLiteral(r._20),
+            annotationLayerNames = parseArrayLiteral(r._21),
+            annotationLayerTypes = parseArrayLiteral(r._22)
           )
         }
       )

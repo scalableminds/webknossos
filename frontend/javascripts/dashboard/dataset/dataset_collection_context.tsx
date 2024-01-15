@@ -350,7 +350,7 @@ function useManagedUrlParams(
         params.set("folderId", activeFolderId);
         // The recursive property is only relevant when a folderId is specified.
         if (searchRecursively) {
-          params.delete("recursive");
+          params.set("recursive", "true");
         } else {
           params.set("recursive", "false");
         }

@@ -1836,9 +1836,11 @@ class SegmentsView extends React.Component<Props, State> {
         : dropTargetGroupId;
     }
     if (dragNode.type === "segment") {
-      // A segment is being dropped onto/next to a segment or group.
+      // Segment(s) were dragged onto/next to a segment or group.
+      // It is possible to drag a segment that was not selected. In that case, the selected segments are moved as well.
+      const selectedSegmentIds = this.state.selectedIds.segments;
       this.props.updateSegments(
-        [dragNode.id],
+        [dragNode.id, ...selectedSegmentIds],
         { groupId: targetGroupId },
         this.props.visibleSegmentationLayer.name,
         true,

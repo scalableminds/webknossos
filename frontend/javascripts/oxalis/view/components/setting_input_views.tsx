@@ -72,7 +72,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
+            variant={"borderless"}
             min={min}
             max={max}
             style={{
@@ -174,7 +174,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
+            variant={"borderless"}
             min={min}
             max={max}
             style={{
@@ -318,7 +318,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
       </div>
       <InputNumber
         controls={false}
-        bordered={false}
+        variant={"borderless"}
         style={{
           width: 140,
         }}

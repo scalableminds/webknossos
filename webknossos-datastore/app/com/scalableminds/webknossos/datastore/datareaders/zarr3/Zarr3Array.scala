@@ -104,9 +104,6 @@ class Zarr3Array(vaultPath: VaultPath,
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
-  private def checkSumLength = 4 // 32-bit checksum
-  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
-
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
     indexShape.tails.toList
@@ -122,11 +119,21 @@ class Zarr3Array(vaultPath: VaultPath,
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 
+  private lazy val checkSumLength =
+    shardingCodec match {
+      case Some(codec) =>
+        if (codec.index_codecs.exists(_.name == "crc32c")) Crc32CCodecConfiguration.checkSumByteLength
+        else 0
+      case None => 0
+    }
+  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
+
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
     shardingCodec match {
-      case Some(codec) if codec.index_location == IndexLocationSetting.start => shardPath.readBytes(Some(Range.Long(0,getShardIndexSize.toLong, 1)))
-      case Some(codec) if codec.index_location == IndexLocationSetting.end   => shardPath.readLastBytes(getShardIndexSize)
-      case None                                                              => Fox.failure("No sharding codec found")
+      case Some(codec) if codec.index_location == IndexLocationSetting.start =>
+        shardPath.readBytes(Some(Range.Long(0, getShardIndexSize.toLong, 1)))
+      case Some(codec) if codec.index_location == IndexLocationSetting.end => shardPath.readLastBytes(getShardIndexSize)
+      case _                                                               => Fox.failure("No sharding codec found")
     }
 
   private def parseShardIndex(index: Array[Byte]): Array[(Long, Long)] = {

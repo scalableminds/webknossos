@@ -263,6 +263,8 @@ case object Crc32CCodecConfiguration extends CodecConfiguration {
   override val includeConfiguration: Boolean = false
   val name = "crc32c"
 
+  val checkSumByteLength = 4 // 32 Bit Codec => 4 Byte
+
   implicit object Crc32CCodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
     override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
   }

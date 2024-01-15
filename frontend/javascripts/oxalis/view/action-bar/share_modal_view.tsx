@@ -549,9 +549,6 @@ export function CopyableSharingLink({
         readOnly
       />
       <Button
-        style={{
-          width: "15%",
-        }}
         onClick={() => copyUrlToClipboard(linkToCopy)}
         icon={<CopyOutlined />}
       >

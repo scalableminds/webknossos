@@ -895,7 +895,10 @@ class SegmentsView extends React.Component<Props, State> {
   getMeshesHeader = () => (
     <>
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
-        <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
+        <ConfigProvider
+          renderEmpty={renderEmptyMeshFileSelect}
+          theme={{ cssVar: { key: "antd-app-theme" } }}
+        >
           <Select
             style={{
               width: 180,

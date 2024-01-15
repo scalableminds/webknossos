@@ -25,16 +25,24 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 
 export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
+  let components = {};
 
   // Ant Design Customizations
   let token: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
+    colorLink: ColorWKBlue,
     fontFamily:
       '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
   };
 
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
+    components = {
+      ...components,
+      Typography: {
+        colorTextHeading: "rgba(255, 255, 255, 0.85)", // Why is this not the default value?
+      },
+    };
   }
   // In case you want customize individual components, adapt the antd design tokens and return them here,
   // e.g., components: { Input: {<designToken>: ...}

@@ -119,14 +119,14 @@ class Zarr3Array(vaultPath: VaultPath,
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 
-  private lazy val checkSumLength =
+  private lazy val shardIndexChecksumLength =
     shardingCodec match {
       case Some(codec) =>
         if (codec.index_codecs.exists(_.name == "crc32c")) Crc32CCodecConfiguration.checkSumByteLength
         else 0
       case None => 0
     }
-  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
+  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
 
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
     shardingCodec match {

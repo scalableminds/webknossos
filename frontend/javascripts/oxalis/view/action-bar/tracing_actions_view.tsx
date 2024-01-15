@@ -179,6 +179,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 
   return {
     key: "layout-menu",
+    icon: <LayoutOutlined />,
     label: (
       <span
         style={{
@@ -186,7 +187,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
           minWidth: 120,
         }}
       >
-        <LayoutOutlined />
         Layout
         <Tooltip placement="top" title={layoutMissingHelpTitle}>
           <InfoCircleOutlined

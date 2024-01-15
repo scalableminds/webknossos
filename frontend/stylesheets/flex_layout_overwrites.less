@@ -28,17 +28,14 @@
 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
-  // background-color: rgba(var(--ant-color-text), 0.4);
-  background-color: var(--ant-color-text)
+  background-color: var(--ant-color-border-secondary)
 }
 .flexlayout__splitter {
   z-index: 21;
-  // background-color: rgba(var(--ant-color-text), 0.1);
-  background-color: var(--ant-color-text);
+  background-color: var(--ant-color-border);
   &::before {
     content: "";
-    // background-color: rgba(var(--ant-color-text), 0);
-    background-color: var(--ant-color-bg-base);
+    background-color: transparent;
   }
 }
 

@@ -161,7 +161,7 @@ class AnnotationIOController @Inject()(
             savedTracingId,
             AnnotationLayerType.Volume,
             uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
-            AnnotationLayerStatistics.defaultForVolume
+            AnnotationLayerStatistics.unknown
           )
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
@@ -178,7 +178,7 @@ class AnnotationIOController @Inject()(
             mergedTracingId,
             AnnotationLayerType.Volume,
             AnnotationLayer.defaultVolumeLayerName,
-            AnnotationLayerStatistics.defaultForVolume
+            AnnotationLayerStatistics.unknown
           ))
     }
 
@@ -196,7 +196,7 @@ class AnnotationIOController @Inject()(
           AnnotationLayer(mergedTracingId,
                           AnnotationLayerType.Skeleton,
                           AnnotationLayer.defaultSkeletonLayerName,
-                          AnnotationLayerStatistics.defaultForSkeleton))
+                          AnnotationLayerStatistics.unknown))
     }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =

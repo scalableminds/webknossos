@@ -295,7 +295,7 @@ class AnnotationService @Inject()(
         AnnotationLayer(tracingIdAndName._1,
                         annotationLayerParameters.typ,
                         tracingIdAndName._2,
-                        AnnotationLayerStatistics.defaultForTyp(annotationLayerParameters.typ))
+                        AnnotationLayerStatistics.zeroedForTyp(annotationLayerParameters.typ))
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)
@@ -383,9 +383,7 @@ class AnnotationService @Inject()(
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, _dataSet, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
-    } yield {
-      annotation
-    }
+    } yield annotation
 
   def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =

@@ -18,13 +18,22 @@ case class AnnotationLayer(
 )
 
 object AnnotationLayerStatistics {
-  val defaultForSkeleton: JsObject = Json.obj() // TODO
-  val defaultForVolume: JsObject = Json.obj() // TODO
 
-  def defaultForTyp(typ: AnnotationLayerType): JsObject = typ match {
-    case AnnotationLayerType.Skeleton => defaultForSkeleton
-    case AnnotationLayerType.Volume   => defaultForVolume
+  def zeroedForTyp(typ: AnnotationLayerType): JsObject = typ match {
+    case AnnotationLayerType.Skeleton =>
+      Json.obj(
+        "treeCount" -> 0,
+        "nodeCount" -> 0,
+        "edgeCount" -> 0,
+        "branchPointCount" -> 0
+      )
+    case AnnotationLayerType.Volume =>
+      Json.obj(
+        "segmentCount" -> 0
+      )
   }
+
+  def unknown: JsObject = Json.obj()
 }
 
 object AnnotationLayer extends FoxImplicits {
@@ -44,15 +53,9 @@ object AnnotationLayer extends FoxImplicits {
                     assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[AnnotationLayer]] = {
     val annotationLayers: List[AnnotationLayer] = List(
       skeletonTracingIdOpt.map(
-        AnnotationLayer(_,
-                        AnnotationLayerType.Skeleton,
-                        defaultSkeletonLayerName,
-                        AnnotationLayerStatistics.defaultForSkeleton)),
+        AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName, AnnotationLayerStatistics.unknown)),
       volumeTracingIdOpt.map(
-        AnnotationLayer(_,
-                        AnnotationLayerType.Volume,
-                        defaultVolumeLayerName,
-                        AnnotationLayerStatistics.defaultForVolume))
+        AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown))
     ).flatten
     for {
       _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"

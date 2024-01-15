@@ -39,7 +39,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-
   def assertValidNewNameV5(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -49,7 +48,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         _ <- datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken"
       } yield Ok
     }
-
 
   /* to provide v4
    - replace new annotation layers by old tracing ids (changed in v5)

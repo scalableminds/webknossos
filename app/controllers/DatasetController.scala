@@ -16,7 +16,7 @@ import models.dataset.explore.{
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

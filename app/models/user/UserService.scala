@@ -330,6 +330,7 @@ class UserService @Inject()(conf: WkConf,
     } yield isTeamManager || user.isAdminOf(_organization)
 
   def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
+    // Note that the same logic is implemented in User/findAllCompactWithFilters in SQL
     for {
       otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
       teamMemberships <- teamMembershipsFor(possibleEditee._id)
@@ -373,7 +374,7 @@ class UserService @Inject()(conf: WkConf,
 
   def publicWritesCompact(user: User, requestingUser: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
-      isEditable <- isEditableBy(user, requestingUser)
+      _ <- Fox.successful(())
       teamsJson = parseArrayLiteral(userCompactInfo.team_ids).indices.map(
         idx =>
           Json.obj(
@@ -402,7 +403,7 @@ class UserService @Inject()(conf: WkConf,
         "experiences" -> experienceJson,
         "lastActivity" -> user.lastActivity,
         "isAnonymous" -> false,
-        "isEditable" -> isEditable,
+        "isEditable" -> userCompactInfo.isEditable,
         "organization" -> userCompactInfo.organization_name,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "selectedTheme" -> userCompactInfo.selectedTheme,

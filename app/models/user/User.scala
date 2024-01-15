@@ -86,7 +86,8 @@ case class UserCompactInfo(
     created: Timestamp,
     lastTaskTypeId: Option[String],
     isSuperUser: Boolean,
-    isEmailVerified: Boolean
+    isEmailVerified: Boolean,
+    isEditable: Boolean
 ) {
   def toUser(implicit ec: ExecutionContext): Fox[User] =
     for {
@@ -219,6 +220,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         $accessQuery
        """
 
+  // Necessary since a tuple can only have 22 elements
   implicit def GetResultUserCompactInfo(implicit e0: GetResult[String],
                                         e1: GetResult[java.sql.Timestamp],
                                         e2: GetResult[Boolean],
@@ -227,7 +229,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     // format: off
     UserCompactInfo(<<[String],<<[String],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
       <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[java.sql.Timestamp],<<[String],
-      <<[String],<<[String],<<[String],<<[java.sql.Timestamp],<<?[String],<<[Boolean],<<[Boolean]
+      <<[String],<<[String],<<[String],<<[java.sql.Timestamp],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
   }
@@ -242,6 +244,18 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                                       isAdmin,
                                                       requestingUser,
                                                       SqlToken.raw("u."))
+      isEditableAttribute = q"""
+        (u._id IN
+          (SELECT _id AS editableUsers FROM webknossos.users WHERE _organization IN
+              (SELECT _organization FROM webknossos.users WHERE _id = ${requestingUser._id} AND isadmin)
+            UNION
+          SELECT _user AS editableUsers FROM webknossos.user_team_roles WHERE _team in
+              (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id} AND isteammanager)
+          )
+        )
+        OR COUNT(t._id) = 0
+        AS iseditable
+        """
       r <- run(q"""
           SELECT
             u._id,
@@ -267,7 +281,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             u.created,
             u.lasttasktypeid,
             m.issuperuser,
-            m.isemailverified
+            m.isemailverified,
+            $isEditableAttribute
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o on o._id = u._organization
         INNER JOIN webknossos.multiusers m on u._multiuser = m._id

@@ -116,7 +116,7 @@ function ensureValidScaleOnInferredDataSource(
     // If one of the data sources is null, return the other.
     const potentialSource = savedDataSourceOnServer || inferredDataSource;
     if (potentialSource && "dataLayers" in potentialSource) {
-      return potentialSource;
+      return potentialSource as APIDataSource;
     } else {
       return null;
     }

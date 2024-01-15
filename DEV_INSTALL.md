@@ -135,6 +135,8 @@ yarn install
 
 Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing WEBKNOSSOS, you can safely ignore this error.
 
+Note: If you are getting node version incompatibility errors, it is usually safe to call yarn with [`--ignore-engines`](https://classic.yarnpkg.com/lang/en/docs/cli/install/#toc-yarn-install-ignore-engines).
+
 To start WEBKNOSSOS, use
 
 ```bash

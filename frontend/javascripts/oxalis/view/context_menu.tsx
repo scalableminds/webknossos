@@ -70,6 +70,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
   getResolutionInfo,
+  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -109,6 +110,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1153,16 +1155,15 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const hasNoFallbackLayer =
-    visibleSegmentationLayer != null &&
-    "fallbackLayer" in visibleSegmentationLayer &&
-    visibleSegmentationLayer.fallbackLayer == null;
+    visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (
         contextMenuPosition == null ||
         volumeTracing == null ||
         !hasNoFallbackLayer ||
-        !volumeTracing.hasSegmentIndex
+        !volumeTracing.hasSegmentIndex ||
+        hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
         return [];
       } else {
@@ -1300,7 +1301,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
+  const areSegmentStatisticsAvailable =
+    hasNoFallbackLayer &&
+    volumeTracing?.hasSegmentIndex &&
+    isHoveredSegmentOrMesh &&
+    !hasAdditionalCoordinates(props.additionalCoordinates); // TODO change once statistics are available for nd-datasets
+
+  if (areSegmentStatisticsAvailable) {
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
@@ -1314,7 +1321,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh) {
+  if (areSegmentStatisticsAvailable) {
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
@@ -1518,7 +1525,14 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateMeshVisibilityAction(layerName, meshId, false));
+    dispatch(
+      updateMeshVisibilityAction(
+        layerName,
+        meshId,
+        false,
+        Store.getState().flycam.additionalCoordinates || undefined,
+      ),
+    );
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));

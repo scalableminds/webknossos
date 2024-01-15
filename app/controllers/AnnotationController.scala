@@ -288,7 +288,7 @@ class AnnotationController @Inject()(
             AnnotationLayer(TracingIds.dummyTracingId,
                             AnnotationLayerType.Skeleton,
                             AnnotationLayer.defaultSkeletonLayerName,
-                            AnnotationLayerStatistics.defaultForSkeleton))
+                            AnnotationLayerStatistics.unknown))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)

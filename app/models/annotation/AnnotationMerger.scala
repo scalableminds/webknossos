@@ -83,13 +83,13 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
           AnnotationLayer(id,
                           AnnotationLayerType.Skeleton,
                           mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName),
-                          AnnotationLayerStatistics.defaultForSkeleton))
+                          AnnotationLayerStatistics.unknown))
       mergedVolumeLayer = mergedVolumeTracingId.map(
         id =>
           AnnotationLayer(id,
                           AnnotationLayerType.Volume,
                           mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName),
-                          AnnotationLayerStatistics.defaultForVolume))
+                          AnnotationLayerStatistics.unknown))
     } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
 
   private def allEqual(str: List[String]): Option[String] =

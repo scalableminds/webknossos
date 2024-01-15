@@ -108,22 +108,14 @@ function DatasetAddView({ history }: RouteComponentProps) {
 
   const tabs: TabsProps["items"] = [
     {
-      label: (
-        <span>
-          <UploadOutlined />
-          Upload Dataset
-        </span>
-      ),
+      label: "Upload Dataset",
+      icon: <UploadOutlined />,
       key: DatasetAddViewTabs.UPLOAD,
       children: <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />,
     },
     {
-      label: (
-        <span>
-          <DatabaseOutlined />
-          Add Remote Dataset
-        </span>
-      ),
+      label: "Add Remote Dataset",
+      icon: <DatabaseOutlined />,
       key: DatasetAddViewTabs.REMOTE,
       children: <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />,
     },

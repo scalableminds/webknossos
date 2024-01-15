@@ -374,7 +374,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
     <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
-      <i className="fas fa-object-ungroup" />
+      <i className="fas fa-object-ungroup icon-margin-right" />
       Merge this volume annotation with its fallback layer
     </div>
   );
@@ -383,14 +383,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     <Tooltip title="Delete this annotation layer.">
       <i
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash"
+        className="fas fa-trash icon-margin-right"
       />
     </Tooltip>
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
     <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
-      <i className="fas fa-trash" />
+      <i className="fas fa-trash icon-margin-right" />
       Delete this annotation layer
     </div>
   );
@@ -473,7 +473,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <div onClick={triggerComputeSegmentIndexFileJob}>
-        <i className="fas fa-database" />
+        <i className="fas fa-database icon-margin-right" />
         Compute a Segment Index file
       </div>
     );
@@ -773,7 +773,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <i
-                  className="fas fa-paint-brush"
+                  className="fas fa-paint-brush icon-margin-right"
                   style={{
                     opacity: 0.7,
                   }}

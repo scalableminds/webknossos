@@ -194,12 +194,12 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </Link>
                     <br />
                     <LinkButton onClick={_.partial(this.deleteScript, script)}>
-                      <DeleteOutlined />
+                      <DeleteOutlined className="icon-margin-right" />
                       Delete
                     </LinkButton>
                   </span>

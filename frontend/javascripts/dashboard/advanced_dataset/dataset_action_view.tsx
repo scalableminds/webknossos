@@ -49,7 +49,7 @@ function NewAnnotationLink({
         title="New Annotation (Skeleton + Volume)"
         disabled={isReloading}
       >
-        <PlusOutlined />
+        <PlusOutlined className="icon-margin-right" />
         New Annotation
       </LinkWithDisabled>
       <span
@@ -151,7 +151,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         style={disabledWhenReloadingStyle}
         type="link"
       >
-        {isReloading ? <LoadingOutlined /> : <ReloadOutlined />}
+        {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
         Reload
       </a>
     );
@@ -161,7 +161,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
           className="import-dataset"
         >
-          <PlusCircleOutlined />
+          <PlusCircleOutlined className="icon-margin-right" />
           Import
         </Link>
         {reloadLink}
@@ -213,7 +213,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               title="View Dataset"
               disabled={isReloading}
             >
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </LinkWithDisabled>
             {dataset.isEditable ? (
@@ -223,7 +223,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   title="Open Dataset Settings"
                   disabled={isReloading}
                 >
-                  <SettingOutlined />
+                  <SettingOutlined className="icon-margin-right" />
                   Settings
                 </LinkWithDisabled>
                 {reloadLink}

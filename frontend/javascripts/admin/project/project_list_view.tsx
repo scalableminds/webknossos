@@ -410,12 +410,12 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Annotations"
                     >
-                      <EyeOutlined />
+                      <EyeOutlined className="icon-margin-right" />
                       View
                     </Link>
                     <br />
                     <Link to={`/projects/${project.id}/edit`} title="Edit Project">
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </Link>
                     <br />
@@ -425,7 +425,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                           onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
                           title="Resume Project"
                         >
-                          <PlayCircleOutlined />
+                          <PlayCircleOutlined className="icon-margin-right" />
                           Resume
                         </a>
                         <br />
@@ -436,14 +436,14 @@ class ProjectListView extends React.PureComponent<Props, State> {
                           onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
                           title="Pause Tasks"
                         >
-                          <PauseCircleOutlined />
+                          <PauseCircleOutlined className="icon-margin-right" />
                           Pause
                         </a>
                         <br />
                       </div>
                     )}
                     <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
-                      <ScheduleOutlined />
+                      <ScheduleOutlined className="icon-margin-right" />
                       Tasks
                     </Link>
                     <br />
@@ -451,7 +451,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       onClick={_.partial(this.increaseProjectTaskInstances, project)}
                       title="Increase Task instances"
                     >
-                      <PlusSquareOutlined />
+                      <PlusSquareOutlined className="icon-margin-right" />
                       Increase Instances
                     </a>
                     <br />
@@ -462,19 +462,19 @@ class ProjectListView extends React.PureComponent<Props, State> {
                         await downloadAnnotation(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
-                      icon={<DownloadOutlined key="download-icon" />}
+                      icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
                     >
                       Download
                     </AsyncLink>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
-                      <TeamOutlined />
+                      <TeamOutlined className="icon-margin-right" />
                       Show active users
                     </a>
                     <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
-                        <DeleteOutlined />
+                        <DeleteOutlined className="icon-margin-right" />
                         Delete
                       </a>
                     ) : null}

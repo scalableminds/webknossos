@@ -270,7 +270,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${id}`}>
-            <PlayCircleOutlined />
+            <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
           <br />
@@ -280,7 +280,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
               return downloadAnnotation(id, typ, hasVolumeTracing);
             }}
-            icon={<DownloadOutlined key="download" />}
+            icon={<DownloadOutlined key="download" className="icon-margin-right" />}
           >
             Download
           </AsyncLink>
@@ -289,7 +289,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <AsyncLink
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
-              icon={<InboxOutlined key="inbox" />}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
             >
               Archive
             </AsyncLink>
@@ -303,7 +303,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", tracing)}
-            icon={<FolderOpenOutlined key="folder" />}
+            icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
           </AsyncLink>

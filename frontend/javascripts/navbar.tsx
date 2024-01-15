@@ -242,7 +242,11 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   return {
     key: "adminMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Administration",
+      <TeamOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: adminstrationSubMenuItems,
   };
 }
@@ -251,7 +255,11 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "statisticMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Statistics",
+      <BarChartOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
@@ -406,7 +414,11 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
-    label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Help",
+      <QuestionCircleOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: helpSubMenuItems,
   };
 }
@@ -415,7 +427,11 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Dashboard",
+      <HomeOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
       { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },

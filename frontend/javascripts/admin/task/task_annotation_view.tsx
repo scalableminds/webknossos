@@ -108,21 +108,18 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     }
 
     const label =
+      annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? "View" : "Open";
+    const icon =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
-        <React.Fragment>
-          <EyeOutlined />
-          View
-        </React.Fragment>
+        <EyeOutlined />
       ) : (
-        <React.Fragment>
-          <PlayCircleOutlined />
-          Open
-        </React.Fragment>
+        <PlayCircleOutlined />
       );
     return {
       items: [
         {
           key: `${annotation.id}-view`,
+          icon: icon,
           label: <a href={`/annotations/Task/${annotation.id}`}>{label}</a>,
         },
         {
@@ -137,6 +134,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         },
         {
           key: `${annotation.id}-download`,
+          icon: <DownloadOutlined />,
           label: (
             <AsyncLink
               href="#"
@@ -144,7 +142,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
               }}
-              icon={<DownloadOutlined />}
             >
               Download
             </AsyncLink>
@@ -208,12 +205,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   </td>
                   <td>
                     <span>
-                      <CheckCircleOutlined />
+                      <CheckCircleOutlined className="icon-margin-right" />
                       {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>
-                      <ClockCircleOutlined />
+                      <ClockCircleOutlined className="icon-margin-right" />
                       {annotation.tracingTime != null
                         ? formatSeconds(annotation.tracingTime / 1000)
                         : 0}

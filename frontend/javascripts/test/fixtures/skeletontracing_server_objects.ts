@@ -177,6 +177,7 @@ export const annotation: APIAnnotation = {
       name: "Skeleton",
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",

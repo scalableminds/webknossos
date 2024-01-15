@@ -88,6 +88,7 @@ export const annotation: APIAnnotation = {
       name: "volume",
       tracingId: "tracingId-1234",
       typ: "Volume",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",

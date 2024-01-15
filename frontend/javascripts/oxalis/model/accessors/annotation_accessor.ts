@@ -1,6 +1,7 @@
 import _ from "lodash";
 import type { OxalisState, Tracing } from "oxalis/store";
 import { getVolumeTracingById } from "./volumetracing_accessor";
+import { APIAnnotationInfo } from "types/api_flow_types";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
   const { owner, restrictions } = state.tracing;
@@ -82,6 +83,34 @@ export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
     const volumeStats = getStats(tracing, "volume", volumeTracing.tracingId);
     if (volumeStats && "segmentCount" in volumeStats) {
       aggregatedStats.segmentCount += volumeStats.segmentCount;
+    }
+  }
+
+  return aggregatedStats;
+}
+
+export function getCombinedStatsFromServerAnnotation(
+  annotation: APIAnnotationInfo,
+): CombinedTracingStats {
+  const aggregatedStats = {
+    treeCount: 0,
+    nodeCount: 0,
+    edgeCount: 0,
+    branchPointCount: 0,
+    segmentCount: 0,
+  };
+
+  for (const annotationLayer of annotation.annotationLayers) {
+    const { stats } = annotationLayer;
+
+    if ("treeCount" in stats) {
+      const { treeCount, nodeCount, edgeCount, branchPointCount } = stats;
+      aggregatedStats.treeCount = treeCount;
+      aggregatedStats.nodeCount = nodeCount;
+      aggregatedStats.edgeCount = edgeCount;
+      aggregatedStats.branchPointCount = branchPointCount;
+    } else if ("segmentCount" in stats) {
+      aggregatedStats.segmentCount += stats.segmentCount;
     }
   }
 

@@ -425,6 +425,7 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
+  stats: TracingStats | {};
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
@@ -438,7 +439,7 @@ export type APIAnnotationInfo = {
   readonly id: string;
   readonly name: string;
   readonly state: string;
-  readonly stats: TracingStats | {};
+  readonly stats: TracingStats | {}; // todop: unused now?
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation

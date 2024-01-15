@@ -15,7 +15,10 @@ import {
   getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import { getCombinedStats } from "oxalis/model/accessors/annotation_accessor";
+import {
+  getCombinedStats,
+  type CombinedTracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -199,6 +202,71 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
   );
 }
 
+export function AnnotationStats({
+  stats,
+  asInfoBlock,
+}: {
+  stats: CombinedTracingStats;
+  asInfoBlock: boolean;
+}) {
+  const { treeCount, nodeCount, edgeCount, branchPointCount, segmentCount } = stats;
+  const formatLabel = (str: string) => (asInfoBlock ? str : "");
+
+  return (
+    <div className="info-tab-block">
+      {asInfoBlock && <p className="sidebar-label">Statistics</p>}
+      <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
+        <tbody>
+          <Tooltip
+            placement="left"
+            title={
+              <>
+                <p>Trees: {treeCount}</p>
+                <p>Nodes: {nodeCount}</p>
+                <p>Edges: {edgeCount}</p>
+                <p>Branchpoints: {branchPointCount}</p>
+              </>
+            }
+          >
+            <tr>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-skeletons.svg"
+                  alt="Skeletons"
+                />
+              </td>
+              <td>
+                {treeCount} {formatLabel("Trees")}
+              </td>
+            </tr>
+          </Tooltip>
+          <Tooltip
+            placement="left"
+            title={`${segmentCount} Segments – Only segments that were manually registered (either brushed or
+                            interacted with) are counted in this statistic. Segmentation layers
+                            created from automated workflows (also known as fallback layers) are not
+                            considered currently.`}
+          >
+            <tr>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-segments.svg"
+                  alt="Segments"
+                />
+              </td>
+              <td>
+                {segmentCount} {formatLabel("Segments")}
+              </td>
+            </tr>
+          </Tooltip>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
@@ -228,61 +296,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    const stats = getCombinedStats(this.props.annotation);
-    const { treeCount, nodeCount, edgeCount, branchPointCount, segmentCount } = stats;
-
-    return (
-      <div className="info-tab-block">
-        <p className="sidebar-label">Statistics</p>
-        <table className="annotation-stats-table">
-          <tbody>
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-skeletons.svg"
-                  alt="Skeletons"
-                />
-              </td>
-              <td>
-                <Tooltip
-                  placement="left"
-                  title={
-                    <>
-                      <p>Nodes: {nodeCount}</p>
-                      <p>Edges: {edgeCount}</p>
-                      <p>Branchpoints: {branchPointCount}</p>
-                    </>
-                  }
-                >
-                  {treeCount} Skeletons
-                </Tooltip>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-segments.svg"
-                  alt="Segments"
-                />
-              </td>
-              <td>
-                <Tooltip
-                  placement="left"
-                  title="For technical reasons, only segments that were manually annotated or
-                      interacted with are counted towards this statistic. Segmentation layers
-                      created from automated workflows (also known as fallback layers) are not currently
-                      considered."
-                >
-                  {segmentCount} Segments
-                </Tooltip>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
+    return <AnnotationStats stats={getCombinedStats(this.props.annotation)} asInfoBlock />;
   }
 
   getKeyboardShortcuts() {

@@ -796,16 +796,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       Toast.info("No segment found at the clicked position");
       return;
     }
-    const selectedSegmentsOrGroup = state.localSegmentationData[layerName].selectedIds;
     const additionalCoordinates = state.flycam.additionalCoordinates;
-    const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
-    if (numberOfSelectedSegments < 2) {
-      // This action is dispatched because the behaviour is identical click on a segment.
-      // Note that the updated position is where the segment was clicked to open the context menu.
-      Store.dispatch(
-        clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
-      );
-    }
+    // This action is dispatched because the behaviour is identical to a click on a segment.
+    // Note that the updated position is where the segment was clicked to open the context menu.
+    Store.dispatch(
+      clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+    );
   };
 
   const computeMeshAdHoc = () => {

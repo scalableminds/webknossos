@@ -55,6 +55,7 @@ import {
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
+  getSelectedIds,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -81,7 +82,7 @@ import {
   deleteSegmentDataAction,
   setActiveCellAction,
   updateSegmentAction,
-  setSelectedSegmentsOrGroupsAction,
+  setSelectedSegmentsOrGroupAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -168,7 +169,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   );
 
   const { segments, segmentGroups } = getVisibleSegments(state);
-  console.log("segments: ", segments);
 
   const isVisibleButUneditableSegmentationLayerActive =
     visibleSegmentationLayer != null && visibleSegmentationLayer.tracingId == null;
@@ -189,12 +189,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     hasVolumeTracing: state.tracing.volumes.length > 0,
     segments,
     segmentGroups,
-    selectedIds: getOrInitializeSelectedSegmentsOrGroup(
-      visibleSegmentationLayer,
-      state,
-      segments,
-      segmentGroups,
-    ),
+    selectedIds: getCleanedSelectedSegmentsOrGroup(state),
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
@@ -218,43 +213,14 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const getOrInitializeSelectedSegmentsOrGroup = (
-  visibleSegmentationLayer: APISegmentationLayer | null | undefined,
-  state: OxalisState,
-  visibleSegments: SegmentMap | null | undefined,
-  visibleSegmentGroups: Array<SegmentGroup>,
-) => {
-  const nothingSelectedObject = { segments: [], group: null };
-  if (visibleSegmentationLayer == null) {
-    return nothingSelectedObject;
+const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
+  console.log("test");
+  const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
+  if (maybeUpdateStoreAction != null) {
+    maybeUpdateStoreAction();
   }
-  const { segments, group } =
-    state.localSegmentationData[visibleSegmentationLayer.name].selectedIds;
-  if (segments.length === 0 && group == null) return nothingSelectedObject;
-
-  // Ensure that the ids of previously selected segments are removed
-  // if these segments don't exist anymore.
-  const currentSegmentIds = new Set(visibleSegments?.map((segment) => segment.id));
-  const currentGroupIdsWithoutRootGroup = new Set(
-    visibleSegmentGroups.map((group) => group.groupId),
-  );
-  const currentGroupIds = currentGroupIdsWithoutRootGroup.add(MISSING_GROUP_ID);
-  const selectedIds = {
-    segments: segments.filter((id) => currentSegmentIds.has(id)),
-    group: group != null && currentGroupIds.has(group) ? group : null,
-  };
-  const haveSegmentsOrGroupsBeenRemovedFromList =
-    selectedIds.segments.length !== segments.length || selectedIds.group !== group;
-  if (haveSegmentsOrGroupsBeenRemovedFromList) {
-    Store.dispatch(
-      setSelectedSegmentsOrGroupsAction(
-        selectedIds.segments,
-        selectedIds.group,
-        visibleSegmentationLayer.name,
-      ),
-    );
-  }
-  return selectedIds;
+  console.log(cleanedSelectedIds);
+  return cleanedSelectedIds;
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
@@ -460,19 +426,18 @@ class SegmentsView extends React.Component<Props, State> {
     // triggers this function. Technically the segment is now present in the tree due
     // to the design in the volumetracing_saga, and it can also be found while debugging
     // this class. But in the scrollTo function, the new segment isn't found right away
-    // in the tree data, thus we need the timeout.
-    setTimeout(() => {
-      if (this.tree?.current == null) {
-        return;
-      }
-      if (
-        this.props.selectedIds.segments.length === 1 &&
-        prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
-      ) {
-        const selectedId = this.props.selectedIds.segments[0];
-        this.tree.current.scrollTo({ key: `segment-${selectedId}` });
-      }
-    }, 100);
+    // in the tree data, thus the timeout is used as a work-around.
+
+    if (this.tree?.current == null) {
+      return;
+    }
+    if (
+      this.props.selectedIds.segments.length === 1 &&
+      prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
+    ) {
+      const selectedId = this.props.selectedIds.segments[0];
+      this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+    }
   }
 
   componentWillUnmount() {
@@ -527,7 +492,7 @@ class SegmentsView extends React.Component<Props, State> {
         This will deselect all selected segments.`,
           onOk: () => {
             Store.dispatch(
-              setSelectedSegmentsOrGroupsAction(
+              setSelectedSegmentsOrGroupAction(
                 [],
                 selectedIdsForState.group,
                 visibleSegmentationLayer.name,
@@ -541,7 +506,7 @@ class SegmentsView extends React.Component<Props, State> {
         // This behaviour is imitated from the skeleton tab.
         const selectedIds = this.getSegmentOrGroupIdsForKeys([key]);
         Store.dispatch(
-          setSelectedSegmentsOrGroupsAction(
+          setSelectedSegmentsOrGroupAction(
             selectedIds.segments,
             selectedIds.group,
             visibleSegmentationLayer.name,
@@ -551,7 +516,7 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     Store.dispatch(
-      setSelectedSegmentsOrGroupsAction(
+      setSelectedSegmentsOrGroupAction(
         selectedIdsForState.segments,
         selectedIdsForState.group,
         visibleSegmentationLayer?.name,
@@ -753,7 +718,7 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     Store.dispatch(
-      setSelectedSegmentsOrGroupsAction([segment.id], null, visibleSegmentationLayer.name),
+      setSelectedSegmentsOrGroupAction([segment.id], null, visibleSegmentationLayer.name),
     );
 
     if (!segment.somePosition) {
@@ -1362,7 +1327,7 @@ class SegmentsView extends React.Component<Props, State> {
     );
     // manually reset selected segments
 
-    Store.dispatch(setSelectedSegmentsOrGroupsAction([], null, visibleSegmentationLayer.name));
+    Store.dispatch(setSelectedSegmentsOrGroupAction([], null, visibleSegmentationLayer.name));
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
@@ -1916,7 +1881,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (dragNode.type === "segment") {
       // Segment(s) were dragged onto/next to a segment or group.
       // It is possible to drag a segment that was not selected. In that case, the selected segments are moved as well.
-      const selectedSegmentIds = this.state.selectedIds.segments;
+      const selectedSegmentIds = this.props.selectedIds.segments;
       this.props.updateSegments(
         [dragNode.id, ...selectedSegmentIds],
         { groupId: targetGroupId },

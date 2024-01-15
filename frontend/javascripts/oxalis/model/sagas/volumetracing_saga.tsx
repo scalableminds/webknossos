@@ -70,7 +70,7 @@ import type {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
-  setSelectedSegmentsOrGroupsAction,
+  setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -736,8 +736,6 @@ function* ensureSegmentExists(
       ),
     );
 
-    // Call this method here instead of an extra saga to make sure that
-    // the segment update is already finished in the store.
     yield* call(updateClickedSegments, action);
   }
 }
@@ -802,7 +800,7 @@ export function* updateClickedSegments(
   );
   const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
   if (numberOfSelectedSegments < 2) {
-    yield* put(setSelectedSegmentsOrGroupsAction([clickedSegmentId], null, layerName));
+    yield* put(setSelectedSegmentsOrGroupAction([clickedSegmentId], null, layerName));
   }
 }
 

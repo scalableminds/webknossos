@@ -42,6 +42,6 @@ class ChunkReader(header: DatasetHeader) {
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> "chunk.decompress.failed"
+      decompressed <- tryo(header.compressorImpl.decompress(bytes, Some(header.bytesPerChunk))).toFox ?~> "chunk.decompress.failed"
     } yield (decompressed, None)
 }

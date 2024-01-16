@@ -13,7 +13,9 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
   Compressor,
   DatasetHeader,
-  DimensionSeparator
+  DimensionSeparator,
+  Lz4Compressor,
+  NullCompressor
 }
 import org.apache.commons.io.IOUtils
 
@@ -138,9 +140,15 @@ case class WKWHeader(
 
   override def resolvedDataType: ArrayDataType = VoxelType.toArrayDataType(voxelType)
 
-  override def compressorImpl: Compressor = ???
+  override def compressorImpl: Compressor = blockType match {
+    case BlockType.Raw                   => nullCompressor
+    case BlockType.LZ4 | BlockType.LZ4HC => lz4Compressor
+  }
 
   override def voxelOffset: Array[Int] = Array(0, 0, 0)
+
+  private lazy val nullCompressor = new NullCompressor
+  private lazy val lz4Compressor = new Lz4Compressor
 }
 
 object WKWHeader extends BoxImplicits {

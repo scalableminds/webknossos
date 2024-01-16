@@ -114,7 +114,7 @@ class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesi
   lazy val compressor = new BloscCompressor(getCompressorSettings)
   override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
 
-  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
+  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes, None)
 }
 
 class GzipCodec(level: Int) extends BytesToBytesCodec {
@@ -125,7 +125,7 @@ class GzipCodec(level: Int) extends BytesToBytesCodec {
 
   override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
 
-  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
+  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes, None)
 }
 
 class ZstdCodec(level: Int, checksum: Boolean) extends BytesToBytesCodec {
@@ -136,7 +136,7 @@ class ZstdCodec(level: Int, checksum: Boolean) extends BytesToBytesCodec {
 
   override def encode(bytes: Array[Byte]): Array[Byte] = compressor.compress(bytes)
 
-  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
+  override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes, None)
 
 }
 

@@ -25,7 +25,7 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
 
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Box[Array[Byte]] =
       for {
-        output <- tryo(header.compressorImpl.decompress(bytes))
+        output <- tryo(header.compressorImpl.decompress(bytes, None))
         paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
           header.fillValueNumber.byteValue()
         }

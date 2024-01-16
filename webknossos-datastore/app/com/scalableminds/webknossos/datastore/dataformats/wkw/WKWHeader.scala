@@ -132,6 +132,8 @@ case class WKWHeader(
 
   override def chunkSize: Array[Int] = Array(32, 32, 32) // TODO: channels
 
+  def shardShape: Array[Int] = ??? // TODO
+
   override def dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
 
   override def fill_value: Either[String, Number] = Right(0)
@@ -149,6 +151,8 @@ case class WKWHeader(
 
   private lazy val nullCompressor = new NullCompressor
   private lazy val lz4Compressor = new Lz4Compressor
+
+  override def isSharded: Boolean = numChunksPerShard > 1
 }
 
 object WKWHeader extends BoxImplicits {

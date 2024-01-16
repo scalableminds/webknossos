@@ -5,12 +5,13 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWHeader}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream
+import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object WKWArray {
@@ -49,4 +50,29 @@ class WKWArray(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache) {}
+                         sharedChunkContentsCache) {
+
+  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
+    for {
+      shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
+      shardFilename = getChunkFilename(shardCoordinates)
+      shardPath = vaultPath / shardFilename
+      parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
+      chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
+      (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
+      _ <- Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
+      range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
+    } yield (shardPath, range)
+
+  override protected def getChunkFilename(chunkIndex: Array[Int]): String = ???
+  // TODO add .wkw, ignore channels
+
+  private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
+    ChunkUtils.computeChunkIndices(
+      header.datasetShape.map(axisOrder.permuteIndicesReverse),
+      axisOrder.permuteIndicesReverse(header.shardShape),
+      header.chunkSize,
+      chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
+    )
+}

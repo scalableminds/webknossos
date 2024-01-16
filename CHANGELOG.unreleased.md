@@ -18,6 +18,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added thumbnails to the dashboard dataset list. [#7479](https://github.com/scalableminds/webknossos/pull/7479)
 - Adhoc mesh rendering is now available for ND datasets.[#7394](https://github.com/scalableminds/webknossos/pull/7394)
 - When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
+- Multiple segments can be dragged and dropped in the segments tab. [#7536](https://github.com/scalableminds/webknossos/pull/7536)
+- Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 
 
 ### Changed
@@ -26,6 +28,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated some dependencies of the backend code (play 2.9, sbt 1.9, minor upgrades for others) for optimized performance. [#7366](https://github.com/scalableminds/webknossos/pull/7366)
 - Processing jobs can now be distributed to multiple webknossos-workers with finer-grained configurability. Compare migration guide. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
 - Removed Swagger/OpenAPI json description of the HTTP API. [#7494](https://github.com/scalableminds/webknossos/pull/7494)
+- Updated antd UI library from version 4.24.8 to 4.24.15. [#7505](https://github.com/scalableminds/webknossos/pull/7505)
+- Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
 
 ### Fixed
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)
@@ -38,8 +42,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where meshes (or chunks of them) were always colored white, if they were loaded while the corresponding segmentation layer was disabled. [#7507](https://github.com/scalableminds/webknossos/pull/7507)
 - Fixed a race condition when opening a short link, that would sometimes lead to an error toast. [#7507](https://github.com/scalableminds/webknossos/pull/7507)
 - Fixed that the Segment Statistics feature was not available in the context menu of segment groups and in the context menu of the data viewports. [#7510](https://github.com/scalableminds/webknossos/pull/7510)
+- Fixed rare bug which produced a benign error toast on some mouse interactions. [#7525](https://github.com/scalableminds/webknossos/pull/7525)
 - Fixed a bug where dataset managers were not allowed to assign teams to new datasets that they are only member of. This already worked while editing the dataset later, but not during upload. [#7518](https://github.com/scalableminds/webknossos/pull/7518)
+- Fixed regression in proofreading tool when automatic mesh loading was disabled and a merge/split operation was performed. [#7534](https://github.com/scalableminds/webknossos/pull/7534)
+- Fixed that last dimension value in ND dataset was not loaded. [#7535](https://github.com/scalableminds/webknossos/pull/7535)
+- Fixed the initialization of the mapping list for agglomerate views if json mappings are present. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 
 ### Removed
+- Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)
 
 ### Breaking Changes

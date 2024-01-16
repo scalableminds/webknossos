@@ -21,14 +21,14 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
 
 case class AgglomerateFileKey(
     organizationName: String,
-    dataSetName: String,
+    datasetName: String,
     layerName: String,
     mappingName: String
 ) {
   def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
     dataBaseDir
       .resolve(organizationName)
-      .resolve(dataSetName)
+      .resolve(datasetName)
       .resolve(layerName)
       .resolve(agglomerateDir)
       .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -70,14 +70,14 @@ class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[Agglo
 class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extends LRUConcurrentCache[Long, Long] {
   // On cache miss, reads whole blocks of IDs (number of elements is standardBlockSize)
 
-  def withCache(segmentId: Long, reader: IHDF5Reader, dataSet: HDF5DataSet)(
+  def withCache(segmentId: Long, reader: IHDF5Reader, hdf5DataSet: HDF5DataSet)(
       readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
 
     def handleUncachedAgglomerate(): Long = {
       val minId =
         if (segmentId < standardBlockSize / 2) 0L else segmentId - standardBlockSize / 2
 
-      val agglomerateIds = readFromFile(reader, dataSet, minId, standardBlockSize)
+      val agglomerateIds = readFromFile(reader, hdf5DataSet, minId, standardBlockSize)
 
       agglomerateIds.zipWithIndex.foreach {
         case (id, index) => put(index + minId, id)

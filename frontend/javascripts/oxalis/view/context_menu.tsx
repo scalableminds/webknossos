@@ -1025,6 +1025,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
   if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
+    nonSkeletonActions.push(focusInSegmentListItem);
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
   }

@@ -279,8 +279,8 @@ function serializeParameters(
                 serializeTag("additionalAxis", {
                   name: coord.name,
                   index: coord.index,
-                  min: coord.bounds[0],
-                  maxExclusive: coord.bounds[1],
+                  start: coord.bounds[0],
+                  end: coord.bounds[1],
                 }),
               ),
             )

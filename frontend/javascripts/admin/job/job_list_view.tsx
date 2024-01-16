@@ -13,7 +13,6 @@ import {
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  ToolTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
@@ -51,11 +50,6 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   CANCELLED: {
     tooltip: "This job was cancelled.",
     icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
-  },
-  MANUAL: {
-    tooltip:
-      "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-    icon: <ToolTwoTone twoToneColor="#d89614" />,
   },
 };
 const refreshInterval = 5000;

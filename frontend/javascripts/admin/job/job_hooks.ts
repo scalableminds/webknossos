@@ -9,13 +9,11 @@ type JobInfo = [jobKey: string, jobId: string];
 export function useStartAndPollJob({
   onSuccess = () => {},
   onFailure = () => {},
-  onManual = () => {},
   initialJobKeyExtractor,
   interval = 2000,
 }: {
   onSuccess?: (job: APIJob) => void;
   onFailure?: (job: APIJob) => void;
-  onManual?: (job: APIJob) => void;
   initialJobKeyExtractor?: (job: APIJob) => string | null;
   interval?: number;
 }): {
@@ -55,9 +53,6 @@ export function useStartAndPollJob({
         }
       } else if (job.state === "FAILURE") {
         onFailure(job);
-        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-      } else if (job.state === "MANUAL") {
-        onManual(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
       }
     }

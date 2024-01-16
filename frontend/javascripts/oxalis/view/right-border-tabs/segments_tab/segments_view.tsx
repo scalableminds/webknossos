@@ -428,16 +428,18 @@ class SegmentsView extends React.Component<Props, State> {
     // this class. But in the scrollTo function, the new segment isn't found right away
     // in the tree data, thus the timeout is used as a work-around.
 
-    if (this.tree?.current == null) {
-      return;
-    }
-    if (
-      this.props.selectedIds.segments.length === 1 &&
-      prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
-    ) {
-      const selectedId = this.props.selectedIds.segments[0];
-      this.tree.current.scrollTo({ key: `segment-${selectedId}` });
-    }
+    setTimeout(() => {
+      if (this.tree?.current == null) {
+        return;
+      }
+      if (
+        this.props.selectedIds.segments.length === 1 &&
+        prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
+      ) {
+        const selectedId = this.props.selectedIds.segments[0];
+        this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      }
+    }, 100);
   }
 
   componentWillUnmount() {

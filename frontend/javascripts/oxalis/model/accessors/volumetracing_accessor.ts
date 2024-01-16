@@ -371,6 +371,7 @@ export function getVisibleSegments(state: OxalisState): {
 // Next to returning a clean list of selected segments or group, this method returns
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
+// The returned segment and group ids are all visible in the segments view tab.
 export function getSelectedIds(state: OxalisState): [
   {
     segments: number[];
@@ -379,7 +380,7 @@ export function getSelectedIds(state: OxalisState): [
   (() => void) | null,
 ] {
   // Ensure that the ids of previously selected segments are removed
-  // if these segments don't exist anymore.
+  // if these segments aren't visible in the segments tab anymore.
   const nothingSelectedObject = { segments: [], group: null };
   let maybeSetSelectedSegmentsOrGroupsAction = null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
@@ -388,8 +389,9 @@ export function getSelectedIds(state: OxalisState): [
   }
   const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
   const { segments, group } = segmentationLayerData.selectedIds;
-  if (segments.length === 0 && group == null)
+  if (segments.length === 0 && group == null) {
     return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
   const currentVisibleSegments = getVisibleSegments(state);
   const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
   let cleanedSelectedGroup = null;

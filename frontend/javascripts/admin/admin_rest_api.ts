@@ -917,7 +917,7 @@ export async function getTracingForAnnotationType(
   tracing.typ = typ;
 
   // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
-  delete tracing.dataSetName;
+  delete tracing.datasetName;
   // @ts-ignore
   delete tracing.organizationName;
 

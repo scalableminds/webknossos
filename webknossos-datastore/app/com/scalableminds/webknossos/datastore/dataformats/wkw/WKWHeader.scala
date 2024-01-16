@@ -6,7 +6,15 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.Zarr3DataType
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayDataType,
+  ArrayOrder,
+  Compressor,
+  DatasetHeader,
+  DimensionSeparator
+}
 import org.apache.commons.io.IOUtils
 
 import java.io._
@@ -35,6 +43,20 @@ object VoxelType extends Enumeration(1) {
     case Int32  => 4
     case Int64  => 8
   }
+
+  def toArrayDataType(voxelType: VoxelType.Value): ArrayDataType =
+    voxelType match {
+      case UInt8  => ArrayDataType.u1
+      case UInt16 => ArrayDataType.u2
+      case UInt32 => ArrayDataType.u4
+      case UInt64 => ArrayDataType.u8
+      case Float  => ArrayDataType.f4
+      case Double => ArrayDataType.f8
+      case Int8   => ArrayDataType.i1
+      case Int16  => ArrayDataType.i2
+      case Int32  => ArrayDataType.i4
+      case Int64  => ArrayDataType.i8
+    }
 }
 
 case class WKWHeader(
@@ -114,7 +136,7 @@ case class WKWHeader(
 
   override def order: ArrayOrder = ArrayOrder.F
 
-  override def resolvedDataType: ArrayDataType = ???
+  override def resolvedDataType: ArrayDataType = VoxelType.toArrayDataType(voxelType)
 
   override def compressorImpl: Compressor = ???
 

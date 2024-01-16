@@ -3,13 +3,11 @@ package com.scalableminds.webknossos.datastore.datareaders.wkw
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{ZarrArray, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
-import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream
@@ -22,7 +20,7 @@ object WKWArray {
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[WKWArray] =
     for {
       headerBytes <- (path / WKWDataFormat.FILENAME_HEADER_WKW)
-        .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
+        .readBytes() ?~> s"Could not read header at ${WKWDataFormat.FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
     } yield
@@ -39,7 +37,7 @@ object WKWArray {
 class WKWArray(vaultPath: VaultPath,
                dataSourceId: DataSourceId,
                layerName: String,
-               header: DatasetHeader,
+               header: WKWHeader,
                axisOrder: AxisOrder,
                channelIndex: Option[Int],
                additionalAxes: Option[Seq[AdditionalAxis]],
@@ -51,4 +49,4 @@ class WKWArray(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache)
+                         sharedChunkContentsCache) {}

@@ -15,12 +15,12 @@ import scala.concurrent.ExecutionContext
 class WKWCubeHandleLegacy(wkwFile: WKWFile, wkwFilePath: Path) extends DataCubeHandle with FoxImplicits {
 
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
-    val blockOffsetX = bucket.bucketX % numBlocksPerCubeDimension
-    val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
-    val blockOffsetZ = bucket.bucketZ % numBlocksPerCubeDimension
+    val numChunksPerShardDimension = wkwFile.header.numChunksPerShardDimension
+    val chunkOffsetX = bucket.bucketX % numChunksPerShardDimension
+    val chunkOffsetY = bucket.bucketY % numChunksPerShardDimension
+    val chunkOffsetZ = bucket.bucketZ % numChunksPerShardDimension
     try {
-      wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)
+      wkwFile.readChunk(chunkOffsetX, chunkOffsetY, chunkOffsetZ)
     } catch {
       case e: InternalError =>
         Failure(s"${e.getMessage} while reading block from $wkwFilePath, realpath ${wkwFilePath.toRealPath()}",

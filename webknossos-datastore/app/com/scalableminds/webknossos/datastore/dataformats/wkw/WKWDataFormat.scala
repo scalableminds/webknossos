@@ -82,9 +82,9 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     val headers = resolutions.map(_._1)
     val voxelTypes = headers.map(_.voxelType).toSet
     val voxelSize = headers.map(_.numBytesPerVoxel).toSet
-    val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
+    val bucketLengths = headers.map(_.numVoxelsPerChunkDimension).toSet
     val wkwResolutions = resolutions.map { resolution =>
-      WKWResolution(resolution._2, resolution._1.numVoxelsPerBlockDimension * resolution._1.numBlocksPerCubeDimension)
+      WKWResolution(resolution._2, resolution._1.numVoxelsPerChunkDimension * resolution._1.numVoxelsPerChunkDimension)
     }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {

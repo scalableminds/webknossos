@@ -64,41 +64,41 @@ trait WKWCompressionHelper extends BoxImplicits {
 
   private lazy val lz4HighCompressor = LZ4Factory.nativeInstance().highCompressor()
 
-  protected def compressBlock(targetBlockType: BlockType.Value)(rawBlock: Array[Byte]): Box[Array[Byte]] = {
-    val result = targetBlockType match {
-      case BlockType.LZ4 | BlockType.LZ4HC =>
-        val compressor = if (targetBlockType == BlockType.LZ4) lz4FastCompressor else lz4HighCompressor
-        val maxCompressedLength = compressor.maxCompressedLength(rawBlock.length)
-        val compressedBlock = Array.ofDim[Byte](maxCompressedLength)
-        tryo(compressor.compress(rawBlock, compressedBlock)).map { compressedLength =>
-          compressedBlock.slice(0, compressedLength)
+  protected def compressChunk(targetChunkType: ChunkType.Value)(rawChunk: Array[Byte]): Box[Array[Byte]] = {
+    val result = targetChunkType match {
+      case ChunkType.LZ4 | ChunkType.LZ4HC =>
+        val compressor = if (targetChunkType == ChunkType.LZ4) lz4FastCompressor else lz4HighCompressor
+        val maxCompressedLength = compressor.maxCompressedLength(rawChunk.length)
+        val compressedChunk = Array.ofDim[Byte](maxCompressedLength)
+        tryo(compressor.compress(rawChunk, compressedChunk)).map { compressedLength =>
+          compressedChunk.slice(0, compressedLength)
         }
-      case BlockType.Raw =>
-        Full(rawBlock)
+      case ChunkType.Raw =>
+        Full(rawChunk)
       case _ =>
-        Failure(error("Invalid targetBlockType for compression"))
+        Failure(error("Invalid targetChunkType for compression"))
     }
     result
   }
 
-  protected def decompressBlock(sourceBlockType: BlockType.Value, numBytesPerBlock: Int)(
-      compressedBlock: Array[Byte]): Box[Array[Byte]] = {
-    val result = sourceBlockType match {
-      case BlockType.LZ4 | BlockType.LZ4HC =>
-        val rawBlock: Array[Byte] = Array.ofDim[Byte](numBytesPerBlock)
+  protected def decompressChunk(sourceChunkType: ChunkType.Value, numBytesPerChunk: Int)(
+      compressedChunk: Array[Byte]): Box[Array[Byte]] = {
+    val result = sourceChunkType match {
+      case ChunkType.LZ4 | ChunkType.LZ4HC =>
+        val rawChunk: Array[Byte] = Array.ofDim[Byte](numBytesPerChunk)
         for {
-          bytesDecompressed <- tryo(lz4Decompressor.decompress(compressedBlock, rawBlock, numBytesPerBlock))
-          _ <- bool2Box(bytesDecompressed == compressedBlock.length) ?~! error(
+          bytesDecompressed <- tryo(lz4Decompressor.decompress(compressedChunk, rawChunk, numBytesPerChunk))
+          _ <- bool2Box(bytesDecompressed == compressedChunk.length) ?~! error(
             "Decompressed unexpected number of bytes",
-            compressedBlock.length,
+            compressedChunk.length,
             bytesDecompressed)
         } yield {
-          rawBlock
+          rawChunk
         }
-      case BlockType.Raw =>
-        Full(compressedBlock)
+      case ChunkType.Raw =>
+        Full(compressedChunk)
       case _ =>
-        Failure(error("Invalid sourceBlockType for decompression"))
+        Failure(error("Invalid sourceChunkType for decompression"))
     }
     result
   }
@@ -164,38 +164,38 @@ class WKWFile(val header: WKWHeader,
 
   private def computeMortonIndex(x: Int, y: Int, z: Int): Box[Int] =
     for {
-      _ <- bool2Box(x >= 0 && x < header.numBlocksPerCubeDimension) ?~! error(
+      _ <- bool2Box(x >= 0 && x < header.numChunksPerShardDimension) ?~! error(
         "X coordinate is out of range",
-        s"[0, ${header.numBlocksPerCubeDimension})",
+        s"[0, ${header.numChunksPerShardDimension})",
         x)
-      _ <- bool2Box(y >= 0 && y < header.numBlocksPerCubeDimension) ?~! error(
+      _ <- bool2Box(y >= 0 && y < header.numChunksPerShardDimension) ?~! error(
         "Y coordinate is out of range",
-        s"[0, ${header.numBlocksPerCubeDimension})",
+        s"[0, ${header.numChunksPerShardDimension})",
         y)
-      _ <- bool2Box(z >= 0 && z < header.numBlocksPerCubeDimension) ?~! error(
+      _ <- bool2Box(z >= 0 && z < header.numChunksPerShardDimension) ?~! error(
         "Z coordinate is out of range",
-        s"[0, ${header.numBlocksPerCubeDimension})",
+        s"[0, ${header.numChunksPerShardDimension})",
         z)
     } yield {
       mortonEncode(x, y, z)
     }
 
-  def readBlock(x: Int, y: Int, z: Int): Box[Array[Byte]] =
+  def readChunk(x: Int, y: Int, z: Int): Box[Array[Byte]] =
     for {
       mortonIndex <- computeMortonIndex(x, y, z)
       (offset, length) <- header.blockBoundaries(mortonIndex)
       data <- readFromUnderlyingBuffers(offset, length)
-      decompressedData <- decompressBlock(header.blockType, header.numBytesPerBlock)(data)
+      decompressedData <- decompressChunk(header.blockType, header.numBytesPerChunk)(data)
     } yield {
       decompressedData
     }
 
-  def writeBlock(x: Int, y: Int, z: Int, data: Array[Byte]): Box[Unit] =
+  def writeChunk(x: Int, y: Int, z: Int, data: Array[Byte]): Box[Unit] =
     for {
       _ <- bool2Box(fileMode == FileMode.ReadWrite) ?~! error("Cannot write to read-only files")
       _ <- bool2Box(!header.isCompressed) ?~! error("Cannot write to compressed files")
-      _ <- bool2Box(data.length == header.numBytesPerBlock) ?~! error("Data to be written has invalid length",
-                                                                      header.numBytesPerBlock,
+      _ <- bool2Box(data.length == header.numBytesPerChunk) ?~! error("Data to be written has invalid length",
+                                                                      header.numBytesPerChunk,
                                                                       data.length)
       mortonIndex <- computeMortonIndex(x, y, z)
       (offset, _) <- header.blockBoundaries(mortonIndex)
@@ -212,37 +212,37 @@ class WKWFile(val header: WKWHeader,
     close()
   }
 
-  private def transcodeFile(targetBlockType: BlockType.Value)(file: RandomAccessFile): Box[Unit] = {
-    val toCompressed = BlockType.isCompressed(targetBlockType)
-    val jumpTableSize = if (toCompressed) header.numBlocksPerCube + 1 else 1
-    val tempHeader = header.copy(blockType = targetBlockType, jumpTable = Array.ofDim[Long](jumpTableSize))
+  private def transcodeFile(targetChunkType: ChunkType.Value)(file: RandomAccessFile): Box[Unit] = {
+    val toCompressed = ChunkType.isCompressed(targetChunkType)
+    val jumpTableSize = if (toCompressed) header.numChunksPerShard + 1 else 1
+    val tempHeader = header.copy(blockType = targetChunkType, jumpTable = Array.ofDim[Long](jumpTableSize))
     tempHeader.writeTo(file)
 
     val dataOffset = file.getFilePointer
     underlyingFile.seek(header.dataOffset)
 
-    val sourceBlockLengths = if (header.isCompressed) {
+    val sourceChunkLengths = if (header.isCompressed) {
       header.jumpTable.sliding(2).map(a => (a(1) - a(0)).toInt)
     } else {
-      Array.fill(header.numBlocksPerCube)(header.numBytesPerBlock).iterator
+      Array.fill(header.numChunksPerShard)(header.numBytesPerChunk).iterator
     }
 
-    val targetBlockLengths = sourceBlockLengths.foldLeft[Box[Seq[Int]]](Full(Seq.empty)) {
+    val targetChunkLengths = sourceChunkLengths.foldLeft[Box[Seq[Int]]](Full(Seq.empty)) {
       case (Full(result), blockLength) =>
         val blockData = Array.ofDim[Byte](blockLength)
         underlyingFile.read(blockData)
         for {
-          rawBlock <- decompressBlock(header.blockType, header.numBytesPerBlock)(blockData)
-          encodedBlock <- compressBlock(targetBlockType)(rawBlock)
+          rawChunk <- decompressChunk(header.blockType, header.numBytesPerChunk)(blockData)
+          encodedChunk <- compressChunk(targetChunkType)(rawChunk)
         } yield {
-          file.write(encodedBlock)
-          result :+ encodedBlock.length
+          file.write(encodedChunk)
+          result :+ encodedChunk.length
         }
       case (failure, _) =>
         failure
     }
 
-    targetBlockLengths.map { blockLengths =>
+    targetChunkLengths.map { blockLengths =>
       val jumpTable = if (toCompressed) {
         blockLengths.map(_.toLong).scan(dataOffset)(_ + _).toArray
       } else {
@@ -254,21 +254,21 @@ class WKWFile(val header: WKWHeader,
     }
   }
 
-  def changeBlockType(targetBlockType: BlockType.Value): Box[WKWFile] = {
+  def changeChunkType(targetChunkType: ChunkType.Value): Box[WKWFile] = {
     val tempFile = new File(underlyingFilePath + ".tmp")
     val targetFile = new File(underlyingFilePath)
 
     for {
-      _ <- bool2Box(targetBlockType != header.blockType) ?~! error("File already has requested blockType")
-      _ <- ResourceBox.manage(new RandomAccessFile(tempFile, "rw"))(transcodeFile(targetBlockType))
+      _ <- bool2Box(targetChunkType != header.blockType) ?~! error("File already has requested blockType")
+      _ <- ResourceBox.manage(new RandomAccessFile(tempFile, "rw"))(transcodeFile(targetChunkType))
       _ <- tryo(replaceUnderlyingFile(tempFile))
       wkwFile <- WKWFile(targetFile, fileMode)
     } yield wkwFile
   }
 
-  def decompress: Box[WKWFile] = changeBlockType(BlockType.Raw)
+  def decompress: Box[WKWFile] = changeChunkType(ChunkType.Raw)
 
-  def compress(targetBlockType: BlockType.Value): Box[WKWFile] = changeBlockType(targetBlockType)
+  def compress(targetChunkType: ChunkType.Value): Box[WKWFile] = changeChunkType(targetChunkType)
 }
 
 object WKWFile extends WKWCompressionHelper {
@@ -302,7 +302,7 @@ object WKWFile extends WKWCompressionHelper {
       } yield {
         val blockIterator = header.blockLengths.flatMap { blockLength =>
           val data: Array[Byte] = IOUtils.toByteArray(dataStream, blockLength)
-          if (header.isCompressed) decompressBlock(header.blockType, header.numBytesPerBlock)(data) else Full(data)
+          if (header.isCompressed) decompressChunk(header.blockType, header.numBytesPerChunk)(data) else Full(data)
         }
         f(header, blockIterator)
       }
@@ -310,19 +310,19 @@ object WKWFile extends WKWCompressionHelper {
 
   def write(os: OutputStream, header: WKWHeader, blocks: Iterator[Array[Byte]]): Box[Unit] = {
     val dataBuffer = new ByteArrayOutputStream()
-    (0 until header.numBlocksPerCube)
+    (0 until header.numChunksPerShard)
       .foldLeft[Box[Array[Int]]](Full(Array.emptyIntArray)) {
         case (Full(blockLengths), _) =>
           if (blocks.hasNext) {
             val data = blocks.next()
             for {
-              _ <- bool2Box(data.length == header.numBytesPerBlock) ?~! error("Unexpected block size",
-                                                                              header.numBytesPerBlock,
+              _ <- bool2Box(data.length == header.numBytesPerChunk) ?~! error("Unexpected block size",
+                                                                              header.numBytesPerChunk,
                                                                               data.length)
-              compressedBlock <- if (header.isCompressed) compressBlock(header.blockType)(data) else Full(data)
-              _ <- tryo(dataBuffer.write(compressedBlock))
+              compressedChunk <- if (header.isCompressed) compressChunk(header.blockType)(data) else Full(data)
+              _ <- tryo(dataBuffer.write(compressedChunk))
             } yield {
-              blockLengths :+ compressedBlock.length
+              blockLengths :+ compressedChunk.length
             }
           } else {
             Failure("No more blocks in iterator.")

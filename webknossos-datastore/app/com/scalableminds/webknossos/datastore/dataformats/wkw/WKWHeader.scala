@@ -6,8 +6,6 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.Zarr3DataType
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayDataType,
   ArrayOrder,
@@ -24,16 +22,16 @@ import java.nio.{ByteBuffer, ByteOrder}
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
 
-object BlockType extends Enumeration(1) {
+object ChunkType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value
 
-  def isCompressed(blockType: BlockType.Value): Boolean = blockType == LZ4 || blockType == LZ4HC
+  def isCompressed(blockType: ChunkType.Value): Boolean = blockType == LZ4 || blockType == LZ4HC
 }
 
 object VoxelType extends Enumeration(1) {
   val UInt8, UInt16, UInt32, UInt64, Float, Double, Int8, Int16, Int32, Int64 = Value
 
-  def bytesPerVoxel(voxelType: VoxelType.Value): Int = voxelType match {
+  def bytesPerVoxelPerChannel(voxelType: VoxelType.Value): Int = voxelType match {
     case UInt8  => 1
     case UInt16 => 2
     case UInt32 => 4
@@ -63,56 +61,58 @@ object VoxelType extends Enumeration(1) {
 
 case class WKWHeader(
     version: Int,
-    numBlocksPerCubeDimension: Int,
-    numVoxelsPerBlockDimension: Int,
-    blockType: BlockType.Value,
+    numChunksPerShardDimension: Int,
+    numVoxelsPerChunkDimension: Int,
+    blockType: ChunkType.Value,
     voxelType: VoxelType.Value,
-    numBytesPerVoxel: Int,
+    numBytesPerVoxel: Int, // this encodes the channel count together with voxelType
     jumpTable: Array[Long]
 ) extends DatasetHeader {
 
   def dataOffset: Long = jumpTable.head
 
-  def isCompressed: Boolean = BlockType.isCompressed(blockType)
+  def isCompressed: Boolean = ChunkType.isCompressed(blockType)
 
-  def numBlocksPerCube: Int = numBlocksPerCubeDimension * numBlocksPerCubeDimension * numBlocksPerCubeDimension
+  def numChunksPerShard: Int = numChunksPerShardDimension * numChunksPerShardDimension * numChunksPerShardDimension
 
-  def numBytesPerBlock: Int =
-    numVoxelsPerBlockDimension * numVoxelsPerBlockDimension * numVoxelsPerBlockDimension * numBytesPerVoxel
+  def numBytesPerChunk: Int =
+    numVoxelsPerChunkDimension * numVoxelsPerChunkDimension * numVoxelsPerChunkDimension * numBytesPerVoxel
+
+  def numChannels: Int = numBytesPerVoxel / VoxelType.bytesPerVoxelPerChannel(voxelType)
 
   def expectedFileSize: Long =
     if (isCompressed) {
       jumpTable.last
     } else {
-      dataOffset + numBytesPerBlock.toLong * numBlocksPerCube.toLong
+      dataOffset + numBytesPerChunk.toLong * numChunksPerShard.toLong
     }
 
   def blockBoundaries(blockIndex: Int): Box[(Long, Int)] =
-    if (blockIndex < numBlocksPerCube) {
+    if (blockIndex < numChunksPerShard) {
       if (isCompressed) {
         val offset = jumpTable(blockIndex)
         val length = (jumpTable(blockIndex + 1) - offset).toInt
         Full((offset, length))
       } else {
-        Full((dataOffset + numBytesPerBlock.toLong * blockIndex.toLong, numBytesPerBlock))
+        Full((dataOffset + numBytesPerChunk.toLong * blockIndex.toLong, numBytesPerChunk))
       }
     } else {
-      Failure("BlockIndex out of bounds")
+      Failure("ChunkIndex out of bounds")
     }
 
   def blockLengths: Iterator[Int] =
     if (isCompressed) {
       jumpTable.sliding(2).map(a => (a(1) - a(0)).toInt)
     } else {
-      Iterator.fill(numBlocksPerCube)(numBytesPerBlock)
+      Iterator.fill(numChunksPerShard)(numBytesPerChunk)
     }
 
   def writeTo(output: DataOutput, isHeaderFile: Boolean = false): Unit = {
     output.write(WKWHeader.magicBytes)
     output.writeByte(WKWHeader.currentVersion)
-    val numBlocksPerCubeDimensionLog2 = (math.log(numBlocksPerCubeDimension) / math.log(2)).toInt
-    val numVoxelsPerBlockDimensionLog2 = (math.log(numVoxelsPerBlockDimension) / math.log(2)).toInt
-    val sideLengths = (numBlocksPerCubeDimensionLog2 << 4) + numVoxelsPerBlockDimensionLog2
+    val numChunksPerShardDimensionLog2 = (math.log(numChunksPerShardDimension) / math.log(2)).toInt
+    val numVoxelsPerChunkDimensionLog2 = (math.log(numVoxelsPerChunkDimension) / math.log(2)).toInt
+    val sideLengths = (numChunksPerShardDimensionLog2 << 4) + numVoxelsPerChunkDimensionLog2
     output.writeByte(sideLengths)
     output.writeByte(blockType.id)
     output.writeByte(voxelType.id)
@@ -141,8 +141,8 @@ case class WKWHeader(
   override def resolvedDataType: ArrayDataType = VoxelType.toArrayDataType(voxelType)
 
   override def compressorImpl: Compressor = blockType match {
-    case BlockType.Raw                   => nullCompressor
-    case BlockType.LZ4 | BlockType.LZ4HC => lz4Compressor
+    case ChunkType.Raw                   => nullCompressor
+    case ChunkType.LZ4 | ChunkType.LZ4HC => lz4Compressor
   }
 
   override def voxelOffset: Array[Int] = Array(0, 0, 0)
@@ -166,8 +166,8 @@ object WKWHeader extends BoxImplicits {
     val magicByteBuffer: Array[Byte] = IOUtils.toByteArray(dataStream, magicBytes.length)
     val version = dataStream.readUnsignedByte()
     val sideLengths = dataStream.readUnsignedByte()
-    val numBlocksPerCubeDimension = 1 << (sideLengths >>> 4) // fileSideLength [higher nibble]
-    val numVoxelsPerBlockDimension = 1 << (sideLengths & 0x0f) // blockSideLength [lower nibble]
+    val numChunksPerShardDimension = 1 << (sideLengths >>> 4) // fileSideLength [higher nibble]
+    val numVoxelsPerChunkDimension = 1 << (sideLengths & 0x0f) // blockSideLength [lower nibble]
     val blockTypeId = dataStream.readUnsignedByte()
     val voxelTypeId = dataStream.readUnsignedByte()
     val numBytesPerVoxel = dataStream.readUnsignedByte() // voxel-size
@@ -178,25 +178,25 @@ object WKWHeader extends BoxImplicits {
                                                                         magicByteBuffer)
       _ <- bool2Box(version == currentVersion) ?~! error("Unknown version", currentVersion, version)
       // We only support fileSideLengths < 1024, so that the total number of blocks per file fits in an Int.
-      _ <- bool2Box(numBlocksPerCubeDimension < 1024) ?~! error("Specified fileSideLength not supported",
-                                                                numBlocksPerCubeDimension,
-                                                                "[0, 1024)")
+      _ <- bool2Box(numChunksPerShardDimension < 1024) ?~! error("Specified fileSideLength not supported",
+                                                                 numChunksPerShardDimension,
+                                                                 "[0, 1024)")
       // We only support blockSideLengths < 1024, so that the total number of voxels per block fits in an Int.
-      _ <- bool2Box(numBlocksPerCubeDimension < 1024) ?~! error("Specified blockSideLength not supported",
-                                                                numVoxelsPerBlockDimension,
-                                                                "[0, 1024)")
-      blockType <- tryo(BlockType(blockTypeId)) ?~! error("Specified blockType is not supported")
+      _ <- bool2Box(numChunksPerShardDimension < 1024) ?~! error("Specified blockSideLength not supported",
+                                                                 numVoxelsPerChunkDimension,
+                                                                 "[0, 1024)")
+      blockType <- tryo(ChunkType(blockTypeId)) ?~! error("Specified blockType is not supported")
       voxelType <- tryo(VoxelType(voxelTypeId)) ?~! error("Specified voxelType is not supported")
     } yield {
-      val jumpTable = if (BlockType.isCompressed(blockType) && readJumpTable) {
-        val numBlocksPerCube = numBlocksPerCubeDimension * numBlocksPerCubeDimension * numBlocksPerCubeDimension
-        (0 to numBlocksPerCube).map(_ => dataStream.readLong()).toArray
+      val jumpTable = if (ChunkType.isCompressed(blockType) && readJumpTable) {
+        val numChunksPerShard = numChunksPerShardDimension * numChunksPerShardDimension * numChunksPerShardDimension
+        (0 to numChunksPerShard).map(_ => dataStream.readLong()).toArray
       } else {
         Array(dataStream.readLong())
       }
       new WKWHeader(version,
-                    numBlocksPerCubeDimension,
-                    numVoxelsPerBlockDimension,
+                    numChunksPerShardDimension,
+                    numVoxelsPerChunkDimension,
                     blockType,
                     voxelType,
                     numBytesPerVoxel,
@@ -207,18 +207,18 @@ object WKWHeader extends BoxImplicits {
   def apply(file: File, readJumpTable: Boolean = false): Box[WKWHeader] =
     ResourceBox.manage(new DataInputStream(new BufferedInputStream(new FileInputStream(file))))(apply(_, readJumpTable))
 
-  def apply(numBlocksPerCubeDimension: Int,
-            numVoxelsPerBlockDimension: Int,
-            blockType: BlockType.Value,
+  def apply(numChunksPerShardDimension: Int,
+            numVoxelsPerChunkDimension: Int,
+            blockType: ChunkType.Value,
             voxelType: VoxelType.Value,
             numChannels: Int): WKWHeader =
     new WKWHeader(
       currentVersion,
-      numBlocksPerCubeDimension,
-      numVoxelsPerBlockDimension,
+      numChunksPerShardDimension,
+      numVoxelsPerChunkDimension,
       blockType,
       voxelType,
-      VoxelType.bytesPerVoxel(voxelType) * numChannels,
+      VoxelType.bytesPerVoxelPerChannel(voxelType) * numChannels,
       Array(0)
     )
 }

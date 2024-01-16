@@ -47,7 +47,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
       case (fileName, is) =>
         WKWFile.read(is) {
           case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
+            if (header.numChunksPerShard == 1) {
               parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                 if (buckets.hasNext) {
                   val data = buckets.next()

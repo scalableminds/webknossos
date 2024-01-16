@@ -1646,11 +1646,8 @@ export async function isDatasetNameValid(
     return "The dataset name must not be empty.";
   }
 
-  let response = await Request.receiveJSON(
+  const response = await Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-    {
-      showErrorToast: false,
-    },
   );
   if (response.isValid) {
     return null;

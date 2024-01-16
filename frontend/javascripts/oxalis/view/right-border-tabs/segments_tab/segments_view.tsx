@@ -214,12 +214,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 };
 
 const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
-  console.log("test");
   const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
   }
-  console.log(cleanedSelectedIds);
   return cleanedSelectedIds;
 };
 

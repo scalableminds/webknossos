@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Removed Swagger/OpenAPI json description of the HTTP API. [#7494](https://github.com/scalableminds/webknossos/pull/7494)
 - Updated antd UI library from version 4.24.8 to 4.24.15. [#7505](https://github.com/scalableminds/webknossos/pull/7505)
 - Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
+- The metadata for ND datasets and their annotation has changed: upper bound of additionalAxex is now stored as an exclusive value, called "end" in the NML format. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
 
 ### Fixed
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)
@@ -47,6 +48,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed regression in proofreading tool when automatic mesh loading was disabled and a merge/split operation was performed. [#7534](https://github.com/scalableminds/webknossos/pull/7534)
 - Fixed that last dimension value in ND dataset was not loaded. [#7535](https://github.com/scalableminds/webknossos/pull/7535)
 - Fixed the initialization of the mapping list for agglomerate views if json mappings are present. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
+- Fixed a bug where uploading ND volume annotations would lead to errors due to parsing of the chunk paths. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
 
 ### Removed
 - Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)

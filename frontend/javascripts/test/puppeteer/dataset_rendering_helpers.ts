@@ -14,6 +14,7 @@ import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import puppeteer from "puppeteer";
+import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -172,7 +173,7 @@ async function waitForMappingEnabled(page: Page) {
   let isMappingEnabled;
 
   while (!isMappingEnabled) {
-    await page.waitForTimeout(5000);
+    await sleep(5000);
     isMappingEnabled = await page.evaluate(
       "webknossos.apiReady().then(async api => api.data.isMappingEnabled())",
     );
@@ -186,7 +187,7 @@ async function waitForTracingViewLoad(page: Page) {
 
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
-    await page.waitForTimeout(500);
+    await sleep(500);
     inputCatchers = await page.$(".inputcatcher");
   }
 }
@@ -203,7 +204,7 @@ async function waitForRenderingFinish(page: Page) {
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await page.waitForTimeout(10000);
+    await sleep(20000);
     currentShot = await page.screenshot({
       fullPage: true,
     });

@@ -98,7 +98,7 @@ class WKRemoteTracingStoreController @Inject()(
   def dataStoreUriForDataSet(name: String,
                              key: String,
                              organizationName: Option[String],
-                             dataSetName: String): Action[AnyContent] =
+                             datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -107,11 +107,11 @@ class WKRemoteTracingStoreController @Inject()(
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
-          } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+            datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+          } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
+          dataSet <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages(
             "dataset.noAccess",
-            dataSetName) ~> FORBIDDEN
+            datasetName) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataSet)
         } yield Ok(Json.toJson(dataStore.url))
       }

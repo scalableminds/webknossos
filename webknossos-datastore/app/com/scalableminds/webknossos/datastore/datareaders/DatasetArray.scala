@@ -37,10 +37,10 @@ class DatasetArray(vaultPath: VaultPath,
     header.rank + 1
   }
 
-  lazy val datasetShape: Array[Int] = if (axisOrder.hasZAxis) {
+  lazy val datasetShape: Option[Array[Int]] = if (axisOrder.hasZAxis) {
     header.datasetShape
   } else {
-    header.datasetShape :+ 1
+    header.datasetShape.map(shape => shape :+ 1)
   }
 
   lazy val chunkSize: Array[Int] = if (axisOrder.hasZAxis) {
@@ -122,7 +122,7 @@ class DatasetArray(vaultPath: VaultPath,
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
-    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(datasetShape),
+    val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(axisOrder.permuteIndicesReverse),
                                                       axisOrder.permuteIndicesReverse(chunkSize),
                                                       shape,
                                                       totalOffset)
@@ -217,7 +217,7 @@ class DatasetArray(vaultPath: VaultPath,
 
   override def toString: String =
     s"${getClass.getCanonicalName} {axisOrder=$axisOrder shape=${header.datasetShape.mkString(",")} chunks=${header.chunkSize.mkString(
-      ",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
+      ",")} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }
 

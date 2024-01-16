@@ -4,24 +4,25 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import ArrayDataType.{ArrayDataType, bytesPerElementFor}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 import java.nio.ByteOrder
 
 trait DatasetHeader {
 
   // Note that in DatasetArray, datasetShape and chunkSize are adapted for 2d datasets
-  def datasetShape: Array[Int] // shape of the entire array
+  def datasetShape: Option[Array[Int]] // shape of the entire array
   def chunkSize: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator
-
-  def dataType: String
 
   def fill_value: Either[String, Number]
 
   def order: ArrayOrder
 
   def resolvedDataType: ArrayDataType
+
+  lazy val elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
   def compressorImpl: Compressor
 
@@ -38,23 +39,20 @@ trait DatasetHeader {
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
-      None
-    else {
-      if (axisOrder.hasZAxis) {
-        Some(
-          BoundingBox(Vec3Int.zeros,
-                      datasetShape(axisOrder.x),
-                      datasetShape(axisOrder.y),
-                      datasetShape(axisOrder.zWithFallback)))
-      } else {
-        Some(BoundingBox(Vec3Int.zeros, datasetShape(axisOrder.x), datasetShape(axisOrder.y), 1))
+    datasetShape.flatMap { shape =>
+      if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
+        None
+      else {
+        if (axisOrder.hasZAxis) {
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
+        } else {
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
+        }
       }
-
     }
 
   // Note that in DatasetArray, this is adapted for 2d datasets
-  lazy val rank: Int = datasetShape.length
+  lazy val rank: Int = chunkSize.length
 
   def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
 

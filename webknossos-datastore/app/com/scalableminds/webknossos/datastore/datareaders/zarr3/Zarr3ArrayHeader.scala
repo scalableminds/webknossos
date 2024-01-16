@@ -13,7 +13,6 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   NullCompressor
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Box
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
@@ -35,25 +34,24 @@ case class Zarr3ArrayHeader(
 ) extends DatasetHeader
     with BoxImplicits {
 
-  override def datasetShape: Array[Int] = shape
+  override def datasetShape: Option[Array[Int]] = Some(shape)
 
   override def chunkSize: Array[Int] = getChunkSize
 
   override def dimension_separator: DimensionSeparator = getDimensionSeparator
 
-  override def dataType: String = data_type.left.getOrElse("extension")
-
   override lazy val order: ArrayOrder = getOrder
 
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
-  private def zarr3DataType: Zarr3DataType = Zarr3DataType.fromString(dataType).getOrElse(raw)
+  private def zarr3DataType: Zarr3DataType =
+    Zarr3DataType.fromString(data_type.left.getOrElse("extension")).getOrElse(raw)
 
   override def resolvedDataType: ArrayDataType = Zarr3DataType.toArrayDataType(zarr3DataType)
 
   override def compressorImpl: Compressor = new NullCompressor // Not used, since specific chunk reader is used
 
-  override def voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
+  override def voxelOffset: Array[Int] = Array.fill(rank)(0)
 
   override def isSharded: Boolean =
     codecs.exists {
@@ -67,8 +65,6 @@ case class Zarr3ArrayHeader(
       _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
     } yield ()
-
-  def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 
   def outerChunkSize: Array[Int] = chunk_grid match {
     case Left(chunkGridSpecification) => chunkGridSpecification.configuration.chunk_shape

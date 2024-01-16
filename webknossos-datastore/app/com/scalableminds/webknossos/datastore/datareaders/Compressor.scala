@@ -2,8 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO.GZIPOutputStream
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
   CompressedSegmentation32,
   CompressedSegmentation64
@@ -314,7 +313,7 @@ class JpegCompressor() extends Compressor {
   }
 }
 
-class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize: Array[Int], blockSize: Vec3Int)
+class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
     extends Compressor {
   override def getId: String = "compressedsegmentation"
 
@@ -322,13 +321,12 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
-      case PrecomputedDataType.uint32 =>
+      case ArrayDataType.u4 =>
         CompressedSegmentation32.decompress(input, volumeSize, blockSize)
-      case PrecomputedDataType.uint64 =>
+      case ArrayDataType.u8 =>
         CompressedSegmentation64.decompress(input, volumeSize, blockSize)
       case _ =>
-        throw new UnsupportedOperationException(
-          "Can not use compressed segmentation for datatypes other than u32, u64.")
+        throw new UnsupportedOperationException("Can not use compressed segmentation for datatypes other than u4, u8.")
     }
 
   override def compress(input: Array[Byte]): Array[Byte] = ???

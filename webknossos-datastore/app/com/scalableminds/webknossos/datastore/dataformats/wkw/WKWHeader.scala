@@ -104,13 +104,11 @@ case class WKWHeader(
     }
   }
 
-  override def datasetShape: Array[Int] = ???
+  override def datasetShape: Option[Array[Int]] = None
 
   override def chunkSize: Array[Int] = Array(32, 32, 32) // TODO: channels
 
   override def dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
-
-  override def dataType: String = ???
 
   override def fill_value: Either[String, Number] = Right(0)
 

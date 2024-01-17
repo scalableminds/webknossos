@@ -32,6 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
 - When clicking a segment in the viewport, it is automatically focused in the segment list. A corresponding context menu entry was added as well. [#7512](https://github.com/scalableminds/webknossos/pull/7512)
 - Updated the isValidName route in the API to return 200 for valid and invalid names. With this, the API version was bumped up to 6. [#7550](https://github.com/scalableminds/webknossos/pull/7550) 
+- Upgraded to Play 3. [#7562](https://github.com/scalableminds/webknossos/pull/7562)
 
 ### Fixed
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)

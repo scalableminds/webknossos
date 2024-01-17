@@ -234,7 +234,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
-        dataSet <- datasetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
+        dataSet <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
         dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)
     } else Fox.successful(volume)
@@ -247,12 +247,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       fileName: Box[String],
       description: Box[Option[String]])(implicit m: MessagesProvider): Box[TaskParameters] = {
     val paramBox: Box[(Option[BoundingBox], String, Vec3Int, Vec3Double)] = skeletonTracing match {
-      case Full(tracing) => Full((tracing.boundingBox, tracing.dataSetName, tracing.editPosition, tracing.editRotation))
+      case Full(tracing) => Full((tracing.boundingBox, tracing.datasetName, tracing.editPosition, tracing.editRotation))
       case f: Failure    => f
       case Empty =>
         volumeTracing match {
           case Full(tracing) =>
-            Full((Some(tracing.boundingBox), tracing.dataSetName, tracing.editPosition, tracing.editRotation))
+            Full((Some(tracing.boundingBox), tracing.datasetName, tracing.editPosition, tracing.editRotation))
           case f: Failure => f
           case Empty      => Failure(Messages("task.create.needsEitherSkeletonOrVolume"))
         }

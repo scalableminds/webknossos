@@ -26,7 +26,7 @@ message VolumeTracing {
     optional int64 activeSegmentId = 1;
     required BoundingBoxProto boundingBox = 2;
     required int64 createdTimestamp = 3;
-    required string dataSetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+    required string datasetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     required Vec3IntProto editPosition = 5;
     required Vec3DoubleProto editRotation = 6;
     required ElementClassProto elementClass = 7;

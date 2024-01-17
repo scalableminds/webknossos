@@ -115,7 +115,10 @@ class MappingSettingsView extends React.Component<Props, State> {
       return;
     }
 
-    if (this.props.segmentationLayer?.mappings != null) {
+    if (
+      this.props.segmentationLayer?.mappings != null &&
+      this.props.segmentationLayer?.agglomerates != null
+    ) {
       return;
     }
 

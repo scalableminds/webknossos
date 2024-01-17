@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Removed Swagger/OpenAPI json description of the HTTP API. [#7494](https://github.com/scalableminds/webknossos/pull/7494)
 - Updated antd UI library from version 4.24.8 to 4.24.15. [#7505](https://github.com/scalableminds/webknossos/pull/7505)
 - Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
+- When clicking a segment in the viewport, it is automatically focused in the segment list. A corresponding context menu entry was added as well. [#7512](https://github.com/scalableminds/webknossos/pull/7512)
 - Updated the isValidName route in the API to return 200 for valid and invalid names. With this, the API version was bumped up to 6. [#7550](https://github.com/scalableminds/webknossos/pull/7550) 
 
 ### Fixed

@@ -144,4 +144,23 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
         bool2Fox(userCount + usersToAddCount <= includedUsers))
     } yield ()
+
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
+      implicit ctx: DBAccessContext): Fox[String] =
+    if (possiblyEmptyEmail.nonEmpty) {
+      Fox.successful(possiblyEmptyEmail)
+    } else {
+      for {
+        owner <- userDAO.findOwnerByOrg(organization._id)
+        ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
+        ownerEmail = ownerMultiUser.email
+      } yield ownerEmail
+    }
+
+  def overTimeMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+    fallbackOnOwnerEmail(organization.overTimeMailingList, organization)
+
+  def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+    fallbackOnOwnerEmail(organization.newUserMailingList, organization)
+
 }

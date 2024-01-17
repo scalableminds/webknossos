@@ -16,29 +16,26 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val defaultSender = conf.Mail.defaultSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
 
-  def registerAdminNotifyerMail(name: String,
+  def registerAdminNotifierMail(name: String,
                                 email: String,
                                 brainDBResult: Option[String],
                                 organization: Organization,
-                                autoActivate: Boolean): Mail =
+                                autoActivate: Boolean,
+                                receiver: String): Mail =
     Mail(
       from = defaultSender,
       subject =
         s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri, autoActivate).body,
-      recipients = List(organization.newUserMailingList)
+      recipients = List(receiver)
     )
 
-  def overLimitMail(user: User,
-                    projectName: String,
-                    taskId: String,
-                    annotationId: String,
-                    organization: Organization): Mail =
+  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, receiver: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
       bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
-      recipients = List(organization.overTimeMailingList)
+      recipients = List(receiver)
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(

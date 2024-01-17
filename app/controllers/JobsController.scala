@@ -149,6 +149,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
+        _ <- datasetService.assertValidLayerName(layerName)
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -173,6 +174,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
+        _ <- datasetService.assertValidLayerName(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -198,6 +200,8 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerName(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -227,6 +231,9 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerName(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
@@ -259,6 +266,8 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
+          _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerName)
+          _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerName)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
@@ -303,6 +312,7 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidLayerName(fallbackLayerName)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = JobCommand.materialize_volume_annotation
@@ -337,6 +347,7 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidLayerName(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -370,6 +381,8 @@ class JobsController @Inject()(
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
+          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerName)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(

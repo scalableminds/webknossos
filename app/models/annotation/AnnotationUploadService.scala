@@ -47,7 +47,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
     NmlParser
       .parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath, None, userToken)
-      .await("NMLParser/parse was changed to return Fox in #7437. Removing this await is tracked in #7551") match {
+      match {
       case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))

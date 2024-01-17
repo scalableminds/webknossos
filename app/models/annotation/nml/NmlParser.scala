@@ -2,7 +2,7 @@ package models.annotation.nml
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -28,9 +28,10 @@ import play.api.i18n.{Messages, MessagesProvider}
 import java.io.InputStream
 import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator with FoxImplicits {
+object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -48,36 +49,38 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             remoteDataStoreClient: Option[WKRemoteDataStoreClient],
             userToken: Option[String])(
       implicit m: MessagesProvider,
-      ec: ExecutionContext): Fox[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
+      ec: ExecutionContext): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
-        _ <- Fox.successful(())
-        parameters <- box2Fox((data \ "parameters").headOption ?~ Messages("nml.parameters.notFound"))
+        parameters <- (data \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
         timestamp = parseTime(parameters \ "time")
-        comments <- box2Fox(parseComments(data \ "comments"))
-        branchPoints <- box2Fox(parseBranchPoints(data \ "branchpoints", timestamp))
-        trees <- box2Fox(parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments)))
-        treeGroups <- box2Fox(extractTreeGroups(data \ "groups"))
+        comments <- parseComments(data \ "comments")
+        branchPoints <- parseBranchPoints(data \ "branchpoints", timestamp)
+        trees <- parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
+        treeGroups <- extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
-        _ <- box2Fox(TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments))
-        additionalAxisProtos <- box2Fox(parseAdditionalAxes(parameters \ "additionalAxes"))
+        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
+        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         organizationName = if (overwritingDataSetName.isDefined) None
         else parseOrganizationName(parameters \ "experiment")
-        canHaveSegmentIndexOpts <- Fox.combined(
-          volumes
-            .map(
-              v =>
-                canHaveSegmentIndexOpt(remoteDataStoreClient,
-                                       organizationName.getOrElse(""),
-                                       dataSetName,
-                                       v.fallbackLayerName,
-                                       userToken))
-            .toList)
+        canHaveSegmentIndexOpts <- Fox
+          .combined(
+            volumes
+              .map(
+                v =>
+                  canHaveSegmentIndexOpt(remoteDataStoreClient,
+                                         organizationName.getOrElse(""),
+                                         dataSetName,
+                                         v.fallbackLayerName,
+                                         userToken))
+              .toList)
+          .await("NMLParser/parse was changed to return Fox in #7437. Removing this await is tracked in #7551",
+                 5 seconds)
       } yield {
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")

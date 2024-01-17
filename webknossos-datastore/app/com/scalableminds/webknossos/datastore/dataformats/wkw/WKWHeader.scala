@@ -157,7 +157,7 @@ case class WKWHeader(
   private lazy val nullCompressor = new NullCompressor
   private lazy val lz4Compressor = new Lz4Compressor
 
-  override def isSharded: Boolean = numChunksPerShard > 1
+  override def isSharded: Boolean = true
 }
 
 object WKWHeader extends BoxImplicits {

@@ -26,15 +26,7 @@ object WKWArray {
         .readBytes() ?~> s"Could not read header at ${WKWDataFormat.FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
-    } yield
-      new WKWArray(path,
-                   dataSourceId,
-                   layerName,
-                   header,
-                   AxisOrder.asZyxFromRank(3),
-                   None,
-                   None,
-                   sharedChunkContentsCache)
+    } yield new WKWArray(path, dataSourceId, layerName, header, AxisOrder.xyz, None, None, sharedChunkContentsCache)
 }
 
 class WKWArray(vaultPath: VaultPath,
@@ -63,25 +55,28 @@ class WKWArray(vaultPath: VaultPath,
       shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
       shardFilename = getChunkFilename(shardCoordinates)
       shardPath = vaultPath / shardFilename
-      _ = logger.info(s"Reading chunk ${chunkIndex.mkString(",")} from shard at $shardPath...")
-      // TODO in uncompressed case, no shardIndex is needed
-      //parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
-      parsedShardIndex <- readAndParseShardIndex(shardPath)
-      chunkIndexInShardIndex <- getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
-      chunkByteOffset = parsedShardIndex(chunkIndexInShardIndex)
-      nextChunkByteOffset = parsedShardIndex(chunkIndexInShardIndex + 1)
+      parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
+      chunkIndexInShardIndex <- getChunkIndexInShardIndex(chunkIndex)
+      chunkByteOffset = shardIndexEntryAt(parsedShardIndex)(chunkIndexInShardIndex)
+      nextChunkByteOffset = shardIndexEntryAt(parsedShardIndex)(chunkIndexInShardIndex + 1)
       range = Range.Long(chunkByteOffset, nextChunkByteOffset, 1)
     } yield (shardPath, range)
 
+  private def shardIndexEntryAt(shardIndex: Array[Long])(chunkIndexInShardIndex: Int): Long =
+    if (header.isCompressed) shardIndex(chunkIndexInShardIndex)
+    else
+      shardIndex(0) + header.numBytesPerChunk.toLong * chunkIndexInShardIndex.toLong
+
   private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Long]] = {
-    val skipBytes = 8
+    val skipBytes = 8 // First 8 bytes of header are other metadata
     val bytesPerShardIndexEntry = 8
+    val numEntriesToRead = if (header.isCompressed) 1 + header.numChunksPerShard else 1
     val rangeInShardFile =
-      Range.Long(skipBytes, skipBytes + (1 + header.numChunksPerShard) * bytesPerShardIndexEntry, 1)
+      Range.Long(skipBytes, skipBytes + numEntriesToRead * bytesPerShardIndexEntry, 1)
     for {
       shardIndexBytes <- shardPath.readBytes(Some(rangeInShardFile))
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(shardIndexBytes))
-      shardIndex = (0 to header.numChunksPerShard).map(_ => dataInputStream.readLong()).toArray
+      shardIndex = (0 until numEntriesToRead).map(_ => dataInputStream.readLong()).toArray
     } yield shardIndex
   }
 
@@ -104,7 +99,7 @@ class WKWArray(vaultPath: VaultPath,
         z)
     } yield mortonEncode(x, y, z)
 
-  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Box[Int] = {
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Int]): Box[Int] = {
     val x = chunkIndex(0) // TODO double check order
     val y = chunkIndex(1)
     val z = chunkIndex(2)
@@ -115,9 +110,9 @@ class WKWArray(vaultPath: VaultPath,
   }
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
-    val x = chunkIndex(0) // TODO double check order
+    val x = chunkIndex(2) // TODO double check order
     val y = chunkIndex(1)
-    val z = chunkIndex(2)
+    val z = chunkIndex(0)
     f"z$z/y$y/x$x.wkw"
   }
   // TODO add .wkw, ignore channels

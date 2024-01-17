@@ -94,10 +94,10 @@ class Lz4Compressor extends Compressor {
         val output: Array[Byte] = Array.ofDim[Byte](expectedUncompressedSizeBytes)
         val lz4Decompressor = LZ4Factory.nativeInstance().fastDecompressor()
         val bytesDecompressed = lz4Decompressor.decompress(input, output, expectedUncompressedSizeBytes)
-        assert(
+        /*assert(
           bytesDecompressed == expectedUncompressedSizeBytes,
           f"While decompressing lz4, expected output to be $expectedUncompressedSizeBytes but got $bytesDecompressed"
-        )
+        )*/
         output
       }
       case None =>

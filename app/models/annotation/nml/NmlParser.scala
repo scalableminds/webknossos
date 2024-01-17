@@ -270,11 +270,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             name <- getSingleAttributeOpt(additionalAxisNode, "name")
             indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
             index <- indexStr.toIntOpt
-            minStr <- getSingleAttributeOpt(additionalAxisNode, "min")
-            min <- minStr.toIntOpt
-            maxStr <- getSingleAttributeOpt(additionalAxisNode, "max")
-            max <- maxStr.toIntOpt
-          } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
+            startStr <- getSingleAttributeOpt(additionalAxisNode, "start")
+            start <- startStr.toIntOpt
+            endStr <- getSingleAttributeOpt(additionalAxisNode, "end")
+            end <- endStr.toIntOpt
+          } yield new AdditionalAxisProto(name, index, Vec2IntProto(start, end))
         }
       )
     )

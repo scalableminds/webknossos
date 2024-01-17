@@ -28,15 +28,13 @@ def main():
                 changed = False
                 with open(json_path, 'r') as json_file:
                     content = json.load(json_file)
-                    if "dataLayers" in content:
-                        for layer in content["dataLayers"]:
-                            if "additionalAxes" in layer:
-                                for axis in layer["additionalAxes"]:
-                                    if "bounds" in axis:
-                                        bounds = axis["bounds"]
-                                        if len(bounds) >= 2:
-                                            bounds[1] = bounds[1] + 1
-                                            changed = True
+                    for layer in content.get("dataLayers", []):
+                        for axis in layer.get("additionalAxes", []):
+                            if "bounds" in axis:
+                                bounds = axis["bounds"]
+                                if len(bounds) >= 2:
+                                    bounds[1] = bounds[1] + 1
+                                    changed = True
                 if changed:
                     print(f"Updating {json_path} (dry={dry})...")
                     count += 1

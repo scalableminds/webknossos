@@ -77,8 +77,8 @@ class WKRemoteTracingStoreController @Inject()(
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataSet <- datasetDAO.findOne(annotation._dataSet)
-          dataSource <- datasetService.dataSourceFor(dataSet)
+          dataset <- datasetDAO.findOne(annotation._dataset)
+          dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
     }
@@ -89,7 +89,7 @@ class WKRemoteTracingStoreController @Inject()(
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataSet <- datasetDAO.findOne(annotation._dataSet)
+          dataSet <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataSet._organization)
         } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))
       }
@@ -98,7 +98,7 @@ class WKRemoteTracingStoreController @Inject()(
   def dataStoreUriForDataSet(name: String,
                              key: String,
                              organizationName: Option[String],
-                             dataSetName: String): Action[AnyContent] =
+                             datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -107,11 +107,11 @@ class WKRemoteTracingStoreController @Inject()(
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            datasetDAO.getOrganizationForDataset(dataSetName)(GlobalAccessContext)
-          } ?~> Messages("dataset.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+            datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+          } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
+          dataSet <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages(
             "dataset.noAccess",
-            dataSetName) ~> FORBIDDEN
+            datasetName) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataSet)
         } yield Ok(Json.toJson(dataStore.url))
       }

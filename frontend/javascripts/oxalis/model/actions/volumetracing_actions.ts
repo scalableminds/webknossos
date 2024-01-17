@@ -36,6 +36,7 @@ type HideBrushAction = ReturnType<typeof hideBrushAction>;
 type SetContourTracingModeAction = ReturnType<typeof setContourTracingModeAction>;
 export type ImportVolumeTracingAction = ReturnType<typeof importVolumeTracingAction>;
 export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAction>;
+export type SetSelectedSegmentsOrGroupAction = ReturnType<typeof setSelectedSegmentsOrGroupAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
@@ -86,6 +87,7 @@ export type VolumeTracingAction =
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
+  | SetSelectedSegmentsOrGroupAction
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
@@ -196,6 +198,18 @@ export const clickSegmentAction = (
     segmentId,
     somePosition,
     someAdditionalCoordinates,
+    layerName,
+  } as const);
+
+export const setSelectedSegmentsOrGroupAction = (
+  selectedSegments: number[],
+  selectedGroup: number | null,
+  layerName: string,
+) =>
+  ({
+    type: "SET_SELECTED_SEGMENTS_OR_GROUP",
+    selectedSegments,
+    selectedGroup,
     layerName,
   } as const);
 

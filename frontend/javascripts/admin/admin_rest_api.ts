@@ -1665,17 +1665,13 @@ export async function isDatasetNameValid(
     return "The dataset name must not be empty.";
   }
 
-  try {
-    await Request.receiveJSON(
-      `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-      {
-        showErrorToast: false,
-      },
-    );
+  const response = await Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
+  );
+  if (response.isValid) {
     return null;
-  } catch (ex) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'msg' implicitly has an 'any' type.
-    return ex.messages.map((msg) => Object.values(msg)[0]).join(". ");
+  } else {
+    return response.errors[0];
   }
 }
 

@@ -175,11 +175,13 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      mailRecipient <- organizationService.overTimeMailRecipient(organization)
+      projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
+      projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
+      mailRecipient <- organizationService.overTimeMailRecipient(organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        brainTracing.Mailer ! Send(
-          defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, mailRecipient))
+        brainTracing.Mailer ! Send(defaultMails
+          .overLimitMail(user, project.name, task._id.toString, annotation.id, List(mailRecipient, projectOwnerEmail)))
       }
     }
 

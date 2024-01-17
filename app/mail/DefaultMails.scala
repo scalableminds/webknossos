@@ -30,12 +30,16 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, receiver: String): Mail =
+  def overLimitMail(user: User,
+                    projectName: String,
+                    taskId: String,
+                    annotationId: String,
+                    recipients: List[String]): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
       bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
-      recipients = List(receiver)
+      recipients = recipients
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(

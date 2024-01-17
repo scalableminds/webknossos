@@ -250,9 +250,9 @@ class AnnotationIOController @Inject()(
 
   private def assertAllOnSameDataset(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
     for {
-      datasetName <- volumes.headOption.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
-      _ <- bool2Fox(skeletons.forall(_.dataSetName == datasetName))
-      _ <- bool2Fox(volumes.forall(_.dataSetName == datasetName))
+      datasetName <- volumes.headOption.map(_.datasetName).orElse(skeletons.headOption.map(_.datasetName)).toFox
+      _ <- bool2Fox(skeletons.forall(_.datasetName == datasetName))
+      _ <- bool2Fox(volumes.forall(_.datasetName == datasetName))
     } yield datasetName
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
@@ -464,7 +464,7 @@ class AnnotationIOController @Inject()(
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataset <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization.name) ?~> "annotation.writeTemporaryFile.failed"
     } yield {

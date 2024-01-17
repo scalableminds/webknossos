@@ -29,7 +29,7 @@ class TaskService @Inject()(conf: WkConf,
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBaseFor(task._id)
-      dataSet <- datasetDAO.findOne(annotationBase._dataSet)
+      dataset <- datasetDAO.findOne(annotationBase._dataset)
       status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
@@ -44,7 +44,7 @@ class TaskService @Inject()(conf: WkConf,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
-        "dataSet" -> dataSet.name,
+        "dataSet" -> dataset.name,
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,

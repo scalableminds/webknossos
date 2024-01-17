@@ -1,7 +1,5 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.uploading
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
@@ -14,13 +12,16 @@ import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common._
 import net.liftweb.common.Box.tryo
+import net.liftweb.common._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(
@@ -65,13 +66,12 @@ object CancelUploadInformation {
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
-    extends LazyLogging
-    with DataSetDeleter
+                              exploreLocalLayerService: ExploreLocalLayerService,
+                              datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+    extends DataSetDeleter
     with DirectoryConstants
-    with FoxImplicits {
-
-  val dataBaseDir: Path = dataSourceService.dataBaseDir
+    with FoxImplicits
+    with LazyLogging {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
@@ -96,6 +96,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___file___${fileName}___chunkSet"
 
   cleanUpOrphanUploads()
+
+  override def dataBaseDir: Path = dataSourceService.dataBaseDir
 
   def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
@@ -238,7 +240,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
           case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+        _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
@@ -314,23 +316,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
   }
-
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
-    Fox
-      .serialCombined(layersToLink) { layerToLink =>
-        val layerPath = layerToLink.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
-        for {
-          _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
-          _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
-          _ <- tryo {
-            Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
-          } ?~> s"Failed to create symlink at $newLayerPath."
-        } yield ()
-      }
-      .map { _ =>
-        ()
-      }
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationName: String,

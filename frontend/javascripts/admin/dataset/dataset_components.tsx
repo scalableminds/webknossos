@@ -1,9 +1,13 @@
 import * as React from "react";
-import { Form, Input, Select, Card } from "antd";
+import { Form, Input, Select, Card, FormInstance } from "antd";
 import messages from "messages";
 import { isDatasetNameValid } from "admin/admin_rest_api";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
+import { FormItemWithInfo } from "dashboard/dataset/helper_components";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import features from "features";
+
 const FormItem = Form.Item;
 export function CardContainer({
   children,
@@ -43,7 +47,7 @@ export const layerNameRules = [
   },
   {
     validator: syncValidator(
-      (value: string) => !value.startsWith("."),
+      (value: string | null) => !value || !value.startsWith("."),
       "The name must not start with a dot.",
     ),
   },
@@ -136,5 +140,62 @@ export function DatastoreFormItem({
         }))}
       />
     </FormItem>
+  );
+}
+
+export function AllowedTeamsFormItem({
+  isDatasetManagerOrAdmin,
+  selectedTeams,
+  setSelectedTeams,
+  formRef,
+}: {
+  isDatasetManagerOrAdmin: boolean;
+  selectedTeams: APITeam | Array<APITeam>;
+  setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
+  formRef: React.RefObject<FormInstance<any>>;
+}) {
+  return (
+    <FormItemWithInfo
+      name="initialTeams"
+      label="Teams allowed to access this dataset"
+      info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
+      hasFeedback
+    >
+      <TeamSelectionComponent
+        mode="multiple"
+        value={selectedTeams}
+        allowNonEditableTeams={isDatasetManagerOrAdmin}
+        onChange={(selectedTeams) => {
+          if (formRef.current == null) return;
+
+          if (!Array.isArray(selectedTeams)) {
+            // Making sure that we always have an array even when only one team is selected.
+            selectedTeams = [selectedTeams];
+          }
+
+          formRef.current.setFieldsValue({
+            initialTeams: selectedTeams,
+          });
+          setSelectedTeams(selectedTeams);
+        }}
+        afterFetchedTeams={(fetchedTeams) => {
+          if (!features().isWkorgInstance) {
+            return;
+          }
+
+          const teamOfOrganization = fetchedTeams.find((team) => team.name === team.organization);
+
+          if (teamOfOrganization == null) {
+            return;
+          }
+
+          if (formRef.current == null) return;
+          formRef.current.setFieldsValue({
+            initialTeams: [teamOfOrganization],
+          });
+          setSelectedTeams([teamOfOrganization]);
+        }}
+      />
+    </FormItemWithInfo>
   );
 }

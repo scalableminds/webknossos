@@ -41,12 +41,12 @@ trait AnnotationInformationHandler extends FoxImplicits {
     def allOnSameDatasetIter(annotations: List[Annotation], _dataSet: ObjectId): Boolean =
       annotations match {
         case List()       => true
-        case head :: tail => head._dataSet == _dataSet && allOnSameDatasetIter(tail, _dataSet)
+        case head :: tail => head._dataset == _dataSet && allOnSameDatasetIter(tail, _dataSet)
       }
     annotations match {
       case List() => Fox.successful(true)
       case head :: _ =>
-        if (allOnSameDatasetIter(annotations, head._dataSet))
+        if (allOnSameDatasetIter(annotations, head._dataset))
           Fox.successful(true)
         else
           Fox.failure("Cannot create compound annotation spanning multiple datasets")

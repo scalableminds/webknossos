@@ -1,6 +1,6 @@
 package models.user
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo

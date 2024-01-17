@@ -185,6 +185,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
     zoomStep: 0,
   });
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next({});
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -225,6 +226,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next({});
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -275,6 +277,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next({});
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -332,6 +335,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     zoomStep: 0,
   }); // pass labeled resolution
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next({});
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords

@@ -4,10 +4,12 @@ import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWHeader}
+import com.scalableminds.util.tools.JsonHelper.bool2Box
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWHeader, WKWMortonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream
@@ -50,7 +52,10 @@ class WKWArray(vaultPath: VaultPath,
                          axisOrder,
                          channelIndex,
                          additionalAxes,
-                         sharedChunkContentsCache) {
+                         sharedChunkContentsCache)
+    with WKWMortonHelper {
+
+  private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
@@ -58,14 +63,63 @@ class WKWArray(vaultPath: VaultPath,
       shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
       shardFilename = getChunkFilename(shardCoordinates)
       shardPath = vaultPath / shardFilename
-      parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
-      chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
-      (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
-      _ <- Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
-      range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
+      _ = logger.info(s"Reading chunk ${chunkIndex.mkString(",")} from shard at $shardPath...")
+      // TODO in uncompressed case, no shardIndex is needed
+      //parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
+      parsedShardIndex <- readAndParseShardIndex(shardPath)
+      chunkIndexInShardIndex <- getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
+      chunkByteOffset = parsedShardIndex(chunkIndexInShardIndex)
+      nextChunkByteOffset = parsedShardIndex(chunkIndexInShardIndex + 1)
+      range = Range.Long(chunkByteOffset, nextChunkByteOffset, 1)
     } yield (shardPath, range)
 
-  override protected def getChunkFilename(chunkIndex: Array[Int]): String = ???
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Long]] = {
+    val skipBytes = 8
+    val bytesPerShardIndexEntry = 8
+    val rangeInShardFile =
+      Range.Long(skipBytes, skipBytes + (1 + header.numChunksPerShard) * bytesPerShardIndexEntry, 1)
+    for {
+      shardIndexBytes <- shardPath.readBytes(Some(rangeInShardFile))
+      dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(shardIndexBytes))
+      shardIndex = (0 to header.numChunksPerShard).map(_ => dataInputStream.readLong()).toArray
+    } yield shardIndex
+  }
+
+  protected def error(msg: String, expected: Any, actual: Any): String =
+    s"""Error processing WKW file: $msg [expected: $expected, actual: $actual]."""
+
+  private def computeMortonIndex(x: Int, y: Int, z: Int): Box[Int] =
+    for {
+      _ <- bool2Box(x >= 0 && x < header.numChunksPerShardDimension) ?~! error(
+        "X coordinate is out of range",
+        s"[0, ${header.numChunksPerShardDimension})",
+        x)
+      _ <- bool2Box(y >= 0 && y < header.numChunksPerShardDimension) ?~! error(
+        "Y coordinate is out of range",
+        s"[0, ${header.numChunksPerShardDimension})",
+        y)
+      _ <- bool2Box(z >= 0 && z < header.numChunksPerShardDimension) ?~! error(
+        "Z coordinate is out of range",
+        s"[0, ${header.numChunksPerShardDimension})",
+        z)
+    } yield mortonEncode(x, y, z)
+
+  private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Box[Int] = {
+    val x = chunkIndex(0) // TODO double check order
+    val y = chunkIndex(1)
+    val z = chunkIndex(2)
+    val chunkOffsetX = x % header.numChunksPerShardDimension
+    val chunkOffsetY = y % header.numChunksPerShardDimension
+    val chunkOffsetZ = z % header.numChunksPerShardDimension
+    computeMortonIndex(chunkOffsetX, chunkOffsetY, chunkOffsetZ)
+  }
+
+  override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
+    val x = chunkIndex(0) // TODO double check order
+    val y = chunkIndex(1)
+    val z = chunkIndex(2)
+    f"z$z/y$y/x$x.wkw"
+  }
   // TODO add .wkw, ignore channels
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =

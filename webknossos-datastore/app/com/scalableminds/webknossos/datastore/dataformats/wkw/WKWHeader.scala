@@ -132,7 +132,12 @@ case class WKWHeader(
 
   override def chunkSize: Array[Int] = Array(32, 32, 32) // TODO: channels
 
-  def shardShape: Array[Int] = ??? // TODO
+  def shardShape: Array[Int] =
+    Array(
+      numChunksPerShardDimension * numVoxelsPerChunkDimension,
+      numChunksPerShardDimension * numVoxelsPerChunkDimension,
+      numChunksPerShardDimension * numVoxelsPerChunkDimension
+    ) // TODO channels
 
   override def dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
 

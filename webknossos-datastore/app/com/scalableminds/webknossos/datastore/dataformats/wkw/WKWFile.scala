@@ -30,24 +30,6 @@ trait WKWMortonHelper {
     morton
   }
 
-  protected def mortonDecode(mortonIndex: Long): (Int, Int, Int) = {
-    var morton = mortonIndex
-    var x = 0
-    var y = 0
-    var z = 0
-    var bit = 0
-
-    while (morton > 0) {
-      x |= ((morton & 1) << bit).toInt
-      morton >>= 1
-      y |= ((morton & 1) << bit).toInt
-      morton >>= 1
-      z |= ((morton & 1) << bit).toInt
-      morton >>= 1
-      bit += 1
-    }
-    (x, y, z)
-  }
 }
 
 trait WKWCompressionHelper extends BoxImplicits {

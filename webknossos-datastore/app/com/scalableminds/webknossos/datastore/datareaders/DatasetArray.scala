@@ -167,8 +167,9 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
       implicit ec: ExecutionContext): Fox[MultiArray] =
-    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
-                                       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
+    readSourceChunkData(chunkIndex, useSkipTypingShortcut)
+  /* sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
+                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)) */
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext): Fox[MultiArray] =
@@ -176,7 +177,9 @@ class DatasetArray(vaultPath: VaultPath,
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
         chunkShape = chunkSizeAtIndex(chunkIndex)
+        _ = logger.info(s"reading chunk at $chunkRange...")
         multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
+        _ = logger.info(s"read chunk with shape ${multiArray.getShape.mkString(",")}")
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)

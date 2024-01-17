@@ -17,10 +17,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added route for triggering the compute segment index worker job. [#7471](https://github.com/scalableminds/webknossos/pull/7471)
 - Added thumbnails to the dashboard dataset list. [#7479](https://github.com/scalableminds/webknossos/pull/7479)
 - Adhoc mesh rendering is now available for ND datasets.[#7394](https://github.com/scalableminds/webknossos/pull/7394)
+- Added the ability to compose a new dataset from existing dataset layers. This can be done with or without transforms (transforms will be derived from landmarks given via BigWarp CSV or WK NMLs). [#7395](https://github.com/scalableminds/webknossos/pull/7395)
 - When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
 - Multiple segments can be dragged and dropped in the segments tab. [#7536](https://github.com/scalableminds/webknossos/pull/7536)
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
-
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
@@ -28,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated some dependencies of the backend code (play 2.9, sbt 1.9, minor upgrades for others) for optimized performance. [#7366](https://github.com/scalableminds/webknossos/pull/7366)
 - Processing jobs can now be distributed to multiple webknossos-workers with finer-grained configurability. Compare migration guide. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
 - Removed Swagger/OpenAPI json description of the HTTP API. [#7494](https://github.com/scalableminds/webknossos/pull/7494)
+- Updated antd UI library from version 4.24.8 to 4.24.15. [#7505](https://github.com/scalableminds/webknossos/pull/7505)
 - Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
 
 ### Fixed

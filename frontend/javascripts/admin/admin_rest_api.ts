@@ -1299,13 +1299,12 @@ export function startNeuronInferralJob(
   outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
-  const urlParamObject = {
+  const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     outputSegmentationLayerName,
     newDatasetName,
-  };
-  const urlParams = new URLSearchParams(urlParamObject);
+  });
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {

@@ -130,7 +130,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
         for {
           annotationIdValidated <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationIdValidated)
-          dataset: Dataset <- datasetDAO.findOne(annotation._dataSet)
+          dataset: Dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           layerOpt = layers.find(_.category == Category.color)

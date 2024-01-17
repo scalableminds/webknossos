@@ -150,16 +150,15 @@ export function setMappingNameReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
   mappingName: string | null | undefined,
-  _mappingType: MappingType,
-  _isMappingEnabled: boolean = true,
+  mappingType: MappingType,
+  isMappingEnabled: boolean = true,
 ) {
   // Editable mappings cannot be disabled or switched for now
   if (volumeTracing.mappingIsEditable) return state;
   // Only HDF5 mappings are persisted in volume annotations for now
-  // TODO: Uncomment this before merging
-  /*if (mappingType !== "HDF5" || !isMappingEnabled) {
+  if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;
-  }*/
+  }
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     mappingName,
   });

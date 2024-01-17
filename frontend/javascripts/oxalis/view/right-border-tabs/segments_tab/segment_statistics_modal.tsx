@@ -1,5 +1,5 @@
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
-import { Modal, Spin, Table } from "antd";
+import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
@@ -13,6 +13,7 @@ import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not not fetched. Check the console for more details.";
@@ -22,6 +23,8 @@ const ERROR_CODE = CONSOLE_ERROR_MESSAGE;
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
+
+const ADDITIONAL_COORDS_COLUMN = "addtionalCoordinates,";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -34,6 +37,7 @@ type Props = {
 };
 
 type SegmentInfo = {
+  additionalCoords?: string;
   segmentId: number;
   segmentName: string;
   groupId: number | undefined | null;
@@ -49,6 +53,7 @@ const exportStatisticsToCSV = (
   segmentInformation: Array<SegmentInfo> | string,
   tracingId: string,
   groupIdToExport: number,
+  hasAdditionalCoords: boolean,
 ) => {
   if (segmentInformation.length === 0 || segmentInformation instanceof String) {
     return;
@@ -57,6 +62,7 @@ const exportStatisticsToCSV = (
     .map(
       (row) =>
         [
+          row.additionalCoords,
           row.segmentId,
           row.segmentName,
           row.groupId,
@@ -66,13 +72,18 @@ const exportStatisticsToCSV = (
           ...row.boundingBoxTopLeft,
           ...row.boundingBoxPosition,
         ]
+          .filter((el) => el != null)
           .map(String) // convert every value to String
           .map((v) => v.replaceAll('"', '""')) // escape double quotes
           .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
           .join(","), // comma-separated
     )
     .join("\n"); // rows starting on new lines
-  const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
+
+  const csv_header = hasAdditionalCoords
+    ? ADDITIONAL_COORDS_COLUMN + SEGMENT_STATISTICS_CSV_HEADER
+    : SEGMENT_STATISTICS_CSV_HEADER;
+  const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
       ? `segmentStatistics_tracing-${tracingId}.csv`
@@ -98,6 +109,13 @@ export function SegmentStatisticsModal({
   const additionalCoordinates = useSelector(
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
+  const hasAdditionalCoords = additionalCoordinates != null && additionalCoordinates.length > 0;
+  const additionalCoordinateStringForModal = hasAdditionalCoords
+    ? additionalCoordinates
+        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+        .reduce((a: string, b: string) => a.concat(b, ", "), "")
+        .slice(0, -2)
+    : "";
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
@@ -121,6 +139,9 @@ export function SegmentStatisticsModal({
           const segmentSizes = response[0];
           const boundingBoxes = response[1];
           const statisticsObjects = [];
+          const additionalCoordStringForCsv =
+            getAdditionalCoordinatesAsString(additionalCoordinates);
+          console.log("add coords", additionalCoordStringForCsv);
           for (let i = 0; i < segments.length; i++) {
             // segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];
@@ -138,6 +159,7 @@ export function SegmentStatisticsModal({
             const currentGroupId = getGroupIdForSegment(currentSegment);
             const segmentStateObject = {
               key: currentSegment.id,
+              additionalCoordinates: additionalCoordStringForCsv,
               segmentId: currentSegment.id,
               segmentName:
                 currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
@@ -216,7 +238,7 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
+      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup, hasAdditionalCoords)}
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
@@ -224,11 +246,20 @@ export function SegmentStatisticsModal({
         {isErrorCase ? (
           MODAL_ERROR_MESSAGE
         ) : (
-          <Table
-            dataSource={dataSource as Array<SegmentInfo>}
-            columns={columns}
-            style={{ whiteSpace: "pre" }}
-          />
+          <>
+            {hasAdditionalCoords && (
+              <Alert
+                message={`These stats are only valid for the current additional coordinates ${additionalCoordinateStringForModal}.`}
+                type="info"
+                showIcon
+              />
+            )}
+            <Table
+              dataSource={dataSource as Array<SegmentInfo>}
+              columns={columns}
+              style={{ whiteSpace: "pre" }}
+            />
+          </>
         )}
       </Spin>
     </Modal>

@@ -3,12 +3,19 @@
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 
 # version log:
+ # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"
  # new in v5: annotation layers (changed annotation json result, changed createExplorational params)
  # new in v4: project queried by id, not name (changed route parameters)
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json constains visibility enum instead of booleans
 
+->       /v6/                                                                 webknossos.latest.Routes
+
+
+GET      /v5/datasets/:organizationName/:dataSetName/isValidNewName           controllers.LegacyApiController.assertValidNewNameV5(organizationName: String, dataSetName: String)
+
 ->       /v5/                                                                 webknossos.latest.Routes
+
 
 # support changes to v5
 GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Long)

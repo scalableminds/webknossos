@@ -80,6 +80,7 @@ import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
+  clickSegmentAction,
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -785,6 +786,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
   };
 
+  const maybeFocusSegment = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    const layerName = visibleSegmentationLayer.name;
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    // This action is dispatched because the behaviour is identical to a click on a segment.
+    // Note that the updated position is where the segment was clicked to open the context menu.
+    Store.dispatch(
+      clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+    );
+  };
+
   const computeMeshAdHoc = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
@@ -951,6 +970,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   }
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+  const focusInSegmentListItem: MenuItemType = {
+    key: "focus-in-segment-list",
+    onClick: maybeFocusSegment,
+    label: "Focus in Segment List",
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -981,12 +1005,13 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 },
                 label: (
                   <>
-                    Select Segment ({segmentIdAtPosition}){" "}
+                    Activate Segment ({segmentIdAtPosition}){" "}
                     {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
                   </>
                 ),
               }
             : null,
+          focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
           allowUpdate
@@ -1000,6 +1025,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
   if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
+    nonSkeletonActions.push(focusInSegmentListItem);
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
   }
@@ -1530,7 +1556,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         layerName,
         meshId,
         false,
-        Store.getState().flycam.additionalCoordinates || undefined,
+        Store.getState().flycam.additionalCoordinates,
       ),
     );
   },

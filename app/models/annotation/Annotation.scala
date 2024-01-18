@@ -138,7 +138,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
 
   private def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
     q"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name, statistics)
-            values($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.statistics})""".asUpdate
+            values($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.stats})""".asUpdate
 
   def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {

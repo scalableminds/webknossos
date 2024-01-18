@@ -553,15 +553,6 @@ export function deletePrivateLink(linkId: string): Promise<{
 }
 
 // ### Annotations
-export function getAnnotationInfos(
-  isFinished: boolean,
-  pageNumber: number = 0,
-): Promise<Array<APIAnnotationInfo>> {
-  return Request.receiveJSON(
-    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
-  );
-}
-
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,

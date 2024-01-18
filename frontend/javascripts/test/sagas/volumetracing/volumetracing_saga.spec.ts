@@ -12,6 +12,7 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 import { enforce } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";
@@ -19,6 +20,7 @@ import sinon from "sinon";
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
+import { ActiveMappingInfo } from "oxalis/store";
 
 mockRequire("app", {
   currentUser: {
@@ -109,6 +111,18 @@ const initialState = update(defaultState, {
     },
   },
 });
+
+const dummyActiveMapping: ActiveMappingInfo = {
+  mappingName: "dummy-mapping-name",
+  mapping: {},
+  mappingKeys: [],
+  mappingColors: [],
+  hideUnmappedIds: false,
+  mappingStatus: "ENABLED",
+  mappingSize: 0,
+  mappingType: "HDF5",
+};
+
 const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
@@ -388,5 +402,42 @@ test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) =
       isBusy: true,
     }),
     take("START_EDITING"),
+  );
+});
+
+test("VolumeTracingSaga should pin an active mapping upon first volume annotation", (t) => {
+  const saga = editVolumeLayerAsync();
+  saga.next();
+  saga.next();
+  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
+  saga.next(startEditingAction);
+  saga.next({
+    isBusy: false,
+  });
+  saga.next(volumeTracing);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+  saga.next(AnnotationToolEnum.BRUSH);
+  saga.next(false);
+  // pass labeled resolution
+  saga.next({
+    resolution: [1, 1, 1],
+    zoomStep: 0,
+  });
+  saga.next(ACTIVE_CELL_ID); // pass active cell id
+  expectValueDeepEqual(
+    t,
+    saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
+    put(
+      setMappingNameAction(
+        volumeTracing.tracingId,
+        dummyActiveMapping.mappingName as string,
+        dummyActiveMapping.mappingType,
+      ),
+    ),
+  );
+  expectValueDeepEqual(
+    t,
+    saga.next([]), // pass empty additional coords
+    put(VolumeTracingActions.setMappingIsPinnedAction()),
   );
 });

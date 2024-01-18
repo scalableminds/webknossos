@@ -58,6 +58,7 @@ import {
 import Dimensions, { DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { SAMNodeSelect } from "./quick_select_ml_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
@@ -74,7 +75,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction | SAMNodeSelect,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -500,7 +501,7 @@ function normalizeToUint8(
 }
 
 export function* finalizeQuickSelect(
-  quickSelectGeometry: QuickSelectGeometry,
+  quickSelectGeometry: QuickSelectGeometry | undefined | null,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,
@@ -513,7 +514,9 @@ export function* finalizeQuickSelect(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
-  quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  if (quickSelectGeometry) {
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  }
   const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,

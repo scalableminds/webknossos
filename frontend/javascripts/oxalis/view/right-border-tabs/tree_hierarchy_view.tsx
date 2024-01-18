@@ -60,6 +60,8 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import features from "features";
+import { computeSAMForSkeletonAction } from "oxalis/model/actions/volumetracing_actions";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -93,6 +95,7 @@ type Props = OwnProps & {
   onShuffleAllTreeColors: () => void;
   onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
   onSetTreeType: (treeId: number, type: TreeTypeEnum) => void;
+  onComputeSAMForSkeleton: (treeId: number) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -574,6 +577,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
       const createMenu = (): MenuProps => {
+        const isSamSupported = features().segmentAnythingEnabled;
         return {
           items: [
             {
@@ -637,6 +641,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               title: "Hide/Show Edges of This Tree",
               icon: <span className="hide-tree-edges-icon" />,
               label: "Hide/Show Edges of This Tree",
+            },
+            {
+              key: "predictNodeWithSAM",
+              onClick: () => {
+                this.props.onComputeSAMForSkeleton(tree.treeId);
+              },
+              disabled: !isSamSupported,
+              title: isSamSupported
+                ? "Predict all Nodes with SAM"
+                : "This feature only works on webknossos.org.",
+              icon: <span className="fas fa-magic" />,
+              label: "Predict all Nodes with SAM",
             },
             isAgglomerateSkeleton
               ? {
@@ -856,6 +872,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onSetTreeType(treeId: number, type: TreeType) {
     dispatch(setTreeTypeAction(treeId, type));
+  },
+  onComputeSAMForSkeleton(treeId: number) {
+    dispatch(computeSAMForSkeletonAction(treeId));
   },
 });
 

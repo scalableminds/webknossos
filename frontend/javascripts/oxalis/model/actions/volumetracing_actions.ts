@@ -45,6 +45,7 @@ export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type ComputeSAMForSkeletonAction = ReturnType<typeof computeSAMForSkeletonAction>;
 export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
@@ -91,6 +92,7 @@ export type VolumeTracingAction =
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
+  | ComputeSAMForSkeletonAction
   | MaybePrefetchEmbeddingAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
@@ -366,6 +368,12 @@ export const computeQuickSelectForRectAction = (
     startPosition,
     endPosition,
     quickSelectGeometry,
+  } as const);
+
+export const computeSAMForSkeletonAction = (treeId: number) =>
+  ({
+    type: "COMPUTE_SAM_FOR_SKELETON",
+    treeId,
   } as const);
 
 export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>

@@ -84,6 +84,7 @@ POST          /datasets/:organizationName/:datasetName                          
 PUT           /datasets/:organizationName/:datasetName                                                                                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.add(token: Option[String], organizationName: String, datasetName: String, folderId: Option[String])
 GET           /datasets/:organizationName/:datasetName                                                                                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.suggestDatasourceJson(token: Option[String], organizationName: String, datasetName: String)
 DELETE        /datasets/:organizationName/:datasetName/deleteOnDisk                                                                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(token: Option[String], organizationName: String, datasetName: String)
+POST          /datasets/compose                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.compose(token: Option[String])
 
 # Actions
 POST          /triggers/checkInboxBlocking                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(token: Option[String])

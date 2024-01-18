@@ -31,7 +31,7 @@ case class ZarrHeader(
     override val order: ArrayOrder
 ) extends DatasetHeader {
 
-  override lazy val datasetShape: Option[Array[Int]] = Some(shape)
+  override lazy val datasetSize: Option[Array[Int]] = Some(shape)
   override lazy val chunkSize: Array[Int] = chunks
 
   override lazy val byteOrder: ByteOrder =

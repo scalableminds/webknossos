@@ -37,7 +37,7 @@ case class PrecomputedScale(key: String,
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
-  override def datasetShape: Option[Array[Int]] = Some(precomputedScale.size)
+  override def datasetSize: Option[Array[Int]] = Some(precomputedScale.size)
 
   override def chunkSize: Array[Int] = precomputedScale.chunk_sizes.head
 

@@ -38,9 +38,9 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   lazy val datasetShape: Option[Array[Int]] = if (axisOrder.hasZAxis) {
-    header.datasetShape
+    header.datasetSize
   } else {
-    header.datasetShape.map(shape => shape :+ 1)
+    header.datasetSize.map(shape => shape :+ 1)
   }
 
   lazy val chunkSize: Array[Int] = if (axisOrder.hasZAxis) {
@@ -176,10 +176,8 @@ class DatasetArray(vaultPath: VaultPath,
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
-        chunkShape = chunkSizeAtIndex(chunkIndex)
-        _ = logger.info(s"reading chunk at $chunkRange...")
-        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
-        _ = logger.info(s"read chunk with shape ${multiArray.getShape.mkString(",")}")
+        chunkSize = chunkSizeAtIndex(chunkIndex)
+        multiArray <- chunkReader.read(shardPath, chunkSize, Some(chunkRange), useSkipTypingShortcut)
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)
@@ -219,7 +217,7 @@ class DatasetArray(vaultPath: VaultPath,
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {axisOrder=$axisOrder shape=${header.datasetShape.mkString(",")} chunks=${header.chunkSize.mkString(
+    s"${getClass.getCanonicalName} {axisOrder=$axisOrder shape=${header.datasetSize.mkString(",")} chunks=${header.chunkSize.mkString(
       ",")} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }

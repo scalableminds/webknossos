@@ -26,7 +26,7 @@ object WKWArray {
         .readBytes() ?~> s"Could not read header at ${WKWDataFormat.FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
-    } yield new WKWArray(path, dataSourceId, layerName, header, AxisOrder.xyz, None, None, sharedChunkContentsCache)
+    } yield new WKWArray(path, dataSourceId, layerName, header, AxisOrder.cxyz, None, None, sharedChunkContentsCache)
 }
 
 class WKWArray(vaultPath: VaultPath,
@@ -100,9 +100,9 @@ class WKWArray(vaultPath: VaultPath,
     } yield mortonEncode(x, y, z)
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int]): Box[Int] = {
-    val x = chunkIndex(0) // TODO double check order
-    val y = chunkIndex(1)
-    val z = chunkIndex(2)
+    val x = chunkIndex(axisOrder.x)
+    val y = chunkIndex(axisOrder.y)
+    val z = chunkIndex(axisOrder.z.getOrElse(3))
     val chunkOffsetX = x % header.numChunksPerShardDimension
     val chunkOffsetY = y % header.numChunksPerShardDimension
     val chunkOffsetZ = z % header.numChunksPerShardDimension
@@ -110,17 +110,16 @@ class WKWArray(vaultPath: VaultPath,
   }
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
-    val x = chunkIndex(2) // TODO double check order
-    val y = chunkIndex(1)
-    val z = chunkIndex(0)
+    val x = chunkIndex(axisOrder.x)
+    val y = chunkIndex(axisOrder.y)
+    val z = chunkIndex(axisOrder.z.getOrElse(3))
     f"z$z/y$y/x$x.wkw"
   }
-  // TODO add .wkw, ignore channels
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
-      header.datasetShape.map(axisOrder.permuteIndicesReverse),
-      axisOrder.permuteIndicesReverse(header.shardShape),
+      header.datasetSize.map(axisOrder.permuteIndicesReverse),
+      axisOrder.permuteIndicesReverse(header.shardSize),
       header.chunkSize,
       chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
     )

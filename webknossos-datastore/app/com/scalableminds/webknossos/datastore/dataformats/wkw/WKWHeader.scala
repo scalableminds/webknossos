@@ -128,16 +128,18 @@ case class WKWHeader(
     }
   }
 
-  override def datasetShape: Option[Array[Int]] = None
+  override def datasetSize: Option[Array[Int]] = None
 
-  override def chunkSize: Array[Int] = Array(32, 32, 32) // TODO: channels
+  override def chunkSize: Array[Int] =
+    Array(numChannels, numVoxelsPerChunkDimension, numVoxelsPerChunkDimension, numVoxelsPerChunkDimension)
 
-  def shardShape: Array[Int] =
+  def shardSize: Array[Int] =
     Array(
+      numChannels,
       numChunksPerShardDimension * numVoxelsPerChunkDimension,
       numChunksPerShardDimension * numVoxelsPerChunkDimension,
       numChunksPerShardDimension * numVoxelsPerChunkDimension
-    ) // TODO channels
+    )
 
   override def dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
 
@@ -152,7 +154,7 @@ case class WKWHeader(
     case ChunkType.LZ4 | ChunkType.LZ4HC => lz4Compressor
   }
 
-  override def voxelOffset: Array[Int] = Array(0, 0, 0)
+  override def voxelOffset: Array[Int] = Array(0, 0, 0, 0)
 
   private lazy val nullCompressor = new NullCompressor
   private lazy val lz4Compressor = new Lz4Compressor

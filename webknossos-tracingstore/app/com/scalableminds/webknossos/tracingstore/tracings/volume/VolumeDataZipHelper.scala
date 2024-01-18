@@ -73,7 +73,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
           else {
             parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
               val dataCompressed = IOUtils.toByteArray(inputStream)
-              val data = compressor.decompress(dataCompressed, None)
+              val data = compressor.decompress(dataCompressed)
               block(bucketPosition, data)
             }
           }

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressed
   CompressedSegmentation64
 }
 import com.sun.jna.ptr.NativeLongByReference
-import net.jpountz.lz4.LZ4Factory
+import org.apache.commons.compress.compressors.lz4.BlockLZ4CompressorInputStream
 import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
@@ -56,7 +56,7 @@ abstract class Compressor {
   def compress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
-  def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte]
+  def decompress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
   protected def passThrough(is: InputStream, os: OutputStream): Unit = {
@@ -80,7 +80,7 @@ class NullCompressor extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = input
 
   @throws[IOException]
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = input
+  override def decompress(input: Array[Byte]): Array[Byte] = input
 }
 
 class Lz4Compressor extends Compressor {
@@ -88,18 +88,14 @@ class Lz4Compressor extends Compressor {
 
   override def compress(input: Array[Byte]): Array[Byte] = ???
 
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytesOpt: Option[Int]): Array[Byte] =
-    expectedUncompressedSizeBytesOpt match {
-      case Some(expectedUncompressedSizeBytes) => {
-        val output: Array[Byte] = Array.ofDim[Byte](expectedUncompressedSizeBytes)
-        val lz4Decompressor = LZ4Factory.nativeInstance().fastDecompressor()
-        lz4Decompressor.decompress(input, output, expectedUncompressedSizeBytes)
-        output
-      }
-      case None =>
-        throw new IllegalArgumentException(
-          "Tried to decompress lz4 without expectedUncompressedSizeBytes. This is not currently supported.")
-    }
+  override def decompress(input: Array[Byte]): Array[Byte] = {
+    val is = new BufferedInputStream(new ByteArrayInputStream(input));
+    val os = new ByteArrayOutputStream()
+    val iis = new BlockLZ4CompressorInputStream(is)
+    try passThrough(iis, os)
+    finally if (iis != null) iis.close()
+    os.toByteArray
+  }
 
 }
 
@@ -132,7 +128,7 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
   }
 
   @throws[IOException]
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new InflaterInputStream(is, new Inflater)
@@ -172,7 +168,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
   }
 
   @throws[IOException]
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new GZIPInputStream(is)
@@ -283,7 +279,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
   }
 
   @throws[IOException]
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
 
     val di = new DataInputStream(is)
@@ -320,7 +316,7 @@ class JpegCompressor() extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = ???
 
   @throws[IOException]
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val iis: ImageInputStream = createImageInputStream(is)
     val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
@@ -338,7 +334,7 @@ class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Arra
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] =
+  override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
       case ArrayDataType.u4 =>
         CompressedSegmentation32.decompress(input, volumeSize, blockSize)
@@ -365,7 +361,7 @@ class ZstdCompressor(level: Int, checksum: Boolean) extends Compressor {
     os.toByteArray
   }
 
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] = {
+  override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val zstd = new ZstdCompressorInputStream(is)
@@ -383,7 +379,7 @@ class ChainedCompressor(compressors: Seq[Compressor]) extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] =
     compressors.foldLeft(input)((bytes, c) => c.compress(bytes))
 
-  override def decompress(input: Array[Byte], expectedUncompressedSizeBytes: Option[Int]): Array[Byte] =
-    compressors.foldRight(input)((c, bytes) => c.decompress(bytes, None))
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    compressors.foldRight(input)((c, bytes) => c.decompress(bytes))
 
 }

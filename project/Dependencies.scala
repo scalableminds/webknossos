@@ -86,7 +86,7 @@ object Dependencies {
     // Base64, Hashing. import org.apache.commons.codec
     "commons-codec" % "commons-codec" % "1.16.0",
     // End-to-end tests. import org.scalatestplus.play
-    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test",
+    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import play.silhouette.crypto

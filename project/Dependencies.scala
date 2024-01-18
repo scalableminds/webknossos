@@ -85,7 +85,7 @@ object Dependencies {
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
     "commons-codec" % "commons-codec" % "1.16.0",
-    // End-to-end tests. import org.scalatestplus.play
+    // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,

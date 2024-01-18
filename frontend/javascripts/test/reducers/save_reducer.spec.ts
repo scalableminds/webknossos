@@ -18,7 +18,7 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
-const initialState: { save: SaveState; activeUser: APIUser } = {
+const initialState: { save: SaveState; activeUser: APIUser; tracing: {} } = {
   activeUser: dummyUser,
   save: {
     isBusyInfo: {

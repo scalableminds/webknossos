@@ -979,7 +979,7 @@ class AnnotationService @Inject()(
           "tracingId" -> annotationInfo.tracingIds(idx),
           "typ" -> annotationInfo.annotationLayerTypes(idx),
           "name" -> annotationInfo.annotationLayerNames(idx),
-          "stats" -> annotationInfo.annotationLayerStatistics(idx)
+          "statistics" -> annotationInfo.annotationLayerStatistics(idx)
       )
     )
     val tracingType: String = getAnnotationTypeForTag(annotationInfo)

@@ -1,10 +1,8 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import java.nio.file.{Path, Paths}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
 
 trait WKWDataFormatHelper {
@@ -12,42 +10,11 @@ trait WKWDataFormatHelper {
   val dataFileExtension: String = "wkw"
   val headerFileName: String = s"header.$dataFileExtension"
 
-  protected def wkwFilePath(
-      cube: CubePosition,
-      dataSourceId: Option[DataSourceId] = None,
-      dataLayerName: Option[String] = None,
-      baseDir: Path = Paths.get(""),
-      resolutionAsTriple: Option[Boolean] = None
-  ): Path =
-    baseDir
-      .resolve(dataSourceId.map(_.team).getOrElse(""))
-      .resolve(dataSourceId.map(_.name).getOrElse(""))
-      .resolve(dataLayerName.getOrElse(""))
-      .resolve(formatResolution(cube.mag, resolutionAsTriple))
-      .resolve(s"z${cube.z}")
-      .resolve(s"y${cube.y}")
-      .resolve(s"x${cube.x}.$dataFileExtension")
+  protected def wkwFilePath(cube: CubePosition): String =
+    wkwFilePath(cube.x, cube.y, cube.z)
 
-  private def formatResolution(resolution: Vec3Int, resolutionAsTripleOpt: Option[Boolean] = None): String =
-    resolutionAsTripleOpt.map { resolutionAsTriple =>
-      if (resolutionAsTriple) s"${resolution.x}-${resolution.y}-${resolution.z}"
-      else resolution.maxDim.toString
-    }.getOrElse {
-      if (resolution.isIsotropic) resolution.maxDim.toString else s"${resolution.x}-${resolution.y}-${resolution.z}"
-    }
-
-  protected def wkwHeaderFilePath(
-      resolution: Vec3Int,
-      dataSourceId: Option[DataSourceId] = None,
-      dataLayerName: Option[String] = None,
-      baseDir: Path = Paths.get("")
-  ): Path =
-    baseDir
-      .resolve(dataSourceId.map(_.team).getOrElse(""))
-      .resolve(dataSourceId.map(_.name).getOrElse(""))
-      .resolve(dataLayerName.getOrElse(""))
-      .resolve(formatResolution(resolution))
-      .resolve(s"header.$dataFileExtension")
+  protected def wkwFilePath(x: Int, y: Int, z: Int): String =
+    f"z$z/y$y/x$x.$dataFileExtension"
 
   protected def parseWKWFilePath(path: String): Option[BucketPosition] = {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r

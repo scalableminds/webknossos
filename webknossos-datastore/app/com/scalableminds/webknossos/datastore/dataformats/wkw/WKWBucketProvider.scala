@@ -63,5 +63,4 @@ class WKWBucketProvider(layer: WKWLayer,
   private def wkwResolutionToMagLocator(wkwResolution: WKWResolution): MagLocator =
     MagLocator(wkwResolution.resolution)
 
-  // TODO support MagLocator directly in WKWLayer? Then we could have path + credentials
 }

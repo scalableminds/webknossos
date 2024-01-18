@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWMortonHelper
+import com.scalableminds.webknossos.datastore.dataformats.wkw.MortonEncoding
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -64,7 +64,7 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {

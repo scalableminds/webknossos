@@ -80,26 +80,6 @@ case class WKWHeader(
 
   def numChannels: Int = numBytesPerVoxel / VoxelType.bytesPerVoxelPerChannel(voxelType)
 
-  def expectedFileSize: Long =
-    if (isCompressed) {
-      jumpTable.last
-    } else {
-      dataOffset + numBytesPerChunk.toLong * numChunksPerShard.toLong
-    }
-
-  def blockBoundaries(blockIndex: Int): Box[(Long, Int)] =
-    if (blockIndex < numChunksPerShard) {
-      if (isCompressed) {
-        val offset = jumpTable(blockIndex)
-        val length = (jumpTable(blockIndex + 1) - offset).toInt
-        Full((offset, length))
-      } else {
-        Full((dataOffset + numBytesPerChunk.toLong * blockIndex.toLong, numBytesPerChunk))
-      }
-    } else {
-      Failure("ChunkIndex out of bounds")
-    }
-
   def blockLengths: Iterator[Int] =
     if (isCompressed) {
       jumpTable.sliding(2).map(a => (a(1) - a(0)).toInt)

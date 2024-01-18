@@ -5,7 +5,12 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.bool2Box
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormat, WKWHeader, WKWMortonHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{
+  MortonEncoding,
+  WKWDataFormat,
+  WKWDataFormatHelper,
+  WKWHeader
+}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
@@ -45,7 +50,8 @@ class WKWArray(vaultPath: VaultPath,
                          channelIndex,
                          additionalAxes,
                          sharedChunkContentsCache)
-    with WKWMortonHelper {
+    with MortonEncoding
+    with WKWDataFormatHelper {
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
@@ -113,7 +119,7 @@ class WKWArray(vaultPath: VaultPath,
     val x = chunkIndex(axisOrder.x)
     val y = chunkIndex(axisOrder.y)
     val z = chunkIndex(axisOrder.z.getOrElse(3))
-    f"z$z/y$y/x$x.wkw"
+    wkwFilePath(x, y, z)
   }
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =

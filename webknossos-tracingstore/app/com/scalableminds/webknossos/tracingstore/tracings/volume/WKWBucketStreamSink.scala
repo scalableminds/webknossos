@@ -32,7 +32,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper with
           ))
       case _ => None
     } ++ mags.map { mag =>
-      NamedFunctionStream(wkwHeaderFilePath(mag).toString,
+      NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$headerFileName",
                           os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
     }
   }

@@ -9,26 +9,26 @@ import java.util
 
 object MultiArrayUtils {
 
-  def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
-    val size = shape.product
+  def createDataBuffer(dataType: ArrayDataType, size: Array[Int]): Object = {
+    val length = size.product
     dataType match {
-      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](size)
-      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](size)
-      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](size)
-      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](size)
-      case ArrayDataType.f4                    => new Array[Float](size)
-      case ArrayDataType.f8                    => new Array[Double](size)
+      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](length)
+      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](length)
+      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](length)
+      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](length)
+      case ArrayDataType.f4                    => new Array[Float](length)
+      case ArrayDataType.f8                    => new Array[Double](length)
     }
   }
 
-  def createArrayWithGivenStorage(storage: Any, shape: Array[Int]): MultiArray = {
+  def createArrayWithGivenStorage(storage: Any, size: Array[Int]): MultiArray = {
     val aClass = storage.getClass
     if (!aClass.isArray) throw new Exception("Underlying storage for MultiArray must be array")
-    MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
+    MultiArray.factory(MADataType.getType(aClass.getComponentType, false), size, storage)
   }
 
-  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): Box[MultiArray] = {
-    val array = MultiArray.factory(dataType, shape)
+  def createFilledArray(dataType: MADataType, size: Array[Int], fill: Number): Box[MultiArray] = {
+    val array = MultiArray.factory(dataType, size)
     val iter = array.getIndexIterator
     tryo {
       if (fill != null) {
@@ -69,8 +69,8 @@ object MultiArrayUtils {
     */
   @throws[InvalidRangeException]
   def copyRange(offset: Array[Int], source: MultiArray, target: MultiArray): Unit = {
-    val sourceShape: Array[Int] = source.getShape
-    val targetShape: Array[Int] = target.getShape
+    val sourceSize: Array[Int] = source.getShape
+    val targetSize: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
     for (dimension <- offset.indices) {
@@ -84,8 +84,8 @@ object MultiArrayUtils {
         sourceFirst = 0
         targetFirst = dimOffset * -1
       }
-      val maxSSteps = sourceShape(dimension) - sourceFirst
-      val maxTSteps = targetShape(dimension) - targetFirst
+      val maxSSteps = sourceSize(dimension) - sourceFirst
+      val maxTSteps = targetSize(dimension) - targetFirst
       val maxSteps = Math.min(maxSSteps, maxTSteps)
       val sourceLast = sourceFirst + maxSteps
       val targetLast = targetFirst + maxSteps

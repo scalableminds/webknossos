@@ -16,8 +16,8 @@ object N5BlockHeader {
 }
 
 case class N5Header(
-    dimensions: Array[Int], // shape of the entire array
-    blockSize: Array[Int], // shape of each chunk
+    dimensions: Array[Int], // size of the entire array
+    blockSize: Array[Int], // size of each chunk
     compression: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     dataType: String,
     dimension_separator: DimensionSeparator = DimensionSeparator.SLASH

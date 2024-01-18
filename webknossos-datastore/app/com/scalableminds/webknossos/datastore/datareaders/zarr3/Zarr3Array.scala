@@ -94,25 +94,25 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[(Long, Long)]] = AlfuCache()
 
-  private def shardShape =
+  private def shardSize =
     header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
-  private def innerChunkShape =
+  private def innerChunkSize =
     header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
-  private def indexShape =
-    shardShape.zip(innerChunkShape).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
+  private def indexSize =
+    shardSize.zip(innerChunkSize).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
 
-  private lazy val chunksPerShard = indexShape.product
+  private lazy val chunksPerShard = indexSize.product
   private def shardIndexEntryLength = 16
 
   private def checkSumLength = 4 // 32-bit checksum
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
-    val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
-    indexShape.tails.toList
+    val shardOffset = shardCoordinates.zip(indexSize).map { case (sc, is) => sc * is }
+    indexSize.tails.toList
       .dropRight(1)
       .zipWithIndex
-      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
+      .map { case (size, i) => size.tail.product * (chunkIndex(i) - shardOffset(i)) }
       .sum
   }
 

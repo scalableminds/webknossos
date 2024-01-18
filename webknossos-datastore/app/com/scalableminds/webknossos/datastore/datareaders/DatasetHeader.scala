@@ -10,9 +10,9 @@ import java.nio.ByteOrder
 
 trait DatasetHeader {
 
-  // Note that in DatasetArray, datasetShape and chunkSize are adapted for 2d datasets
-  def datasetSize: Option[Array[Int]] // shape of the entire array
-  def chunkSize: Array[Int] // shape of each chunk,
+  // Note that in DatasetArray, datasetSize and chunkSize are adapted for 2d datasets
+  def datasetSize: Option[Array[Int]] // size of the entire array
+  def chunkSize: Array[Int] // size of each chunk,
 
   def dimension_separator: DimensionSeparator
 
@@ -39,14 +39,14 @@ trait DatasetHeader {
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    datasetSize.flatMap { shape =>
+    datasetSize.flatMap { size =>
       if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
         None
       else {
         if (axisOrder.hasZAxis) {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
+          Some(BoundingBox(Vec3Int.zeros, size(axisOrder.x), size(axisOrder.y), size(axisOrder.zWithFallback)))
         } else {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
+          Some(BoundingBox(Vec3Int.zeros, size(axisOrder.x), size(axisOrder.y), 1))
         }
       }
     }

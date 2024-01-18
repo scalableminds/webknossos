@@ -3,21 +3,21 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.typesafe.scalalogging.LazyLogging
 
 object ChunkUtils extends LazyLogging {
-  def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
+  def computeChunkIndices(arraySizeOpt: Option[Array[Int]],
                           arrayChunkSize: Array[Int],
-                          selectedShape: Array[Int],
+                          selectedSize: Array[Int],
                           selectedOffset: Array[Int]): List[Array[Int]] = {
     val nDims = arrayChunkSize.length
     val start = new Array[Int](nDims)
     val end = new Array[Int](nDims)
     var numChunks = 1
     for (dim <- 0 until nDims) {
-      val largestPossibleIndex = arrayShapeOpt.map(arrayShape => (arrayShape(dim) - 1) / arrayChunkSize(dim))
+      val largestPossibleIndex = arraySizeOpt.map(arraySize => (arraySize(dim) - 1) / arrayChunkSize(dim))
       val smallestPossibleIndex = 0
       val startIndexRaw = selectedOffset(dim) / arrayChunkSize(dim)
       val startIndexClamped =
         Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(startIndexRaw), startIndexRaw))
-      val endIndexRaw = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkSize(dim)
+      val endIndexRaw = (selectedOffset(dim) + selectedSize(dim) - 1) / arrayChunkSize(dim)
       val endIndexClampedToBbox =
         Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(endIndexRaw), endIndexRaw))
       val endIndexClamped = Math.max(startIndexClamped, endIndexClampedToBbox) // end index must be greater or equal to start index

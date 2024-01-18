@@ -21,8 +21,8 @@ import play.api.libs.json._
 
 case class ZarrHeader(
     zarr_format: Int, // format version number
-    shape: Array[Int], // shape of the entire array
-    chunks: Array[Int], // shape of each chunk
+    shape: Array[Int], // size of the entire array
+    chunks: Array[Int], // size of each chunk
     compressor: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
     override val dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
@@ -62,9 +62,9 @@ object ZarrHeader extends JsonImplicits {
     // data request method always decompresses before sending
     val compressor = None
 
-    val shape = Array(
+    val size = Array(
       channels,
-      // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+      // Zarr can't handle data sets that don't start at 0, so we extend the size to include "true" coords
       (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
       (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
       (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
@@ -73,7 +73,7 @@ object ZarrHeader extends JsonImplicits {
     val chunks = Array(channels, cubeLength, cubeLength, cubeLength)
 
     ZarrHeader(zarr_format = 2,
-               shape = shape,
+               shape = size,
                chunks = chunks,
                compressor = compressor,
                dtype = dtype,

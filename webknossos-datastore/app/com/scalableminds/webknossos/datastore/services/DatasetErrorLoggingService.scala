@@ -16,7 +16,7 @@ class DatasetErrorLoggingService @Inject()(
     extends IntervalScheduler
     with LazyLogging {
 
-  private val errorCountThresholdPerDataset = 50000
+  private val errorCountThresholdPerDataset = 5
 
   override protected def tickerInterval: FiniteDuration = 60 minutes
 

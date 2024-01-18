@@ -45,7 +45,7 @@ PUT           /user/userConfiguration                                           
 POST          /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
 PUT           /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
 GET           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasSetAdminViewConfiguration(organizationName: String, datasetName: String)
+PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
 
 # Users
 POST          /user/tasks/request                                                               controllers.TaskController.request()

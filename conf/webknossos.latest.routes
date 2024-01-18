@@ -91,7 +91,7 @@ PATCH         /datasets/:organizationName/:datasetName/teams                    
 GET           /datasets/:organizationName/:datasetName/layers/:layer/thumbnail                  controllers.DatasetController.thumbnail(organizationName: String, datasetName: String, layer: String, w: Option[Int], h: Option[Int], mappingName: Option[String], sharingToken: Option[String])
 POST          /datasets/:organizationName/:datasetName/layers/:layer/segmentAnythingEmbedding   controllers.DatasetController.segmentAnythingEmbedding(organizationName: String, datasetName: String, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:organizationName/:datasetName/clearThumbnailCache                      controllers.DatasetController.removeFromThumbnailCache(organizationName: String, datasetName: String)
-GET           /datasets/:organizationName/:datasetName/isValidNewName                           controllers.DatasetController.assertValidNewName(organizationName: String, datasetName: String)
+GET           /datasets/:organizationName/:datasetName/isValidNewName                           controllers.DatasetController.isValidNewName(organizationName: String, datasetName: String)
 GET           /datasets/:organizationName/:datasetName                                          controllers.DatasetController.read(organizationName: String, datasetName: String, sharingToken: Option[String])
 
 # Folders

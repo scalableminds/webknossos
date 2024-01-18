@@ -70,6 +70,7 @@ import type {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -734,6 +735,8 @@ function* ensureSegmentExists(
         !doesSegmentExist,
       ),
     );
+
+    yield* call(updateClickedSegments, action);
   }
 }
 
@@ -779,6 +782,25 @@ function* updateHoveredSegmentId(): Saga<void> {
 
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+}
+
+export function* updateClickedSegments(
+  action: ClickSegmentAction | SetActiveCellAction,
+): Saga<void> {
+  // If one or zero segments are selected, update selected segments in store
+  // Otherwise, the multiselection is kept.
+  const { segmentId } = action;
+  const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+  const layerName = segmentationLayer?.name;
+  if (layerName == null) return;
+  const clickedSegmentId = segmentId;
+  const selectedSegmentsOrGroup = yield* select(
+    (state) => state.localSegmentationData[layerName]?.selectedIds,
+  );
+  const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
+  if (numberOfSelectedSegments < 2) {
+    yield* put(setSelectedSegmentsOrGroupAction([clickedSegmentId], null, layerName));
   }
 }
 

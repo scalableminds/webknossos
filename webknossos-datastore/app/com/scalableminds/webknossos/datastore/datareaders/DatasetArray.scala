@@ -167,9 +167,8 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
       implicit ec: ExecutionContext): Fox[MultiArray] =
-    readSourceChunkData(chunkIndex, useSkipTypingShortcut)
-  /* sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
-                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)) */
+    sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
+                                       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext): Fox[MultiArray] =

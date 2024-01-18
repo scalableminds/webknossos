@@ -125,7 +125,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
   }
 
   private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
-    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$FILENAME_HEADER_WKW".r
     val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
     path match {
       case wkwHeaderRx(_, magLiteral) =>

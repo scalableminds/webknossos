@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayDataType,
   ArrayOrder,
   Compressor,
   DatasetHeader,
@@ -19,7 +18,7 @@ import org.apache.commons.io.IOUtils
 
 import java.io._
 import java.nio.{ByteBuffer, ByteOrder}
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 
 object ChunkType extends Enumeration(1) {
@@ -36,7 +35,8 @@ case class WKWHeader(
     voxelType: VoxelType.Value,
     numBytesPerVoxel: Int, // this encodes the channel count together with voxelType
     jumpTable: Array[Long]
-) extends DatasetHeader {
+) extends DatasetHeader
+    with WKWDataFormatHelper {
 
   def dataOffset: Long = jumpTable.head
 

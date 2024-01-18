@@ -16,7 +16,7 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import java.nio.ByteBuffer
-import java.{lang, util}
+import java.util
 import java.util.zip.{Deflater, DeflaterOutputStream, GZIPInputStream, Inflater, InflaterInputStream}
 import javax.imageio.ImageIO
 import javax.imageio.ImageIO.createImageInputStream
@@ -93,11 +93,7 @@ class Lz4Compressor extends Compressor {
       case Some(expectedUncompressedSizeBytes) => {
         val output: Array[Byte] = Array.ofDim[Byte](expectedUncompressedSizeBytes)
         val lz4Decompressor = LZ4Factory.nativeInstance().fastDecompressor()
-        val bytesDecompressed = lz4Decompressor.decompress(input, output, expectedUncompressedSizeBytes)
-        /*assert(
-          bytesDecompressed == expectedUncompressedSizeBytes,
-          f"While decompressing lz4, expected output to be $expectedUncompressedSizeBytes but got $bytesDecompressed"
-        )*/
+        lz4Decompressor.decompress(input, output, expectedUncompressedSizeBytes)
         output
       }
       case None =>

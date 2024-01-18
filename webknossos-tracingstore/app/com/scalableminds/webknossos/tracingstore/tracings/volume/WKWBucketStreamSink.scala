@@ -5,7 +5,6 @@ import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{
   ChunkType,
   VoxelType,
-  WKWDataFormat,
   WKWDataFormatHelper,
   WKWFile,
   WKWHeader
@@ -25,7 +24,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper with
     val header = WKWHeader(1, DataLayer.bucketLength, ChunkType.LZ4, voxelType, numChannels)
     bucketStream.flatMap {
       case (bucket, data) if !isAllZero(data) =>
-        val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength)).toString
+        val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength))
         Some(
           NamedFunctionStream(
             filePath,
@@ -33,7 +32,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper with
           ))
       case _ => None
     } ++ mags.map { mag =>
-      NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$headerFileName",
+      NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
                           os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
     }
   }

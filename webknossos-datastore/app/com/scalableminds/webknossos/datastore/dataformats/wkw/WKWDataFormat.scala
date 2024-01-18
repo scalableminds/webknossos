@@ -7,12 +7,9 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.datastore.services.{DataSourceImportReport, DataSourceImporter}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{VoxelType, WKWHeader}
 import net.liftweb.common.{Box, Failure, Full}
 
 object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
-
-  val FILENAME_HEADER_WKW = "header.wkw"
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(
       implicit report: DataSourceImportReport[Path]): Box[DataLayer] =

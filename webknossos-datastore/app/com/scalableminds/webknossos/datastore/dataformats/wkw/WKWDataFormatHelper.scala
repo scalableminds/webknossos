@@ -1,17 +1,16 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
-import net.liftweb.common.{Box, Failure, Full}
 
 trait WKWDataFormatHelper {
 
   val dataFileExtension: String = "wkw"
-  val headerFileName: String = s"header.$dataFileExtension"
+  val FILENAME_HEADER_WKW: String = s"header.$dataFileExtension"
 
   protected def wkwFilePath(cube: CubePosition): String =
-    wkwFilePath(cube.x, cube.y, cube.z)
+    f"${cube.mag.toMagLiteral(allowScalar = true)}/${wkwFilePath(cube.x, cube.y, cube.z)}"
 
   protected def wkwFilePath(x: Int, y: Int, z: Int): String =
     f"z$z/y$y/x$x.$dataFileExtension"

@@ -19,7 +19,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     (for {
       resolutions <- exploreResolutions(baseDir)
       ((voxelType, voxelSize), wkwResolutions) <- extractHeaderParameters(resolutions)
-      elementClass <- voxelTypeToElementClass(voxelType, voxelSize)
+      elementClass <- VoxelType.toElementClass(voxelType, voxelSize)
     } yield {
       val category = previous.map(_.category).getOrElse(guessLayerCategory(name, elementClass))
       val boundingBox = previous

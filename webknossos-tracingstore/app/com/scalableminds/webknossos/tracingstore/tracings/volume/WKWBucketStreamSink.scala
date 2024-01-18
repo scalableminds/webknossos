@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{
   ChunkType,
+  VoxelType,
   WKWDataFormat,
   WKWDataFormatHelper,
   WKWFile,
@@ -20,7 +21,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper with
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
-    val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
+    val (voxelType, numChannels) = VoxelType.fromElementClass(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, ChunkType.LZ4, voxelType, numChannels)
     bucketStream.flatMap {
       case (bucket, data) if !isAllZero(data) =>

@@ -28,7 +28,7 @@ export type VolumeTracingStats = {
 
 export type TracingStats = SkeletonTracingStats | VolumeTracingStats;
 
-export type CombinedTracingStats = SkeletonTracingStats & VolumeTracingStats;
+export type CombinedTracingStats = (SkeletonTracingStats | {}) & (VolumeTracingStats | {});
 
 export function getStats(
   tracing: Tracing,
@@ -60,13 +60,13 @@ export function getStats(
 }
 
 export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
-  const aggregatedStats = {
-    treeCount: 0,
-    nodeCount: 0,
-    edgeCount: 0,
-    branchPointCount: 0,
-    segmentCount: 0,
-  };
+  const aggregatedStats: {
+    treeCount?: number;
+    nodeCount?: number;
+    edgeCount?: number;
+    branchPointCount?: number;
+    segmentCount?: number;
+  } = {};
 
   if (tracing.skeleton) {
     const skeletonStats = getStats(tracing, "skeleton", tracing.skeleton.tracingId);
@@ -82,6 +82,9 @@ export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
   for (const volumeTracing of tracing.volumes) {
     const volumeStats = getStats(tracing, "volume", volumeTracing.tracingId);
     if (volumeStats && "segmentCount" in volumeStats) {
+      if (aggregatedStats.segmentCount == null) {
+        aggregatedStats.segmentCount = 0;
+      }
       aggregatedStats.segmentCount += volumeStats.segmentCount;
     }
   }
@@ -92,13 +95,13 @@ export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
 export function getCombinedStatsFromServerAnnotation(
   annotation: APIAnnotationInfo,
 ): CombinedTracingStats {
-  const aggregatedStats = {
-    treeCount: 0,
-    nodeCount: 0,
-    edgeCount: 0,
-    branchPointCount: 0,
-    segmentCount: 0,
-  };
+  const aggregatedStats: {
+    treeCount?: number;
+    nodeCount?: number;
+    edgeCount?: number;
+    branchPointCount?: number;
+    segmentCount?: number;
+  } = {};
 
   for (const annotationLayer of annotation.annotationLayers) {
     const { stats } = annotationLayer;
@@ -110,6 +113,10 @@ export function getCombinedStatsFromServerAnnotation(
       aggregatedStats.edgeCount = edgeCount;
       aggregatedStats.branchPointCount = branchPointCount;
     } else if ("segmentCount" in stats) {
+      if (aggregatedStats.segmentCount == null) {
+        aggregatedStats.segmentCount = 0;
+      }
+
       aggregatedStats.segmentCount += stats.segmentCount;
     }
   }

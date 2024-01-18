@@ -209,7 +209,6 @@ export function AnnotationStats({
   stats: CombinedTracingStats;
   asInfoBlock: boolean;
 }) {
-  const { treeCount, nodeCount, edgeCount, branchPointCount, segmentCount } = stats;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
 
   return (
@@ -217,50 +216,54 @@ export function AnnotationStats({
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
-          <Tooltip
-            placement="left"
-            title={
-              <>
-                <p>Trees: {treeCount}</p>
-                <p>Nodes: {nodeCount}</p>
-                <p>Edges: {edgeCount}</p>
-                <p>Branchpoints: {branchPointCount}</p>
-              </>
-            }
-          >
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-skeletons.svg"
-                  alt="Skeletons"
-                />
-              </td>
-              <td>
-                {treeCount} {formatLabel("Trees")}
-              </td>
-            </tr>
-          </Tooltip>
-          <Tooltip
-            placement="left"
-            title={`${segmentCount} Segments – Only segments that were manually registered (either brushed or
-                            interacted with) are counted in this statistic. Segmentation layers
-                            created from automated workflows (also known as fallback layers) are not
-                            considered currently.`}
-          >
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-segments.svg"
-                  alt="Segments"
-                />
-              </td>
-              <td>
-                {segmentCount} {formatLabel("Segments")}
-              </td>
-            </tr>
-          </Tooltip>
+          {"treeCount" in stats ? (
+            <Tooltip
+              placement="left"
+              title={
+                <>
+                  <p>Trees: {stats.treeCount}</p>
+                  <p>Nodes: {stats.nodeCount}</p>
+                  <p>Edges: {stats.edgeCount}</p>
+                  <p>Branchpoints: {stats.branchPointCount}</p>
+                </>
+              }
+            >
+              <tr>
+                <td>
+                  <img
+                    className="info-tab-icon"
+                    src="/assets/images/icon-skeletons.svg"
+                    alt="Skeletons"
+                  />
+                </td>
+                <td>
+                  {stats.treeCount} {formatLabel("Trees")}
+                </td>
+              </tr>
+            </Tooltip>
+          ) : null}
+          {"segmentCount" in stats ? (
+            <Tooltip
+              placement="left"
+              title={`${stats.segmentCount} Segments – Only segments that were manually registered (either brushed or
+                                      interacted with) are counted in this statistic. Segmentation layers
+                                      created from automated workflows (also known as fallback layers) are not
+                                      considered currently.`}
+            >
+              <tr>
+                <td>
+                  <img
+                    className="info-tab-icon"
+                    src="/assets/images/icon-segments.svg"
+                    alt="Segments"
+                  />
+                </td>
+                <td>
+                  {stats.segmentCount} {formatLabel("Segments")}
+                </td>
+              </tr>
+            </Tooltip>
+          ) : null}
         </tbody>
       </table>
     </div>

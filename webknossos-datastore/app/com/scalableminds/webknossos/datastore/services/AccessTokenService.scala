@@ -77,6 +77,13 @@ trait AccessTokenService {
     accessAnswersCache.getOrLoad((accessRequest, token),
                                  _ => remoteWebKnossosClient.requestUserAccess(token, accessRequest))
 
+  def assertUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
+      _ <- Fox.bool2Fox(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
+    } yield ()
+
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
                                            block: => Future[Result]): Future[Result] =
     userAccessAnswer match {

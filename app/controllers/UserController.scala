@@ -64,6 +64,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(request.identity._id),
+          isForOwnDashboard = true,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
@@ -172,9 +173,11 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userIdValidated),
+          isForOwnDashboard = false,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
         jsonList = annotations.map(annotationService.writeCompactInfo)

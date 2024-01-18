@@ -113,7 +113,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val cumsumPath =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.datasetName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(cumsumFileName)
@@ -206,7 +206,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
-        dataSetName = dataSetName,
+        datasetName = dataSetName,
         trees = trees
       )
       val duration = System.nanoTime() - startTime
@@ -233,7 +233,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val hdfFile =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.datasetName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")

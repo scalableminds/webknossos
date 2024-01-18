@@ -78,13 +78,13 @@ class MappingSettingsView extends React.Component<Props, State> {
 
   componentDidMount() {
     if (this.props.isMappingEnabled) {
-      this.refreshLayerMappings();
+      this.ensureMappingsAreLoaded();
     }
   }
 
   componentDidUpdate(prevProps: Props) {
     if (this.props.isMappingEnabled !== prevProps.isMappingEnabled) {
-      this.refreshLayerMappings();
+      this.ensureMappingsAreLoaded();
     }
   }
 
@@ -106,14 +106,10 @@ class MappingSettingsView extends React.Component<Props, State> {
     if (document.activeElement) document.activeElement.blur();
   };
 
-  async refreshLayerMappings() {
+  async ensureMappingsAreLoaded() {
     const { segmentationLayer } = this.props;
 
     if (!segmentationLayer) {
-      return;
-    }
-
-    if (this.props.segmentationLayer?.mappings != null) {
       return;
     }
 
@@ -122,7 +118,7 @@ class MappingSettingsView extends React.Component<Props, State> {
 
   handleSetMappingEnabled = (shouldMappingBeEnabled: boolean): void => {
     if (shouldMappingBeEnabled) {
-      this.refreshLayerMappings();
+      this.ensureMappingsAreLoaded();
     }
 
     this.setState({

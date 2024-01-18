@@ -409,7 +409,6 @@ function VolumeTracingReducer(
       });
     }
     case "SET_MAPPING_IS_PINNED": {
-      console.log("pinning mapping", volumeTracing.mappingName);
       if (volumeTracing.mappingIsPinned) return state;
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {

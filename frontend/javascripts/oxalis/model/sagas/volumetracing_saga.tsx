@@ -692,8 +692,6 @@ export function* diffVolumeTracing(
     }
 
     if (
-      // Use single = comparison here to ensure that the mapping name is only updated when the string changes and not when changed from undefined to null.
-      //prevVolumeTracing.mappingName != volumeTracing.mappingName ||
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
       prevVolumeTracing.mappingIsPinned !== volumeTracing.mappingIsPinned
     ) {

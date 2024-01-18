@@ -446,6 +446,9 @@ export type APIAnnotationInfo = {
   readonly modified: number;
   readonly id: string;
   readonly name: string;
+  // Not used by the front-end anymore, but the
+  // backend still serves this for backward-compatibility reasons.
+  readonly stats?: SkeletonTracingStats | {};
   readonly state: string;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;

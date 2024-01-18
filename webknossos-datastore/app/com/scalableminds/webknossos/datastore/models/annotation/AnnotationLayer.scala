@@ -14,7 +14,7 @@ case class AnnotationLayer(
     tracingId: String,
     typ: AnnotationLayerType,
     name: String,
-    statistics: JsObject,
+    stats: JsObject,
 )
 
 object AnnotationLayerStatistics {

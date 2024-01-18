@@ -41,6 +41,7 @@ const initialState: { save: SaveState; activeUser: APIUser } = {
       totalActionCount: 0,
     },
   },
+  tracing: {},
 };
 test("Save should add update actions to the queue", (t) => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];

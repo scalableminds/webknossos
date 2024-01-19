@@ -275,12 +275,17 @@ function _getPosition(flycam: Flycam): Vector3 {
 
 export function getAdditionalCoordinatesAsString(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  separator: string = ";",
 ): string {
   if (additionalCoordinates != null && additionalCoordinates.length > 0) {
     return additionalCoordinates
       ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b, ";"), "") as string;
+      .reduce((a: string, b: string) => a.concat(b, separator), "")
+      .slice(0, -1 * separator.length);
   }
+  console.log(
+    "hey, make sure ND meshes are still working after changing getAdditionalCoordinatesAsString",
+  );
   return "";
 }
 

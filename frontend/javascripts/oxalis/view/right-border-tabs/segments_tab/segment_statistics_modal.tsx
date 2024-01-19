@@ -37,7 +37,8 @@ type Props = {
 };
 
 type SegmentInfo = {
-  additionalCoords?: string;
+  key: number;
+  additionalCoordinates: string;
   segmentId: number;
   segmentName: string;
   groupId: number | undefined | null;
@@ -46,7 +47,9 @@ type SegmentInfo = {
   formattedSize: string;
   volumeInVoxel: number;
   boundingBoxTopLeft: Vector3;
+  boundingBoxTopLeftAsString: string;
   boundingBoxPosition: Vector3;
+  boundingBoxPositionAsString: string;
 };
 
 const exportStatisticsToCSV = (
@@ -62,7 +65,7 @@ const exportStatisticsToCSV = (
     .map(
       (row) =>
         [
-          row.additionalCoords,
+          row.additionalCoordinates,
           row.segmentId,
           row.segmentName,
           row.groupId,
@@ -110,16 +113,14 @@ export function SegmentStatisticsModal({
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
   const hasAdditionalCoords = additionalCoordinates != null && additionalCoordinates.length > 0;
-  const additionalCoordinateStringForModal = hasAdditionalCoords
-    ? additionalCoordinates
-        ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-        .reduce((a: string, b: string) => a.concat(b, ", "), "")
-        .slice(0, -2)
-    : "";
+  const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
+    additionalCoordinates,
+    ", ",
+  );
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
-      const segmentStatisticsObjects = await Promise.all([
+      const segmentStatisticsObjects: Array<SegmentInfo> | string = await Promise.all([
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
@@ -157,7 +158,7 @@ export function SegmentStatisticsModal({
               currentSegmentSizeInVx,
             );
             const currentGroupId = getGroupIdForSegment(currentSegment);
-            const segmentStateObject = {
+            const segmentStateObject: SegmentInfo = {
               key: currentSegment.id,
               additionalCoordinates: additionalCoordStringForCsv,
               segmentId: currentSegment.id,

@@ -1,4 +1,4 @@
-import akka.actor.{ActorSystem, Props}
+import org.apache.pekko.actor.{ActorSystem, Props}
 import cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService

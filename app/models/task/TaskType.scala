@@ -185,5 +185,5 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield count
 
   override def deleteOne(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    deleteOneWithNameSuffix(taskTypeId, nameColumn = "description")
+    deleteOneWithNameSuffix(taskTypeId, nameColumn = "summary")
 }

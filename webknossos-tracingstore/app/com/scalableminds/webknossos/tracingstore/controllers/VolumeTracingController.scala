@@ -327,7 +327,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-            _ <- bool2Fox(tracing.mappingIsPinned.getOrElse(false)) ?~> "annotation.mappingIsPinned"
+            _ <- assertMappingIsNotPinned(tracing)
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(
               baseMappingName = tracingMappingName)
@@ -357,6 +357,9 @@ class VolumeTracingController @Inject()(
         }
       }
     }
+
+  private def assertMappingIsNotPinned(volumeTracing: VolumeTracing): Fox[Unit] =
+    bool2Fox(!volumeTracing.mappingIsPinned.getOrElse(false)) ?~> "annotation.mappingIsPinned"
 
   def agglomerateGraphMinCut(token: Option[String], tracingId: String): Action[MinCutParameters] =
     Action.async(validateJson[MinCutParameters]) { implicit request =>

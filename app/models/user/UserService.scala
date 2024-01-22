@@ -372,21 +372,21 @@ class UserService @Inject()(conf: WkConf,
     }
   }
 
-  def publicWritesCompact(user: User, requestingUser: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
+  def publicWritesCompact(user: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
       _ <- Fox.successful(())
-      teamsJson = parseArrayLiteral(userCompactInfo.team_ids).indices.map(
+      teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
         idx =>
           Json.obj(
-            "id" -> parseArrayLiteral(userCompactInfo.team_ids)(idx),
-            "name" -> parseArrayLiteral(userCompactInfo.team_names)(idx),
-            "isTeamManager" -> parseArrayLiteral(userCompactInfo.team_managers)(idx).toBoolean
+            "id" -> parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral)(idx),
+            "name" -> parseArrayLiteral(userCompactInfo.teamNamesAsArrayLiteral)(idx),
+            "isTeamManager" -> parseArrayLiteral(userCompactInfo.teamManagersAsArrayLiteral)(idx).toBoolean
         ))
       experienceJson = Json.obj(
-        parseArrayLiteral(userCompactInfo.experienceValues).zipWithIndex
+        parseArrayLiteral(userCompactInfo.experienceValuesAsArrayLiteral).zipWithIndex
           .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
           .map(valueAndIndex =>
-            (parseArrayLiteral(userCompactInfo.experienceDomains)(valueAndIndex._2),
+            (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
              Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
       novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
     } yield {

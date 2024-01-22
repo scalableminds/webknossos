@@ -247,7 +247,7 @@ class UserController @Inject()(userService: UserService,
                                                                      request.identity)
       zipped = users.zip(userCompactInfos)
       js <- Fox.serialCombined(zipped.sortBy(_._1.lastName.toLowerCase))(u =>
-        userService.publicWritesCompact(u._1, request.identity, u._2))
+        userService.publicWritesCompact(u._1, u._2))
     } yield Ok(Json.toJson(js))
   }
 

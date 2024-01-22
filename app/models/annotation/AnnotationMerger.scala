@@ -2,7 +2,11 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
@@ -78,12 +82,14 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
         id =>
           AnnotationLayer(id,
                           AnnotationLayerType.Skeleton,
-                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName)))
+                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName),
+                          AnnotationLayerStatistics.unknown))
       mergedVolumeLayer = mergedVolumeTracingId.map(
         id =>
           AnnotationLayer(id,
                           AnnotationLayerType.Volume,
-                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName)))
+                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName),
+                          AnnotationLayerStatistics.unknown))
     } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
 
   private def allEqual(str: List[String]): Option[String] =

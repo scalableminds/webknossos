@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{BoxImplicits, ByteUtils, JsonHelper}
+import com.scalableminds.util.tools.{BoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,

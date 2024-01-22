@@ -63,12 +63,12 @@ class WKWArray(vaultPath: VaultPath,
       shardPath = vaultPath / shardFilename
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
       chunkIndexInShardIndex <- getChunkIndexInShardIndex(chunkIndex)
-      chunkByteOffset = shardIndexEntryAt(parsedShardIndex)(chunkIndexInShardIndex)
-      nextChunkByteOffset = shardIndexEntryAt(parsedShardIndex)(chunkIndexInShardIndex + 1)
+      chunkByteOffset = shardIndexEntryAt(parsedShardIndex, chunkIndexInShardIndex)
+      nextChunkByteOffset = shardIndexEntryAt(parsedShardIndex, chunkIndexInShardIndex + 1)
       range = Range.Long(chunkByteOffset, nextChunkByteOffset, 1)
     } yield (shardPath, range)
 
-  private def shardIndexEntryAt(shardIndex: Array[Long])(chunkIndexInShardIndex: Int): Long =
+  private def shardIndexEntryAt(shardIndex: Array[Long], chunkIndexInShardIndex: Int): Long =
     if (header.isCompressed) shardIndex(chunkIndexInShardIndex)
     else
       shardIndex(0) + header.numBytesPerChunk.toLong * chunkIndexInShardIndex.toLong

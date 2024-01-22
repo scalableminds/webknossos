@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressed
   CompressedSegmentation64
 }
 import com.sun.jna.ptr.NativeLongByReference
-import org.apache.commons.compress.compressors.lz4.BlockLZ4CompressorInputStream
+import org.apache.commons.compress.compressors.lz4.{BlockLZ4CompressorInputStream, BlockLZ4CompressorOutputStream}
 import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
@@ -86,14 +86,21 @@ class NullCompressor extends Compressor {
 class Lz4Compressor extends Compressor {
   override def getId: String = "LZ4Compressor"
 
-  override def compress(input: Array[Byte]): Array[Byte] = ???
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new BufferedInputStream(new ByteArrayInputStream(input));
+    val os = new ByteArrayOutputStream()
+    val cos = new BlockLZ4CompressorOutputStream(os)
+    try passThrough(is, cos)
+    finally if (cos != null) cos.close()
+    os.toByteArray
+  }
 
   override def decompress(input: Array[Byte]): Array[Byte] = {
     val is = new BufferedInputStream(new ByteArrayInputStream(input));
     val os = new ByteArrayOutputStream()
-    val iis = new BlockLZ4CompressorInputStream(is)
-    try passThrough(iis, os)
-    finally if (iis != null) iis.close()
+    val cis = new BlockLZ4CompressorInputStream(is)
+    try passThrough(cis, os)
+    finally if (cis != null) cis.close()
     os.toByteArray
   }
 

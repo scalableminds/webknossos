@@ -19,13 +19,13 @@ import scala.concurrent.ExecutionContext
 class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val size = Vec3Int.full(bucket.bucketLength)
+    val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
 
     bucket.additionalCoordinates match {
       case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
-        zarrArray.readBytesWithAdditionalCoordinates(size, offset, additionalCoordinates, dataLayer.additionalAxisMap)
-      case _ => zarrArray.readBytesXYZ(size, offset, dataLayer.elementClass == ElementClass.uint24)
+        zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
+      case _ => zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
     }
   }
 

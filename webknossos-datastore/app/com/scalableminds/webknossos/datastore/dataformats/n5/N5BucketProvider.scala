@@ -19,9 +19,9 @@ import scala.concurrent.ExecutionContext
 class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val size = Vec3Int.full(bucket.bucketLength)
+    val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    n5Array.readBytesXYZ(size, offset, dataLayer.elementClass == ElementClass.uint24)
+    n5Array.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
   }
 
   override protected def onFinalize(): Unit = ()

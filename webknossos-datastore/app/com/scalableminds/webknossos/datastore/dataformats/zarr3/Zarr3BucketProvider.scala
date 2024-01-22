@@ -19,9 +19,9 @@ import ucar.ma2.{Array => MultiArray}
 class ZarrCubeHandle(zarrArray: Zarr3Array) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val size = Vec3Int.full(bucket.bucketLength)
+    val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    zarrArray.readBytesXYZ(size, offset, dataLayer.elementClass == ElementClass.uint24)
+    zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
   }
 
   override protected def onFinalize(): Unit = ()

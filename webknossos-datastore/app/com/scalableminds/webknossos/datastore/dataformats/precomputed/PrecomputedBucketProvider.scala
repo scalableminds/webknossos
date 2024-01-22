@@ -19,9 +19,9 @@ import ucar.ma2.{Array => MultiArray}
 class PrecomputedCubeHandle(precomputedArray: PrecomputedArray) extends DataCubeHandle with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val size = Vec3Int.full(bucket.bucketLength)
+    val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-    precomputedArray.readBytesXYZ(size, offset, dataLayer.elementClass == ElementClass.uint24)
+    precomputedArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
   }
 
   override protected def onFinalize(): Unit = ()

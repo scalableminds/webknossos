@@ -16,29 +16,29 @@ class ChunkReader(header: DatasetHeader) {
   private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)
 
   def read(path: VaultPath,
-           chunkSizeFromMetadata: Array[Int],
+           chunkShapeFromMetadata: Array[Int],
            range: Option[NumericRange[Long]],
            useSkipTypingShortcut: Boolean)(implicit ec: ExecutionContext): Fox[MultiArray] =
     for {
-      chunkBytesAndSizeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndSize(path, range).futureBox
-      chunkSize: Array[Int] = chunkBytesAndSizeBox.toOption.flatMap(_._2).getOrElse(chunkSizeFromMetadata)
-      typed <- chunkBytesAndSizeBox.map(_._1) match {
+      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).futureBox
+      chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
+      typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) if useSkipTypingShortcut =>
-          shortcutChunkTyper.wrapAndType(chunkBytes, chunkSize).toFox ?~> "chunk.shortcutWrapAndType.failed"
+          shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
         case Empty if useSkipTypingShortcut =>
-          shortcutChunkTyper.createFromFillValue(chunkSize).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
+          shortcutChunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
         case Full(chunkBytes) =>
-          chunkTyper.wrapAndType(chunkBytes, chunkSize).toFox ?~> "chunk.wrapAndType.failed"
+          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          chunkTyper.createFromFillValue(chunkSize).toFox ?~> "chunk.createFromFillValue.failed"
+          chunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }
     } yield typed
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
-  // and chunk size (optional, only for data formats where each chunk reports its own size, e.g. N5)
-  protected def readChunkBytesAndSize(path: VaultPath, range: Option[NumericRange[Long]])(
+  // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
+  protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)

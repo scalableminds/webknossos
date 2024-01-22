@@ -23,36 +23,36 @@ abstract class ChunkTyper {
   val header: DatasetHeader
 
   def ma2DataType: MADataType
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray]
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray]
 
-  def createFromFillValue(chunkSize: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType, chunkSize, header.fillValueNumber)
+  def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
+    MultiArrayUtils.createFilledArray(ma2DataType, chunkShape, header.fillValueNumber)
 
-  // Chunk size in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk size
+  // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.
-  def chunkSizeOrdered(chunkSize: Array[Int]): Array[Int] =
-    if (header.order == ArrayOrder.F) chunkSize.reverse else chunkSize
+  def chunkShapeOrdered(chunkShape: Array[Int]): Array[Int] =
+    if (header.order == ArrayOrder.F) chunkShape.reverse else chunkShape
 }
 
 class ByteChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.BYTE
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
-    tryo(MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), bytes))
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
+    tryo(MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), bytes))
 }
 
 class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.DOUBLE
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
-      val typedStorage = new Array[Double](chunkSize.product)
+      val typedStorage = new Array[Double](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -60,14 +60,14 @@ class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.SHORT
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
-      val typedStorage = new Array[Short](chunkSize.product)
+      val typedStorage = new Array[Short](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -75,14 +75,14 @@ class IntChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.INT
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
-      val typedStorage = new Array[Int](chunkSize.product)
+      val typedStorage = new Array[Int](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -90,14 +90,14 @@ class LongChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.LONG
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
-      val typedStorage = new Array[Long](chunkSize.product)
+      val typedStorage = new Array[Long](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 
 }
@@ -106,29 +106,29 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   val ma2DataType: MADataType = MADataType.FLOAT
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] =
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
-      val typedStorage = new Array[Float](chunkSize.product)
+      val typedStorage = new Array[Float](chunkShape.product)
       val bais = use(new ByteArrayInputStream(bytes))
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkSize), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
-// In no-partial-copy shortcut, the MultiArray size is never used, so it is just set to flat.
+// In no-partial-copy shortcut, the MultiArray shape is never used, so it is just set to flat.
 // type is always BYTE
 class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.BYTE
 
-  def wrapAndType(bytes: Array[Byte], chunkSize: Array[Int]): Box[MultiArray] = tryo {
-    val flatSize = Array(bytes.length)
-    MultiArray.factory(ma2DataType, flatSize, bytes)
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
+    val flatShape = Array(bytes.length)
+    MultiArray.factory(ma2DataType, flatShape, bytes)
   }
 
-  override def createFromFillValue(chunkSize: Array[Int]): Box[MultiArray] = {
-    val flatSize = Array(chunkSize.product * header.bytesPerElement)
-    MultiArrayUtils.createFilledArray(ma2DataType, flatSize, header.fillValueNumber)
+  override def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] = {
+    val flatShape = Array(chunkShape.product * header.bytesPerElement)
+    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber)
   }
 }

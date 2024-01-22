@@ -75,7 +75,7 @@ const exportStatisticsToCSV = (
           ...row.boundingBoxTopLeft,
           ...row.boundingBoxPosition,
         ]
-          .filter((el) => el != null)
+          .filter((el) => el != null && el.toString().length > 0)
           .map(String) // convert every value to String
           .map((v) => v.replaceAll('"', '""')) // escape double quotes
           .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
@@ -250,6 +250,7 @@ export function SegmentStatisticsModal({
           <>
             {hasAdditionalCoords && (
               <Alert
+                className="segments-stats-info-alert"
                 message={`These stats are only valid for the current additional coordinates ${additionalCoordinateStringForModal}.`}
                 type="info"
                 showIcon

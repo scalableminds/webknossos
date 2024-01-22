@@ -16,15 +16,13 @@ import com.scalableminds.webknossos.datastore.geometry.AdditionalAxisProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
-import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
-    extends LazyLogging
-    with ProtoGeometryImplicits
+    extends ProtoGeometryImplicits
     with VolumeBucketReversionHelper
     with ByteUtils {
 

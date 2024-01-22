@@ -52,6 +52,8 @@ import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_acces
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { SearchProps } from "antd/lib/input";
+import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
+import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -680,46 +682,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           width={150}
-          render={(__, annotation: APIAnnotationInfo) =>
-            "treeCount" in annotation.stats &&
-            "nodeCount" in annotation.stats &&
-            "edgeCount" in annotation.stats ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "30% auto",
-                }}
-              >
-                <span
-                  title="Trees"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-sitemap" />
-                </span>
-                <span>{annotation.stats.treeCount}</span>
-                <span
-                  title="Nodes"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-circle fa-sm" />
-                </span>
-                <span>{annotation.stats.nodeCount}</span>
-                <span
-                  title="Edges"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-arrows-alt-h" />
-                </span>
-                <span>{annotation.stats.edgeCount}</span>
-              </div>
-            ) : null
-          }
+          render={(__, annotation: APIAnnotationInfo) => (
+            <AnnotationStats
+              stats={getCombinedStatsFromServerAnnotation(annotation)}
+              asInfoBlock={false}
+            />
+          )}
         />
         <Column
           title="Tags"

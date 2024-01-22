@@ -7,7 +7,11 @@ import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -283,7 +287,8 @@ class AnnotationController @Inject()(
           List(
             AnnotationLayer(TracingIds.dummyTracingId,
                             AnnotationLayerType.Skeleton,
-                            AnnotationLayer.defaultSkeletonLayerName))
+                            AnnotationLayer.defaultSkeletonLayerName,
+                            AnnotationLayerStatistics.unknown))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)

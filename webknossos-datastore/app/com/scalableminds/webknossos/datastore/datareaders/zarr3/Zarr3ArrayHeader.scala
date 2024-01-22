@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
@@ -56,16 +56,20 @@ case class Zarr3ArrayHeader(
   override def voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
 
   override def isSharded: Boolean =
-    codecs.exists {
-      case _: ShardingCodecConfiguration => true
-      case _                             => false
-    }
+    shardingCodecConfiguration.isDefined
+
+  private def shardingCodecConfiguration = codecs.collectFirst {
+    case s: ShardingCodecConfiguration => s
+  }
 
   def assertValid: Box[Unit] =
     for {
       _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
       _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
+      _ <- shardingCodecConfiguration
+        .map(_.isSupported)
+        .getOrElse(Full(())) ?~! "Sharding codec configuration is not supported"
     } yield ()
 
   def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)

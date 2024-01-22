@@ -34,6 +34,10 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   }
 }
 
+export type BooleanBox = {
+  value: boolean;
+};
+
 export function* getBoundingBoxForViewport(
   position: Vector3,
   currentViewport: OrthoView,
@@ -166,6 +170,7 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
+  wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -196,9 +201,7 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
+  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
       min,
@@ -245,7 +248,7 @@ export function* labelWithVoxelBuffer2D(
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
+  const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
@@ -255,20 +258,27 @@ export function* labelWithVoxelBuffer2D(
     shouldOverwrite,
     overwritableValue,
   );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
+
+  if (wroteVoxels) {
+    // thirdDimensionOfSlice needs to be provided in global coordinates
+    const thirdDimensionOfSlice =
+      topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingResolutions(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      newCellIdValue,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  if (wroteVoxelsBox != null) {
+    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+  }
 }
 
 export function* createVolumeLayer(

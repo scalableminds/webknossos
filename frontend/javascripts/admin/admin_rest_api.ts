@@ -949,7 +949,16 @@ export function getNewestVersionForTracing(
   );
 }
 
-export function getSegmentVolumes(
+/*
+POST        /volume/:tracingId/segmentStatistics/volume         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(token: Option[String], tracingId: String)
+POST        /volume/:tracingId/segmentStatistics/boundingBox    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(token: Option[String], tracingId: String)
+*/
+
+/* 
+POST /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentStatistics/boundingBox 
+  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String) 
+  */
+export function getSegmentVolumesFromTracingStore(
   tracingStoreUrl: string,
   tracingId: string,
   mag: Vector3,
@@ -965,15 +974,36 @@ export function getSegmentVolumes(
   );
 }
 
+//POST /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentStatistics/volume
+//@com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentVolume(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+
+export function getSegmentVolumesFromDataStore(
+  dataStoreUrl: string,
+  dataSetName: string,
+  dataLayerName: string,
+  organizationName: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { mag, segmentIds },
+      },
+    ),
+  );
+}
+
 export function getSegmentBoundingBoxes(
-  tracingStoreUrl: string,
+  requestUrl: string,
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      `${requestUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
       {
         data: { mag, segmentIds },
       },

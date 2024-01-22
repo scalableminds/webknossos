@@ -1,4 +1,4 @@
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumesFromDataStore } from "admin/admin_rest_api";
 import { Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
@@ -12,6 +12,7 @@ import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -79,22 +80,41 @@ const exportStatisticsToCSV = (
 export function SegmentStatisticsModal({
   onCancel,
   tracingId,
-  tracingStoreUrl,
   visibleSegmentationLayer,
   relevantSegments: segments,
   parentGroup,
   groupTree,
 }: Props) {
+  const state = Store.getState();
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = Store.getState().dataset.dataSource.scale;
+  const dataSetScale = state.dataset.dataSource.scale;
+
+  const datasetName = state.dataset.name;
+  const organization = state.dataset.owningOrganization;
+  const dataStoreHost = state.dataset.dataStore.url;
+  const tracingStoreHost = state.tracing.tracingStore.url;
+
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}`;
+
+  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${visibleSegmentationLayer.name}`;
+
+  const maybeVolumeTracing =
+    "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
+      ? getVolumeTracingById(state.tracing, visibleSegmentationLayer.tracingId)
+      : null;
+  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
+  const shouldUseDataStore = maybeVolumeTracing == null;
+
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
       const segmentStatisticsObjects = await Promise.all([
-        getSegmentVolumes(
-          tracingStoreUrl,
-          tracingId,
+        getSegmentVolumesFromDataStore(
+          dataStoreHost,
+          datasetName,
+          visibleSegmentationLayer.name,
+          organization,
           layersFinestResolution,
           segments.map((segment) => segment.id),
         ),

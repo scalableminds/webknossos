@@ -23,7 +23,11 @@ import org.apache.commons.io.IOUtils
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits with LazyLogging {
+trait VolumeDataZipHelper
+    extends WKWDataFormatHelper
+    with VolumeBucketReversionHelper
+    with BoxImplicits
+    with LazyLogging {
 
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
     for {
@@ -51,7 +55,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
               parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                 if (buckets.hasNext) {
                   val data = buckets.next()
-                  if (!isAllZero(data)) {
+                  if (!isRevertedBucket(data)) {
                     block(bucketPosition, data)
                   }
                 }

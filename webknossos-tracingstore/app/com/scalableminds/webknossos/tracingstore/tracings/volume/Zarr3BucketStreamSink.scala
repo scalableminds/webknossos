@@ -22,9 +22,10 @@ import play.api.libs.json.Json
 import scala.concurrent.{ExecutionContext, Future}
 
 // Creates data zip from volume tracings
-class Zarr3BucketStreamSink(val layer: VolumeTracingLayer)
+class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
     extends LazyLogging
     with ProtoGeometryImplicits
+    with VolumeBucketReversionHelper
     with ByteUtils {
 
   private lazy val defaultLayerName = "volumeAnnotationData"
@@ -69,13 +70,20 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer)
       dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )
     bucketStream.flatMap {
-      case (bucket, data) if !isAllZero(data) =>
-        val filePath = zarrChunkFilePath(defaultLayerName, bucket)
-        Some(
-          NamedFunctionStream(
-            filePath,
-            os => Future.successful(os.write(compressor.compress(data)))
-          ))
+      case (bucket, data) =>
+        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedBucket(data)
+        if (skipBucket) {
+          // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
+          None
+        } else {
+          val filePath = zarrChunkFilePath(defaultLayerName, bucket)
+          Some(
+            NamedFunctionStream(
+              filePath,
+              os => Future.successful(os.write(compressor.compress(data)))
+            )
+          )
+        }
       case _ => None
     } ++ mags.map { mag =>
       NamedFunctionStream.fromString(zarrHeaderFilePath(defaultLayerName, mag), Json.prettyPrint(Json.toJson(header)))

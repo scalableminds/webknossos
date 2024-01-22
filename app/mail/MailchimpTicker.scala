@@ -1,6 +1,6 @@
 package mail
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox

@@ -12,11 +12,11 @@ class DatasetSymlinkService @Inject()(dataSourceService: DataSourceService)(impl
     extends FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
-  def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+  def addSymlinksToOtherDatasetLayers(datasetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
     Fox
       .serialCombined(layersToLink) { layerToLink =>
         val layerPath = layerToLink.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
+        val newLayerPath = datasetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
         for {
           _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
           _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."

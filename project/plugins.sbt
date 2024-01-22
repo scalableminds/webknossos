@@ -1,5 +1,5 @@
 // play framework
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.0-RC3")
+addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.1")
 
 // buildinfo routes
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")

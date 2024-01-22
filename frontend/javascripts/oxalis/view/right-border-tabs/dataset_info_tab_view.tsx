@@ -28,7 +28,7 @@ import type { OxalisState, Task, Tracing } from "oxalis/store";
 
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset } from "libs/utils";
+import { mayUserEditDataset, pluralize } from "libs/utils";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
 import Title from "antd/lib/typography/Title";
@@ -237,7 +237,7 @@ export function AnnotationStats({
                   />
                 </td>
                 <td>
-                  {stats.treeCount} {formatLabel("Trees")}
+                  {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
                 </td>
               </tr>
             </Tooltip>
@@ -245,7 +245,10 @@ export function AnnotationStats({
           {"segmentCount" in stats ? (
             <Tooltip
               placement="left"
-              title={`${stats.segmentCount} Segments – Only segments that were manually registered (either brushed or
+              title={`${stats.segmentCount} ${pluralize(
+                "Segment",
+                stats.segmentCount,
+              )} – Only segments that were manually registered (either brushed or
                                       interacted with) are counted in this statistic. Segmentation layers
                                       created from automated workflows (also known as fallback layers) are not
                                       considered currently.`}
@@ -259,7 +262,7 @@ export function AnnotationStats({
                   />
                 </td>
                 <td>
-                  {stats.segmentCount} {formatLabel("Segments")}
+                  {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
                 </td>
               </tr>
             </Tooltip>

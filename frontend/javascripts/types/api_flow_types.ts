@@ -8,7 +8,10 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type {
+  SkeletonTracingStats,
+  TracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,

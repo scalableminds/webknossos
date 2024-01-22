@@ -38,10 +38,10 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
     @tailrec
-    def allOnSameDatasetIter(annotations: List[Annotation], _dataSet: ObjectId): Boolean =
+    def allOnSameDatasetIter(annotations: List[Annotation], datasetId: ObjectId): Boolean =
       annotations match {
         case List()       => true
-        case head :: tail => head._dataset == _dataSet && allOnSameDatasetIter(tail, _dataSet)
+        case head :: tail => head._dataset == datasetId && allOnSameDatasetIter(tail, datasetId)
       }
     annotations match {
       case List() => Fox.successful(true)

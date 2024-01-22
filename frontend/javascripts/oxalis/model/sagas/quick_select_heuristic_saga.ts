@@ -87,9 +87,10 @@ export function* prepareQuickSelect(
   labeledResolution: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
-  const activeViewport = yield* select(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport,
-  );
+  const activeViewport =
+    "viewport" in action
+      ? action.viewport
+      : yield* select((state: OxalisState) => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");

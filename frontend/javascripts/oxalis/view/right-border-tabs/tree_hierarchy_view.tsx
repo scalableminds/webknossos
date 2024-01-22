@@ -21,7 +21,7 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
+import { OrthoViews, TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -874,7 +874,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setTreeTypeAction(treeId, type));
   },
   onComputeSAMForSkeleton(treeId: number) {
-    dispatch(computeSAMForSkeletonAction(treeId));
+    dispatch(computeSAMForSkeletonAction(treeId, OrthoViews.PLANE_XY));
   },
 });
 

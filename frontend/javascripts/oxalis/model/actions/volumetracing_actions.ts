@@ -370,10 +370,11 @@ export const computeQuickSelectForRectAction = (
     quickSelectGeometry,
   } as const);
 
-export const computeSAMForSkeletonAction = (treeId: number) =>
+export const computeSAMForSkeletonAction = (treeId: number, viewport: OrthoView) =>
   ({
     type: "COMPUTE_SAM_FOR_SKELETON",
     treeId,
+    viewport,
   } as const);
 
 export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>

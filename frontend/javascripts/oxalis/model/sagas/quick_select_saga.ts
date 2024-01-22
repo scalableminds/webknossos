@@ -21,6 +21,9 @@ import performQuickSelectML, {
 import { AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
+import Dimensions from "../dimensions";
+import createProgressCallback from "libs/progress_callback";
+import { Tree } from "oxalis/store";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -42,28 +45,52 @@ export default function* listenToQuickSelect(): Saga<void> {
             yield* call(performQuickSelectML, action);
           }
         } else {
-          const tree = yield* select(
+          const tree: Tree = yield* select(
             (state) => enforceSkeletonTracing(state.tracing).trees[action.treeId],
           );
+          const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(action.viewport);
+          const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+
+          if (busyBlockingInfo.isBusy) {
+            console.warn(
+              `Ignoring skelton SAM annotation request (reason: ${
+                busyBlockingInfo.reason || "unknown"
+              })`,
+            );
+            return;
+          }
+
+          yield* put(setBusyBlockingInfoAction(true, "Annotating nodes of Tree ..."));
+          const progressCallback = createProgressCallback({
+            pauseDelay: 200,
+            successMessageDelay: 1000,
+            key: "TREE_SAM_ANNOTATION_PROGRESS",
+          });
+          const nodeCount = tree.nodes.size();
+          let currentNodeCount = 1;
           for (const node of tree.nodes.values()) {
-            const position = node.position;
-            const embeddingPrefectTopLeft: Vector3 = [
-              position[0] - 100,
-              position[1] - 100,
-              position[2],
-            ];
-            const embeddingPrefectBottomRight: Vector3 = [
-              position[0] + 100,
-              position[1] + 100,
-              position[2],
-            ];
+            yield* call(
+              progressCallback,
+              false,
+              `Annotating node ${currentNodeCount} of ${nodeCount}...`,
+            );
+            const nodePosition: Vector3 = [...node.position];
+            const embeddingPrefectTopLeft: Vector3 = [...node.position];
+            const embeddingPrefectBottomRight: Vector3 = [...node.position];
+            embeddingPrefectTopLeft[firstDim] -= 100;
+            embeddingPrefectTopLeft[secondDim] -= 100;
+            embeddingPrefectBottomRight[firstDim] += 100;
+            embeddingPrefectBottomRight[secondDim] += 100;
             const nodeSelect: SAMNodeSelect = {
-              nodePosition: position,
+              nodePosition,
               startPosition: embeddingPrefectTopLeft,
               endPosition: embeddingPrefectBottomRight,
+              viewport: action.viewport,
             };
             yield* call(performQuickSelectML, nodeSelect);
+            currentNodeCount++;
           }
+          yield* call(progressCallback, true, "Finished annotating all nodes");
         }
       } catch (ex) {
         Toast.error((ex as Error).toString());

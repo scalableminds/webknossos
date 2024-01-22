@@ -81,6 +81,7 @@ import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   clickSegmentAction,
+  computeSAMForSkeletonAction,
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -414,10 +415,12 @@ function getNodeContextMenuOptions({
   hideMesh,
   setPosition,
   refreshMesh,
+  computeSAMForSkeletonAction,
   useLegacyBindings,
   volumeTracing,
   infoRows,
   allowUpdate,
+  viewport,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
@@ -551,6 +554,13 @@ function getNodeContextMenuOptions({
                     : null,
                 label: "Extract shortest Path to this Node",
               },
+          {
+            key: "annotate-nodes-with-sam",
+            onClick: () => {
+              computeSAMForSkeletonAction(clickedTree.treeId, viewport);
+            },
+            label: "Annotate Nodes with SAM",
+          },
         ]
       : []),
     ...meshItems,
@@ -1565,6 +1575,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
   refreshMesh(layerName: string, segmentId: number) {
     dispatch(refreshMeshAction(layerName, segmentId));
+  },
+  computeSAMForSkeletonAction(treeId: number, activeViewport: OrthoView) {
+    dispatch(computeSAMForSkeletonAction(treeId, activeViewport));
   },
 });
 

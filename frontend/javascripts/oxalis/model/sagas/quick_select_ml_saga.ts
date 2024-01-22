@@ -30,6 +30,7 @@ export type SAMNodeSelect = {
   nodePosition: Vector3;
   startPosition: Vector3;
   endPosition: Vector3;
+  viewport: OrthoView;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -181,12 +182,15 @@ min
 
   // Use intersection-over-union estimates to pick the best mask.
   const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
-  // @ts-ignore
   const sortedScores: Array<[number, number]> = ([...iouPredictions.data] as number[])
-    .map((score, index) => [score, index])
+    .map((score, index) => [score, index] as [number, number])
     .sort((a, b) => b[0] - a[0]);
-  const bestMaskIndex = sortedScores[0][0] != 3 ? sortedScores[0][0] : sortedScores[1][0]; //iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
-  debugger;
+  // Avoid picking prediction 3 as this seems to always select the full user bounding box.
+  const bestMaskIndex = sortedScores[0][1] !== 3 ? sortedScores[0][1] : sortedScores[1][1];
+  // @ts-ignore
+  // const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
+  // const bestMaskIndex = 1;
+  // debugger;
   console.log("bestIndex", bestMaskIndex);
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
   // Fill the mask data with a for loop (slicing/mapping would incur additional

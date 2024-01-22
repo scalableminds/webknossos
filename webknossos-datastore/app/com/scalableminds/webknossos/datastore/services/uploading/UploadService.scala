@@ -6,6 +6,7 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
@@ -235,7 +236,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         _ <- Fox.successful(())
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
-          case UploadedDataSourceType.ZARR            => exploreLocalDatasource(unpackToDir, dataSourceId)
+          case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED =>
+            exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.EXPLORED        => Fox.successful(())
           case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
           case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
@@ -245,9 +247,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       } yield ()
     }
 
-  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
+  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId, typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
-      _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
@@ -354,27 +356,28 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       UploadedDataSourceType.EXPLORED
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
     } else {
       UploadedDataSourceType.WKW
     }
 
-  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+  private def hasFileName(fileNames: List[String], dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     for {
-      listing: Seq[Path] <- PathUtils.listFilesRecursive(
-        dataSourceDir,
-        maxDepth = maxDepth,
-        silent = false,
-        filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
+                                                         maxDepth = maxDepth,
+                                                         silent = false,
+                                                         filters = p => fileNames.contains(p.getFileName.toString))
     } yield listing.nonEmpty
 
+  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    hasFileName(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
+
+  private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path): Box[Boolean] =
+    hasFileName(List(FILENAME_INFO), dataSourceDir, 1)
+
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
-    for {
-      listing: Seq[Path] <- PathUtils.listFilesRecursive(
-        dataSourceDir,
-        maxDepth = 1,
-        silent = false,
-        filters = p => p.getFileName.toString == FILENAME_DATASOURCE_PROPERTIES_JSON)
-    } yield listing.nonEmpty
+    hasFileName(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
 
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {
@@ -501,5 +504,5 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW = Value
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED = Value
 }

@@ -71,7 +71,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     for {
       dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
                                                                                              datasetName,
@@ -208,8 +208,8 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
     val mappingName = mappingNameOpt.getOrElse("")
     for {
       rows <- run(q"""SELECT image
-                     FROM webknossos.dataSet_thumbnails
-                     WHERE _dataSet = $datasetId
+                     FROM webknossos.dataset_thumbnails
+                     WHERE _dataset = $datasetId
                      AND dataLayerName = $layerName
                      AND width = $width
                      AND height = $height
@@ -229,10 +229,10 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                       mag1BoundingBox: BoundingBox): Fox[Unit] = {
     val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with emptystring
     for {
-      _ <- run(q"""INSERT INTO webknossos.dataSet_thumbnails (
-            _dataSet, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)
+      _ <- run(q"""INSERT INTO webknossos.dataset_thumbnails (
+            _dataset, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)
                    VALUES($datasetId, $layerName, $width, $height, $mappingName, $image, $mimeType, $mag, $mag1BoundingBox, ${Instant.now})
-                   ON CONFLICT (_dataSet, dataLayerName, width, height, mappingName)
+                   ON CONFLICT (_dataset, dataLayerName, width, height, mappingName)
                    DO UPDATE SET
                      image = $image,
                      mimeType = $mimeType,
@@ -245,12 +245,12 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
 
   def removeAllForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.dataSet_thumbnails WHERE _dataSet = $datasetId".asUpdate)
+      _ <- run(q"DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $datasetId".asUpdate)
     } yield ()
 
   def removeAllExpired(expiryDuration: FiniteDuration): Fox[Unit] =
     for {
-      num <- run(q"DELETE FROM webknossos.dataSet_thumbnails WHERE created < ${Instant.now - expiryDuration}".asUpdate)
+      num <- run(q"DELETE FROM webknossos.dataset_thumbnails WHERE created < ${Instant.now - expiryDuration}".asUpdate)
       _ = logger.info(s"removed $num expired thumbnails")
     } yield ()
 }

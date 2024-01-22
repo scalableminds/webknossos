@@ -1,6 +1,6 @@
 package controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.services.AuthenticatorResult
@@ -258,15 +258,15 @@ class AuthenticationController @Inject()(
   }
 
   private def accessibleBySwitchingForSuperUser(organizationNameOpt: Option[String],
-                                                dataSetNameOpt: Option[String],
+                                                datasetNameOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    (organizationNameOpt, dataSetNameOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
+    (organizationNameOpt, datasetNameOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(organizationName), Some(datasetName), None, None) =>
         for {
           organization <- organizationDAO.findOneByName(organizationName)
-          _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
+          _ <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)
         } yield organization
       case (None, None, Some(annotationId), None) =>
         for {
@@ -286,7 +286,7 @@ class AuthenticationController @Inject()(
 
   private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
                                                 organizationNameOpt: Option[String],
-                                                dataSetNameOpt: Option[String],
+                                                datasetNameOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] =
     for {
@@ -295,7 +295,7 @@ class AuthenticationController @Inject()(
         identity =>
           canAccessDatasetOrAnnotationOrWorkflow(identity,
                                                  organizationNameOpt,
-                                                 dataSetNameOpt,
+                                                 datasetNameOpt,
                                                  annotationIdOpt,
                                                  workflowHashOpt))
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
@@ -303,13 +303,13 @@ class AuthenticationController @Inject()(
 
   private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
                                                      organizationNameOpt: Option[String],
-                                                     dataSetNameOpt: Option[String],
+                                                     datasetNameOpt: Option[String],
                                                      annotationIdOpt: Option[String],
                                                      workflowHashOpt: Option[String]): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
-    (organizationNameOpt, dataSetNameOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
-        canAccessDataset(ctx, organizationName, dataSetName)
+    (organizationNameOpt, datasetNameOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(organizationName), Some(datasetName), None, None) =>
+        canAccessDataset(ctx, organizationName, datasetName)
       case (None, None, Some(annotationId), None) =>
         canAccessAnnotation(user, ctx, annotationId)
       case (None, None, None, Some(workflowHash)) =>
@@ -318,10 +318,10 @@ class AuthenticationController @Inject()(
     }
   }
 
-  private def canAccessDataset(ctx: DBAccessContext, organizationName: String, dataSetName: String): Fox[Boolean] = {
+  private def canAccessDataset(ctx: DBAccessContext, organizationName: String, datasetName: String): Fox[Boolean] = {
     val foundFox = for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
+      _ <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx)
     } yield ()
     foundFox.futureBox.map(_.isDefined)
   }

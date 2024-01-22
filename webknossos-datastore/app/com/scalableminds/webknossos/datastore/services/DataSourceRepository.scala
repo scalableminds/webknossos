@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
@@ -20,10 +20,10 @@ class DataSourceRepository @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
+  def getDataSourceAndDataLayer(organizationName: String, datasetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {
-      dataSource <- findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound")
+      dataSource <- findUsable(DataSourceId(datasetName, organizationName)).toFox ?~> Messages("dataSource.notFound")
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 

@@ -408,13 +408,13 @@ class VolumeTracingService @Inject()(
   def duplicate(tracingId: String,
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
-                dataSetBoundingBox: Option[BoundingBox],
+                datasetBoundingBox: Option[BoundingBox],
                 resolutionRestrictions: ResolutionRestrictions,
                 editPosition: Option[Vec3Int],
                 editRotation: Option[Vec3Double],
                 boundingBox: Option[BoundingBox],
                 mappingName: Option[String]): Fox[(String, VolumeTracing)] = {
-    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
+    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, datasetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
     val newTracing = tracingWithResolutionRestrictions.copy(
       createdTimestamp = System.currentTimeMillis(),
@@ -437,8 +437,8 @@ class VolumeTracingService @Inject()(
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
                                                fromTask: Boolean,
-                                               dataSetBoundingBox: Option[BoundingBox]): VolumeTracing =
-    if (fromTask && dataSetBoundingBox.isDefined) {
+                                               datasetBoundingBox: Option[BoundingBox]): VolumeTracing =
+    if (fromTask && datasetBoundingBox.isDefined) {
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
@@ -447,7 +447,7 @@ class VolumeTracingService @Inject()(
                                 Some(true),
                                 Some(getRandomColor),
                                 tracing.boundingBox))
-        .withBoundingBox(dataSetBoundingBox.get)
+        .withBoundingBox(datasetBoundingBox.get)
     } else tracing
 
   private def duplicateData(sourceId: String,

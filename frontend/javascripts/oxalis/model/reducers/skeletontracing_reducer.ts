@@ -389,6 +389,27 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_TREE_TYPE": {
+          const { treeType, treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map((tree) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        type: {
+                          $set: treeType,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
         case "SHUFFLE_ALL_TREE_COLORS": {
           const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
           return update(state, {

@@ -123,7 +123,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       rList <- run(q"""select o.name
               from webknossos.annotations_ a
-              join webknossos.datasets_ d on a._dataSet = d._id
+              join webknossos.datasets_ d on a._dataset = d._id
               join webknossos.organizations_ o on d._organization = o._id
               where a._id = $annotationId""".as[String])
       r <- rList.headOption.toFox
@@ -145,7 +145,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataSet = $datasetId".asUpdate)
+      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".asUpdate)
     } yield ()
 
   def updateLastStorageScanTime(organizationId: ObjectId, time: Instant): Fox[Unit] =
@@ -161,17 +161,17 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                  SELECT _id
                  FROM webknossos.datasets_
                  WHERE _organization = $organizationId
-                 AND name = ${entry.dataSetName}
+                 AND name = ${entry.datasetName}
                  LIMIT 1
                )
                INSERT INTO webknossos.organization_usedStorage(
-                  _organization, _dataStore, _dataSet, layerName,
+                  _organization, _dataStore, _dataset, layerName,
                   magOrDirectoryName, usedStorageBytes, lastUpdated)
                SELECT
                 $organizationId, $dataStoreName, ds._id, ${entry.layerName},
                 ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW()
                FROM ds
-               ON CONFLICT (_organization, _dataStore, _dataSet, layerName, magOrDirectoryName)
+               ON CONFLICT (_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
                DO UPDATE
                  SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
                """.asUpdate)

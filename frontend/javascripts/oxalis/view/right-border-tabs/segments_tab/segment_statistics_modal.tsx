@@ -105,7 +105,6 @@ export function SegmentStatisticsModal({
       : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
   const shouldUseDataStore = maybeVolumeTracing == null;
-
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();

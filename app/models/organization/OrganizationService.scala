@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO}
+import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
+                                    userService: UserService,
                                     rpc: RPC,
                                     conf: WkConf,
 )(implicit ec: ExecutionContext)
@@ -152,8 +153,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       for {
         owner <- userDAO.findOwnerByOrg(organization._id)
-        ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
-        ownerEmail = ownerMultiUser.email
+        ownerEmail <- userService.emailFor(owner)
       } yield ownerEmail
     }
 

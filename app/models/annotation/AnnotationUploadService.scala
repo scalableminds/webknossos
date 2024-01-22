@@ -28,9 +28,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       file: File,
       name: String,
       overwritingDatasetName: Option[String],
-      userToken: Option[String],
       isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
-    extractFromNml(new FileInputStream(file), name, overwritingDatasetName, isTaskUpload, userToken)
+    extractFromNml(new FileInputStream(file), name, overwritingDatasetName, isTaskUpload)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
     case Full(failure) =>
@@ -43,9 +42,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       name: String,
       overwritingDatasetName: Option[String],
       isTaskUpload: Boolean,
-      userToken: Option[String],
       basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDatasetName, isTaskUpload, basePath, None, userToken) match {
+    NmlParser.parse(name, inputStream, overwritingDatasetName, isTaskUpload, basePath, None) match {
       case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
@@ -57,8 +55,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       zipFileName: Option[String] = None,
       useZipName: Boolean,
       overwritingDatasetName: Option[String],
-      isTaskUpload: Boolean,
-      userToken: Option[String])(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult = {
+      isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var parseResults = List.empty[NmlParseResult]
@@ -70,7 +67,6 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
                          filename.toString,
                          overwritingDatasetName,
                          isTaskUpload,
-                         userToken,
                          Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
@@ -146,11 +142,9 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     }
   }
 
-  <<<<<<< HEAD
   def extractFromFiles(
       files: Seq[(File, String)],
       useZipName: Boolean,
-      userToken: Option[String],
       overwritingDatasetName: Option[String] = None,
       isTaskUpload: Boolean = false)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult =
     files.foldLeft(NmlResults.MultiNmlParseResult()) {
@@ -161,33 +155,31 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
               if (allZips)
                 acc.combineWith(
                   extractFromFiles(
-                    extractFromZip(file, Some(name), useZipName, overwritingDatasetName, isTaskUpload, userToken).otherFiles.toSeq
+                    extractFromZip(file, Some(name), useZipName, overwritingDatasetName, isTaskUpload).otherFiles.toSeq
                       .map(tuple => (tuple._2, tuple._1)),
                     useZipName,
                     overwritingDatasetName,
-                    userToken,
                     isTaskUpload
                   ))
               else
                 acc.combineWith(
-                  extractFromFile(file, name, useZipName, overwritingDatasetName, userToken, isTaskUpload))
+                  extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
             case _ => acc
           } else
-          acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, userToken, isTaskUpload))
+          acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
     }
 
   def extractFromFile(file: File,
                       fileName: String,
                       useZipName: Boolean,
                       overwritingDatasetName: Option[String],
-                      userToken: Option[String],
                       isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
-      extractFromZip(file, Some(fileName), useZipName, overwritingDatasetName, isTaskUpload, userToken)
+      extractFromZip(file, Some(fileName), useZipName, overwritingDatasetName, isTaskUpload)
     } else {
       logger.trace("Extracting from Nml file")
-      val parseResult = extractFromNmlFile(file, fileName, overwritingDatasetName, userToken, isTaskUpload)
+      val parseResult = extractFromNmlFile(file, fileName, overwritingDatasetName, isTaskUpload)
       MultiNmlParseResult(List(parseResult), Map.empty)
     }
 

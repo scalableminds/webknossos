@@ -100,7 +100,6 @@ class AnnotationIOController @Inject()(
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles,
                                                    useZipName = true,
-                                                   userToken = urlOrHeaderToken(None, request),
                                                    overwritingDatasetName)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)

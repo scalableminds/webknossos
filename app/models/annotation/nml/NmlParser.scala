@@ -46,8 +46,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             overwritingDatasetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None,
-            remoteDataStoreClient: Option[WKRemoteDataStoreClient],
-            userToken: Option[String])(
+            remoteDataStoreClient: Option[WKRemoteDataStoreClient])(
       implicit m: MessagesProvider,
       ec: ExecutionContext): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
@@ -76,8 +75,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                   canHaveSegmentIndexOpt(remoteDataStoreClient,
                                          organizationName.getOrElse(""),
                                          datasetName,
-                                         v.fallbackLayerName,
-                                         userToken))
+                                         v.fallbackLayerName))
               .toList)
           .await("NMLParser/parse was changed to return Fox in #7437. Removing this await is tracked in #7551",
                  5 seconds)
@@ -554,8 +552,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def canHaveSegmentIndexOpt(remoteDatastoreClient: Option[WKRemoteDataStoreClient],
                                      organizationName: String,
                                      datasetName: String,
-                                     fallbackLayerName: Option[String],
-                                     userToken: Option[String])(implicit ec: ExecutionContext) =
+                                     fallbackLayerName: Option[String])(implicit ec: ExecutionContext) =
     for {
       canHaveSegmentIndex <- fallbackLayerName match {
         case Some(layerName) =>

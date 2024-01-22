@@ -351,7 +351,7 @@ class AnnotationService @Inject()(
         All of this is skipped if existingAnnotationLayers is empty.
        */
       oldPrecedenceLayer <- fetchOldPrecedenceLayer
-      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "dataStore.notFoundForDataset"
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
         createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))

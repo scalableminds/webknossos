@@ -27,6 +27,13 @@ export type VolumeTracingStats = {
 };
 
 export type TracingStats = SkeletonTracingStats | VolumeTracingStats;
+type TracingStatsHelper = {
+  treeCount?: number;
+  nodeCount?: number;
+  edgeCount?: number;
+  branchPointCount?: number;
+  segmentCount?: number;
+};
 
 export type CombinedTracingStats = (SkeletonTracingStats | {}) & (VolumeTracingStats | {});
 
@@ -60,13 +67,7 @@ export function getStats(
 }
 
 export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
-  const aggregatedStats: {
-    treeCount?: number;
-    nodeCount?: number;
-    edgeCount?: number;
-    branchPointCount?: number;
-    segmentCount?: number;
-  } = {};
+  const aggregatedStats: TracingStatsHelper = {};
 
   if (tracing.skeleton) {
     const skeletonStats = getStats(tracing, "skeleton", tracing.skeleton.tracingId);
@@ -95,13 +96,7 @@ export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
 export function getCombinedStatsFromServerAnnotation(
   annotation: APIAnnotationInfo,
 ): CombinedTracingStats {
-  const aggregatedStats: {
-    treeCount?: number;
-    nodeCount?: number;
-    edgeCount?: number;
-    branchPointCount?: number;
-    segmentCount?: number;
-  } = {};
+  const aggregatedStats: TracingStatsHelper = {};
 
   for (const annotationLayer of annotation.annotationLayers) {
     const { stats } = annotationLayer;

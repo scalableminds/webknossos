@@ -32,7 +32,7 @@ module.exports = function (env = {}) {
         // Use copy plugin to copy *.wasm to output folder.
         { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
         { from: "public/models/*.*", to: "models/[name][ext]" },
-        // For CSP, see https://github.com/gildas-lormeau/zip.js/blob/62126066df4a90fb6048e95aa5f71dcdc6cf9c4a/index.d.ts#L72
+        // For CSP, see https://gildas-lormeau.github.io/zip.js/api/interfaces/Configuration.html#workerScripts
         { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
       ],
     }),

@@ -9,8 +9,8 @@ import java.util
 
 object MultiArrayUtils {
 
-  def createDataBuffer(dataType: ArrayDataType, size: Array[Int]): Object = {
-    val length = size.product
+  def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
+    val length = shape.product
     dataType match {
       case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](length)
       case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](length)
@@ -21,14 +21,14 @@ object MultiArrayUtils {
     }
   }
 
-  def createArrayWithGivenStorage(storage: Any, size: Array[Int]): MultiArray = {
+  def createArrayWithGivenStorage(storage: Any, shape: Array[Int]): MultiArray = {
     val aClass = storage.getClass
     if (!aClass.isArray) throw new Exception("Underlying storage for MultiArray must be array")
-    MultiArray.factory(MADataType.getType(aClass.getComponentType, false), size, storage)
+    MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType, size: Array[Int], fill: Number): Box[MultiArray] = {
-    val array = MultiArray.factory(dataType, size)
+  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): Box[MultiArray] = {
+    val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
     tryo {
       if (fill != null) {
@@ -69,8 +69,8 @@ object MultiArrayUtils {
     */
   @throws[InvalidRangeException]
   def copyRange(offset: Array[Int], source: MultiArray, target: MultiArray): Unit = {
-    val sourceSize: Array[Int] = source.getShape
-    val targetSize: Array[Int] = target.getShape
+    val sourceShape: Array[Int] = source.getShape
+    val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
     for (dimension <- offset.indices) {
@@ -84,8 +84,8 @@ object MultiArrayUtils {
         sourceFirst = 0
         targetFirst = dimOffset * -1
       }
-      val maxSSteps = sourceSize(dimension) - sourceFirst
-      val maxTSteps = targetSize(dimension) - targetFirst
+      val maxSSteps = sourceShape(dimension) - sourceFirst
+      val maxTSteps = targetShape(dimension) - targetFirst
       val maxSteps = Math.min(maxSSteps, maxTSteps)
       val sourceLast = sourceFirst + maxSteps
       val targetLast = targetFirst + maxSteps

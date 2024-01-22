@@ -94,22 +94,22 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[(Long, Long)]] = AlfuCache()
 
-  private def shardSize =
-    header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
-  private def innerChunkSize =
-    header.chunkShape // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
-  private def indexSize =
-    shardSize.zip(innerChunkSize).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
+  private def shardShape =
+    header.outerChunkShape // Only valid for one hierarchy of sharding codecs, describes total shape of a shard (in voxels)
+  private def innerChunkShape =
+    header.chunkShape // Describes shape (in voxels) of a real chunk, that is a chunk that is stored in a shard
+  private def indexShape =
+    shardShape.zip(innerChunkShape).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
 
-  private lazy val chunksPerShard = indexSize.product
+  private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
-    val shardOffset = shardCoordinates.zip(indexSize).map { case (sc, is) => sc * is }
-    indexSize.tails.toList
+    val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
+    indexShape.tails.toList
       .dropRight(1)
       .zipWithIndex
-      .map { case (size, i) => size.tail.product * (chunkIndex(i) - shardOffset(i)) }
+      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
       .sum
   }
 
@@ -158,7 +158,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
       header.datasetShape.map(axisOrder.permuteIndicesReverse),
-      axisOrder.permuteIndicesReverse(header.outerChunkSize),
+      axisOrder.permuteIndicesReverse(header.outerChunkShape),
       header.chunkShape,
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )

@@ -70,7 +70,7 @@ case class Zarr3ArrayHeader(
         .getOrElse(Full(())) ?~! "Sharding codec configuration is not supported"
     } yield ()
 
-  def outerChunkSize: Array[Int] = chunk_grid match {
+  def outerChunkShape: Array[Int] = chunk_grid match {
     case Left(chunkGridSpecification) => chunkGridSpecification.configuration.chunk_shape
     case Right(_)                     => ???
   }
@@ -80,7 +80,7 @@ case class Zarr3ArrayHeader(
       case ShardingCodecConfiguration(chunk_shape, _, _, _) => Some(chunk_shape)
       case _                                                => None
     }.headOption
-    shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
+    shardingCodecInnerChunkSize.getOrElse(outerChunkShape)
   }
 
   // Note: this currently works if only a single transpose codec is present,

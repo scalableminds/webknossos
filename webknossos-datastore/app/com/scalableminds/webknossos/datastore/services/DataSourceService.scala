@@ -122,9 +122,9 @@ class DataSourceService @Inject()(
     } yield (dataSource, report.messages.toList)
   }
 
-  def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {

@@ -31,8 +31,8 @@ class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             multiUserDAO: MultiUserDAO,
                             userExperiencesDAO: UserExperiencesDAO,
-                            userDataSetConfigurationDAO: UserDatasetConfigurationDAO,
-                            userDataSetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
+                            userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
+                            userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -239,7 +239,7 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetViewConfiguration(
+  def updateDatasetViewConfiguration(
       user: User,
       datasetName: String,
       organizationName: String,
@@ -254,14 +254,14 @@ class UserService @Inject()(conf: WkConf,
         case (name, config) =>
           config.asOpt[LayerViewConfiguration] match {
             case Some(viewConfiguration) =>
-              userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+              userDatasetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
                                                                                                    dataset._id,
                                                                                                    name,
                                                                                                    viewConfiguration)
             case None => Fox.successful(())
           }
       }
-      _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
+      _ <- userDatasetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataset._id,
                                                                                    datasetConfiguration)
     } yield ()

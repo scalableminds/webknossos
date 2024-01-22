@@ -94,14 +94,14 @@ class AnnotationIOController @Inject()(
       log() {
         val shouldCreateGroupForEachFile: Boolean =
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
-        val overwritingDataSetName: Option[String] =
+        val overwritingDatasetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles,
                                                    useZipName = true,
                                                    userToken = urlOrHeaderToken(None, request),
-                                                   overwritingDataSetName)
+                                                   overwritingDatasetName)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
@@ -119,7 +119,7 @@ class AnnotationIOController @Inject()(
             // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
             // This is what determines the merging strategy for volume layers
             volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
-            dataset <- findDataSetForUploadedAnnotations(skeletonTracings,
+            dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
                                                          volumeLayersGroupedRaw.flatten.map(_.tracing),
                                                          wkUrl)
             volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset)
@@ -198,7 +198,7 @@ class AnnotationIOController @Inject()(
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
     bool2Fox(parseSuccesses.exists(p => p.skeletonTracing.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"
 
-  private def findDataSetForUploadedAnnotations(
+  private def findDatasetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
       volumeTracings: List[VolumeTracing],
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =

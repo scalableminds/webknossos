@@ -37,9 +37,9 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
   def mergeN(
       newId: ObjectId,
       persistTracing: Boolean,
-      _user: ObjectId,
-      _dataSet: ObjectId,
-      _team: ObjectId,
+      userId: ObjectId,
+      datasetId: ObjectId,
+      teamId: ObjectId,
       typ: AnnotationType,
       annotations: List[Annotation]
   )(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -47,25 +47,25 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, _dataSet, persistTracing)
+        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, datasetId, persistTracing)
       } yield {
         Annotation(
           newId,
-          _dataSet,
+          datasetId,
           None,
-          _team,
-          _user,
+          teamId,
+          userId,
           mergedAnnotationLayers,
           typ = typ
         )
       }
     }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], datasetId: ObjectId, persistTracing: Boolean)(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
-      dataSet <- datasetDAO.findOne(dataSetId)
-      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      dataset <- datasetDAO.findOne(datasetId)
+      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
       skeletonLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Skeleton))
       volumeLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Volume))
       mergedSkeletonTracingId <- mergeSkeletonTracings(tracingStoreClient,

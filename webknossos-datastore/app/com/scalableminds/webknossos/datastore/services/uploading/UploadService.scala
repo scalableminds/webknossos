@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
@@ -68,7 +68,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               runningUploadMetadataStore: DataStoreRedisStore,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
-    extends DataSetDeleter
+    extends DatasetDeleter
     with DirectoryConstants
     with FoxImplicits
     with LazyLogging {
@@ -220,8 +220,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
       _ <- dataSourceRepository.updateDataSource(dataSource)
-      dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
-    } yield (dataSourceId, dataSetSizeBytes)
+      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
+    } yield (dataSourceId, datasetSizeBytes)
   }
 
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
@@ -273,17 +273,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
-                                  dataSetNeedsConversion: Boolean,
+                                  datasetNeedsConversion: Boolean,
                                   label: String): Fox[Unit] =
     result match {
       case Full(_) =>
         Fox.successful(())
       case Empty =>
-        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         logger.warn(s"Error while $label: $msg, $e")
-        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
         for {
           _ <- result ?~> f"Error while $label"

@@ -43,7 +43,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   def parse(name: String,
             nmlInputStream: InputStream,
-            overwritingDataSetName: Option[String],
+            overwritingDatasetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None,
             remoteDataStoreClient: Option[WKRemoteDataStoreClient],
@@ -65,8 +65,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
-        dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
-        organizationName = if (overwritingDataSetName.isDefined) None
+        datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
+        organizationName = if (overwritingDatasetName.isDefined) None
         else parseOrganizationName(parameters \ "experiment")
         canHaveSegmentIndexOpts <- Fox
           .combined(
@@ -75,7 +75,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 v =>
                   canHaveSegmentIndexOpt(remoteDataStoreClient,
                                          organizationName.getOrElse(""),
-                                         dataSetName,
+                                         datasetName,
                                          v.fallbackLayerName,
                                          userToken))
               .toList)
@@ -107,7 +107,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                   None,
                   boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
                   timestamp,
-                  dataSetName,
+                  datasetName,
                   editPosition,
                   editRotation,
                   ElementClass.uint32,
@@ -134,7 +134,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           else
             Some(
               SkeletonTracing(
-                dataSetName,
+                datasetName,
                 treesSplit,
                 timestamp,
                 taskBoundingBox,
@@ -290,11 +290,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             name <- getSingleAttributeOpt(additionalAxisNode, "name")
             indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
             index <- indexStr.toIntOpt
-            minStr <- getSingleAttributeOpt(additionalAxisNode, "min")
-            min <- minStr.toIntOpt
-            maxStr <- getSingleAttributeOpt(additionalAxisNode, "max")
-            max <- maxStr.toIntOpt
-          } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
+            startStr <- getSingleAttributeOpt(additionalAxisNode, "start")
+            start <- startStr.toIntOpt
+            endStr <- getSingleAttributeOpt(additionalAxisNode, "end")
+            end <- endStr.toIntOpt
+          } yield new AdditionalAxisProto(name, index, Vec2IntProto(start, end))
         }
       )
     )
@@ -309,7 +309,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     }
   }
 
-  private def parseDataSetName(nodes: NodeSeq): String =
+  private def parseDatasetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
 
   private def parseDescription(nodes: NodeSeq): String =

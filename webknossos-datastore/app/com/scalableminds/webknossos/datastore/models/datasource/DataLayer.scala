@@ -163,7 +163,7 @@ trait DataLayerLike {
   // This is the default from the DataSource JSON.
   def defaultViewConfiguration: Option[LayerViewConfiguration]
 
-  // This is the default from the DataSet Edit View.
+  // This is the default from the Dataset Edit View.
   def adminViewConfiguration: Option[LayerViewConfiguration]
 
   def coordinateTransformations: Option[List[CoordinateTransformation]]

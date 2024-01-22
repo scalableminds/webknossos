@@ -258,10 +258,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         additionalCoordinates,
         layerName,
       );
-      if (maybeMeshes == null) {
-        throw Error("No mesh data found in state.localSegmentationData.");
-      }
-      if (maybeMeshes[segmentId] == null) {
+      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+        // No meshes exist for the segment id. No need to do anything.
         return state;
       }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
@@ -418,6 +416,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const meshFile = availableMeshFiles.find((el) => el.meshFileName === meshFileName);
       return updateKey2(state, "localSegmentationData", layerName, {
         currentMeshFile: meshFile,
+      });
+    }
+
+    case "SET_SELECTED_SEGMENTS_OR_GROUP": {
+      const { selectedSegments, selectedGroup, layerName } = action;
+      return updateKey2(state, "localSegmentationData", layerName, {
+        selectedIds: { segments: selectedSegments, group: selectedGroup },
       });
     }
 

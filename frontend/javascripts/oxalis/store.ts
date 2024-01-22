@@ -570,7 +570,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string, //layerName
     {
-      //for meshes, the string represents additional coordinates, number is the segment ID.
+      // For meshes, the string represents additional coordinates, number is the segment ID.
       // The undefined types were added to enforce null checks when using this structure.
       readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
@@ -581,6 +581,9 @@ export type OxalisState = {
       // The `segments` here should only be used for non-annotation volume
       // layers.
       readonly segments: SegmentMap;
+      // Note that segments that are not in the segment tab could be stored as selected.
+      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+      readonly selectedIds: { segments: number[]; group: number | null };
       readonly connectomeData: ConnectomeData;
     }
   >;

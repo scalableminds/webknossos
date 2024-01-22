@@ -24,6 +24,9 @@ ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
+// Disable unused import warnings, only in sbt console REPL
+Compile / console / scalacOptions -= "-Xlint:unused"
+
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 

@@ -30,7 +30,7 @@ class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
 
   def getByKey(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      shortLink <- shortLinkDAO.findOneByKey(key)
+      shortLink <- shortLinkDAO.findOneByKey(key) ?~> "shortLink.notFound"
     } yield Ok(Json.toJson(shortLink))
   }
 }

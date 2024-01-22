@@ -31,15 +31,15 @@ case class PrecomputedScale(key: String,
   // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
   // > "chunk_sizes": Array of 3-element [x, y, z] arrays of integers specifying the x, y, and z dimensions in voxels of each supported chunk size. Typically just a single chunk size will be specified as [[x, y, z]].
   // While the format specifies that there can be multiple chunk sizes, we only support the first one.
-  def primaryChunkSize: Array[Int] = chunk_sizes.head
+  def primaryChunkShape: Array[Int] = chunk_sizes.head
 
 }
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
-  override def datasetSize: Option[Array[Int]] = Some(precomputedScale.size)
+  override def datasetShape: Option[Array[Int]] = Some(precomputedScale.size)
 
-  override def chunkSize: Array[Int] = precomputedScale.chunk_sizes.head
+  override def chunkShape: Array[Int] = precomputedScale.chunk_sizes.head
 
   override def dimension_separator: DimensionSeparator = DimensionSeparator.UNDERSCORE
 
@@ -54,7 +54,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
-  override def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] =
+  override def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] =
     chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
@@ -62,13 +62,13 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map(chunkIndexWithDim => {
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
-      val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkSize(dim)
-      val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkSize(dim))
+      val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)
+      val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkShape(dim))
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
     })
 
-  def gridSize: Array[Int] = chunkSize.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
+  def gridSize: Array[Int] = chunkShape.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
 
   override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }

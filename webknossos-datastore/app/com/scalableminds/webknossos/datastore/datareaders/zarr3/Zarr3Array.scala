@@ -97,7 +97,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def shardSize =
     header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
   private def innerChunkSize =
-    header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
+    header.chunkShape // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
   private def indexSize =
     shardSize.zip(innerChunkSize).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
 
@@ -157,10 +157,10 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
-      header.datasetSize.map(axisOrder.permuteIndicesReverse),
+      header.datasetShape.map(axisOrder.permuteIndicesReverse),
       axisOrder.permuteIndicesReverse(header.outerChunkSize),
-      header.chunkSize,
-      chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
+      header.chunkShape,
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(

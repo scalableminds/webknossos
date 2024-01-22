@@ -37,21 +37,21 @@ class DatasetArray(vaultPath: VaultPath,
     header.rank + 1
   }
 
-  lazy val datasetSize: Option[Array[Int]] = if (axisOrder.hasZAxis) {
-    header.datasetSize
+  lazy val datasetShape: Option[Array[Int]] = if (axisOrder.hasZAxis) {
+    header.datasetShape
   } else {
-    header.datasetSize.map(size => size :+ 1)
+    header.datasetShape.map(size => size :+ 1)
   }
 
-  lazy val chunkSize: Array[Int] = if (axisOrder.hasZAxis) {
-    header.chunkSize
+  lazy val chunkShape: Array[Int] = if (axisOrder.hasZAxis) {
+    header.chunkShape
   } else {
-    header.chunkSize :+ 1
+    header.chunkShape :+ 1
   }
 
-  private def chunkSizeAtIndex(index: Array[Int]) =
-    if (axisOrder.hasZAxis) { header.chunkSizeAtIndex(index) } else {
-      chunkSize // irregular sized chunk indexes are currently not supported for 2d datasets
+  private def chunkShapeAtIndex(index: Array[Int]) =
+    if (axisOrder.hasZAxis) { header.chunkShapeAtIndex(index) } else {
+      chunkShape // irregular sized chunk indexes are currently not supported for 2d datasets
     }
 
   // Returns byte array in fortran-order with little-endian values
@@ -86,10 +86,10 @@ class DatasetArray(vaultPath: VaultPath,
       this works for now.
      */
 
-    val sizeArray: Array[Int] = Array.fill(dimensionCount)(1)
-    sizeArray(dimensionCount - 3) = size.x
-    sizeArray(dimensionCount - 2) = size.y
-    sizeArray(dimensionCount - 1) = size.z
+    val shapeArray: Array[Int] = Array.fill(dimensionCount)(1)
+    shapeArray(dimensionCount - 3) = size.x
+    shapeArray(dimensionCount - 2) = size.y
+    shapeArray(dimensionCount - 1) = size.z
 
     val offsetArray: Array[Int] = Array.fill(dimensionCount)(0)
     offsetArray(dimensionCount - 3) = offset.x
@@ -104,37 +104,37 @@ class DatasetArray(vaultPath: VaultPath,
     for (additionalCoordinate <- additionalCoordinates) {
       val index = additionalAxesMap(additionalCoordinate.name).index
       offsetArray(index) = additionalCoordinate.value
-      // sizeArray for additional coordinates will always be 1
+      // shapeArray for additional coordinates will always be 1
     }
-    readBytes(sizeArray, offsetArray)
+    readBytes(shapeArray, offsetArray)
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(size: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      typedMultiArray <- readAsFortranOrder(size, offset)
+      typedMultiArray <- readAsFortranOrder(shape, offset)
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
     } yield asBytes
 
-  // Read from array. Note that size and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
+  // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
 
-  private def readAsFortranOrder(size: Array[Int], offset: Array[Int])(
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
-    val chunkIndices = ChunkUtils.computeChunkIndices(datasetSize.map(axisOrder.permuteIndicesReverse),
-                                                      axisOrder.permuteIndicesReverse(chunkSize),
-                                                      size,
+    val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(axisOrder.permuteIndicesReverse),
+                                                      axisOrder.permuteIndicesReverse(chunkShape),
+                                                      shape,
                                                       totalOffset)
-    if (partialCopyingIsNotNeeded(size, totalOffset, chunkIndices)) {
+    if (partialCopyingIsNotNeeded(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex),
                                                                useSkipTypingShortcut = true)
       } yield sourceChunk
     } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, size)
-      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, size.reverse)
+      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
       val targetInCOrder: MultiArray = MultiArrayUtils.orderFlippedView(targetMultiArray)
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
@@ -156,7 +156,7 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
-    s"Copying data from dataset chunk failed. Chunk size: ${sourceChunk.getShape.mkString(",")}, target size: ${target.getShape
+    s"Copying data from dataset chunk failed. Chunk shape: ${sourceChunk.getShape.mkString(",")}, target shape: ${target.getShape
       .mkString(",")}, offset: ${offsetInChunk.mkString(",")}"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
@@ -175,13 +175,13 @@ class DatasetArray(vaultPath: VaultPath,
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
-        chunkSize = chunkSizeAtIndex(chunkIndex)
-        multiArray <- chunkReader.read(shardPath, chunkSize, Some(chunkRange), useSkipTypingShortcut)
+        chunkShape = chunkShapeAtIndex(chunkIndex)
+        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)
-      val chunkSize = chunkSizeAtIndex(chunkIndex)
-      chunkReader.read(chunkPath, chunkSize, None, useSkipTypingShortcut)
+      val chunkShape = chunkShapeAtIndex(chunkIndex)
+      chunkReader.read(chunkPath, chunkShape, None, useSkipTypingShortcut)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -191,7 +191,7 @@ class DatasetArray(vaultPath: VaultPath,
       chunkIndex.drop(1).mkString(header.dimension_separator.toString) // (c),x,y,z -> z is dropped in 2d case
     }
 
-  private def partialCopyingIsNotNeeded(bufferSize: Array[Int],
+  private def partialCopyingIsNotNeeded(bufferShape: Array[Int],
                                         globalOffset: Array[Int],
                                         chunkIndices: List[Array[Int]]): Boolean =
     chunkIndices match {
@@ -199,24 +199,24 @@ class DatasetArray(vaultPath: VaultPath,
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
-        isBufferSizeEqualChunkSize(bufferSize) &&
+        isBufferShapeEqualChunkShape(bufferShape) &&
         axisOrder == AxisOrder.asCxyzFromRank(rank)
       case _ => false
     }
 
-  private def isBufferSizeEqualChunkSize(bufferSize: Array[Int]): Boolean =
-    util.Arrays.equals(bufferSize, chunkSize)
+  private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
+    util.Arrays.equals(bufferShape, chunkShape)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(chunkSize)(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(chunkShape)(dim))
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {axisOrder=$axisOrder size=${header.datasetSize.mkString(",")} chunks=${header.chunkSize.mkString(
+    s"${getClass.getCanonicalName} {axisOrder=$axisOrder shape=${header.datasetShape.mkString(",")} chunks=${header.chunkShape.mkString(
       ",")} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }

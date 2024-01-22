@@ -77,12 +77,12 @@ case class WKWHeader(
     }
   }
 
-  override def datasetSize: Option[Array[Int]] = None
+  override def datasetShape: Option[Array[Int]] = None
 
-  override def chunkSize: Array[Int] =
+  override def chunkShape: Array[Int] =
     Array(numChannels, numVoxelsPerChunkDimension, numVoxelsPerChunkDimension, numVoxelsPerChunkDimension)
 
-  def shardSize: Array[Int] =
+  def shardShape: Array[Int] =
     Array(
       numChannels,
       numChunksPerShardDimension * numVoxelsPerChunkDimension,

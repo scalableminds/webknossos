@@ -34,9 +34,9 @@ case class Zarr3ArrayHeader(
 ) extends DatasetHeader
     with BoxImplicits {
 
-  override def datasetSize: Option[Array[Int]] = Some(shape)
+  override def datasetShape: Option[Array[Int]] = Some(shape)
 
-  override def chunkSize: Array[Int] = getChunkSize
+  override def chunkShape: Array[Int] = getChunkSize
 
   override def dimension_separator: DimensionSeparator = getDimensionSeparator
 

@@ -124,9 +124,9 @@ class WKWArray(vaultPath: VaultPath,
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
-      header.datasetSize.map(axisOrder.permuteIndicesReverse),
-      axisOrder.permuteIndicesReverse(header.shardSize),
-      header.chunkSize,
-      chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
+      header.datasetShape.map(axisOrder.permuteIndicesReverse),
+      axisOrder.permuteIndicesReverse(header.shardShape),
+      header.chunkShape,
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 }

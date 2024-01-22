@@ -10,9 +10,9 @@ import java.nio.ByteOrder
 
 trait DatasetHeader {
 
-  // Note that in DatasetArray, datasetSize and chunkSize are adapted for 2d datasets
-  def datasetSize: Option[Array[Int]] // size of the entire array
-  def chunkSize: Array[Int] // size of each chunk,
+  // Note that in DatasetArray, datasetShape and chunkShape are adapted for 2d datasets
+  def datasetShape: Option[Array[Int]] // shape of the entire array
+  def chunkShape: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator
 
@@ -30,7 +30,7 @@ trait DatasetHeader {
 
   lazy val bytesPerElement: Int = bytesPerElementFor(resolvedDataType)
 
-  lazy val bytesPerChunk: Int = chunkSize.toList.product * bytesPerElement
+  lazy val bytesPerChunk: Int = chunkShape.toList.product * bytesPerElement
 
   lazy val fillValueNumber: Number =
     fill_value match {
@@ -39,22 +39,22 @@ trait DatasetHeader {
     }
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    datasetSize.flatMap { size =>
+    datasetShape.flatMap { shape =>
       if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
         None
       else {
         if (axisOrder.hasZAxis) {
-          Some(BoundingBox(Vec3Int.zeros, size(axisOrder.x), size(axisOrder.y), size(axisOrder.zWithFallback)))
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
         } else {
-          Some(BoundingBox(Vec3Int.zeros, size(axisOrder.x), size(axisOrder.y), 1))
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
         }
       }
     }
 
   // Note that in DatasetArray, this is adapted for 2d datasets
-  lazy val rank: Int = chunkSize.length
+  lazy val rank: Int = chunkShape.length
 
-  def chunkSizeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkSize
+  def chunkShapeAtIndex(chunkIndex: Array[Int]): Array[Int] = chunkShape
 
   def isSharded = false
 

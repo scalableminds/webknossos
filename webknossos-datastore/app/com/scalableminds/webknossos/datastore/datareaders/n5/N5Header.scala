@@ -25,9 +25,9 @@ case class N5Header(
   val fill_value: Either[String, Number] = Right(0)
   val order: ArrayOrder = ArrayOrder.F
 
-  override lazy val datasetSize: Option[Array[Int]] = Some(dimensions)
+  override lazy val datasetShape: Option[Array[Int]] = Some(dimensions)
 
-  lazy val chunkSize: Array[Int] = blockSize
+  lazy val chunkShape: Array[Int] = blockSize
 
   override lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 

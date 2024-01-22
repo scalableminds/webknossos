@@ -1287,12 +1287,17 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    outputSegmentationLayerName,
+    newDatasetName,
+  });
   return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
-      ",",
-    )}&newDatasetName=${newDatasetName}`,
+    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },

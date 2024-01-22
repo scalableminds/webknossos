@@ -175,8 +175,8 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          FROM webknossos.folder_paths fp
          WHERE fp._descendant IN (
            SELECT d._folder
-           FROM webknossos.dataSets_ d
-           LEFT JOIN webknossos.dataSet_allowedTeams dt ON dt._dataSet = d._id
+           FROM webknossos.datasets_ d
+           LEFT JOIN webknossos.dataset_allowedTeams dt ON dt._dataset = d._id
            LEFT JOIN webknossos.user_team_roles utr ON dt._team = utr._team
            WHERE utr._user = $requestingUserId
            OR d.isPublic

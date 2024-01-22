@@ -22,7 +22,7 @@ ThisBuild / javacOptions ++= Seq(
 )
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
-PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
+PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 // Disable unused import warnings, only in sbt console REPL
 Compile / console / scalacOptions -= "-Xlint:unused"

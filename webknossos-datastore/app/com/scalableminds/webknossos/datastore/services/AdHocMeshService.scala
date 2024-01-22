@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.routing.RoundRobinPool
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.routing.RoundRobinPool
+import org.apache.pekko.util.Timeout
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate

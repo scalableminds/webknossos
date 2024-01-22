@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.AdHocMeshingServiceHolder

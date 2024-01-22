@@ -1,6 +1,6 @@
 package thirdparty
 
-import akka.actor.{ActorSelection, ActorSystem}
+import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

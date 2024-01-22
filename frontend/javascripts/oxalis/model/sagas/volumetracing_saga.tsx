@@ -21,6 +21,7 @@ import Constants, {
   FillModeEnum,
   OrthoViews,
   Unicode,
+  OverwriteModeEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
@@ -106,10 +107,13 @@ import {
   applyLabeledVoxelMapToAllMissingResolutions,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
+  BooleanBox,
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+
+const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -175,6 +179,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    const wroteVoxelsBox = { value: false };
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -274,6 +279,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         overwriteMode,
         labeledZoomStep,
         initialViewport,
+        wroteVoxelsBox,
       );
     }
 
@@ -319,6 +325,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
             overwriteMode,
             labeledZoomStep,
             activeViewport,
+            wroteVoxelsBox,
           );
         }
 
@@ -329,6 +336,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
           overwriteMode,
           labeledZoomStep,
           activeViewport,
+          wroteVoxelsBox,
         );
       }
 
@@ -343,6 +351,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       overwriteMode,
       labeledZoomStep,
       initialViewport,
+      wroteVoxelsBox,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
@@ -357,6 +366,18 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+
+    if (!wroteVoxelsBox.value) {
+      const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+      if (overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY)
+        yield* call(
+          [Toast, Toast.warning],
+          "No voxels were changed. You might want to change the overwrite-mode to “Overwrite everything” in the toolbar. Otherwise, only empty voxels will be changed.",
+          { key: OVERWRITE_EMPTY_WARNING_KEY },
+        );
+    } else {
+      yield* call([Toast, Toast.close], OVERWRITE_EMPTY_WARNING_KEY);
+    }
   }
 }
 
@@ -559,6 +580,7 @@ export function* finishLayer(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   activeViewport: OrthoView,
+  wroteVoxelsBox: BooleanBox,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -572,6 +594,7 @@ export function* finishLayer(
       overwriteMode,
       labeledZoomStep,
       activeViewport,
+      wroteVoxelsBox,
     );
   }
 

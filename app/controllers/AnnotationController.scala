@@ -1,6 +1,6 @@
 package controllers
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
@@ -550,9 +550,11 @@ class AnnotationController @Inject()(
         annotationInfos <- annotationDAO.findAllListableExplorationals(
           isFinished,
           None,
+          isForOwnDashboard = true,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
         annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)

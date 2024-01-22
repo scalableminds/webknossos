@@ -2,7 +2,15 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.{BoxImplicits, ByteUtils}
-import com.scalableminds.webknossos.datastore.datareaders.{BloscCompressor, BoolCompressionSetting, CompressionSetting, GzipCompressor, IntCompressionSetting, StringCompressionSetting, ZstdCompressor}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  BoolCompressionSetting,
+  CompressionSetting,
+  GzipCompressor,
+  IntCompressionSetting,
+  StringCompressionSetting,
+  ZstdCompressor
+}
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
@@ -287,15 +295,17 @@ final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             index_codecs: Seq[CodecConfiguration],
                                             index_location: IndexLocationSetting.IndexLocationSetting =
                                               IndexLocationSetting.end)
-    extends CodecConfiguration with BoxImplicits {
+    extends CodecConfiguration
+    with BoxImplicits {
   override def name: String = ShardingCodecConfiguration.name
-// index_codecs.size <= 2 && index_codecs.count(_.name == "bytes") == 1 && index_codecs.count(_.name == "crc32c") <= 1
   def isSupported: Box[Unit] =
-  for {
-    _ <- bool2Box(index_codecs.size <= 2) ?~! "Maximum of 2 index codecs supported"
-    _ <- bool2Box(index_codecs.count(_.name == "bytes") == 1) ?~! "Exactly one bytes codec supported"
-    _ <- bool2Box(index_codecs.count(_.name == "crc32c") <= 1) ?~! "Maximum of 1 crc32c codec supported"
-  } yield ()
+    for {
+      _ <- bool2Box(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
+      _ <- bool2Box(index_codecs.count(_.name == "bytes") == 1) ?~! s"Exactly one bytes codec supported, got ${index_codecs
+        .count(_.name == "bytes")}"
+      _ <- bool2Box(index_codecs.count(_.name == "crc32c") <= 1) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs
+        .count(_.name == "crc32c")}"
+    } yield ()
 
 }
 

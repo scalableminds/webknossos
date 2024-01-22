@@ -21,13 +21,13 @@ class DefaultMails @Inject()(conf: WkConf) {
                                 brainDBResult: Option[String],
                                 organization: Organization,
                                 autoActivate: Boolean,
-                                receiver: String): Mail =
+                                recipient: String): Mail =
     Mail(
       from = defaultSender,
       subject =
         s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri, autoActivate).body,
-      recipients = List(receiver)
+      recipients = List(recipient)
     )
 
   def overLimitMail(user: User,
@@ -42,33 +42,33 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = recipients
     )
 
-  def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
+  def newUserMail(name: String, recipient: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
       implicit mp: MessagesProvider): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to WEBKNOSSOS",
       bodyHtml = html.mail.newUser(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
-      recipients = List(receiver)
+      recipients = List(recipient)
     )
 
-  def activatedMail(name: String, receiver: String): Mail =
+  def activatedMail(name: String, recipient: String): Mail =
     Mail(from = defaultSender,
          subject = "WEBKNOSSOS | Account activated",
          bodyHtml = html.mail.validateUser(name, uri).body,
-         recipients = List(receiver))
+         recipients = List(recipient))
 
-  def changePasswordMail(name: String, receiver: String): Mail =
+  def changePasswordMail(name: String, recipient: String): Mail =
     Mail(from = defaultSender,
          subject = "WEBKNOSSOS | Password changed",
          bodyHtml = html.mail.passwordChanged(name, uri).body,
-         recipients = List(receiver))
+         recipients = List(recipient))
 
-  def resetPasswordMail(name: String, receiver: String, token: String): Mail =
+  def resetPasswordMail(name: String, recipient: String, token: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS | Password Reset",
       bodyHtml = html.mail.resetPassword(name, uri, token).body,
-      recipients = List(receiver)
+      recipients = List(recipient)
     )
 
   def newOrganizationMail(organizationDisplayName: String, creatorEmail: String, domain: String): Mail =
@@ -79,7 +79,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(newOrganizationMailingList)
     )
 
-  def inviteMail(receiver: String,
+  def inviteMail(recipient: String,
                  inviteTokenValue: String,
                  autoVerify: Boolean,
                  organizationDisplayName: String,
@@ -89,7 +89,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
       bodyHtml = html.mail.invite(senderName, organizationDisplayName, inviteTokenValue, uri, autoVerify).body,
-      recipients = List(receiver)
+      recipients = List(recipient)
     )
   }
 

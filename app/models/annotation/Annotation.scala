@@ -548,7 +548,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def insertOne(a: Annotation): Fox[Unit] = {
     val insertAnnotationQuery = q"""
-        insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility,
+        insert into webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility,
                                            name, viewConfiguration, state, statistics, tags, tracingTime, typ, othersMayEdit, created, modified, isDeleted)
         values(${a._id}, ${a._dataset}, ${a._task}, ${a._team},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
@@ -569,7 +569,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val updateAnnotationQuery = q"""
              update webknossos.annotations
              set
-               _dataSet = ${a._dataset},
+               _dataset = ${a._dataset},
                _team = ${a._team},
                _user = ${a._user},
                description = ${a.description},

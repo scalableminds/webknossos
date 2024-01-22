@@ -113,6 +113,7 @@ import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
+import features from "features";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -554,13 +555,15 @@ function getNodeContextMenuOptions({
                     : null,
                 label: "Extract shortest Path to this Node",
               },
-          {
-            key: "annotate-nodes-with-sam",
-            onClick: () => {
-              computeSAMForSkeletonAction(clickedTree.treeId, viewport);
-            },
-            label: "Annotate Nodes with SAM",
-          },
+          features().segmentAnythingEnabled
+            ? {
+                key: "annotate-nodes-with-sam",
+                onClick: () => {
+                  computeSAMForSkeletonAction(clickedTree.treeId, viewport);
+                },
+                label: "Annotate Nodes with SAM",
+              }
+            : null,
         ]
       : []),
     ...meshItems,

@@ -642,18 +642,20 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               icon: <span className="hide-tree-edges-icon" />,
               label: "Hide/Show Edges of This Tree",
             },
-            {
-              key: "predictNodeWithSAM",
-              onClick: () => {
-                this.props.onComputeSAMForSkeleton(tree.treeId);
-              },
-              disabled: !isSamSupported,
-              title: isSamSupported
-                ? "Predict all Nodes with SAM"
-                : "This feature only works on webknossos.org.",
-              icon: <span className="fas fa-magic" />,
-              label: "Predict all Nodes with SAM",
-            },
+            features().segmentAnythingEnabled
+              ? {
+                  key: "predictNodeWithSAM",
+                  onClick: () => {
+                    this.props.onComputeSAMForSkeleton(tree.treeId);
+                  },
+                  disabled: !isSamSupported,
+                  title: isSamSupported
+                    ? "Predict all Nodes with SAM"
+                    : "This feature only works on webknossos.org.",
+                  icon: <span className="fas fa-magic" />,
+                  label: "Predict all Nodes with SAM",
+                }
+              : null,
             isAgglomerateSkeleton
               ? {
                   key: "convertToNormalSkeleton",

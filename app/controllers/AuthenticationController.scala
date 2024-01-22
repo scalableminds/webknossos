@@ -148,13 +148,19 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
       brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
+      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)(GlobalAccessContext)
       _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
         Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
       }
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult.flatten, organization, autoActivate))
+        defaultMails.registerAdminNotifierMail(user.name,
+                                               email,
+                                               brainDBResult.flatten,
+                                               organization,
+                                               autoActivate,
+                                               newUserEmailRecipient))
     } yield {
       user
     }
@@ -356,9 +362,14 @@ class AuthenticationController @Inject()(
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
+      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ = Mailer ! Send(
-        defaultMails
-          .registerAdminNotifyerMail(request.identity.name, userEmail, None, organization, invite.autoActivate))
+        defaultMails.registerAdminNotifierMail(request.identity.name,
+                                               userEmail,
+                                               None,
+                                               organization,
+                                               invite.autoActivate,
+                                               newUserEmailRecipient))
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
     } yield Ok
   }

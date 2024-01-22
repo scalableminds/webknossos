@@ -31,9 +31,9 @@ class PublicationService @Inject()(datasetService: DatasetService,
   def publicWrites(publication: Publication): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSets <- datasetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
+      datasets <- datasetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
       annotations <- annotationDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
-      dataSetsJson <- Fox.serialCombined(dataSets)(d => datasetService.publicWrites(d, None, None, None))
+      datasetsJson <- Fox.serialCombined(datasets)(d => datasetService.publicWrites(d, None, None, None))
       annotationsJson <- Fox.serialCombined(annotations) { annotation =>
         annotationService.writesWithDataset(annotation)
       }
@@ -45,7 +45,7 @@ class PublicationService @Inject()(datasetService: DatasetService,
         "title" -> publication.title,
         "description" -> publication.description,
         "created" -> publication.created,
-        "datasets" -> dataSetsJson,
+        "datasets" -> datasetsJson,
         "annotations" -> annotationsJson
       )
   }

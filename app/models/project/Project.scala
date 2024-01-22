@@ -176,6 +176,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption
     } yield count
 
+  override def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(projectId)
 }
 
 class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(

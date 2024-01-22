@@ -230,4 +230,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
     } yield ()
 
+  override def deleteOne(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(teamId)
+
 }

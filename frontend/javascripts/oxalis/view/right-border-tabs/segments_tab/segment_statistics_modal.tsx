@@ -251,7 +251,7 @@ export function SegmentStatisticsModal({
             {hasAdditionalCoords && (
               <Alert
                 className="segments-stats-info-alert"
-                message={`These stats are only valid for the current additional coordinates ${additionalCoordinateStringForModal}.`}
+                message={`These statistics are only valid for the current additional coordinates ${additionalCoordinateStringForModal}.`}
                 type="info"
                 showIcon
               />

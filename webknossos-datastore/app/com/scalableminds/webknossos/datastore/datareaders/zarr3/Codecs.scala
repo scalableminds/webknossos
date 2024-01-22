@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.tools.{BoxImplicits, ByteUtils}
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -12,7 +13,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Format, JsObject, JsResult, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
+import net.liftweb.common.Box
+import play.api.libs.json.{Format, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import play.api.libs.json.Json.WithDefaultValues
 import ucar.ma2.{Array => MultiArray}
 
@@ -36,6 +38,17 @@ object TransposeSetting {
   }
 
   def fOrderFromRank(rank: Int): IntArrayTransposeSetting = IntArrayTransposeSetting(Array.range(rank - 1, -1, -1))
+}
+
+object IndexLocationSetting extends ExtendedEnumeration {
+  type IndexLocationSetting = Value
+  val start, end = Value
+
+  implicit object IndexLocationSettingFormat extends Format[IndexLocationSetting] {
+    override def reads(json: JsValue): JsResult[IndexLocationSetting] =
+      json.validate[String].map(IndexLocationSetting.withName)
+    override def writes(o: IndexLocationSetting): JsValue = JsString(o.toString)
+  }
 }
 
 trait Codec
@@ -169,7 +182,8 @@ class Crc32CCodec extends BytesToBytesCodec with ByteUtils with LazyLogging {
 
 class ShardingCodec(val chunk_shape: Array[Int],
                     val codecs: Seq[CodecConfiguration],
-                    val index_codecs: Seq[CodecConfiguration])
+                    val index_codecs: Seq[CodecConfiguration],
+                    val index_location: IndexLocationSetting.IndexLocationSetting = IndexLocationSetting.end)
     extends ArrayToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/v1.0.html
@@ -250,6 +264,8 @@ case object Crc32CCodecConfiguration extends CodecConfiguration {
   override val includeConfiguration: Boolean = false
   val name = "crc32c"
 
+  val checkSumByteLength = 4 // 32 Bit Codec => 4 Byte
+
   implicit object Crc32CCodecConfigurationReads extends Reads[Crc32CCodecConfiguration.type] {
     override def reads(json: JsValue): JsResult[Crc32CCodecConfiguration.type] = JsSuccess(Crc32CCodecConfiguration)
   }
@@ -276,9 +292,21 @@ object CodecSpecification {
 
 final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             codecs: Seq[CodecConfiguration],
-                                            index_codecs: Seq[CodecConfiguration])
-    extends CodecConfiguration {
+                                            index_codecs: Seq[CodecConfiguration],
+                                            index_location: IndexLocationSetting.IndexLocationSetting =
+                                              IndexLocationSetting.end)
+    extends CodecConfiguration
+    with BoxImplicits {
   override def name: String = ShardingCodecConfiguration.name
+  def isSupported: Box[Unit] =
+    for {
+      _ <- bool2Box(index_codecs.size <= 2) ?~! s"Maximum of 2 index codecs supported, got ${index_codecs.size}"
+      _ <- bool2Box(index_codecs.count(_.name == "bytes") == 1) ?~! s"Exactly one bytes codec supported, got ${index_codecs
+        .count(_.name == "bytes")}"
+      _ <- bool2Box(index_codecs.count(_.name == "crc32c") <= 1) ?~! s"Maximum of 1 crc32c codec supported, got ${index_codecs
+        .count(_.name == "crc32c")}"
+    } yield ()
+
 }
 
 object ShardingCodecConfiguration {

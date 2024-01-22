@@ -241,11 +241,14 @@ class UserController @Inject()(userService: UserService,
       isAdmin: Option[Boolean]
   ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      users <- userDAO.findAllWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
-      js <- Fox.serialCombined(users.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+      (users, userCompactInfos) <- userDAO.findAllCompactWithFilters(isEditable,
+                                                                     isTeamManagerOrAdmin,
+                                                                     isAdmin,
+                                                                     request.identity)
+      zipped = users.zip(userCompactInfos)
+      js <- Fox.serialCombined(zipped.sortBy(_._1.lastName.toLowerCase))(u =>
+        userService.publicWritesCompact(u._1, u._2))
+    } yield Ok(Json.toJson(js))
   }
 
   private val userUpdateReader =

@@ -76,7 +76,6 @@ export const annotation: APIAnnotation = {
   typ: "Explorational",
   teams: [],
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -88,6 +87,7 @@ export const annotation: APIAnnotation = {
       name: "volume",
       tracingId: "tracingId-1234",
       typ: "Volume",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",

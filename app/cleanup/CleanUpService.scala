@@ -1,6 +1,6 @@
 package cleanup
 
-import akka.actor.{ActorSystem, Cancellable}
+import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
@@ -11,10 +11,10 @@ import scala.concurrent.duration.FiniteDuration
 
 class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
 
-  @volatile private var akkaIsShuttingDown = false
+  @volatile private var pekkoIsShuttingDown = false
 
   system.registerOnTermination {
-    akkaIsShuttingDown = true
+    pekkoIsShuttingDown = true
   }
 
   def register[T](description: String, interval: FiniteDuration, runOnShutdown: Boolean = false)(
@@ -22,7 +22,7 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
     system.scheduler.scheduleWithFixedDelay(interval, interval)(() => runJob(description, job, runOnShutdown))
 
   private def runJob[T](description: String, job: => Fox[T], runOnShutdown: Boolean): Unit =
-    if (!akkaIsShuttingDown || runOnShutdown) {
+    if (!pekkoIsShuttingDown || runOnShutdown) {
       job.futureBox.map {
         case Full(value) =>
           logger.info(s"Completed cleanup job: $description. Result: " + value)

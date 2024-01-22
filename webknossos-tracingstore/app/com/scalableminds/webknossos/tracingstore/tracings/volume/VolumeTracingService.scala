@@ -442,8 +442,8 @@ class VolumeTracingService @Inject()(
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
                                                fromTask: Boolean,
-                                               dataSetBoundingBox: Option[BoundingBox]): VolumeTracing =
-    if (fromTask && dataSetBoundingBox.isDefined) {
+                                               datasetBoundingBox: Option[BoundingBox]): VolumeTracing =
+    if (fromTask && datasetBoundingBox.isDefined) {
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
@@ -452,7 +452,7 @@ class VolumeTracingService @Inject()(
                                 Some(true),
                                 Some(getRandomColor),
                                 tracing.boundingBox))
-        .withBoundingBox(dataSetBoundingBox.get)
+        .withBoundingBox(datasetBoundingBox.get)
     } else tracing
 
   private def duplicateData(sourceId: String,

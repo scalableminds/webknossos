@@ -50,7 +50,6 @@ import {
 import {
   getAdditionalCoordinatesAsString,
   getPosition,
-  hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,

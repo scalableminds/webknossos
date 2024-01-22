@@ -111,7 +111,6 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

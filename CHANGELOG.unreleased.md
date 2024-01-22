@@ -21,7 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
 - Multiple segments can be dragged and dropped in the segments tab. [#7536](https://github.com/scalableminds/webknossos/pull/7536)
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
-- Segment staticstics are now available for ND datases. [#7411](https://github.com/scalableminds/webknossos/pull/7411)
+- Segment statistics are now available for ND datases. [#7411](https://github.com/scalableminds/webknossos/pull/7411)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)

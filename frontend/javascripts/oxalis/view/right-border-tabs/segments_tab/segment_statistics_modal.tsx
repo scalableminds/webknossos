@@ -13,7 +13,10 @@ import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesAsString,
+  hasAdditionalCoordinates,
+} from "oxalis/model/accessors/flycam_accessor";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not not fetched. Check the console for more details.";
@@ -112,7 +115,7 @@ export function SegmentStatisticsModal({
   const additionalCoordinates = useSelector(
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
-  const hasAdditionalCoords = additionalCoordinates != null && additionalCoordinates.length > 0;
+  const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
     additionalCoordinates,
     ", ",
@@ -142,7 +145,6 @@ export function SegmentStatisticsModal({
           const statisticsObjects = [];
           const additionalCoordStringForCsv =
             getAdditionalCoordinatesAsString(additionalCoordinates);
-          console.log("add coords", additionalCoordStringForCsv);
           for (let i = 0; i < segments.length; i++) {
             // segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];

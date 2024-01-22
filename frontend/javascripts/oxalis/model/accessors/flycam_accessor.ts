@@ -289,9 +289,6 @@ export function getAdditionalCoordinatesAsString(
       .reduce((a: string, b: string) => a.concat(b, separator), "")
       .slice(0, -1 * separator.length);
   }
-  console.log(
-    "hey, make sure ND meshes are still working after changing getAdditionalCoordinatesAsString",
-  );
   return "";
 }
 

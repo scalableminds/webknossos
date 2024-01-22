@@ -344,8 +344,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           o.name,
           ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
           ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
-          ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs
-          ARRAY_AGG(al.statistics) AS annotation_layer_statistics
+          ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
+          ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
       FROM webknossos.annotations as a
                LEFT JOIN webknossos.users_ u
                          ON u._id = a._user

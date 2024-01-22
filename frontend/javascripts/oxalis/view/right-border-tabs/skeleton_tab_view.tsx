@@ -218,7 +218,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw Error("Zip file doesn't contain an NML file.");
         }
 
-        const nmlBlob = await nmlFileEntry.getData(new BlobWriter());
+        // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+        const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
         const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
 
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
@@ -228,7 +229,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         );
 
         if (dataFileEntry) {
-          const dataBlob = await dataFileEntry.getData(new BlobWriter());
+          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+          const dataBlob = await dataFileEntry.getData!(new BlobWriter());
           const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();

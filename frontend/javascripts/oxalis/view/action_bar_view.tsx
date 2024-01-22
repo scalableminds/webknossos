@@ -110,7 +110,7 @@ function AdditionalCoordinatesInputView() {
                 label={coord.name}
                 key={coord.name}
                 min={bounds[0]}
-                max={bounds[1]}
+                max={bounds[1] - 1}
                 value={coord.value}
                 spans={[2, 18, 4]}
                 onChange={(newCoord) => {

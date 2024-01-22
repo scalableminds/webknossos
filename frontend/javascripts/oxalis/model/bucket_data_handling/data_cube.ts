@@ -232,7 +232,7 @@ class DataCube {
       for (const coord of coords || []) {
         if (coord.name in this.additionalAxes) {
           const { bounds } = this.additionalAxes[coord.name];
-          if (coord.value < bounds[0] || coord.value > bounds[1]) {
+          if (coord.value < bounds[0] || coord.value >= bounds[1]) {
             return null;
           }
         }

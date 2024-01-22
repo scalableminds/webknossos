@@ -429,11 +429,11 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DatasetViewConfiguration] =
+  def findOneForUserAndDataset(userId: ObjectId, datasetId: ObjectId): Fox[DatasetViewConfiguration] =
     for {
       rows <- run(q"""select viewConfiguration
-                      from webknossos.user_dataSetConfigurations
-                      where _dataSet = $dataSetId
+                      from webknossos.user_datasetConfigurations
+                      where _dataset = $datasetId
                       and _user = $userId""".as[String])
       parsed = rows.map(Json.parse)
       result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
@@ -441,14 +441,14 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
 
   def updateDatasetConfigurationForUserAndDataset(
       userId: ObjectId,
-      dataSetId: ObjectId,
+      datasetId: ObjectId,
       configuration: DatasetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
-      deleteQuery = q"""delete from webknossos.user_dataSetConfigurations
-               where _user = $userId and _dataSet = $dataSetId""".asUpdate
-      insertQuery = q"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, viewConfiguration)
-               values($userId, $dataSetId, ${Json.toJson(configuration)})""".asUpdate
+      deleteQuery = q"""delete from webknossos.user_datasetConfigurations
+               where _user = $userId and _dataset = $datasetId""".asUpdate
+      insertQuery = q"""insert into webknossos.user_datasetConfigurations(_user, _dataset, viewConfiguration)
+               values($userId, $datasetId, ${Json.toJson(configuration)})""".asUpdate
       _ <- run(
         DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
@@ -462,14 +462,14 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
 
   def findAllByLayerNameForUserAndDataset(layerNames: List[String],
                                           userId: ObjectId,
-                                          dataSetId: ObjectId): Fox[Map[String, LayerViewConfiguration]] =
+                                          datasetId: ObjectId): Fox[Map[String, LayerViewConfiguration]] =
     if (layerNames.isEmpty) {
       Fox.successful(Map.empty[String, LayerViewConfiguration])
     } else {
       for {
         rows <- run(q"""select layerName, viewConfiguration
-                      from webknossos.user_dataSetLayerConfigurations
-                      where _dataset = $dataSetId
+                      from webknossos.user_datasetLayerConfigurations
+                      where _dataset = $datasetId
                       and _user = $userId
                       and layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
         parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
@@ -478,15 +478,15 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
 
   def updateDatasetConfigurationForUserAndDatasetAndLayer(
       userId: ObjectId,
-      dataSetId: ObjectId,
+      datasetId: ObjectId,
       layerName: String,
       viewConfiguration: LayerViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
-      deleteQuery = q"""delete from webknossos.user_dataSetLayerConfigurations
-               where _user = $userId and _dataSet = $dataSetId and layerName = $layerName""".asUpdate
-      insertQuery = q"""insert into webknossos.user_dataSetLayerConfigurations(_user, _dataSet, layerName, viewConfiguration)
-               values($userId, $dataSetId, $layerName, ${Json.toJson(viewConfiguration)})""".asUpdate
+      deleteQuery = q"""delete from webknossos.user_datasetLayerConfigurations
+               where _user = $userId and _dataset = $datasetId and layerName = $layerName""".asUpdate
+      insertQuery = q"""insert into webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
+               values($userId, $datasetId, $layerName, ${Json.toJson(viewConfiguration)})""".asUpdate
       _ <- run(
         DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,

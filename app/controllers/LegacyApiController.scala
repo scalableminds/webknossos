@@ -39,13 +39,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def assertValidNewNameV5(organizationName: String, dataSetName: String): Action[AnyContent] =
+  def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- datasetService.assertValidDatasetName(dataSetName)
-        _ <- datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken"
+        _ <- datasetService.assertValidDatasetName(datasetName)
+        _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       } yield Ok
     }
 
@@ -172,11 +172,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   }
 
   def annotationCreateExplorationalV4(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -351,11 +351,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     }
 
   def annotationCreateExplorationalV1(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult

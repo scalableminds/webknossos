@@ -130,7 +130,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
           .filter(axis => !defaultAxes.contains(axis.name))
           .zipWithIndex
           .map(axisAndIndex =>
-            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2) - 1)).toFox))
+            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2))).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
       _ <- Fox.bool2Fox(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes

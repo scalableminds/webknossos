@@ -30,11 +30,11 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
-      _dataSet <- finishedAnnotations.headOption.map(_._dataset).toFox
+      datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(task._id,
                                                   persistTracing = false,
                                                   user._id,
-                                                  _dataSet,
+                                                  datasetId,
                                                   project._team,
                                                   AnnotationType.CompoundTask,
                                                   finishedAnnotations) ?~> "annotation.merge.failed.compound"

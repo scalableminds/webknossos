@@ -4,10 +4,17 @@ import type { Uniforms } from "oxalis/geometries/materials/plane_material_factor
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { Store } from "oxalis/singletons";
+import { Model, Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
+import {
+  getLayerByName,
+  getTransformsForLayer,
+  getTransformsForSkeletonLayer,
+  getTransformsPerLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { M4x4 } from "libs/mjs";
 export const NodeTypes = {
   INVALID: 0.0,
   NORMAL: 1.0,
@@ -106,6 +113,39 @@ class NodeShader {
       },
       true,
     );
+
+    const dataset = Store.getState().dataset;
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+
+    this.uniforms[`transform`] = {
+      value: M4x4.transpose(
+        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
+      ),
+    };
+    this.uniforms[`has_transform`] = {
+      value: true,
+      // !_.isEqual(
+      //   getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+      //   Identity4x4,
+      // ),
+    };
+
+    // this.storePropertyUnsubscribers.push(
+    // );
+    listenToStoreProperty(
+      (storeState) =>
+        getTransformsForSkeletonLayer(
+          storeState.dataset,
+          storeState.datasetConfiguration.nativelyRenderedLayerName,
+        ),
+      (skeletonTransforms) => {
+        const transforms = skeletonTransforms;
+        const { affineMatrix } = transforms;
+
+        this.uniforms[`transform`].value = M4x4.transpose(affineMatrix);
+      },
+    );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -134,6 +174,9 @@ uniform int isPicking; // bool indicates whether we are currently rendering for 
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
 uniform float viewMode;
+
+uniform mat4 transform;
+uniform bool has_transform;
 
 <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
@@ -209,7 +252,9 @@ void main() {
       return;
     }
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    // todop: transform position here
+    vec4 transformedCoord = transform * vec4(position, 1.);
+    gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
     // NODE RADIUS
     if (overrideNodeRadius == 1) {

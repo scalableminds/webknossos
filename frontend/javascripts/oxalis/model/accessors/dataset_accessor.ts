@@ -772,6 +772,39 @@ export function getTransformsForLayer(
   );
 }
 
+export function getTransformsForSkeletonLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  const layerTransforms = IdentityTransform;
+
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. Just use the transforms
+    // as they are in the dataset.
+    return layerTransforms;
+  }
+
+  // Apply the inverse of the layer that should be rendered natively
+  // to the current layers transforms
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms. Leave the layer
+    // transforms untouched.
+    return layerTransforms;
+  }
+
+  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
+  return inverseNativeTransforms;
+
+  // return (
+  //   getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
+  //   IdentityTransform
+  // );
+}
+
 function _getTransformsPerLayer(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,

@@ -22,9 +22,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When setting up WEBKNOSSOS from the git repository for development, the organization directory for storing datasets is now automatically created on startup. [#7517](https://github.com/scalableminds/webknossos/pull/7517)
 - Multiple segments can be dragged and dropped in the segments tab. [#7536](https://github.com/scalableminds/webknossos/pull/7536)
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
+- The annotation list in the dashboard now also shows segment counts of volume annotations (after they have been edited). [#7548](https://github.com/scalableminds/webknossos/pull/7548)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
+- Improved loading speed for the users list. [#7466](https://github.com/scalableminds/webknossos/pull/7466)
 - Admins and Team Managers can now also download job exports for jobs of other users, if they have the link. [#7462](https://github.com/scalableminds/webknossos/pull/7462)
 - Updated some dependencies of the backend code (play 2.9, sbt 1.9, minor upgrades for others) for optimized performance. [#7366](https://github.com/scalableminds/webknossos/pull/7366)
 - Processing jobs can now be distributed to multiple webknossos-workers with finer-grained configurability. Compare migration guide. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
@@ -57,6 +59,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the initialization of the mapping list for agglomerate views if json mappings are present. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 - Fixed a bug where uploading ND volume annotations would lead to errors due to parsing of the chunk paths. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
 - Fixed a bug where listing the annotations of other users would result in empty lists even if there are annotations and you should be allowed to see them. [#7563](https://github.com/scalableminds/webknossos/pull/7563)
+- Fixed the "Download Meshes" functionality which was affected by the recent introduction of the CSP. [#7577](https://github.com/scalableminds/webknossos/pull/7577)
+- Fixed a bug where listing the annotations of other users would result in empty lists even if there are annotations, and you should be allowed to see them. [#7563](https://github.com/scalableminds/webknossos/pull/7563)
+- Fixed errors showing when viewing the annotation list. [#7579](https://github.com/scalableminds/webknossos/pull/7579)
 
 ### Removed
 - Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)

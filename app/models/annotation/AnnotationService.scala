@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
+  AnnotationLayerStatistics,
   AnnotationLayerType,
   AnnotationSource,
   FetchedAnnotationLayer
@@ -290,7 +291,11 @@ class AnnotationService @Inject()(
           case _ =>
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
-      } yield AnnotationLayer(tracingIdAndName._1, annotationLayerParameters.typ, tracingIdAndName._2)
+      } yield
+        AnnotationLayer(tracingIdAndName._1,
+                        annotationLayerParameters.typ,
+                        tracingIdAndName._2,
+                        AnnotationLayerStatistics.zeroedForTyp(annotationLayerParameters.typ))
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)
@@ -378,9 +383,7 @@ class AnnotationService @Inject()(
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
-    } yield {
-      annotation
-    }
+    } yield annotation
 
   def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -627,10 +630,6 @@ class AnnotationService @Inject()(
                               typ = annotationType)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
-
-  // Does not use access query (because they dont support prefixes). Use only after separate access check!
-  def sharedAnnotationsFor(userTeams: List[ObjectId]): Fox[List[Annotation]] =
-    annotationDAO.findAllSharedForTeams(userTeams)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -896,7 +895,7 @@ class AnnotationService @Inject()(
         "viewConfiguration" -> annotation.viewConfiguration,
         "typ" -> annotation.typ,
         "task" -> taskJson,
-        "stats" -> annotation.statistics,
+        "stats" -> Json.obj(), // included for legacy parsers
         "restrictions" -> restrictionsJs,
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataset.name,
@@ -979,7 +978,8 @@ class AnnotationService @Inject()(
         Json.obj(
           "tracingId" -> annotationInfo.tracingIds(idx),
           "typ" -> annotationInfo.annotationLayerTypes(idx),
-          "name" -> annotationInfo.annotationLayerNames(idx)
+          "name" -> annotationInfo.annotationLayerNames(idx),
+          "stats" -> annotationInfo.annotationLayerStatistics(idx)
       )
     )
     val tracingType: String = getAnnotationTypeForTag(annotationInfo)
@@ -990,7 +990,7 @@ class AnnotationService @Inject()(
       "name" -> annotationInfo.name,
       "description" -> annotationInfo.description,
       "typ" -> annotationInfo.typ,
-      "stats" -> annotationInfo.stats,
+      "stats" -> Json.obj(), // included for legacy parsers
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
       "organization" -> annotationInfo.organizationName,

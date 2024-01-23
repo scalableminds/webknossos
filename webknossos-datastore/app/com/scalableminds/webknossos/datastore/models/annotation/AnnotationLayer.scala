@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext
@@ -13,8 +13,28 @@ import scala.concurrent.ExecutionContext
 case class AnnotationLayer(
     tracingId: String,
     typ: AnnotationLayerType,
-    name: String
+    name: String,
+    stats: JsObject,
 )
+
+object AnnotationLayerStatistics {
+
+  def zeroedForTyp(typ: AnnotationLayerType): JsObject = typ match {
+    case AnnotationLayerType.Skeleton =>
+      Json.obj(
+        "treeCount" -> 0,
+        "nodeCount" -> 0,
+        "edgeCount" -> 0,
+        "branchPointCount" -> 0
+      )
+    case AnnotationLayerType.Volume =>
+      Json.obj(
+        "segmentCount" -> 0
+      )
+  }
+
+  def unknown: JsObject = Json.obj()
+}
 
 object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
@@ -32,8 +52,10 @@ object AnnotationLayer extends FoxImplicits {
                     volumeTracingIdOpt: Option[String],
                     assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[AnnotationLayer]] = {
     val annotationLayers: List[AnnotationLayer] = List(
-      skeletonTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName)),
-      volumeTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName))
+      skeletonTracingIdOpt.map(
+        AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName, AnnotationLayerStatistics.unknown)),
+      volumeTracingIdOpt.map(
+        AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown))
     ).flatten
     for {
       _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"

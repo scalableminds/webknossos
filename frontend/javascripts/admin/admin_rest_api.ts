@@ -949,15 +949,6 @@ export function getNewestVersionForTracing(
   );
 }
 
-/*
-POST        /volume/:tracingId/segmentStatistics/volume         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(token: Option[String], tracingId: String)
-POST        /volume/:tracingId/segmentStatistics/boundingBox    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(token: Option[String], tracingId: String)
-*/
-
-/* 
-POST /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentStatistics/boundingBox 
-  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String) 
-  */
 export function getSegmentVolumesFromTracingStore(
   tracingStoreUrl: string,
   tracingId: string,
@@ -974,40 +965,38 @@ export function getSegmentVolumesFromTracingStore(
   );
 }
 
-//POST /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentStatistics/volume
-//@com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentVolume(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+export function getSegmentVolumes(requestUrl: string, mag: Vector3, segmentIds: Array<number>) {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
+      data: { mag, segmentIds },
+      method: "POST",
+    }),
+  );
+}
 
-export function getSegmentVolumesFromDataStore(
+export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
   dataSetName: string,
   dataLayerName: string,
   organizationName: string,
-  mag: Vector3,
-  segmentIds: Array<number>,
-): Promise<number[]> {
+) {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentStatistics/volume?token=${token}`,
-      {
-        data: { mag, segmentIds },
-      },
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentIndex?token=${token}`,
     ),
   );
 }
 
 export function getSegmentBoundingBoxes(
   requestUrl: string,
-  tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
-): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+) {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${requestUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
-      {
-        data: { mag, segmentIds },
-      },
-    ),
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
+      data: { mag, segmentIds },
+      method: "POST",
+    }),
   );
 }
 

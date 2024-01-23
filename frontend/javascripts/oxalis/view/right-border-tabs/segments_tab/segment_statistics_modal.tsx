@@ -1,4 +1,4 @@
-import { getSegmentBoundingBoxes, getSegmentVolumesFromDataStore } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
@@ -19,7 +19,7 @@ const SEGMENT_STATISTICS_CSV_HEADER =
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
-  tracingId: string;
+  tracingId: string | undefined;
   tracingStoreUrl: string;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
@@ -41,7 +41,7 @@ type SegmentInfo = {
 
 const exportStatisticsToCSV = (
   segmentInformation: Array<SegmentInfo>,
-  tracingId: string,
+  tracingIdOrDatasetName: string,
   groupIdToExport: number,
 ) => {
   if (segmentInformation.length === 0) {
@@ -69,8 +69,8 @@ const exportStatisticsToCSV = (
   const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
-      ? `segmentStatistics_tracing-${tracingId}.csv`
-      : `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
+      ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
+      : `segmentStatistics_${tracingIdOrDatasetName}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {
     type: "text/plain;charset=utf-8",
   });
@@ -95,31 +95,26 @@ export function SegmentStatisticsModal({
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
 
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}`;
-
-  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${visibleSegmentationLayer.name}`;
-
   const maybeVolumeTracing =
     "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
       ? getVolumeTracingById(state.tracing, visibleSegmentationLayer.tracingId)
       : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
   const shouldUseDataStore = maybeVolumeTracing == null;
+  const requestUrl = shouldUseDataStore
+    ? `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}/`
+    : `${tracingStoreHost}/tracings/volume/${tracingId}`;
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
       const segmentStatisticsObjects = await Promise.all([
-        getSegmentVolumesFromDataStore(
-          dataStoreHost,
-          datasetName,
-          visibleSegmentationLayer.name,
-          organization,
+        getSegmentVolumes(
+          requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
         ),
         getSegmentBoundingBoxes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
         ),
@@ -215,7 +210,7 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
+      onOk={() => exportStatisticsToCSV(dataSource, tracingId || datasetName, parentGroup)}
       okText="Export to CSV"
     >
       <Spin spinning={dataSource.length === 0}>

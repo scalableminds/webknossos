@@ -14,7 +14,7 @@ import {
   CloseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
-import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
+import { getJobs, hasSegmentIndexInDataStore, startComputeMeshFileJob } from "admin/admin_rest_api";
 import { api, Model } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -45,7 +45,6 @@ import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
-  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -1119,12 +1118,24 @@ class SegmentsView extends React.Component<Props, State> {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (
       visibleSegmentationLayer == null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex ||
       // TODO change once statistics are available for nd-datasets
       hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)
     ) {
-      // In this case we are in an ND annotation.
       return null;
+    }
+    // In this case we are in an ND annotation.
+    if (!this.props.activeVolumeTracing?.hasSegmentIndex) {
+      const state = Store.getState();
+      const datasetName = state.dataset.name;
+      const organization = state.dataset.owningOrganization;
+      const dataStoreHost = state.dataset.dataStore.url;
+      const hasSegmentIndex = hasSegmentIndexInDataStore(
+        dataStoreHost,
+        datasetName,
+        visibleSegmentationLayer.name,
+        organization,
+      );
+      if (!hasSegmentIndex) return null;
     }
     return {
       key: "segmentStatistics",
@@ -1549,15 +1560,22 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentStatisticsModal = (groupId: number) => {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (
-      visibleSegmentationLayer != null &&
-      this.props.hasVolumeTracing &&
-      segments != null &&
-      segments.length > 0
-    ) {
+    if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
       const state = Store.getState();
       const tracingId = this.props.activeVolumeTracing?.tracingId;
-      if (tracingId == null) return null;
+      if (tracingId == null) {
+        const state = Store.getState();
+        const datasetName = state.dataset.name;
+        const organization = state.dataset.owningOrganization;
+        const dataStoreHost = state.dataset.dataStore.url;
+        const hasSegmentIndex = hasSegmentIndexInDataStore(
+          dataStoreHost,
+          datasetName,
+          visibleSegmentationLayer.name,
+          organization,
+        );
+        if (!hasSegmentIndex) return null;
+      }
       const tracingStoreUrl = state.tracing.tracingStore.url;
       return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal

@@ -56,6 +56,7 @@ import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "li
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
+  getVolumeTracingById,
   hasAgglomerateMapping,
   hasConnectomeFile,
   hasEditableMapping,
@@ -103,7 +104,11 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import {
+  getSegmentBoundingBoxes,
+  getSegmentVolumes,
+  hasSegmentIndexInDataStore,
+} from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
@@ -1179,46 +1184,65 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+  const state = Store.getState();
+  const datasetName = state.dataset.name;
+  const organization = state.dataset.owningOrganization;
+  const dataStoreHost = state.dataset.dataStore.url;
+  const hasSegmentIndex =
+    visibleSegmentationLayer != null &&
+    (volumeTracing?.hasSegmentIndex ||
+      hasSegmentIndexInDataStore(
+        dataStoreHost,
+        datasetName,
+        visibleSegmentationLayer.name,
+        organization,
+      ));
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       if (
         contextMenuPosition == null ||
-        volumeTracing == null ||
         visibleSegmentationLayer == null ||
-        !volumeTracing.hasSegmentIndex ||
+        !hasSegmentIndex ||
         hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
         return [];
-      } else {
-        const tracingId = volumeTracing.tracingId;
-        const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
-        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-        const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = Store.getState().dataset.dataSource.scale;
-        const [segmentSize] = await getSegmentVolumes(
-          tracingStoreUrl,
-          tracingId,
-          layersFinestResolution,
-          [segmentIdAtPosition],
-        );
-        const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          tracingStoreUrl,
-          tracingId,
-          layersFinestResolution,
-          [segmentIdAtPosition],
-        );
-        const boundingBoxInMag1 = getBoundingBoxInMag1(
-          boundingBoxInRequestedMag,
-          layersFinestResolution,
-        );
-        const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
-        const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
-        return [
-          formatNumberToVolume(volumeInNm3),
-          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
-        ];
       }
+
+      const tracingId = volumeTracing?.tracingId;
+      const tracingStoreHost = state.tracing.tracingStore.url;
+      const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+      const layersFinestResolution = magInfo.getFinestResolution();
+      const dataSetScale = state.dataset.dataSource.scale;
+
+      const maybeVolumeTracing =
+        "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
+          ? getVolumeTracingById(state.tracing, visibleSegmentationLayer.tracingId)
+          : null;
+      // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
+      const shouldUseDataStore = maybeVolumeTracing == null;
+      const requestUrl = shouldUseDataStore
+        ? `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}/`
+        : `${tracingStoreHost}/tracings/volume/${tracingId}`;
+
+      const [segmentSize] = await getSegmentVolumes(requestUrl, layersFinestResolution, [
+        segmentIdAtPosition,
+      ]);
+      const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
+        requestUrl,
+        layersFinestResolution,
+        [segmentIdAtPosition],
+      );
+      const boundingBoxInMag1 = getBoundingBoxInMag1(
+        boundingBoxInRequestedMag,
+        layersFinestResolution,
+      );
+      const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
+      const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
+      const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+      return [
+        formatNumberToVolume(volumeInNm3),
+        `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+      ];
     },
     ["loading", "loading"],
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
@@ -1325,9 +1349,10 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 
   const areSegmentStatisticsAvailable =
-    volumeTracing?.hasSegmentIndex &&
+    // TODO make sure that segment index <-> segment stats is correct, bc I think there are other cases too
     isHoveredSegmentOrMesh &&
-    !hasAdditionalCoordinates(props.additionalCoordinates); // TODO change once statistics are available for nd-datasets
+    !hasAdditionalCoordinates(props.additionalCoordinates) &&
+    hasSegmentIndex; // TODO change once statistics are available for nd-datasets
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

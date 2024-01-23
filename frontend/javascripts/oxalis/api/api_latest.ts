@@ -77,12 +77,17 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
+import {
   getLayerBoundingBox,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
   flatToNestedMatrix,
+  getTransformsForSkeletonLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -986,9 +991,17 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
-    );
+    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
+      const dataset = Store.getState().dataset;
+      const nativelyRenderedLayerName =
+        Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+
+      const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+      const invertedTransform = currentTransforms;
+      const newPosition = transformPointUnscaled(invertedTransform)(node.position);
+
+      return Store.dispatch(setPositionAction(newPosition));
+    });
   };
 
   /**

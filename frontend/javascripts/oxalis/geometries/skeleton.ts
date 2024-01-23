@@ -219,6 +219,8 @@ class Skeleton {
     const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
+    // todop: don't disable if no transforms are active
+    mesh.frustumCulled = false;
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {

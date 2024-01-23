@@ -30,6 +30,7 @@ import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_
 import MultiKeyMap from "libs/multi_key_map";
 import {
   chainTransforms,
+  createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
   Transform,
@@ -701,7 +702,7 @@ function _getOriginalTransformsForLayerOrNull(
 
   if (type === "affine") {
     const nestedMatrix = transformation.matrix;
-    return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
+    return createAffineTransformFromMatrix(nestedMatrix);
   } else if (type === "thin_plate_spline") {
     let { source, target } = transformation.correspondences;
 
@@ -772,7 +773,7 @@ export function getTransformsForLayer(
   );
 }
 
-export function getTransformsForSkeletonLayer(
+function _getTransformsForSkeletonLayer(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
 ): Transform {
@@ -804,6 +805,8 @@ export function getTransformsForSkeletonLayer(
   //   IdentityTransform
   // );
 }
+
+export const getTransformsForSkeletonLayer = memoizeOne(_getTransformsForSkeletonLayer);
 
 function _getTransformsPerLayer(
   dataset: APIDataset,

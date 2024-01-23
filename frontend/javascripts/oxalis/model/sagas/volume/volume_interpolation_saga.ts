@@ -30,14 +30,42 @@ import {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  setMappingIsPinnedAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
-import { OxalisState } from "oxalis/store";
+import { OxalisState, VolumeTracing } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
+
+// This saga should be within volumetracing_saga.tsx but is placed here to avoid cyclic dependencies.
+export function* ensureMaybeActiveMappingIsPinned(volumeTracing: VolumeTracing): Saga<void> {
+  const activeMappingByLayer = yield* select(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const isSomeMappingActive = volumeTracing.tracingId in activeMappingByLayer;
+  if (isSomeMappingActive && !volumeTracing.mappingIsPinned) {
+    // A mapping that is active and is annotated on needs to be pinned to ensure a consistent state in the future.
+    // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
+    const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
+    if (activeMapping.mappingName) {
+      yield* put(
+        setMappingNameAction(
+          volumeTracing.tracingId,
+          activeMapping.mappingName,
+          activeMapping.mappingType,
+        ),
+      );
+      yield* put(setMappingIsPinnedAction());
+      const message = `The mapping ${activeMapping.mappingName} is from now on pinned to this annotation due to annotating the volume while this mapping was active.\nTo undo this, please restore an older version of the annotation where the mapping was not pinned yet.`;
+      Toast.info(message, { timeout: 10000 });
+      console.log(message);
+    }
+  }
+}
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -433,6 +461,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
     return;
   }
+  // As the interpolation will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
+  yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
 
   // In the extrusion case, we don't need any distance transforms. The binary
   // masks are enough to decide whether a voxel needs to be written.

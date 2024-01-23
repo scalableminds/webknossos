@@ -18,6 +18,9 @@ import performQuickSelectML, {
 } from "./quick_select_ml_saga";
 import { AnnotationToolEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { ensureMaybeActiveMappingIsPinned } from "./volume/volume_interpolation_saga";
+import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
+import { VolumeTracing } from "oxalis/store";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -30,6 +33,13 @@ export default function* listenToQuickSelect(): Saga<void> {
     function* guard(action: ComputeQuickSelectForRectAction) {
       try {
         yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
+        // As changes to the volume layer will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
+        const volumeTracing: VolumeTracing | null | undefined = yield* select(
+          getActiveSegmentationTracing,
+        );
+        if (volumeTracing) {
+          yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+        }
 
         yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {

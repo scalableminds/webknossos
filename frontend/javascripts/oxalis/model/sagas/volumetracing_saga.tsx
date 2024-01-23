@@ -58,7 +58,6 @@ import type {
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
-  setMappingNameAction,
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
@@ -72,7 +71,6 @@ import type {
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
-  setMappingIsPinnedAction,
   setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -109,7 +107,9 @@ import {
   labelWithVoxelBuffer2D,
   BooleanBox,
 } from "./volume/helpers";
-import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import maybeInterpolateSegmentationLayer, {
+  ensureMaybeActiveMappingIsPinned,
+} from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 
@@ -221,25 +221,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    const activeMappingByLayer = yield* select(
-      (state) => state.temporaryConfiguration.activeMappingByLayer,
-    );
-    const isSomeMappingActive = volumeTracing.tracingId in activeMappingByLayer;
-    if (isSomeMappingActive && !volumeTracing.mappingIsPinned) {
-      // A mapping that is active and is annotated on needs to be pinned to ensure a consistent state in the future.
-      // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
-      const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
-      if (activeMapping.mappingName) {
-        yield* put(
-          setMappingNameAction(
-            volumeTracing.tracingId,
-            activeMapping.mappingName,
-            activeMapping.mappingType,
-          ),
-        );
-        yield* put(setMappingIsPinnedAction());
-      }
-    }
+    // As changes to the volume layer will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
+    yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
 
     if (isDrawing && activeCellId === 0) {
       yield* call(
@@ -456,7 +439,9 @@ export function* floodFill(): Saga<void> {
       console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
       continue;
     }
-
+    // As the flood fill will be applied to the volume layer,
+    // the potentially existing mapping should be pinned to ensure a consistent state.
+    yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     const progressCallback = createProgressCallback({

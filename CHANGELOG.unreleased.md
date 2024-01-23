@@ -40,6 +40,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When no Email Address for New-User Notifications is configured, the organization owner will be notified. For overtime notifications, the project owner and the organization owner will be notified. [#7561](https://github.com/scalableminds/webknossos/pull/7561)
 - The metadata for ND datasets and their annotation has changed: upper bound of additionalAxes is now stored as an exclusive value, called "end" in the NML format. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
 - Added support for the *index_location* parameter in sharded Zarr 3 datasets. [#7553](https://github.com/scalableminds/webknossos/pull/7553)
+- When creating or uploading a non-task volume annotation layer with a fallback segmentation layer, the annotation layer’s bounding box will now be limited to that layer’s, instead of the whole dataset’s. [#7579](https://github.com/scalableminds/webknossos/pull/7578)
 
 ### Fixed
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)

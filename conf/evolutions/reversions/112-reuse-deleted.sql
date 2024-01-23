@@ -2,8 +2,6 @@ START TRANSACTION;
 
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 112, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
--- not reverting the suffix appending, to avoid false positives
-
 UPDATE webknossos.teams SET name = REPLACE(name, '.deleted.beforeDeletionSuffix', '') WHERE isDeleted = TRUE;
 UPDATE webknossos.projects SET name = REPLACE(name, '.deleted.beforeDeletionSuffix', '') WHERE isDeleted = TRUE;
 UPDATE webknossos.tasktypes SET summary = REPLACE(summary, '.deleted.beforeDeletionSuffix', '') WHERE isDeleted = TRUE;

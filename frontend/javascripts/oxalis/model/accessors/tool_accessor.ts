@@ -112,13 +112,48 @@ function _getDisabledInfoWhenVolumeIsDisabled(
   };
 }
 
+function _getDisabledInfoForProofreadTool(
+  hasSkeleton: boolean,
+  agglomerateState: AgglomerateState,
+  isProofReadingToolAllowed: boolean,
+  isUneditableMappingPinned: boolean,
+  activeOrganization: APIOrganization | null,
+  activeUser: APIUser | null | undefined,
+) {
+  const isDisabled =
+    !hasSkeleton ||
+    !agglomerateState.value ||
+    !isProofReadingToolAllowed ||
+    isUneditableMappingPinned;
+  let explanation = "Proofreading actions are not allowed with a pinned and modified mapping.";
+  if (!isUneditableMappingPinned) {
+    if (!agglomerateState.value) {
+      explanation = agglomerateState.reason;
+    } else if (!isProofReadingToolAllowed) {
+      explanation = getFeatureNotAvailableInPlanMessage(
+        PricingPlanEnum.Power,
+        activeOrganization,
+        activeUser,
+      );
+    } else {
+      explanation = disabledSkeletonExplanation;
+    }
+  }
+  return {
+    isDisabled,
+    explanation,
+  };
+}
+
 const getDisabledInfoWhenVolumeIsDisabled = memoizeOne(_getDisabledInfoWhenVolumeIsDisabled);
+const getDisabledInfoForProofreadTool = memoizeOne(_getDisabledInfoForProofreadTool);
 
 function _getDisabledInfoFromArgs(
   hasSkeleton: boolean,
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
+  isUneditableMappingPinned: boolean,
   agglomerateState: AgglomerateState,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
@@ -170,27 +205,14 @@ function _getDisabledInfoFromArgs(
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.PROOFREAD]: {
-      isDisabled: !hasSkeleton || !agglomerateState.value || !isProofReadingToolAllowed,
-      explanation:
-        // The explanations are prioritized according to effort the user has to put into
-        // activating proofreading.
-        // 1) If no agglomerate mapping is available (or activated), the user should know
-        //    about this requirement and be able to set it up (this can be the most difficult
-        //    step).
-        // 2) If a mapping is available, the pricing plan is potentially warned upon.
-        // 3) In the end, a potentially missing skeleton is warned upon (quite rare, because
-        //    most annotations have a skeleton).
-        agglomerateState.value
-          ? isProofReadingToolAllowed
-            ? disabledSkeletonExplanation
-            : getFeatureNotAvailableInPlanMessage(
-                PricingPlanEnum.Power,
-                activeOrganization,
-                activeUser,
-              )
-          : agglomerateState.reason,
-    },
+    [AnnotationToolEnum.PROOFREAD]: getDisabledInfoForProofreadTool(
+      hasSkeleton,
+      agglomerateState,
+      isProofReadingToolAllowed,
+      isUneditableMappingPinned,
+      activeOrganization,
+      activeUser,
+    ),
     [AnnotationToolEnum.LINE_MEASUREMENT]: {
       isDisabled: false,
       explanation: genericDisabledExplanation,
@@ -242,6 +264,9 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isEditableMappingActive,
     isSegmentationTracingTransformed,
   );
+  const isUneditableMappingPinned =
+    (segmentationTracingLayer?.mappingIsPinned && !segmentationTracingLayer?.mappingIsEditable) ??
+    false;
 
   const isVolumeDisabled =
     !hasVolume ||
@@ -268,6 +293,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.BRUSH, state),
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.FILL_CELL, state),
+    isUneditableMappingPinned,
     agglomerateState,
     genericDisabledExplanation,
     state.activeOrganization,

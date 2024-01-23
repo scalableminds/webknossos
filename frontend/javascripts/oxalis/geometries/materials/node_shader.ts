@@ -4,16 +4,11 @@ import type { Uniforms } from "oxalis/geometries/materials/plane_material_factor
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { Model, Store } from "oxalis/singletons";
+import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
-import {
-  getLayerByName,
-  getTransformsForLayer,
-  getTransformsForSkeletonLayer,
-  getTransformsPerLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
 import { M4x4 } from "libs/mjs";
 export const NodeTypes = {
   INVALID: 0.0,
@@ -252,7 +247,6 @@ void main() {
       return;
     }
 
-    // todop: transform position here
     vec4 transformedCoord = transform * vec4(position, 1.);
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 

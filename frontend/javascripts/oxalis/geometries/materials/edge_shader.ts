@@ -5,6 +5,8 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { Store } from "oxalis/singletons";
 import _ from "lodash";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
+import { M4x4 } from "libs/mjs";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
@@ -31,6 +33,23 @@ class EdgeShader {
         value: treeColorTexture,
       },
     };
+
+    const dataset = Store.getState().dataset;
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    this.uniforms[`transform`] = {
+      value: M4x4.transpose(
+        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
+      ),
+    };
+    this.uniforms[`has_transform`] = {
+      value: true,
+      // !_.isEqual(
+      //   getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+      //   Identity4x4,
+      // ),
+    };
+
     const { additionalCoordinates } = Store.getState().flycam;
 
     _.each(additionalCoordinates, (_val, idx) => {
@@ -47,6 +66,20 @@ class EdgeShader {
         });
       },
       true,
+    );
+
+    listenToStoreProperty(
+      (storeState) =>
+        getTransformsForSkeletonLayer(
+          storeState.dataset,
+          storeState.datasetConfiguration.nativelyRenderedLayerName,
+        ),
+      (skeletonTransforms) => {
+        const transforms = skeletonTransforms;
+        const { affineMatrix } = transforms;
+
+        this.uniforms[`transform`].value = M4x4.transpose(affineMatrix);
+      },
     );
   }
 
@@ -67,6 +100,9 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
+
+uniform mat4 transform;
+uniform bool has_transform;
 
 <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
@@ -101,7 +137,10 @@ void main() {
       return;
     }
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 transformedCoord = transform * vec4(position, 1.);
+    gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
+
+
     color = rgba.rgb;
 }`)({ additionalCoordinates });
   }

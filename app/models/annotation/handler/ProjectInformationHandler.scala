@@ -27,7 +27,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       annotations <- annotationDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
-      _dataSet <- annotations.headOption.map(_._dataSet).toFox
+      _dataSet <- annotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(projectId,
                                                   persistTracing = false,
                                                   user._id,

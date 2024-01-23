@@ -10,6 +10,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  CancelUploadInformation,
+  ComposeRequest,
+  ComposeService,
+  ReserveUploadInformation,
+  UploadInformation,
+  UploadService
+}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
@@ -32,7 +40,8 @@ class DataSourceController @Inject()(
     connectomeFileService: ConnectomeFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
-    uploadService: UploadService
+    uploadService: UploadService,
+    composeService: ComposeService
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
@@ -436,6 +445,22 @@ class DataSourceController @Inject()(
             datasetName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
           _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
+        } yield Ok
+      }
+    }
+
+  def compose(token: Option[String]): Action[ComposeRequest] =
+    Action.async(validateJson[ComposeRequest]) { implicit request =>
+      val userToken = urlOrHeaderToken(token, request)
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
+        for {
+          _ <- Fox.serialCombined(request.body.layers.map(_.datasetId).toList)(
+            id =>
+              accessTokenService.assertUserAccess(
+                UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
+                userToken))
+          dataSource <- composeService.composeDataset(request.body, userToken)
+          _ <- dataSourceRepository.updateDataSource(dataSource)
         } yield Ok
       }
     }

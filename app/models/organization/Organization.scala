@@ -161,7 +161,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                  SELECT _id
                  FROM webknossos.datasets_
                  WHERE _organization = $organizationId
-                 AND name = ${entry.dataSetName}
+                 AND name = ${entry.datasetName}
                  LIMIT 1
                )
                INSERT INTO webknossos.organization_usedStorage(

@@ -28,7 +28,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       ObjectId.generate,
       persistTracing,
       issuingUser._id,
-      annotationB._dataSet,
+      annotationB._dataset,
       annotationB._team,
       AnnotationType.Explorational,
       List(annotationA, annotationB)

@@ -5,6 +5,9 @@ import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import models.dataset.DatasetService
+import models.organization.OrganizationDAO
+
 import javax.inject.Inject
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
@@ -29,10 +32,22 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     userController: UserController,
                                     projectController: ProjectController,
                                     projectDAO: ProjectDAO,
+                                    organizationDAO: OrganizationDAO,
+                                    datasetService: DatasetService,
                                     taskDAO: TaskDAO,
                                     taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  def assertValidNewNameV5(organizationName: String, dataSetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- datasetService.assertValidDatasetName(dataSetName)
+        _ <- datasetService.assertNewDatasetName(dataSetName, organization._id) ?~> "dataset.name.alreadyTaken"
+      } yield Ok
+    }
 
   /* to provide v4
    - replace new annotation layers by old tracing ids (changed in v5)

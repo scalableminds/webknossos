@@ -1016,7 +1016,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.props.onSetPosition(foundPosition);
     const zoomValue = this.props.onZoomToResolution(layerName, foundResolution);
     Toast.success(
-      `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
+      `Jumping to position ${foundPosition
+        .map((el) => Math.floor(el))
+        .join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
   };
 

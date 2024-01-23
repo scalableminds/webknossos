@@ -373,14 +373,20 @@ class DatasetController @Inject()(userService: UserService,
     Future.successful(JsonBadRequest(Messages("dataset.type.invalid", typ)))
   }
 
-  def assertValidNewName(organizationName: String, datasetName: String): Action[AnyContent] =
+  def isValidNewName(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- datasetService.assertValidDatasetName(datasetName)
-        _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
-      } yield Ok
+        validName <- datasetService.assertValidDatasetName(datasetName).futureBox
+        nameAlreadyExists <- (datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken").futureBox
+        errors = combineErrors(List(validName, nameAlreadyExists))
+        valid = validName.isDefined && nameAlreadyExists.isDefined
+      } yield
+        errors match {
+          case Some(e) => Ok(Json.obj("isValid" -> valid, "errors" -> e.map(Messages(_))))
+          case None    => Ok(Json.obj("isValid" -> valid))
+        }
     }
 
   def getOrganizationForDataset(datasetName: String): Action[AnyContent] = sil.UserAwareAction.async {

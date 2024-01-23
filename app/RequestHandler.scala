@@ -66,7 +66,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     assets.at(path = "/public", file = path)
   }
 
-  private def CURRENT_API_VERSION = 5
+  private def CURRENT_API_VERSION = 6
 
   private def apiVersionIsTooNew(request: RequestHeader): Boolean =
     "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {

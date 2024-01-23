@@ -48,7 +48,6 @@ type OwnProps = {
   onAdded: (
     datasetOrganization: string,
     uploadedDatasetName: string,
-    isRemoteDataset: boolean,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -228,7 +227,7 @@ function DatasetAddRemoteView(props: Props) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name, true);
+      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 

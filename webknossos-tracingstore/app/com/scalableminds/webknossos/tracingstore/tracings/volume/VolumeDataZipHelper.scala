@@ -85,7 +85,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
     val additionalAxesNames: Seq[String] = dimensionNames.toSeq.drop(1).dropRight(3) // drop channel left, and xyz right
 
     // assume additionalAxes,x,y,z
-    val chunkPathRegex = s"(|.*/)(\\d+-\\d+-\\d+)/c\\.(.+)".r
+    val chunkPathRegex = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/c\\.(.+)".r
 
     path match {
       case chunkPathRegex(_, magStr, dimsStr) =>
@@ -99,7 +99,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
         val bucketY = dims(dims.length - 2)
         val bucketZ = dims.last
 
-        Vec3Int.fromMagLiteral(magStr).map { mag =>
+        Vec3Int.fromMagLiteral(magStr, allowScalar = true).map { mag =>
           BucketPosition(
             bucketX.toInt * mag.x * DataLayer.bucketLength,
             bucketY.toInt * mag.y * DataLayer.bucketLength,

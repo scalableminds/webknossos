@@ -23,7 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 
 case class Annotation(
     _id: ObjectId,
-    _dataSet: ObjectId,
+    _dataset: ObjectId,
     _task: Option[ObjectId] = None,
     _team: ObjectId,
     _user: ObjectId,
@@ -248,14 +248,17 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     accessQueryFromAccessQWithPrefix(listAccessQ, q"")(ctx)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    readAccessQWithPrefix(requestingUserId, q"")
+
+  protected def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
     q"""(
-              visibility = ${AnnotationVisibility.Public}
-           or (visibility = ${AnnotationVisibility.Internal}
-               and (select _organization from webknossos.teams where webknossos.teams._id = _team)
+              ${prefix}visibility = ${AnnotationVisibility.Public}
+           or (${prefix}visibility = ${AnnotationVisibility.Internal}
+               and (select _organization from webknossos.teams where webknossos.teams._id = ${prefix}_team)
                  in (select _organization from webknossos.users_ where _id = $requestingUserId))
-           or _team in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)
-           or _user = $requestingUserId
-           or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+           or ${prefix}_team in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)
+           or ${prefix}_user = $requestingUserId
+           or (select _organization from webknossos.teams where webknossos.teams._id = ${prefix}_team)
              in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)
          )"""
 
@@ -304,11 +307,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
+      // In dashboard, list only own + explicitly shared annotations. When listing those of another user, list all of their annotations the viewer is allowed to see
+      isForOwnDashboard: Boolean,
       typ: AnnotationType,
       limit: Int,
       pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
-      accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      accessQuery <- if (isForOwnDashboard) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"true")
       typQuery = q"a.typ = $typ"
@@ -544,7 +550,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val insertAnnotationQuery = q"""
         insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility,
                                            name, viewConfiguration, state, statistics, tags, tracingTime, typ, othersMayEdit, created, modified, isDeleted)
-        values(${a._id}, ${a._dataSet}, ${a._task}, ${a._team},
+        values(${a._id}, ${a._dataset}, ${a._task}, ${a._team},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
          ${a.viewConfiguration},
          ${a.state}, ${a.statistics},
@@ -563,7 +569,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val updateAnnotationQuery = q"""
              update webknossos.annotations
              set
-               _dataSet = ${a._dataSet},
+               _dataSet = ${a._dataset},
                _team = ${a._team},
                _user = ${a._user},
                description = ${a.description},

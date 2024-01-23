@@ -189,7 +189,7 @@ class AnnotationService @Inject()(
       organizationName: String,
       annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSource.notFound"
       newAnnotationLayers <- createTracingsForExplorational(dataSet,
                                                             dataSource,
@@ -240,7 +240,7 @@ class AnnotationService @Inject()(
         tracingIdAndName <- annotationLayerParameters.typ match {
           case AnnotationLayerType.Skeleton =>
             val skeleton = SkeletonTracingDefaults.createInstance.copy(
-              dataSetName = dataSet.name,
+              datasetName = dataSet.name,
               editPosition = dataSource.center,
               organizationName = Some(datasetOrganizationName),
               additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
@@ -406,7 +406,7 @@ class AnnotationService @Inject()(
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.downsample.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
       newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId, downsample = true)
@@ -418,7 +418,7 @@ class AnnotationService @Inject()(
   def addSegmentIndex(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataSet.notFoundForAnnotation"
       _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.segmentIndex.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
       _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId, dryRun = false)
@@ -490,8 +490,8 @@ class AnnotationService @Inject()(
       ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       for {
-        dataSetName <- datasetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-        dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> Messages("dataset.noAccess", dataSetName)
+        dataSetName <- datasetDAO.getNameById(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+        dataSet <- datasetDAO.findOne(annotation._dataset) ?~> Messages("dataset.noAccess", dataSetName)
         (newSkeletonId, newVolumeId) <- tracingsFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task $taskId with annotation base ${annotation._id}"
         annotationLayers <- AnnotationLayer.layersFromIds(newSkeletonId, newVolumeId)
         newAnnotation = annotation.copy(
@@ -528,7 +528,7 @@ class AnnotationService @Inject()(
       System.currentTimeMillis()
     )
     SkeletonTracingDefaults.createInstance.copy(
-      dataSetName = dataSetName,
+      datasetName = dataSetName,
       boundingBox = boundingBox.flatMap { box =>
         if (box.isEmpty) None else Some(box)
       },
@@ -690,7 +690,7 @@ class AnnotationService @Inject()(
         user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
-        dataset <- datasetDAO.findOne(annotation._dataSet)
+        dataset <- datasetDAO.findOne(annotation._dataset)
         organizationName <- organizationDAO.findOrganizationNameForAnnotation(annotation._id)
         skeletonTracingIdOpt <- annotation.skeletonTracingId
         volumeTracingIdOpt <- annotation.volumeTracingId
@@ -750,7 +750,7 @@ class AnnotationService @Inject()(
         dataSet <- datasetDAO.findOne(dataSetId)
       } yield dataSet.scale
 
-    val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
+    val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataset)
     val tracingsGrouped = annotationsGrouped.map {
       case (dataSetId, annotations) =>
         for {
@@ -819,7 +819,7 @@ class AnnotationService @Inject()(
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
-      _ <- datasetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDatasetAccess"
+      _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDatasetAccess"
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated
@@ -836,7 +836,7 @@ class AnnotationService @Inject()(
           _ = logger.warn(
             s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing $oldSkeletonTracingIdOpt and/or volume tracing $oldVolumeTracingIdOpt")
           annotationBase <- baseForTask(task._id)
-          dataSet <- datasetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+          dataSet <- datasetDAO.findOne(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
           (newSkeletonIdOpt, newVolumeIdOpt) <- tracingsFromBase(annotationBase, dataSet)
           _ <- Fox.bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
           _ <- Fox.runOptional(newSkeletonIdOpt)(newSkeletonId =>
@@ -869,7 +869,7 @@ class AnnotationService @Inject()(
                    restrictionsOpt: Option[AnnotationRestrictions] = None): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
@@ -919,7 +919,7 @@ class AnnotationService @Inject()(
   def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       dataSetJs <- datasetService.publicWrites(dataSet, None, None, None)
@@ -937,7 +937,7 @@ class AnnotationService @Inject()(
   def writesAsAnnotationSource(annotation: Annotation, accessViaPrivateLink: Boolean): Fox[JsValue] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- datasetDAO.findOne(annotation._dataSet) ?~> "dataset.notFoundForAnnotation"
+      dataSet <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       tracingStore <- tracingStoreDAO.findFirst

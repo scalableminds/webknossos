@@ -145,7 +145,7 @@ case class CreateAnnotationEvent(user: User, annotation: Annotation)(implicit ec
     extends AnalyticsEvent {
   def eventType: String = "create_annotation"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "annotation_dataset_id" -> annotation._dataSet.id))
+    Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "annotation_dataset_id" -> annotation._dataset.id))
 }
 
 case class OpenAnnotationEvent(user: User, annotation: Annotation) extends AnalyticsEvent {
@@ -156,7 +156,7 @@ case class OpenAnnotationEvent(user: User, annotation: Annotation) extends Analy
     } yield {
       Json.obj("annotation_id" -> annotation._id.id,
                "annotation_owner_multiuser_id" -> owner_multiuser_id,
-               "annotation_dataset_id" -> annotation._dataSet.id)
+               "annotation_dataset_id" -> annotation._dataset.id)
     }
 }
 

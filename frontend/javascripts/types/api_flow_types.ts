@@ -85,6 +85,14 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+export type LayerLink = {
+  datasetId: APIDatasetId;
+  sourceName: string;
+  newName: string;
+  transformations: CoordinateTransformation[];
+};
+
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
   numberOfElements: number;

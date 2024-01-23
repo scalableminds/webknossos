@@ -13,6 +13,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - If your setup contains webknossos-workers, you may want to add the new available worker job `compute_segment_index_file` to the `supportedJobCommands` column of one or more of your workers. [#7493](https://github.com/scalableminds/webknossos/pull/7493)
 - The WEBKNOSSOS api version has changed to 6. The `isValidNewName` route for datasets now returns 200 regardless of whether the name is valid or not. The body contains a JSON object with the key "isValid". [#7550](https://github.com/scalableminds/webknossos/pull/7550)
 - If your setup contains ND datasets, run the python3 script at `tools/migrate-axis-bounds/migration.py` on your datastores to update the datasource-properties.jsons of the ND datasets.
+- With the upgrade to Play 3 and the migration to pekko, configuration keys using akka need to be changed. For the default configuration this results in the following changes:
+  - akka.requestTimeout → pekko.requestTimeout
+  - akka.actor.default-dispatcher → pekko.actor.default-dispatcher
 
 ### Postgres Evolutions:
 

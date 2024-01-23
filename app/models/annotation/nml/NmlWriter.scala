@@ -20,7 +20,7 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
-    dataSetName: String,
+    datasetName: String,
     organizationName: String,
     description: Option[String],
     wkUrl: String,
@@ -179,7 +179,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
-        writer.writeAttribute("name", parameters.dataSetName)
+        writer.writeAttribute("name", parameters.datasetName)
         writer.writeAttribute("organization", parameters.organizationName)
         parameters.description.foreach(writer.writeAttribute("description", _))
         writer.writeAttribute("wkUrl", parameters.wkUrl)

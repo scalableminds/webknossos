@@ -13,7 +13,7 @@
     <logger name="braingames.binary" level="TRACE"/>
     <logger name="braingames.datastore" level="TRACE"/>
     <logger name="actor" level="DEBUG"/>
-    <logger name="akka" level="INFO"/>
+    <logger name="org.apache.pekko" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

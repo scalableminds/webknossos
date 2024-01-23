@@ -97,20 +97,20 @@ class WKRemoteDataStoreController @Inject()(
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          dataSetName: String,
-                          dataSetSizeBytes: Long,
+                          datasetName: String,
+                          datasetSizeBytes: Long,
                           needsConversion: Boolean,
                           viaAddRoute: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
-            dataSetName) ~> NOT_FOUND
+            datasetName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataSetName, viaAddRoute))
-          _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, dataSetSizeBytes))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, datasetName, viaAddRoute))
+          _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }

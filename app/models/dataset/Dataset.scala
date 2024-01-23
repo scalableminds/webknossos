@@ -562,13 +562,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- datasetLayerDAO.updateLayers(id, source)
     } yield ()
 
-  def deactivateUnreported(existingDataSetIds: List[ObjectId],
+  def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDataSetIds.isEmpty) q"${true}"
-      else q"_id not in ${SqlToken.tupleFromList(existingDataSetIds)}"
+      if (existingDatasetIds.isEmpty) q"${true}"
+      else q"_id not in ${SqlToken.tupleFromList(existingDatasetIds)}"
     val statusNotAlreadyInactive = q"status not in ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteResolutionsQuery =
       q"""delete from webknossos.dataset_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate

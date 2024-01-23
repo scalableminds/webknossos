@@ -42,10 +42,10 @@ POST          /auth/createUserInOrganization/:organizationName                  
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()
 PUT           /user/userConfiguration                                                           controllers.ConfigurationController.update()
-POST          /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
-PUT           /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, datasetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, datasetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, datasetName: String)
+POST          /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
+PUT           /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
+GET           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
+PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
 
 # Users
 POST          /user/tasks/request                                                               controllers.TaskController.request()
@@ -125,7 +125,7 @@ POST          /tracingstores/:name/validateUserAccess                           
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
-GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataSet(name: String, key: String, organizationName: Option[String], datasetName: String)
+GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationName: Option[String], datasetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()
@@ -269,7 +269,7 @@ POST          /jobs/run/computeMeshFile/:organizationName/:datasetName          
 POST          /jobs/run/computeSegmentIndexFile/:organizationName/:datasetName                  controllers.JobsController.runComputeSegmentIndexFileJob(organizationName: String, datasetName: String, layerName: String)
 POST          /jobs/run/exportTiff/:organizationName/:datasetName                               controllers.JobsController.runExportTiffJob(organizationName: String, datasetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
 POST          /jobs/run/inferNuclei/:organizationName/:datasetName                              controllers.JobsController.runInferNucleiJob(organizationName: String, datasetName: String, layerName: String, newDatasetName: String)
-POST          /jobs/run/inferNeurons/:organizationName/:datasetName                             controllers.JobsController.runInferNeuronsJob(organizationName: String, datasetName: String, layerName: String, bbox: String, newDatasetName: String)
+POST          /jobs/run/inferNeurons/:organizationName/:datasetName                             controllers.JobsController.runInferNeuronsJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
 POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:datasetName              controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, datasetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
 POST          /jobs/run/findLargestSegmentId/:organizationName/:datasetName                     controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, datasetName: String, layerName: String)
 POST          /jobs/run/renderAnimation/:organizationName/:datasetName                          controllers.JobsController.runRenderAnimationJob(organizationName: String, datasetName: String)

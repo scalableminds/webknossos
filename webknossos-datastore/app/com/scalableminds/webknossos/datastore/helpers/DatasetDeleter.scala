@@ -8,11 +8,11 @@ import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-trait DataSetDeleter extends LazyLogging with DirectoryConstants {
+trait DatasetDeleter extends LazyLogging with DirectoryConstants {
   def dataBaseDir: Path
 
   def deleteOnDisk(organizationName: String,
-                   dataSetName: String,
+                   datasetName: String,
                    isInConversion: Boolean = false,
                    reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     @tailrec
@@ -32,12 +32,12 @@ trait DataSetDeleter extends LazyLogging with DirectoryConstants {
       }
 
     val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationName).resolve(forConversionDir).resolve(dataSetName)
-      else dataBaseDir.resolve(organizationName).resolve(dataSetName)
+      if (isInConversion) dataBaseDir.resolve(organizationName).resolve(forConversionDir).resolve(datasetName)
+      else dataBaseDir.resolve(organizationName).resolve(datasetName)
 
     if (Files.exists(dataSourcePath)) {
       val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(trashDir)
-      val targetPath = trashPath.resolve(dataSetName)
+      val targetPath = trashPath.resolve(datasetName)
       new File(trashPath.toString).mkdirs()
 
       logger.info(

@@ -477,7 +477,7 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const data = this.getOrCreateData();
 
     if (this.needsBackendData()) {
@@ -499,7 +499,7 @@ export class DataBucket {
       );
     }
 
-    this._applyVoxelMapInPlace(
+    return this._applyVoxelMapInPlace(
       data,
       voxelMap,
       segmentId,
@@ -521,8 +521,9 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const out = new Float32Array(3);
+    let wroteVoxels = false;
 
     const segmentId = castForArrayType(uncastSegmentId, data);
 
@@ -539,12 +540,15 @@ export class DataBucket {
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
             data[voxelAddress] = segmentId;
+            wroteVoxels = true;
           }
         }
       }
     }
 
     this.invalidateValueSet();
+
+    return wroteVoxels;
   }
 
   markAsPulled(): void {

@@ -74,10 +74,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataSet <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
+      dataset <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
         duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
       else Fox.successful(None)
@@ -234,8 +234,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
-        dataSet <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
-        dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+        dataset <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)
     } else Fox.successful(volume)
 
@@ -387,13 +387,13 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataSet <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+        dataset <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
           "dataset.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
                                                                     fullTasks.count(_._1.baseAnnotation.isDefined))
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
           SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple.map(_._2).openOr(None)))))
         skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks).map {
@@ -428,10 +428,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               requestingUser._id,
               skeletonTracingIdBox = tuple._2._1,
               volumeTracingIdBox = tuple._2._2,
-              dataSet._id,
+              dataset._id,
               description = tuple._1.map(_._1.description).openOr(None)
           ))
-        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
+        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
         result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -451,10 +451,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     @scala.annotation.tailrec
     def allOnSameDatasetIter(
         requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
-        dataSetName: String): Boolean =
+        datasetName: String): Boolean =
       requestedTasksRest match {
         case List()       => true
-        case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
+        case head :: tail => head._1.dataSet == datasetName && allOnSameDatasetIter(tail, datasetName)
       }
 
     if (allOnSameDatasetIter(requestedTasks, firstDatasetName))
@@ -492,27 +492,27 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: Dataset, requestingUser: User)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
         projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
-      dataSetTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
-      noAccessTeamIds = projects.map(_._team).diff(dataSetTeamIds)
+      datasetTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
+      noAccessTeamIds = projects.map(_._team).diff(datasetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
-        filterOutTransitiveSubteam(id, dataSetTeamIds))
+        filterOutTransitiveSubteam(id, datasetTeamIds))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
-        s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
+        s"Project team “${team.name}” has no read permission to dataset “${dataset.name}”.")
     } yield warnings
   }
 
-  private def filterOutTransitiveSubteam(subteamId: ObjectId, dataSetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
-    if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
+  private def filterOutTransitiveSubteam(subteamId: ObjectId, datasetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
+    if (datasetTeams.isEmpty) Fox.successful(Some(subteamId))
     else {
       for {
-        memberDifference <- userDAO.findTeamMemberDifference(subteamId, dataSetTeams)
+        memberDifference <- userDAO.findTeamMemberDifference(subteamId, datasetTeams)
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 

@@ -12,7 +12,7 @@
 ->       /v6/                                                                 webknossos.latest.Routes
 
 
-GET      /v5/datasets/:organizationName/:dataSetName/isValidNewName           controllers.LegacyApiController.assertValidNewNameV5(organizationName: String, dataSetName: String)
+GET      /v5/datasets/:organizationName/:datasetName/isValidNewName           controllers.LegacyApiController.assertValidNewNameV5(organizationName: String, datasetName: String)
 
 ->       /v5/                                                                 webknossos.latest.Routes
 
@@ -30,7 +30,7 @@ GET      /v4/user/tasks                                                       co
 GET      /v4/users/:id/annotations                                            controllers.LegacyApiController.annotationListByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v4/users/:id/tasks                                                  controllers.LegacyApiController.annotationTasksByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v4/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV4(id: String)
-POST     /v4/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, dataSetName: String)
+POST     /v4/datasets/:organizationName/:datasetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, datasetName: String)
 
 ->       /v4/                                                                 webknossos.latest.Routes
 
@@ -47,7 +47,7 @@ GET      /v3/user/tasks                                                       co
 GET      /v3/users/:id/annotations                                            controllers.LegacyApiController.annotationListByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v3/users/:id/tasks                                                  controllers.LegacyApiController.annotationTasksByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v3/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV4(id: String)
-POST     /v3/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, dataSetName: String)
+POST     /v3/datasets/:organizationName/:datasetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, datasetName: String)
 
 # support changes to v4
 POST     /v3/tasks/list                                                       controllers.LegacyApiController.taskListTasks
@@ -77,7 +77,7 @@ GET      /v2/user/tasks                                                       co
 GET      /v2/users/:id/annotations                                            controllers.LegacyApiController.annotationListByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v2/users/:id/tasks                                                  controllers.LegacyApiController.annotationTasksByUserV4(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v2/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV4(id: String)
-POST     /v2/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, dataSetName: String)
+POST     /v2/datasets/:organizationName/:datasetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV4(organizationName: String, datasetName: String)
 
 # Support changes to v4
 POST     /v2/tasks/list                                                       controllers.LegacyApiController.taskListTasks
@@ -104,7 +104,7 @@ GET      /v1/user/tasks                                                       co
 GET      /v1/users/:id/annotations                                            controllers.LegacyApiController.annotationListByUserV1(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v1/users/:id/tasks                                                  controllers.LegacyApiController.annotationTasksByUserV1(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v1/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV1(id: String)
-POST     /v1/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV1(organizationName: String, dataSetName: String)
+POST     /v1/datasets/:organizationName/:datasetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorationalV1(organizationName: String, datasetName: String)
 
 # Support changes to v4
 POST     /v1/tasks/list                                                       controllers.LegacyApiController.taskListTasks

@@ -95,7 +95,7 @@ class BoundingBox {
     return size[0] * size[1] * size[2];
   }
 
-  chunkIntoBuckets() {
+  *chunkIntoBuckets(): Generator<BoundingBox, void, void> {
     const size = this.getSize();
     const start = [...this.min];
     const chunkSize: Vector3 = [32, 32, 32];
@@ -108,25 +108,20 @@ class BoundingBox {
       mod(start[1], chunkBorderAlignments[1]),
       mod(start[2], chunkBorderAlignments[2]),
     ];
-    const boxes = [];
 
     for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
       for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
         for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
           const newMin: Vector3 = [x, y, z];
-          boxes.push(
-            this.intersectedWith(
-              new BoundingBox({
-                min: newMin,
-                max: V3.add(newMin, chunkSize),
-              }),
-            ),
+          yield this.intersectedWith(
+            new BoundingBox({
+              min: newMin,
+              max: V3.add(newMin, chunkSize),
+            }),
           );
         }
       }
     }
-
-    return boxes;
   }
 
   fromMag1ToMag(mag: Vector3): BoundingBox {

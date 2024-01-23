@@ -2309,7 +2309,7 @@
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.2.tgz#d291c6a4e97989b5c61d9acf396ae4fe133a718d"
   integrity sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==
 
-"@zip.js/zip.js@^2.6.81":
+"@zip.js/zip.js@^2.7.32":
   version "2.7.32"
   resolved "https://registry.yarnpkg.com/@zip.js/zip.js/-/zip.js-2.7.32.tgz#54b1d4b2e6dcfc9cd75fd487d5831f8d983e55a6"
   integrity sha512-9Ox1meDIvIKE23LLA7Fxd/ewJpKjj2KryH92doHRqx2406LmIzorsiMawL0qIK7dvwN9K+mfk47lauoIE0o1zQ==

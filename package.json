@@ -154,7 +154,7 @@
     "@types/pixelmatch": "^5.2.4",
     "@types/pngjs": "^6.0.1",
     "@types/three": "^0.142.0",
-    "@zip.js/zip.js": "^2.6.81",
+    "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
     "antd": "^5.13.0",
     "ball-morphology": "^0.1.0",

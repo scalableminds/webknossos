@@ -125,7 +125,7 @@ function _getDisabledInfoForProofreadTool(
     !agglomerateState.value ||
     !isProofReadingToolAllowed ||
     isUneditableMappingPinned;
-  let explanation = "Proofreading actions are not allowed with a pinned and modified mapping.";
+  let explanation = "Proofreading actions are not supported after modifying the segmentation.";
   if (!isUneditableMappingPinned) {
     if (!agglomerateState.value) {
       explanation = agglomerateState.reason;

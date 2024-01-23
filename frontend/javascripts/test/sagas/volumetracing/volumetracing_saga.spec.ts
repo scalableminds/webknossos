@@ -1,6 +1,7 @@
 import "test/sagas/volumetracing/volumetracing_saga.mock";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
+import _ from "lodash";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 import {
   OrthoViews,
@@ -31,10 +32,16 @@ mockRequire("app", {
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
+mockRequire("libs/toast", {
+  info: _.noop,
+});
 
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
+const {
+  ensureMaybeActiveMappingIsPinned,
+} = require("oxalis/model/sagas/volume/volume_interpolation_saga");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -431,7 +438,17 @@ test("VolumeTracingSaga should pin an active mapping upon first volume annotatio
     resolution: [1, 1, 1],
     zoomStep: 0,
   });
-  saga.next(ACTIVE_CELL_ID); // pass active cell id
+  // Test whether nested saga ensureMaybeActiveMappingIsPinned is called.
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID),
+    call(ensureMaybeActiveMappingIsPinned, volumeTracing),
+  );
+});
+
+test("ensureMaybeActiveMappingIsPinned should pin an existing mapping to the annotation", (t) => {
+  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+  saga.next();
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
@@ -448,4 +465,12 @@ test("VolumeTracingSaga should pin an active mapping upon first volume annotatio
     saga.next([]), // pass empty additional coords
     put(VolumeTracingActions.setMappingIsPinnedAction()),
   );
+  t.true(saga.next().done);
+});
+
+test("ensureMaybeActiveMappingIsPinned should not try to pin a mapping when there is no active mapping.", (t) => {
+  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+  saga.next();
+  saga.next({});
+  t.true(saga.next().done);
 });

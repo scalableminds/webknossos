@@ -72,8 +72,8 @@ class Zarr3Array(vaultPath: VaultPath,
       case GzipCodecConfiguration(level)           => new GzipCodec(level)
       case ZstdCodecConfiguration(level, checksum) => new ZstdCodec(level, checksum)
       case Crc32CCodecConfiguration                => new Crc32CCodec
-      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs) =>
-        new ShardingCodec(chunk_shape, codecs, index_codecs)
+      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location) =>
+        new ShardingCodec(chunk_shape, codecs, index_codecs, index_location)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {
       case codec: ShardingCodec => Some(codec)
@@ -104,9 +104,6 @@ class Zarr3Array(vaultPath: VaultPath,
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
 
-  private def checkSumLength = 4 // 32-bit checksum
-  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
-
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
     indexShape.tails.toList
@@ -122,8 +119,22 @@ class Zarr3Array(vaultPath: VaultPath,
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 
+  private lazy val shardIndexChecksumLength =
+    shardingCodec match {
+      case Some(codec) =>
+        if (codec.index_codecs.exists(_.name == "crc32c")) Crc32CCodecConfiguration.checkSumByteLength
+        else 0
+      case None => 0
+    }
+  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
+
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
-    shardPath.readLastBytes(getShardIndexSize)
+    shardingCodec match {
+      case Some(codec) if codec.index_location == IndexLocationSetting.start =>
+        shardPath.readBytes(Some(Range.Long(0, getShardIndexSize.toLong, 1)))
+      case Some(codec) if codec.index_location == IndexLocationSetting.end => shardPath.readLastBytes(getShardIndexSize)
+      case _                                                               => Fox.failure("No sharding codec found")
+    }
 
   private def parseShardIndex(index: Array[Byte]): Array[(Long, Long)] = {
     val decodedIndex = shardingCodec match {

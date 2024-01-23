@@ -219,7 +219,8 @@ class Skeleton {
     const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
-    // todop: don't disable if no transforms are active
+    // todop: don't disable if no transforms are active? check if culling
+    // really helps with large annotations first.
     mesh.frustumCulled = false;
     this.rootGroup.add(mesh);
 

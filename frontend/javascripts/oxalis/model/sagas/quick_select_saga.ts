@@ -2,7 +2,7 @@ import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { call, all, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   ComputeQuickSelectForRectAction,
   ComputeSAMForSkeletonAction,
@@ -68,12 +68,8 @@ export default function* listenToQuickSelect(): Saga<void> {
           });
           const nodeCount = tree.nodes.size();
           let currentNodeCount = 1;
+          const predictionSagas = [];
           for (const node of tree.nodes.values()) {
-            yield* call(
-              progressCallback,
-              false,
-              `Annotating node ${currentNodeCount} of ${nodeCount}...`,
-            );
             const nodePosition: Vector3 = [...node.position];
             const embeddingPrefectTopLeft: Vector3 = [...node.position];
             const embeddingPrefectBottomRight: Vector3 = [...node.position];
@@ -87,9 +83,10 @@ export default function* listenToQuickSelect(): Saga<void> {
               endPosition: embeddingPrefectBottomRight,
               viewport: action.viewport,
             };
-            yield* call(performQuickSelectML, nodeSelect);
+            predictionSagas.push(call(performQuickSelectML, nodeSelect));
             currentNodeCount++;
           }
+          yield* all([...predictionSagas]);
           yield* call(progressCallback, true, "Finished annotating all nodes");
         }
       } catch (ex) {

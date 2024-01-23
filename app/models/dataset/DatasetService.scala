@@ -54,6 +54,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
     } yield ()
 
+  def assertValidLayerName(name: String): Fox[Unit] =
+    for {
+      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.layer.name.invalid.characters"
+      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
+    } yield ()
+
   def assertNewDatasetName(name: String, organizationId: ObjectId): Fox[Unit] =
     datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 

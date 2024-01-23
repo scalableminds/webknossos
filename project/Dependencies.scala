@@ -2,14 +2,14 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "9.0.0"
+  private val silhouetteVersion = "10.0.0"
   private val brotliVersion = "1.11.0"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "com.typesafe.play" %% "play" % "2.9.0",
+    "org.playframework" %% "play" % "3.0.1",
     // Play’s JSON serialization. import play.api.libs.json
     "com.typesafe.play" %% "play-json" % "2.10.1",
     // Sending emails. import org.apache.commons.mail
@@ -85,8 +85,8 @@ object Dependencies {
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
     "commons-codec" % "commons-codec" % "1.16.0",
-    // End-to-end tests. import org.scalatestplus.play
-    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test",
+    // End-to-end tests, backend unit tests. import org.scalatestplus.play
+    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import play.silhouette.crypto

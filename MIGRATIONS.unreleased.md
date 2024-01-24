@@ -20,3 +20,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 
 - [110-worker-config.sql](conf/evolutions/110-worker-config.sql)
+- [111-stats-per-annotation-layer.sql](conf/evolutions/111-stats-per-annotation-layer.sql)
+- [112-reuse-deleted.sql](conf/evolutions/112-reuse-deleted.sql)

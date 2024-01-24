@@ -66,6 +66,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where listing the annotations of other users would result in empty lists even if there are annotations, and you should be allowed to see them. [#7563](https://github.com/scalableminds/webknossos/pull/7563)
 - Fixed errors showing when viewing the annotation list. [#7579](https://github.com/scalableminds/webknossos/pull/7579)
 - Fixed a bug where all-zero chunks/buckets were omitted when downloading volume annotation even in case of a fallback segmentation layer, where their zeroed-bucket information is actually needed. [#7576](https://github.com/scalableminds/webknossos/pull/7576)
+- Fixed a bug where zarr3 datasets with sharding that didn’t specify an explicit index_location in their metadata could not be read. [#7583](https://github.com/scalableminds/webknossos/pull/7583)
 
 ### Removed
 - Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)

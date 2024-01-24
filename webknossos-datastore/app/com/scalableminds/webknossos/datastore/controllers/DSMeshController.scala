@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    fullMeshService: FullMeshService,
     dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
     dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     binaryDataServiceHolder: BinaryDataServiceHolder
@@ -188,6 +189,26 @@ class DSMeshController @Inject()(
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
           } else Ok(data)
+        }
+      }
+    }
+
+  def loadFullMesh(token: Option[String],
+                   organizationName: String,
+                   datasetName: String,
+                   dataLayerName: String): Action[FullMeshRequest] =
+    Action.async(validateJson[MeshChunkDataRequestV3List]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          data: Array[Byte] <- fullMeshService.loadFor(token: Option[String],
+                                                       organizationName,
+                                                       datasetName,
+                                                       dataLayerName,
+                                                       request.body) ?~> "mesh.file.loadChunk.failed"
+
+        } yield {
+          Ok(data)
         }
       }
     }

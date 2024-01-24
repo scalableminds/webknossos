@@ -43,7 +43,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                segmentId,
                                                                mag,
                                                                additionalCoordinates,
-                                                               AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
+                                                               AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
       volumeData <- getVolumeDataForPositions(tracing,
                                               tracingId,
                                               mag,
@@ -67,7 +67,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                segmentId,
                                                                mag,
                                                                additionalCoordinates,
-                                                               AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
+                                                               AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
       relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,

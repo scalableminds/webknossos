@@ -24,13 +24,13 @@ object AdditionalAxis {
       case None => Seq()
     }
 
-  def fromProto(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
+  def fromProtos(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
     additionalAxisProtos.map(
       p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
     )
 
-  def fromProtoAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
-    val axes = fromProto(additionalAxisProtos)
+  def fromProtosAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
+    val axes = fromProtos(additionalAxisProtos)
     if (axes.nonEmpty) {
       Some(axes)
     } else {

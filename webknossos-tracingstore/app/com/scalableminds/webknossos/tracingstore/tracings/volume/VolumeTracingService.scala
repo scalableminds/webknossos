@@ -112,7 +112,7 @@ class VolumeTracingService @Inject()(
         new VolumeSegmentIndexBuffer(tracingId,
                                      volumeSegmentIndexClient,
                                      updateGroup.version,
-                                     AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes)))
+                                     AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(Fox.successful(tracing)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
@@ -308,7 +308,7 @@ class VolumeTracingService @Inject()(
             segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                               volumeSegmentIndexClient,
                                                               tracing.version,
-                                                              AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
+                                                              AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
             _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
               for {
                 _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
@@ -335,7 +335,7 @@ class VolumeTracingService @Inject()(
       val segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                             volumeSegmentIndexClient,
                                                             tracing.version,
-                                                            AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
+                                                            AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
 
       val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
         if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
@@ -467,7 +467,7 @@ class VolumeTracingService @Inject()(
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,
                                                         volumeSegmentIndexClient,
                                                         destinationTracing.version,
-                                                        AdditionalAxis.fromProtoAsOpt(sourceTracing.additionalAxes))
+                                                        AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes))
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
@@ -493,7 +493,7 @@ class VolumeTracingService @Inject()(
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
       userToken = userToken,
-      additionalAxes = AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes)
+      additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
   def updateActionLog(tracingId: String,
@@ -615,7 +615,7 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBoxes)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtoAsOpt(t.additionalAxes)))
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
       else {
         val labelMap = mergedVolumeStats.labelMaps(indexB)
@@ -706,7 +706,7 @@ class VolumeTracingService @Inject()(
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
-          AdditionalAxis.fromProtoAsOpt(t.additionalAxes))))
+          AdditionalAxis.fromProtosAsOpt(t.additionalAxes))))
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,

@@ -43,12 +43,44 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
+
+case class GetSegmentIndexParameters(
+    mag: Vec3Int,
+    cubeSize: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+)
+
+object GetSegmentIndexParameters {
+  implicit object GetSegmentIndexParametersFormat extends Format[GetSegmentIndexParameters] {
+    override def reads(json: JsValue): JsResult[GetSegmentIndexParameters] =
+      for {
+        magString <- (json \ "mag").validate[String]
+        mag <- Vec3Int
+          .fromMagLiteral(magString, allowScalar = true)
+          .map(JsSuccess(_))
+          .getOrElse(JsError("dataLayer.invalidMag"))
+        cubeSizeString <- (json \ "cubeSize").validate[String]
+        cubeSize <- Vec3Int
+          .fromUriLiteral(cubeSizeString)
+          .map(JsSuccess(_))
+          .getOrElse(JsError("Parsing cube size failed. Use x,y,z format."))
+        additionalCoordinates <- (json \ "additionalCoordinates").validateOpt[Seq[AdditionalCoordinate]]
+      } yield GetSegmentIndexParameters(mag, cubeSize, additionalCoordinates)
+
+    override def writes(o: GetSegmentIndexParameters): JsObject =
+      Json.obj(
+        "mag" -> o.mag,
+        "cubeSize" -> o.cubeSize,
+        "additionalCoordinates" -> o.additionalCoordinates
+      )
+  }
+}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
@@ -486,36 +518,22 @@ class VolumeTracingController @Inject()(
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(request.body.mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          cubeSizeParsed <- Vec3Int
-            .fromUriLiteral(request.body.cubeSize)
-            .toFox ?~> "Parsing cube size failed. Use x,y,z format."
           tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
               tracingId,
               segmentId,
-              magParsed,
+              request.body.mag,
               request.body.additionalCoordinates,
-              AdditionalAxis.fromProtoAsOpt(tracing.additionalAxes))
+              AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
-            .map(_ / cubeSizeParsed)
+            .map(_ / request.body.cubeSize)
             .distinct // divide by requested cube size to map them to larger buckets, select unique
-            .map(_ * cubeSizeParsed) // return positions, not indices
+            .map(_ * request.body.cubeSize) // return positions, not indices
         } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }
 
-}
-
-case class GetSegmentIndexParameters(
-    mag: String,
-    cubeSize: String,
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-)
-
-object GetSegmentIndexParameters {
-  implicit val jsonFormat: OFormat[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
 }

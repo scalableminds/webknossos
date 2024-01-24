@@ -176,7 +176,7 @@ class SkeletonTracingService @Inject()(
       tracingA <- tracingA
       tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtoAsOpt(t.additionalAxes)))
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)

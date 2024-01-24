@@ -197,7 +197,7 @@ class DSMeshController @Inject()(
                    organizationName: String,
                    datasetName: String,
                    dataLayerName: String): Action[FullMeshRequest] =
-    Action.async(validateJson[MeshChunkDataRequestV3List]) { implicit request =>
+    Action.async(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {

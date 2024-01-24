@@ -7,6 +7,7 @@ import type {
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  APISkeletonLayer,
   ElementClass,
 } from "types/api_flow_types";
 import type {
@@ -717,9 +718,12 @@ function _getOriginalTransformsForLayerOrNull(
 
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
-  layer: APIDataLayer,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
+  if (layer.category === "skeleton") {
+    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
+  }
   const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
 
   if (nativelyRenderedLayerName == null) {
@@ -764,7 +768,7 @@ function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(
   dataset: APIDataset,
-  layer: APIDataLayer,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
@@ -773,40 +777,40 @@ export function getTransformsForLayer(
   );
 }
 
-function _getTransformsForSkeletonLayer(
+function _getTransformsForSkeletonLayerOrNull(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
-): Transform {
-  const layerTransforms = IdentityTransform;
-
+): Transform | null {
   if (nativelyRenderedLayerName == null) {
-    // No layer is requested to be rendered natively. Just use the transforms
-    // as they are in the dataset.
-    return layerTransforms;
+    // No layer is requested to be rendered natively. We can use
+    // each layer's transforms as is. The skeleton layer doesn't have
+    // a transforms property currently, which is why we return null.
+    return null;
   }
 
-  // Apply the inverse of the layer that should be rendered natively
-  // to the current layers transforms
+  // Compute the inverse of the layer that should be rendered natively
   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
-
   const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
 
   if (transformsOfNativeLayer == null) {
-    // The inverse of no transforms, are no transforms. Leave the layer
-    // transforms untouched.
-    return layerTransforms;
+    // The inverse of no transforms, are no transforms
+    return null;
   }
 
-  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
-  return inverseNativeTransforms;
-
-  // return (
-  //   getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
-  //   IdentityTransform
-  // );
+  return invertTransform(transformsOfNativeLayer);
 }
 
-export const getTransformsForSkeletonLayer = memoizeOne(_getTransformsForSkeletonLayer);
+export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForSkeletonLayerOrNull);
+
+export function getTransformsForSkeletonLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
+}
 
 function _getTransformsPerLayer(
   dataset: APIDataset,

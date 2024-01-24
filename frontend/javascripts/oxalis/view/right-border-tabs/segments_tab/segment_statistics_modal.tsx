@@ -19,15 +19,15 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 
 const MODAL_ERROR_MESSAGE =
-  "Segment statistics could not not fetched. Check the console for more details.";
+  "Segment statistics could not be fetched. Check the console for more details.";
 const CONSOLE_ERROR_MESSAGE =
-  "Segment statistics could not not fetched due to the following reason:";
+  "Segment statistics could not be fetched due to the following reason:";
 const ERROR_CODE = CONSOLE_ERROR_MESSAGE;
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
 
-const ADDITIONAL_COORDS_COLUMN = "addtionalCoordinates,";
+const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -65,29 +65,27 @@ const exportStatisticsToCSV = (
     return;
   }
   const segmentStatisticsAsString = (segmentInformation as Array<SegmentInfo>)
-    .map(
-      (row) =>
-        [
-          row.additionalCoordinates,
-          row.segmentId,
-          row.segmentName,
-          row.groupId,
-          row.groupName,
-          row.volumeInVoxel,
-          row.volumeInNm3,
-          ...row.boundingBoxTopLeft,
-          ...row.boundingBoxPosition,
-        ]
-          .filter((el) => el != null && el.toString().length > 0)
-          .map(String) // convert every value to String
-          .map((v) => v.replaceAll('"', '""')) // escape double quotes
-          .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-          .join(","), // comma-separated
-    )
+    .map((row) => {
+      const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
+      const segmentInfoRow = [
+        row.segmentId,
+        row.segmentName,
+        row.groupId,
+        row.groupName,
+        row.volumeInVoxel,
+        row.volumeInNm3,
+        ...row.boundingBoxTopLeft,
+        ...row.boundingBoxPosition,
+      ]
+        .map(String) // convert every value to String
+        .map((v) => v.replaceAll('"', '""')) // escape double quotes
+        .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)); // quote it if necessary
+      return maybeAdditionalCoords.concat(segmentInfoRow).join(",");
+    })
     .join("\n"); // rows starting on new lines
 
   const csv_header = hasAdditionalCoords
-    ? ADDITIONAL_COORDS_COLUMN + SEGMENT_STATISTICS_CSV_HEADER
+    ? [ADDITIONAL_COORDS_COLUMN, SEGMENT_STATISTICS_CSV_HEADER].join(",")
     : SEGMENT_STATISTICS_CSV_HEADER;
   const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
@@ -253,7 +251,7 @@ export function SegmentStatisticsModal({
             {hasAdditionalCoords && (
               <Alert
                 className="segments-stats-info-alert"
-                message={`These statistics are only valid for the current additional coordinates ${additionalCoordinateStringForModal}.`}
+                message={`These statistics only refer to the current additional coordinate(s) ${additionalCoordinateStringForModal}.`}
                 type="info"
                 showIcon
               />

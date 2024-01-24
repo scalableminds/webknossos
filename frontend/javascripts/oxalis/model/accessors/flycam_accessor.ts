@@ -286,8 +286,7 @@ export function getAdditionalCoordinatesAsString(
   if (additionalCoordinates != null && additionalCoordinates.length > 0) {
     return additionalCoordinates
       ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b, separator), "")
-      .slice(0, -1 * separator.length);
+      .join(separator);
   }
   return "";
 }

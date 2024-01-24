@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(110);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(112);
 COMMIT TRANSACTION;
 
 
@@ -39,7 +39,6 @@ CREATE TABLE webknossos.annotations(
   name VARCHAR(256) NOT NULL DEFAULT '',
   viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
-  statistics JSONB NOT NULL,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
@@ -47,8 +46,7 @@ CREATE TABLE webknossos.annotations(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
-  CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
 
@@ -58,8 +56,10 @@ CREATE TABLE webknossos.annotation_layers(
   tracingId CHAR(36) NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  statistics JSONB NOT NULL,
   UNIQUE (name, _annotation),
-  PRIMARY KEY (_annotation, tracingId)
+  PRIMARY KEY (_annotation, tracingId),
+  CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
 );
 
 CREATE TABLE webknossos.annotation_sharedTeams(

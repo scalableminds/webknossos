@@ -1,6 +1,7 @@
 # API versioning is handled here. Higher-Priority routes first
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
+# Note: keep this in sync with the reported version numbers in the utils.ApiVersioning trait
 
 # version log:
  # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"

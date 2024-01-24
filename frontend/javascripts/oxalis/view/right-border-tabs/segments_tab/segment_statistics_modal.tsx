@@ -17,12 +17,12 @@ import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
+import { pluralize } from "libs/utils";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
 const CONSOLE_ERROR_MESSAGE =
   "Segment statistics could not be fetched due to the following reason:";
-const ERROR_CODE = CONSOLE_ERROR_MESSAGE;
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -56,14 +56,11 @@ type SegmentInfo = {
 };
 
 const exportStatisticsToCSV = (
-  segmentInformation: Array<SegmentInfo> | string,
+  segmentInformation: Array<SegmentInfo> | null,
   tracingId: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
 ) => {
-  if (segmentInformation.length === 0 || segmentInformation instanceof String) {
-    return;
-  }
   const segmentStatisticsAsString = (segmentInformation as Array<SegmentInfo>)
     .map((row) => {
       const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
@@ -118,10 +115,10 @@ export function SegmentStatisticsModal({
     additionalCoordinates,
     ", ",
   );
-  const dataSource = useFetch(
+  const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
-      const segmentStatisticsObjects: Array<SegmentInfo> | string = await Promise.all([
+      const segmentStatisticsObjects: Array<SegmentInfo> | null = await Promise.all([
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
@@ -184,7 +181,7 @@ export function SegmentStatisticsModal({
         },
         (error) => {
           console.log(CONSOLE_ERROR_MESSAGE, error);
-          return ERROR_CODE;
+          return null;
         },
       );
       return segmentStatisticsObjects;
@@ -231,7 +228,7 @@ export function SegmentStatisticsModal({
     return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
   };
 
-  const isErrorCase = dataSource === ERROR_CODE;
+  const isErrorCase = segmentStatisticsObjects == null;
 
   return (
     <Modal
@@ -239,11 +236,13 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup, hasAdditionalCoords)}
+      onOk={() =>
+        exportStatisticsToCSV(segmentStatisticsObjects, tracingId, parentGroup, hasAdditionalCoords)
+      }
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
-      <Spin spinning={dataSource?.length === 0}>
+      <Spin spinning={segmentStatisticsObjects?.length === 0 && segments.length > 0}>
         {isErrorCase ? (
           MODAL_ERROR_MESSAGE
         ) : (
@@ -251,13 +250,16 @@ export function SegmentStatisticsModal({
             {hasAdditionalCoords && (
               <Alert
                 className="segments-stats-info-alert"
-                message={`These statistics only refer to the current additional coordinate(s) ${additionalCoordinateStringForModal}.`}
+                message={`These statistics only refer to the current additional ${pluralize(
+                  "coordinate",
+                  additionalCoordinates?.length || 0,
+                )} ${additionalCoordinateStringForModal}.`}
                 type="info"
                 showIcon
               />
             )}
             <Table
-              dataSource={dataSource as Array<SegmentInfo>}
+              dataSource={segmentStatisticsObjects as Array<SegmentInfo>}
               columns={columns}
               style={{ whiteSpace: "pre" }}
             />

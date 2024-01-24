@@ -65,6 +65,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the "Download Meshes" functionality which was affected by the recent introduction of the CSP. [#7577](https://github.com/scalableminds/webknossos/pull/7577)
 - Fixed a bug where listing the annotations of other users would result in empty lists even if there are annotations, and you should be allowed to see them. [#7563](https://github.com/scalableminds/webknossos/pull/7563)
 - Fixed errors showing when viewing the annotation list. [#7579](https://github.com/scalableminds/webknossos/pull/7579)
+- Fixed a bug where all-zero chunks/buckets were omitted when downloading volume annotation even in case of a fallback segmentation layer, where their zeroed-bucket information is actually needed. [#7576](https://github.com/scalableminds/webknossos/pull/7576)
 
 ### Removed
 - Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)

@@ -9,7 +9,7 @@ import type {
   SetLastSaveTimestampAction,
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
@@ -113,7 +113,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
       // Only report tracing statistics, if a "real" update to the tracing happened
       const stats = _.some(action.items, (ua) => ua.name !== "updateTracing")
-        ? Utils.toNullable(getStats(state.tracing))
+        ? getStats(state.tracing, action.saveQueueType, action.tracingId)
         : null;
       const { items, transactionId } = action;
 

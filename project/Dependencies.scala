@@ -72,7 +72,9 @@ object Dependencies {
     // Brotli compression native bindings. not imported
     "com.aayushatharva.brotli4j" % "native-linux-x86_64" % brotliVersion,
     "com.aayushatharva.brotli4j" % "native-osx-x86_64" % brotliVersion,
-    "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion
+    "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion,
+    // lz4 compression. import net.jpountz.lz4
+    "org.lz4" % "lz4-java" % "1.8.0"
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

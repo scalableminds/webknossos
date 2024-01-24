@@ -30,6 +30,7 @@ import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -131,7 +132,7 @@ export function serializeToNml(
       _.concat(
         serializeMetaInformation(state, annotation, buildInfo),
         serializeParameters(state, annotation, tracing),
-        serializeTrees(visibleTrees),
+        serializeTrees(state, visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
         "<groups>",
@@ -291,7 +292,7 @@ function serializeParameters(
   ];
 }
 
-function serializeTrees(trees: Array<Tree>): Array<string> {
+function serializeTrees(state: OxalisState, trees: Array<Tree>): Array<string> {
   return _.flatten(
     trees.map((tree) =>
       serializeTagWithChildren(
@@ -305,7 +306,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         },
         [
           "<nodes>",
-          ...indent(serializeNodes(tree.nodes)),
+          ...indent(serializeNodes(state, tree.nodes)),
           "</nodes>",
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
@@ -316,10 +317,10 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
   );
 }
 
-function serializeNodes(nodes: NodeMap): Array<string> {
+function serializeNodes(state: OxalisState, nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
-    // todop: is untransformedPosition what users expect?
-    const position = node.untransformedPosition.map(Math.floor);
+    // todop: we should probably encode in the NML that a transform was used
+    const position = getNodePosition(node, state).map(Math.floor);
     const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
 
     return serializeTag("node", {

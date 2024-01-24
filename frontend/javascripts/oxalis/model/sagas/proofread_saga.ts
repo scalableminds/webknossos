@@ -287,8 +287,10 @@ function* splitOrMergeOrMinCutAgglomerate(
   }
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
 
-  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
-  const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
+  // Use untransformedPosition because agglomerate trees should not have
+  // any transforms, anyway.
+  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).untransformedPosition;
+  const targetNodePosition = targetTree.nodes.get(targetNodeId).untransformedPosition;
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
@@ -451,9 +453,11 @@ function* performMinCut(
       let firstNodeId;
       let secondNodeId;
       for (const node of sourceTree.nodes.values()) {
-        if (_.isEqual(node.position, edge.position1)) {
+        // Use untransformedPosition because agglomerate trees should not have
+        // any transforms, anyway.
+        if (_.isEqual(node.untransformedPosition, edge.position1)) {
           firstNodeId = node.id;
-        } else if (_.isEqual(node.position, edge.position2)) {
+        } else if (_.isEqual(node.untransformedPosition, edge.position2)) {
           secondNodeId = node.id;
         }
         if (firstNodeId && secondNodeId) {

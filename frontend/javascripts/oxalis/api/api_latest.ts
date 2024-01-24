@@ -60,6 +60,7 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
   mapGroups,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -164,6 +165,7 @@ import type {
   OxalisState,
   SegmentGroup,
   Segment,
+  MutableNode,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import type { ToastStyle } from "libs/toast";
@@ -992,15 +994,7 @@ class TracingApi {
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
-      const dataset = Store.getState().dataset;
-      const nativelyRenderedLayerName =
-        Store.getState().datasetConfiguration.nativelyRenderedLayerName;
-
-      const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
-      const invertedTransform = currentTransforms;
-      const newPosition = transformPointUnscaled(invertedTransform)(node.position);
-
-      return Store.dispatch(setPositionAction(newPosition));
+      return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
     });
   };
 
@@ -1045,23 +1039,26 @@ class TracingApi {
    * Measures the length of the given tree and returns the length in nanometer and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     const tree = skeletonTracing.trees[treeId];
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const datasetScale = state.dataset.dataSource.scale;
     // Pre-allocate vectors
     let lengthNmAcc = 0;
     let lengthVxAcc = 0;
 
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
-      lengthVxAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
+      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
+      lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
 
     return [lengthNmAcc, lengthVxAcc];
@@ -1138,14 +1135,17 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
+    const state = Store.getState();
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
-      const nextNodePosition = sourceTree.nodes.get(nextNodeId).position;
+      const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));
 
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neighbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
         const neighbourDistance =
           distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
 

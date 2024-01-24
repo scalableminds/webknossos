@@ -1,10 +1,17 @@
 import _ from "lodash";
-import type { DeleteNodeUpdateAction, NodeWithTreeId } from "oxalis/model/sagas/update_actions";
+import type {
+  DeleteNodeUpdateAction,
+  NodeWithTreeId,
+  UpdateActionNode,
+} from "oxalis/model/sagas/update_actions";
 import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getNodePosition,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/throttled_store";
 import { api } from "oxalis/singletons";
 import messages from "messages";
@@ -143,7 +150,7 @@ async function onCreateNode(
   mergerModeState: MergerModeState,
   nodeId: number,
   treeId: number,
-  position: Vector3,
+  untransformedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null,
   updateMapping: boolean = true,
 ) {
@@ -153,9 +160,10 @@ async function onCreateNode(
     return;
   }
 
+  // todop: inverse-transform of segmentation layer on pos
   const segmentId = await api.data.getDataValue(
     segmentationLayerName,
-    position,
+    untransformedPosition,
     null,
     additionalCoordinates,
   );
@@ -206,7 +214,7 @@ async function onDeleteNode(
   }
 }
 
-async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTreeId) {
+async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateActionNode) {
   const { position, id, treeId } = node;
   const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
 
@@ -214,6 +222,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
     return;
   }
 
+  // todop: do inverse-transform of segmentation layer on pos
   const segmentId = await api.data.getDataValue(segmentationLayerName, position);
 
   if (nodeSegmentMap[id] !== segmentId) {
@@ -240,8 +249,14 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
   for (const action of diff) {
     switch (action.name) {
       case "createNode": {
-        const { treeId, id: nodeId, position } = action.value;
-        onCreateNode(mergerModeState, nodeId, treeId, position, action.value.additionalCoordinates);
+        const { treeId, id: nodeId, position: untransformedPosition } = action.value;
+        onCreateNode(
+          mergerModeState,
+          nodeId,
+          treeId,
+          untransformedPosition,
+          action.value.additionalCoordinates,
+        );
         break;
       }
 
@@ -306,7 +321,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
   const setSegmentationOfNode = async (node: NodeWithTreeId) => {
-    const pos = node.position;
+    const pos = getNodePosition(node, Store.getState());
     const { treeId } = node;
 
     // Skip nodes outside segmentation
@@ -321,7 +336,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       // The node is not in bounds of the segmentation
       return;
     }
-
+    // todop: do inverse-transform of segmentation layer on pos
     const segmentId = await api.data.getDataValue(segmentationLayerName, pos);
 
     if (segmentId != null && segmentId > 0) {

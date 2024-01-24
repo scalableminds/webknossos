@@ -291,7 +291,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
   const createDummyNode = (id: number): Node => ({
     bitDepth: 8,
     id,
-    position: [0, 0, 0],
+    untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
     resolution: 10,
@@ -447,7 +447,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
   const createDummyNode = (id: number): Node => ({
     bitDepth: 8,
     id,
-    position: [0, 0, 0],
+    untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
     resolution: 10,

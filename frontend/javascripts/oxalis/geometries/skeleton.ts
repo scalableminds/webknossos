@@ -13,6 +13,7 @@ import NodeShader, {
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { UpdateActionNode } from "oxalis/model/sagas/update_actions";
 
 const MAX_CAPACITY = 1000;
 
@@ -514,14 +515,16 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node) {
+  createNode(treeId: number, node: Node | UpdateActionNode) {
     const id = this.combineIds(node.id, treeId);
     this.create(
       id,
       this.nodes,
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
         const attributes = buffer.geometry.attributes;
-        attributes.position.set(node.position, index * 3);
+        const untransformedPosition =
+          "untransformedPosition" in node ? node.untransformedPosition : node.position;
+        attributes.position.set(untransformedPosition, index * 3);
 
         if (node.additionalCoordinates) {
           for (const idx of _.range(0, node.additionalCoordinates.length)) {
@@ -652,8 +655,8 @@ class Skeleton {
       const positionAttribute = attributes.position;
       const treeIdAttribute = attributes.treeId;
 
-      positionAttribute.set(source.position, index * 6);
-      positionAttribute.set(target.position, index * 6 + 3);
+      positionAttribute.set(source.untransformedPosition, index * 6);
+      positionAttribute.set(target.untransformedPosition, index * 6 + 3);
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];

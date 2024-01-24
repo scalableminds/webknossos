@@ -3,7 +3,11 @@ import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getMaxNodeId,
+  getNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -198,14 +202,19 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Recenter active node
       s: () => {
-        const skeletonTracing = Store.getState().tracing.skeleton;
+        const state = Store.getState();
+        const skeletonTracing = state.tracing.skeleton;
 
         if (!skeletonTracing) {
           return;
         }
 
         getActiveNode(skeletonTracing).map((activeNode) =>
-          api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
+          api.tracing.centerPositionAnimated(
+            getNodePosition(activeNode, state),
+            false,
+            activeNode.rotation,
+          ),
         );
       },
       ".": () => this.nextNode(true),

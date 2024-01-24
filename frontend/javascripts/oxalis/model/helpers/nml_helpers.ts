@@ -318,7 +318,8 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map((node) => {
-    const position = node.position.map(Math.floor);
+    // todop: is untransformedPosition what users expect?
+    const position = node.untransformedPosition.map(Math.floor);
     const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
 
     return serializeTag("node", {
@@ -755,7 +756,7 @@ export function parseNml(nmlString: string): Promise<{
 
             const currentNode = {
               id: nodeId,
-              position: [
+              untransformedPosition: [
                 Math.trunc(_parseFloat(attr, "x")),
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),

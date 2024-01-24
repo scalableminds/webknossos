@@ -21,6 +21,7 @@ import {
   getActiveNode,
   getActiveTree,
   getTree,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
@@ -346,9 +347,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
+      Store.dispatch(setPositionAction(getNodePosition(node, state))),
     );
   };
 

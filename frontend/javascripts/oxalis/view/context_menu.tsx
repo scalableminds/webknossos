@@ -60,7 +60,11 @@ import {
   hasConnectomeFile,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getNodeAndTree,
+  findTreeByNodeId,
+  getNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
@@ -1256,24 +1260,34 @@ function ContextMenuInner(propsWithInputRef: Props) {
   nodeContextMenuTree = nodeContextMenuTree as Tree | null;
   nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
 
+  const clickedNodesPosition =
+    nodeContextMenuNode != null ? getNodePosition(nodeContextMenuNode, Store.getState()) : null;
+
   const positionToMeasureDistanceTo =
-    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+    nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
       ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
+
+  const getActiveNodePosition = () => {
+    if (activeNode == null) {
+      throw new Error("getActiveNodePosition was called even though activeNode is null.");
+    }
+    return getNodePosition(activeNode, Store.getState());
+  };
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
           ),
-          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+          formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]
       : null;
   const nodePositionAsString =
-    nodeContextMenuNode != null
-      ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
+    nodeContextMenuNode != null && clickedNodesPosition != null
+      ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
   const infoRows = [];
 

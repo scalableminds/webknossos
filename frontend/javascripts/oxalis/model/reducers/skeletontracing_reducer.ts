@@ -711,7 +711,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, {
-                  position: {
+                  untransformedPosition: {
                     // Don't round here, since this would make the continuous
                     // movement of a node weird.
                     $set: position,

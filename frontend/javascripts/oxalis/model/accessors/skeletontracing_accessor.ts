@@ -15,12 +15,15 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
   Node,
+  OxalisState,
 } from "oxalis/store";
 import {
   findGroup,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { TreeType } from "oxalis/constants";
+import type { TreeType, Vector3 } from "oxalis/constants";
+import { getTransformsForSkeletonLayer } from "./dataset_accessor";
+import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
 export type SkeletonTracingStats = {
   treeCount: number;
@@ -198,6 +201,23 @@ export function getNodeAndTreeOrNull(
       node: null,
     });
 }
+
+export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(currentTransforms)(node.untransformedPosition);
+}
+
+export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(currentTransforms))(position);
+}
+
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),

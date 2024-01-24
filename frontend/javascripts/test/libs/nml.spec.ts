@@ -31,7 +31,7 @@ const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reReq
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
-  position: [id, id, id],
+  untransformedPosition: [id, id, id],
   additionalCoordinates: [],
   radius: id,
   resolution: 10,

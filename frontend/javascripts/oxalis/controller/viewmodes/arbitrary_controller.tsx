@@ -7,6 +7,7 @@ import {
   getActiveNode,
   getMaxNodeId,
   getNodePosition,
+  untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
@@ -366,12 +367,18 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
-    const position = getPosition(Store.getState().flycam);
-    const rotation = getRotation(Store.getState().flycam);
-    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+    const state = Store.getState();
+    const position = getPosition(state.flycam);
+    const rotation = getRotation(state.flycam);
+    const additionalCoordinates = state.flycam.additionalCoordinates;
     Store.dispatch(
-      createNodeAction(position, additionalCoordinates, rotation, constants.ARBITRARY_VIEW, 0),
+      createNodeAction(
+        untransformNodePosition(position, state),
+        additionalCoordinates,
+        rotation,
+        constants.ARBITRARY_VIEW,
+        0,
+      ),
     );
   }
 

@@ -283,7 +283,7 @@ function addNode(
 
   Store.dispatch(
     createNodeAction(
-      position,
+      untransformNodePosition(position, state),
       state.flycam.additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],

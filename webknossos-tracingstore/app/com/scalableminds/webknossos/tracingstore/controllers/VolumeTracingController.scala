@@ -52,7 +52,7 @@ import scala.concurrent.ExecutionContext
 
 case class GetSegmentIndexParameters(
     mag: Vec3Int,
-    cubeSize: Vec3Int,
+    cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
 )
 

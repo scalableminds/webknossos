@@ -125,11 +125,21 @@ async function createNodeOverwrite(
   if (!segmentationLayerName) {
     return;
   }
+  const { position: untransformedPosition, additionalCoordinates } = action;
+  // Calculate where the node is actually rendered.
+  const transformedNodePosition = transformNodePosition(untransformedPosition, Store.getState());
 
-  const { position, additionalCoordinates } = action;
+  // Apply the inverse of the segmentation transform to know where to look up
+  // the voxel value.
+  const inverseSegmentationTransform = getInverseSegmentationTransformer(
+    Store.getState(),
+    segmentationLayerName,
+  );
+  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
+
   const segmentId = await api.data.getDataValue(
     segmentationLayerName,
-    position,
+    segmentPosition,
     null,
     additionalCoordinates,
   );
@@ -174,11 +184,11 @@ async function onCreateNode(
     state,
     segmentationLayerName,
   );
-  const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
+  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
 
   const segmentId = await api.data.getDataValue(
     segmentationLayerName,
-    segmentationPosition,
+    segmentPosition,
     null,
     additionalCoordinates,
   );
@@ -247,8 +257,8 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
     state,
     segmentationLayerName,
   );
-  const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
-  const segmentId = await api.data.getDataValue(segmentationLayerName, segmentationPosition);
+  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
+  const segmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
 
   if (nodeSegmentMap[id] !== segmentId) {
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
@@ -363,22 +373,22 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       state,
       segmentationLayerName,
     );
-    const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
+    const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
 
     // Skip nodes outside segmentation
     if (
-      segmentationPosition[0] < segMinVec[0] ||
-      segmentationPosition[1] < segMinVec[1] ||
-      segmentationPosition[2] < segMinVec[2] ||
-      segmentationPosition[0] >= segMaxVec[0] ||
-      segmentationPosition[1] >= segMaxVec[1] ||
-      segmentationPosition[2] >= segMaxVec[2]
+      segmentPosition[0] < segMinVec[0] ||
+      segmentPosition[1] < segMinVec[1] ||
+      segmentPosition[2] < segMinVec[2] ||
+      segmentPosition[0] >= segMaxVec[0] ||
+      segmentPosition[1] >= segMaxVec[1] ||
+      segmentPosition[2] >= segMaxVec[2]
     ) {
       // The node is not in bounds of the segmentation
       return;
     }
 
-    const segmentId = await api.data.getDataValue(segmentationLayerName, segmentationPosition);
+    const segmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
 
     if (segmentId != null && segmentId > 0) {
       // Store the segment id

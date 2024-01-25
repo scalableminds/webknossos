@@ -207,6 +207,7 @@ uniform float highlightCommentedNodes;
 uniform float viewMode;
 
 uniform mat4 transform;
+// todop: unused currently
 uniform bool has_transform;
 
 <% if (tpsTransform != null) { %>

@@ -7,10 +7,17 @@ import { Store } from "oxalis/singletons";
 import _ from "lodash";
 import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
 import { M4x4 } from "libs/mjs";
+import {
+  generateCalculateTpsOffsetFunction,
+  generateTpsInitialization,
+} from "oxalis/shaders/thin_plate_spline.glsl";
+import TPS3D from "libs/thin_plate_spline";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
   uniforms: Uniforms = {};
+  scaledTps: TPS3D | null = null;
+  oldVertexShaderCode: string | null = null;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -25,12 +32,16 @@ class EdgeShader {
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
+    const state = Store.getState();
     this.uniforms = {
       activeTreeId: {
         value: NaN,
       },
       treeColors: {
         value: treeColorTexture,
+      },
+      datasetScale: {
+        value: state.dataset.dataSource.scale,
       },
     };
 
@@ -78,13 +89,37 @@ class EdgeShader {
         const transforms = skeletonTransforms;
         const { affineMatrix } = transforms;
 
+        const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+
+        if (scaledTps) {
+          this.scaledTps = scaledTps;
+        } else {
+          this.scaledTps = null;
+        }
+
         this.uniforms[`transform`].value = M4x4.transpose(affineMatrix);
+
+        this.recomputeVertexShader();
       },
     );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
     return this.material;
+  }
+
+  recomputeVertexShader() {
+    const newVertexShaderCode = this.getVertexShader();
+
+    // Comparing to this.material.vertexShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldVertexShaderCode != null && this.oldVertexShaderCode === newVertexShaderCode) {
+      return;
+    }
+
+    this.oldVertexShaderCode = newVertexShaderCode;
+    this.material.vertexShader = newVertexShaderCode;
+    this.material.needsUpdate = true;
   }
 
   getVertexShader(): string {
@@ -100,18 +135,24 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
+uniform vec3 datasetScale;
 
 uniform mat4 transform;
 uniform bool has_transform;
 
-<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+<% if (tpsTransform != null) { %>
+  <%= generateTpsInitialization({Skeleton: tpsTransform}, "Skeleton") %>
+  <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
+<% } %>
+
+<% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+<% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -119,11 +160,15 @@ out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+    <% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         alpha = 0.;
       }
     <% }) %>
+
+    <% if (tpsTransform != null) { %>
+      initializeTPSArraysForSkeleton();
+    <% } %>
 
     ivec2 treeIdToTextureCoordinate = ivec2(
       mod(treeId, ${COLOR_TEXTURE_WIDTH_FIXED}),
@@ -137,12 +182,22 @@ void main() {
       return;
     }
 
-    vec4 transformedCoord = transform * vec4(position, 1.);
+    <% if (tpsTransform != null) { %>
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
+      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+    <% } else { %>
+      vec4 transformedCoord = transform * vec4(position, 1.);
+    <% } %>
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
 
     color = rgba.rgb;
-}`)({ additionalCoordinates });
+}`)({
+      additionalCoordinateLength: (additionalCoordinates || []).length,
+      tpsTransform: this.scaledTps,
+      generateTpsInitialization,
+      generateCalculateTpsOffsetFunction,
+    });
   }
 
   getFragmentShader(): string {

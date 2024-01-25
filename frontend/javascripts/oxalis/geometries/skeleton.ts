@@ -224,7 +224,7 @@ class Skeleton {
     // wouldn't be culled correctly.
     // In basic testing, culling didn't provide a noticable performance
     // improvement (tested with 500k skeleton nodes).
-    mesh.frustumCulled = true;
+    mesh.frustumCulled = false;
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {

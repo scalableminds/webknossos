@@ -220,15 +220,15 @@ class Skeleton {
     const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
-    // todop: don't disable if no transforms are active? check if culling
-    // really helps with large annotations first.
-    mesh.frustumCulled = false;
+    // Frustum culling is disabled because nodes that are transformed
+    // wouldn't be culled correctly.
+    // In basic testing, culling didn't provide a noticable performance
+    // improvement (tested with 500k skeleton nodes).
+    mesh.frustumCulled = true;
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {
       const pickingMesh = helper.buildMesh(geometry, material);
-      // todop: don't disable if no transforms are active? check if culling
-      // really helps with large annotations first.
       pickingMesh.frustumCulled = false;
       this.pickingNode.add(pickingMesh);
     }

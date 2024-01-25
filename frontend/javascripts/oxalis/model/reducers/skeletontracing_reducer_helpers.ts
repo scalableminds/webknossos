@@ -139,7 +139,6 @@ export function createNode(
   const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
-    // todop: or should position be inverted here?
     untransformedPosition: position,
     additionalCoordinates,
     radius,

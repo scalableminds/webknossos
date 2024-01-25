@@ -42,7 +42,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When no Email Address for New-User Notifications is configured, the organization owner will be notified. For overtime notifications, the project owner and the organization owner will be notified. [#7561](https://github.com/scalableminds/webknossos/pull/7561)
 - The metadata for ND datasets and their annotation has changed: upper bound of additionalAxes is now stored as an exclusive value, called "end" in the NML format. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
 - Added support for the *index_location* parameter in sharded Zarr 3 datasets. [#7553](https://github.com/scalableminds/webknossos/pull/7553)
-
+- Updated antd UI library from version 4.24.15 to 5.13.2. [#7522](https://github.com/scalableminds/webknossos/pull/7522)
 
 ### Fixed
 - Datasets with annotations can now be deleted. The concerning annotations can no longer be viewed but still be downloaded. [#7429](https://github.com/scalableminds/webknossos/pull/7429)

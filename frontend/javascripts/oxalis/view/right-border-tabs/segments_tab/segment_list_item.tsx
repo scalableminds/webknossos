@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, MenuProps, Modal } from "antd";
+import { List, Tooltip, Dropdown, MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -406,6 +406,7 @@ function _SegmentListItem({
   multiSelectMenu,
   activeVolumeTracing,
 }: Props) {
+  const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
   const mappedId = mapId(segment.id);
@@ -516,7 +517,7 @@ function _SegmentListItem({
             return;
           }
 
-          Modal.confirm({
+          modal.confirm({
             content: `Are you sure you want to delete the data of segment ${getSegmentName(
               segment,
               true,

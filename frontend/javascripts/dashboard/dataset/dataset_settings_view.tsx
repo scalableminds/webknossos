@@ -388,8 +388,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       return null;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'title' implicitly has an 'any' type.
-    function showJSONModal(title, object) {
+    function showJSONModal(title: string, object: any) {
       Modal.info({
         title,
         width: 800,

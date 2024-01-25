@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Button, Divider, InputNumber, Modal } from "antd";
+import { App, Button, Divider, InputNumber, Modal } from "antd";
 import dayjs from "dayjs";
 import {
   DatabaseOutlined,
@@ -34,9 +34,10 @@ const ModalInformationFooter = (
 );
 
 function extendPricingPlan(organization: APIOrganization) {
+  const { modal } = App.useApp();
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
-  Modal.confirm({
+  modal.confirm({
     title: "Extend Current Plan",
     okText: "Request Extension",
     onOk: () => {

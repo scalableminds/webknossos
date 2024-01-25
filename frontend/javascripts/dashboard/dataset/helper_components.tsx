@@ -1,4 +1,4 @@
-import { Alert, Form, Tooltip, Modal } from "antd";
+import { Alert, Form, Tooltip, App } from "antd";
 import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -104,9 +104,10 @@ export class RetryingErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-export const confirmAsync = (opts: Record<string, any>): Promise<boolean> =>
-  new Promise((resolve) => {
-    Modal.confirm({
+export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
+  const { modal } = App.useApp();
+  return new Promise((resolve) => {
+    modal.confirm({
       ...opts,
 
       onOk() {
@@ -118,6 +119,7 @@ export const confirmAsync = (opts: Record<string, any>): Promise<boolean> =>
       },
     });
   });
+};
 
 export const hasFormError = (formErrors: FieldError[], key: string): boolean => {
   // Find the number of errors for form fields whose path starts with key

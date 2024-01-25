@@ -10,12 +10,12 @@ import {
   Card,
   Radio,
   Upload,
-  Modal,
   InputNumber,
   Input,
   Spin,
   RadioChangeEvent,
   Tooltip,
+  App,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
@@ -125,8 +125,11 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   });
   saveAs(blob, filename);
 }
+
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
+  const { modal } = App.useApp();
+
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
   let teamName: string | null = null;
@@ -198,7 +201,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     );
   const successPlural = successfulTasks.length === 1 ? "" : "s";
   const warningsPlural = warnings.length === 1 ? "" : "s";
-  Modal.info({
+  modal.info({
     title: `${successfulTasks.length} task${successPlural} successfully created, ${failedTasks.length} failed. ${warnings.length} warning${warningsPlural}.`,
     content: (
       <div>

@@ -23,6 +23,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Multiple segments can be dragged and dropped in the segments tab. [#7536](https://github.com/scalableminds/webknossos/pull/7536)
 - Added the option to convert agglomerate skeletons to freely modifiable skeletons in the context menu of the Skeleton tab. [#7537](https://github.com/scalableminds/webknossos/pull/7537)
 - The annotation list in the dashboard now also shows segment counts of volume annotations (after they have been edited). [#7548](https://github.com/scalableminds/webknossos/pull/7548)
+- The buildinfo route now reports the supported HTTP API versions. [#7581](https://github.com/scalableminds/webknossos/pull/7581)
+- After deleting specific teams, projects and task types, their names can now be re-used when creating new ones. [#7573](https://github.com/scalableminds/webknossos/pull/7573)
 
 ### Changed
 - Improved loading speed of the annotation list. [#7410](https://github.com/scalableminds/webknossos/pull/7410)
@@ -35,7 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated antd UI library from version 4.24.8 to 4.24.15. [#7505](https://github.com/scalableminds/webknossos/pull/7505)
 - Changed the default dataset search mode to also search in subfolders. [#7539](https://github.com/scalableminds/webknossos/pull/7539)
 - When clicking a segment in the viewport, it is automatically focused in the segment list. A corresponding context menu entry was added as well. [#7512](https://github.com/scalableminds/webknossos/pull/7512)
-- Updated the isValidName route in the API to return 200 for valid and invalid names. With this, the API version was bumped up to 6. [#7550](https://github.com/scalableminds/webknossos/pull/7550) 
+- Updated the isValidName route in the API to return 200 for valid and invalid names. With this, the API version was bumped up to 6. [#7550](https://github.com/scalableminds/webknossos/pull/7550)
 - Upgraded to Play 3. [#7562](https://github.com/scalableminds/webknossos/pull/7562)
 - When no Email Address for New-User Notifications is configured, the organization owner will be notified. For overtime notifications, the project owner and the organization owner will be notified. [#7561](https://github.com/scalableminds/webknossos/pull/7561)
 - The metadata for ND datasets and their annotation has changed: upper bound of additionalAxes is now stored as an exclusive value, called "end" in the NML format. [#7547](https://github.com/scalableminds/webknossos/pull/7547)
@@ -63,6 +65,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the "Download Meshes" functionality which was affected by the recent introduction of the CSP. [#7577](https://github.com/scalableminds/webknossos/pull/7577)
 - Fixed a bug where listing the annotations of other users would result in empty lists even if there are annotations, and you should be allowed to see them. [#7563](https://github.com/scalableminds/webknossos/pull/7563)
 - Fixed errors showing when viewing the annotation list. [#7579](https://github.com/scalableminds/webknossos/pull/7579)
+- Fixed a bug where all-zero chunks/buckets were omitted when downloading volume annotation even in case of a fallback segmentation layer, where their zeroed-bucket information is actually needed. [#7576](https://github.com/scalableminds/webknossos/pull/7576)
+- Fixed a bug where zarr3 datasets with sharding that didn’t specify an explicit index_location in their metadata could not be read. [#7583](https://github.com/scalableminds/webknossos/pull/7583)
 
 ### Removed
 - Removed several unused frontend libraries. [#7521](https://github.com/scalableminds/webknossos/pull/7521)

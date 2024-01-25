@@ -17,9 +17,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
-  private def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+  protected def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
 
-  def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
+  protected def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
 }
 
 trait VolumeBucketCompression extends LazyLogging {

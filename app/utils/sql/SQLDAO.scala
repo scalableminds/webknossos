@@ -65,6 +65,16 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     } yield ()
   }
 
+  def deleteOneWithNameSuffix(id: ObjectId, nameColumn: String = "name")(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertDeleteAccess(id)
+      deletedSuffix = s".deleted.at.${Instant.now.epochMillis}"
+      collectionToken = SqlToken.raw(collectionName)
+      nameColumnToken = SqlToken.raw(nameColumn)
+      _ <- run(
+        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
+    } yield ()
+
   protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)

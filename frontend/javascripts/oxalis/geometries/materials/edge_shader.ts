@@ -137,14 +137,14 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.range(additionalCoordinateLength, (_coord, idx) => { %>
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.range(additionalCoordinateLength, (_coord, idx) => { %>
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -152,7 +152,7 @@ out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% _.range(additionalCoordinateLength, (_coord, idx) => { %>
+    <% _.range(additionalCoordinateLength).map((idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         alpha = 0.;
       }

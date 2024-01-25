@@ -204,7 +204,7 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.range(additionalCoordinateLength, (idx) => { %>
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
@@ -213,7 +213,7 @@ uniform sampler2D treeColors;
 in float radius;
 in vec3 position;
 
-<% _.range(additionalCoordinateLength, (idx) => { %>
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -254,7 +254,7 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
-    <% _.range(additionalCoordinateLength, (idx) => { %>
+    <% _.range(additionalCoordinateLength).map((idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         return;
       }

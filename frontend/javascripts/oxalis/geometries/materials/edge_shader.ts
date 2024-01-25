@@ -48,12 +48,12 @@ class EdgeShader {
     const dataset = Store.getState().dataset;
     const nativelyRenderedLayerName =
       Store.getState().datasetConfiguration.nativelyRenderedLayerName;
-    this.uniforms[`transform`] = {
+    this.uniforms["transform"] = {
       value: M4x4.transpose(
         getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
       ),
     };
-    this.uniforms[`has_transform`] = {
+    this.uniforms["has_transform"] = {
       value: true,
       // !_.isEqual(
       //   getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
@@ -97,7 +97,7 @@ class EdgeShader {
           this.scaledTps = null;
         }
 
-        this.uniforms[`transform`].value = M4x4.transpose(affineMatrix);
+        this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
 
         this.recomputeVertexShader();
       },

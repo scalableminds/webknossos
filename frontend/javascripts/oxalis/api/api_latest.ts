@@ -78,17 +78,12 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
-  invertTransform,
-  transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
-import {
   getLayerBoundingBox,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
   flatToNestedMatrix,
-  getTransformsForSkeletonLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,

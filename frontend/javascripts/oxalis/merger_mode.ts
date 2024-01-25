@@ -7,10 +7,16 @@ import type {
 import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getInverseSegmentationTransformer,
+  getLayerByName,
+  getTransformsForLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getNodePosition,
   getSkeletonTracing,
+  transformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/throttled_store";
 import { api } from "oxalis/singletons";
@@ -19,6 +25,7 @@ import { UnregisterHandler } from "oxalis/api/api_latest";
 import { Action } from "oxalis/model/actions/actions";
 import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
@@ -160,10 +167,21 @@ async function onCreateNode(
     return;
   }
 
-  // todop: inverse-transform of segmentation layer on pos
+  const state = Store.getState();
+  // Calculate where the node is actually rendered.
+  const transformedNodePosition = transformNodePosition(untransformedPosition, state);
+
+  // Apply the inverse of the segmentation transform to know where to look up
+  // the voxel value.
+  const inverseSegmentationTransform = getInverseSegmentationTransformer(
+    state,
+    segmentationLayerName,
+  );
+  const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
+
   const segmentId = await api.data.getDataValue(
     segmentationLayerName,
-    untransformedPosition,
+    segmentationPosition,
     null,
     additionalCoordinates,
   );
@@ -215,15 +233,25 @@ async function onDeleteNode(
 }
 
 async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateActionNode) {
-  const { position, id, treeId } = node;
+  const { position: untransformedPosition, id, treeId } = node;
   const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
   }
 
-  // todop: do inverse-transform of segmentation layer on pos
-  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  const state = Store.getState();
+  // Calculate where the node is actually rendered.
+  const transformedNodePosition = transformNodePosition(untransformedPosition, state);
+
+  // Apply the inverse of the segmentation transform to know where to look up
+  // the voxel value.
+  const inverseSegmentationTransform = getInverseSegmentationTransformer(
+    state,
+    segmentationLayerName,
+  );
+  const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
+  const segmentId = await api.data.getDataValue(segmentationLayerName, segmentationPosition);
 
   if (nodeSegmentMap[id] !== segmentId) {
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
@@ -233,7 +261,14 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
     }
 
     if (segmentId != null && segmentId > 0) {
-      await onCreateNode(mergerModeState, id, treeId, position, node.additionalCoordinates, false);
+      await onCreateNode(
+        mergerModeState,
+        id,
+        treeId,
+        untransformedPosition,
+        node.additionalCoordinates,
+        false,
+      );
     } else if (nodeSegmentMap[id] != null) {
       // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
       delete nodeSegmentMap[id];
@@ -321,23 +356,32 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
   const setSegmentationOfNode = async (node: NodeWithTreeId) => {
-    const pos = getNodePosition(node, Store.getState());
+    const transformedNodePosition = getNodePosition(node, Store.getState());
     const { treeId } = node;
+
+    // Apply the inverse of the segmentation transform to know where to look up
+    // the voxel value.
+    const state = Store.getState();
+    const inverseSegmentationTransform = getInverseSegmentationTransformer(
+      state,
+      segmentationLayerName,
+    );
+    const segmentationPosition = inverseSegmentationTransform(transformedNodePosition);
 
     // Skip nodes outside segmentation
     if (
-      pos[0] < segMinVec[0] ||
-      pos[1] < segMinVec[1] ||
-      pos[2] < segMinVec[2] ||
-      pos[0] >= segMaxVec[0] ||
-      pos[1] >= segMaxVec[1] ||
-      pos[2] >= segMaxVec[2]
+      segmentationPosition[0] < segMinVec[0] ||
+      segmentationPosition[1] < segMinVec[1] ||
+      segmentationPosition[2] < segMinVec[2] ||
+      segmentationPosition[0] >= segMaxVec[0] ||
+      segmentationPosition[1] >= segMaxVec[1] ||
+      segmentationPosition[2] >= segMaxVec[2]
     ) {
       // The node is not in bounds of the segmentation
       return;
     }
-    // todop: do inverse-transform of segmentation layer on pos
-    const segmentId = await api.data.getDataValue(segmentationLayerName, pos);
+
+    const segmentId = await api.data.getDataValue(segmentationLayerName, segmentationPosition);
 
     if (segmentId != null && segmentId > 0) {
       // Store the segment id
@@ -366,7 +410,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
 function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const state = Store.getState();
-  const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+  const visibleLayer = getVisibleSegmentationLayer(state);
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
   const defaults = {
     treeIdToRepresentativeSegmentId: {},

@@ -203,11 +203,15 @@ export function getNodeAndTreeOrNull(
 }
 
 export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+  return transformNodePosition(node.untransformedPosition, state);
+}
+
+export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
   const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
 
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
-  return transformPointUnscaled(currentTransforms)(node.untransformedPosition);
+  return transformPointUnscaled(currentTransforms)(position);
 }
 
 export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {

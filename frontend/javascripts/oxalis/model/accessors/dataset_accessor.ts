@@ -35,6 +35,7 @@ import {
   createThinPlateSplineTransform,
   invertTransform,
   Transform,
+  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
@@ -827,6 +828,17 @@ function _getTransformsPerLayer(
 }
 
 export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
+
+export function getInverseSegmentationTransformer(
+  state: OxalisState,
+  segmentationLayerName: string,
+) {
+  const { dataset } = state;
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const layer = getLayerByName(dataset, segmentationLayerName);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(segmentationTransforms));
+}
 
 export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
   const layers = dataset.dataSource.dataLayers;

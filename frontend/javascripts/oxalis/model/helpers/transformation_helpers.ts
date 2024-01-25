@@ -3,7 +3,10 @@ import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import { Matrix4x4 } from "mjs";
 import { Vector3, Vector4 } from "oxalis/constants";
-import { nestedToFlatMatrix } from "../accessors/dataset_accessor";
+
+export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
+  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
 
 export type Transform =
   | {

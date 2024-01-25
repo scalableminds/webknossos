@@ -833,10 +833,6 @@ export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
   return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
 });
 
-export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
-  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
-}
-
 export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
   return [
     matrix.slice(0, 4) as Vector4,

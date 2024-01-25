@@ -124,21 +124,12 @@ class NodeShader {
     const nativelyRenderedLayerName =
       Store.getState().datasetConfiguration.nativelyRenderedLayerName;
 
+    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
     this.uniforms["transform"] = {
-      value: M4x4.transpose(
-        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
-      ),
-    };
-    this.uniforms["has_transform"] = {
-      value: true,
-      // !_.isEqual(
-      //   getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-      //   Identity4x4,
-      // ),
+      value: M4x4.transpose(affineMatrix),
     };
 
-    // this.storePropertyUnsubscribers.push(
-    // );
+    // this.storePropertyUnsubscribers.push();
     listenToStoreProperty(
       (storeState) =>
         getTransformsForSkeletonLayer(
@@ -207,8 +198,6 @@ uniform float highlightCommentedNodes;
 uniform float viewMode;
 
 uniform mat4 transform;
-// todop: unused currently
-uniform bool has_transform;
 
 <% if (tpsTransform != null) { %>
   <%= generateTpsInitialization({Skeleton: tpsTransform}, "Skeleton") %>

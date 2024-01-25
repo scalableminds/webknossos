@@ -53,13 +53,6 @@ class EdgeShader {
         getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
       ),
     };
-    this.uniforms["has_transform"] = {
-      value: true,
-      // !_.isEqual(
-      //   getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-      //   Identity4x4,
-      // ),
-    };
 
     const { additionalCoordinates } = Store.getState().flycam;
 
@@ -138,7 +131,6 @@ uniform sampler2D treeColors;
 uniform vec3 datasetScale;
 
 uniform mat4 transform;
-uniform bool has_transform;
 
 <% if (tpsTransform != null) { %>
   <%= generateTpsInitialization({Skeleton: tpsTransform}, "Skeleton") %>

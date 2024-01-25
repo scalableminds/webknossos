@@ -167,6 +167,10 @@ export const initializeSkeletonTracingAction = (tracing: ServerSkeletonTracing) 
   } as const);
 
 export const createNodeAction = (
+  // Note that this position should not have any
+  // transformations applied. This is the value that
+  // will be stored in the back-end and on which potential
+  // transformations will be applied.
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,

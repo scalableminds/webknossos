@@ -126,7 +126,7 @@ test("SkeletonTracing should add a new node", (t) => {
   t.is(newSkeletonTracing.activeNodeId, 1);
   t.deepEqual(newSkeletonTracing.trees[1].edges.size(), 0);
   deepEqualObjectContaining(t, newSkeletonTracing.trees[1].nodes.get(1), {
-    position,
+    untransformedPosition: position,
     rotation,
     viewport,
     resolution,

@@ -145,14 +145,14 @@ uniform bool has_transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
+<% _.range(additionalCoordinateLength, (_coord, idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
+<% _.range(additionalCoordinateLength, (_coord, idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -160,7 +160,7 @@ out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% _.each(additionalCoordinateLength || [], (_coord, idx) => { %>
+    <% _.range(additionalCoordinateLength, (_coord, idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         alpha = 0.;
       }

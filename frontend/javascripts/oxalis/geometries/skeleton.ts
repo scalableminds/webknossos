@@ -227,6 +227,9 @@ class Skeleton {
 
     if (helper.supportsPicking) {
       const pickingMesh = helper.buildMesh(geometry, material);
+      // todop: don't disable if no transforms are active? check if culling
+      // really helps with large annotations first.
+      pickingMesh.frustumCulled = false;
       this.pickingNode.add(pickingMesh);
     }
 

@@ -1,4 +1,4 @@
-import { Alert, Form, Tooltip, App } from "antd";
+import { Alert, Form, Tooltip, Modal } from "antd";
 import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -105,9 +105,8 @@ export class RetryingErrorBoundary extends React.Component<
   }
 }
 export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
-  const { modal } = App.useApp();
   return new Promise((resolve) => {
-    modal.confirm({
+    Modal.confirm({
       ...opts,
 
       onOk() {

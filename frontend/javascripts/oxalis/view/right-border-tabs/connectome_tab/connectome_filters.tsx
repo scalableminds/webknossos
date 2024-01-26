@@ -135,11 +135,13 @@ class ConnectomeFilters extends React.Component<Props, State> {
   getFilterSettings = () => {
     const { availableSynapseTypes } = this.props;
     const { filters } = this.state;
-    // @ts-ignore
-    const synapseDirectionOptions = Object.keys(directionCaptions).map((direction: DirectionCaptionsKeys) => ({
-      label: directionCaptions[direction],
-      value: direction,
-    }));
+    const synapseDirectionOptions = Object.keys(directionCaptions).map(
+      // @ts-ignore
+      (direction: DirectionCaptionsKeys) => ({
+        label: directionCaptions[direction],
+        value: direction,
+      }),
+    );
     const synapseTypeOptions = availableSynapseTypes.map((synapseType) => ({
       label: synapseType,
       value: synapseType,

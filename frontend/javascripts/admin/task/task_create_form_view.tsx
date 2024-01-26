@@ -15,7 +15,7 @@ import {
   Spin,
   RadioChangeEvent,
   Tooltip,
-  App,
+  Modal,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
@@ -128,7 +128,6 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
 
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
-  const { modal } = App.useApp();
 
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
@@ -201,7 +200,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     );
   const successPlural = successfulTasks.length === 1 ? "" : "s";
   const warningsPlural = warnings.length === 1 ? "" : "s";
-  modal.info({
+  Modal.info({
     title: `${successfulTasks.length} task${successPlural} successfully created, ${failedTasks.length} failed. ${warnings.length} warning${warningsPlural}.`,
     content: (
       <div>

@@ -159,6 +159,7 @@ export type APIDatasetDetails = {
   readonly brainRegion?: string;
   readonly acquisition?: string;
 };
+
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
   folderId: string;
@@ -174,6 +175,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   jobsEnabled: boolean;
+  jobsSupportedByAvailableWorkers: APIJobType[];
   sortingKey: number;
   owningOrganization: string;
   publication: null | undefined;

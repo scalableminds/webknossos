@@ -15,7 +15,12 @@ import {
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
+import {
+  APIJobType,
+  type AdditionalAxis,
+  type APIDataLayer,
+  type APIDataset,
+} from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
@@ -592,7 +597,9 @@ function _DownloadModalView({
           {messages["download.export_as_tiff"]({ typeName })}
         </Text>
       </Row>
-      {activeTabKey === "export" && !features().jobsEnabled ? (
+      {activeTabKey === "export" &&
+      (!features().jobsEnabled ||
+        !dataset.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF)) ? (
         workerInfo
       ) : (
         <div>

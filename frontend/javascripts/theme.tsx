@@ -4,7 +4,7 @@ import { App, ConfigProvider, theme } from "antd";
 import { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
-import type { AliasToken } from "antd/lib/theme/interface";
+import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 
@@ -25,28 +25,25 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 
 export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
-  let components = {};
+  let components: OverrideToken = {
+    Layout: {
+      footerBg: "var(--ant-layout-header-bg)",
+    },
+  };
 
   // Ant Design Customizations
   let token: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
     colorLink: ColorWKBlue,
+    borderRadius: 4,
     fontFamily:
       '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
   };
 
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
-    components = {
-      ...components,
-      Typography: {
-        colorTextHeading: "rgba(255, 255, 255, 0.85)", // Why is this not the default value?
-      },
-    };
   }
-  // In case you want customize individual components, adapt the antd design tokens and return them here,
-  // e.g., components: { Input: {<designToken>: ...}
-  return { algorithm, token };
+  return { algorithm, token, components };
 }
 
 export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {

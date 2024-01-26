@@ -31,7 +31,6 @@ import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_a
 import { mayUserEditDataset, pluralize } from "libs/utils";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-import Title from "antd/lib/typography/Title";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -308,7 +307,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getKeyboardShortcuts() {
     return this.props.isDatasetViewMode ? (
       <div className="info-tab-block">
-        <Title level={5}>Keyboard Shortcuts</Title>
+        <Typography.Title level={5}>Keyboard Shortcuts</Typography.Title>
         <p>
           Find the complete list of shortcuts in the{" "}
           <a
@@ -371,9 +370,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               wordWrap: "break-word",
             }}
           >
-            <Title level={5} style={{ display: "initial" }}>
+            <Typography.Title level={5} style={{ display: "initial" }}>
               {displayName || datasetName}
-            </Title>
+            </Typography.Title>
             {getEditSettingsIcon()}
           </div>
           {datasetDescription ? (

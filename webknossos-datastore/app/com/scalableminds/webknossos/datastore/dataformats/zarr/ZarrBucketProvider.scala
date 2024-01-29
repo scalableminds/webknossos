@@ -1,13 +1,11 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -16,23 +14,6 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging {
-
-  def cutOutBucket(bucket: BucketPosition, dataLayer: DataLayer)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val shape = Vec3Int.full(bucket.bucketLength)
-    val offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-
-    bucket.additionalCoordinates match {
-      case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
-        zarrArray.readBytesWithAdditionalCoordinates(shape, offset, additionalCoordinates, dataLayer.additionalAxisMap)
-      case _ => zarrArray.readBytesXYZ(shape, offset, dataLayer.elementClass == ElementClass.uint24)
-    }
-  }
-
-  override protected def onFinalize(): Unit = ()
-
-}
-
 class ZarrBucketProvider(layer: ZarrLayer,
                          dataSourceId: DataSourceId,
                          val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
@@ -40,8 +21,8 @@ class ZarrBucketProvider(layer: ZarrLayer,
     extends BucketProvider
     with LazyLogging {
 
-  override def openShardOrArrayHandle(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[ZarrCubeHandle] = {
+  override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
     val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
@@ -63,7 +44,7 @@ class ZarrBucketProvider(layer: ZarrLayer,
                       magLocator.axisOrder,
                       magLocator.channelIndex,
                       chunkContentsCache)
-                .map(new ZarrCubeHandle(_))
+                .map(new DatasetArrayHandle(_))
             } yield cubeHandle
           case None => Empty
         }

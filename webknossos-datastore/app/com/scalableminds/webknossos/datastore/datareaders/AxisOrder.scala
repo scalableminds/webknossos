@@ -2,6 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import play.api.libs.json.{Json, OFormat}
 
+// Defines the axis order of a DatasetArray. Note that this ignores transpose codecs/ArrayOrder.F/C.
+// Those will have to be applied on individual chunk’s contents.
 case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
 
   def hasZAxis: Boolean = z.isDefined
@@ -12,7 +14,7 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     case None => Math.max(Math.max(x, y), c.getOrElse(-1)) + 1
   }
 
-  def permutation(rank: Int): Array[Int] =
+  def wkToArrayPermutation(rank: Int): Array[Int] =
     c match {
       case Some(channel) =>
         ((0 until (rank - 4)).toList :+ channel :+ x :+ y :+ zWithFallback).toArray
@@ -20,20 +22,20 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
         ((0 until (rank - 3)).toList :+ x :+ y :+ zWithFallback).toArray
     }
 
-  def inversePermutation(rank: Int): Array[Int] = {
+  def arrayToWkPermutation(rank: Int): Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(rank)(0)
-    permutation(rank).zipWithIndex.foreach {
+    wkToArrayPermutation(rank).zipWithIndex.foreach {
       case (p, i) =>
         permutationMutable(p) = i
     }
     permutationMutable
   }
 
-  def permuteIndices(indices: Array[Int]): Array[Int] =
-    permutation(indices.length).map(indices(_))
+  def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
+    wkToArrayPermutation(indices.length).map(indices(_))
 
-  def permuteIndicesReverse(indices: Array[Int]): Array[Int] =
-    inversePermutation(indices.length).map(indices(_))
+  def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
+    arrayToWkPermutation(indices.length).map(indices(_))
 
 }
 

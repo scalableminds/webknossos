@@ -133,7 +133,7 @@ object MultiArrayUtils {
      * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
      * e.g. with axis order ZXY
      */
-    val permutation = axisOrder.permutation(source.getRank)
+    val permutation = axisOrder.wkToArrayPermutation(source.getRank)
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
     source.permute(flippedIfNeeded)
   }

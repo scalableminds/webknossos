@@ -497,6 +497,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "setTreeGroupColor",
           disabled: isEditingDisabled,
+          icon: <i className="fas fa-eye-dropper fa-sm " />,
           label: (
             <ChangeColorMenuItemContent
               title="Change Tree Group Color"
@@ -579,6 +580,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             {
               key: "changeTreeColor",
               disabled: isEditingDisabled,
+              icon: <i className="fas fa-eye-dropper fa-sm " />,
               label: (
                 <ChangeColorMenuItemContent
                   title="Change Tree Color"

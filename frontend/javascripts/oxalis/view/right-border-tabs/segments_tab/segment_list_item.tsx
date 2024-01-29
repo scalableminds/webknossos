@@ -477,7 +477,6 @@ function _SegmentListItem({
               );
             }}
             rgb={Utils.take3(segmentColorRGBA)}
-            hidePickerIcon
           />
         ),
       },

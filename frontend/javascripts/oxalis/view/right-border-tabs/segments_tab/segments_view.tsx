@@ -1015,14 +1015,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: (
-        <i
-          className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -1034,7 +1027,6 @@ class SegmentsView extends React.Component<Props, State> {
             this.setGroupColor(groupId, color);
           }}
           rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
-          hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
       ),
     };
@@ -1044,14 +1036,7 @@ class SegmentsView extends React.Component<Props, State> {
     const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
-      icon: (
-        <i
-          className="fas fa-undo"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-undo" />,
       label: (
         <div
           title={title}

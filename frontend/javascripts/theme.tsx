@@ -7,6 +7,7 @@ import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
+const ColorWKDarkGrey = "#1f1f1f";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -27,7 +28,12 @@ export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
   let components: OverrideToken = {
     Layout: {
-      footerBg: "var(--ant-layout-header-bg)",
+      headerBg: ColorWKDarkGrey,
+      footerBg: ColorWKDarkGrey,
+    },
+    Menu: {
+      darkItemBg: ColorWKDarkGrey,
+      darkPopupBg: ColorWKDarkGrey,
     },
   };
 

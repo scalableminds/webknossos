@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer
@@ -29,7 +30,8 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       explored = Seq(
         exploreLocalNgffArray(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
-        exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory)
+        exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory),
+        exploreLocalN5Multiscales(path, dataSourceId, layerDirectory)
       )
       dataSource <- Fox.firstSuccess(explored) ?~> "Could not explore local data source"
     } yield dataSource
@@ -76,7 +78,22 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         case l: PrecomputedDataLayer => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
         case l: PrecomputedSegmentationLayer =>
           l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
-      }.toList
+      }
+      dataSource = new DataSource(dataSourceId, relativeLayers, voxelSize)
+    } yield dataSource
+
+  private def exploreLocalN5Multiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
+      implicit ec: ExecutionContext): Fox[DataSource] =
+    for {
+      fullPath <- Fox.successful(path.resolve(layerDirectory))
+      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
+      vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
+      layersWithVoxelSizes <- (new N5MultiscalesExplorer).explore(vaultPath, None)
+      (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
+      relativeLayers = layers.map {
+        case l: N5DataLayer         => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
+        case l: N5SegmentationLayer => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
+      }
       dataSource = new DataSource(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 

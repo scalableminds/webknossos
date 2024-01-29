@@ -1,12 +1,11 @@
-package com.scalableminds.webknossos.datastore.datareaders.zarr
+package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.{ArrayDataType, bytesPerElementFor}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
+import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder}
-import ucar.ma2.{Array => MultiArray}
 
 object BytesConverter {
   def toByteArray(multiArray: MultiArray, dataType: ArrayDataType, byteOrder: ByteOrder): Box[Array[Byte]] = tryo {

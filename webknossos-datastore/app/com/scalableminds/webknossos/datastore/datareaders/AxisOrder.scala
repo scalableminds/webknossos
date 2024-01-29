@@ -8,7 +8,7 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
 
   def zWithFallback: Int = z match {
     case Some(value) => value
-    // z is appended to the end of the array (this is reflected in DatasetArray adding 1 at the end of header shape and chunksize)
+    // z is appended to the end of the array (this is reflected in DatasetArray adding 1 at the end of header datasetShape and chunkShape)
     case None => Math.max(Math.max(x, y), c.getOrElse(-1)) + 1
   }
 

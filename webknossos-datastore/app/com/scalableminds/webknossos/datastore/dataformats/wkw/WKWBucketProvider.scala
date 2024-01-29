@@ -1,13 +1,11 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.wkw.WKWArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging

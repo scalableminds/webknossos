@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.dataformats
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 

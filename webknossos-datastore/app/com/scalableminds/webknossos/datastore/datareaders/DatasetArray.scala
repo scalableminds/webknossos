@@ -63,24 +63,6 @@ class DatasetArray(vaultPath: VaultPath,
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
     }
 
-  // Returns byte array in fortran-order with little-endian values
-  def readBytesXYZ(shape: Vec3Int, offset: Vec3Int, shouldReadUint24: Boolean = false)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val paddingDimensionsCount = rank - 3
-    val offsetArray = channelIndex match {
-      case Some(c) if rank >= 4 =>
-        Array.fill(paddingDimensionsCount - 1)(0) :+ c :+ offset.x :+ offset.y :+ offset.z
-      case _ => Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
-    }
-    val shapeArray = if (shouldReadUint24 && rank >= 4) {
-      Array.fill(paddingDimensionsCount - 1)(1) :+ 3 :+ shape.x :+ shape.y :+ shape.z
-    } else {
-      Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
-    }
-
-    readBytes(shapeArray, offsetArray)
-  }
-
   def readBytesWithAdditionalCoordinates(
       shapeXYZ: Vec3Int,
       offsetXYZ: Vec3Int,

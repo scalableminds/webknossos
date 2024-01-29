@@ -195,7 +195,9 @@ object Zarr3ArrayHeader extends JsonImplicits {
         chunk_shape <- config("chunk_shape").validate[Array[Int]]
         codecs = readCodecs(config("codecs"))
         index_codecs = readCodecs(config("index_codecs"))
-        index_location <- config("index_location").validate[IndexLocationSetting.IndexLocationSetting]
+        index_location = (config \ "index_location")
+          .asOpt[IndexLocationSetting.IndexLocationSetting]
+          .getOrElse(IndexLocationSetting.end)
       } yield ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location)
 
     private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {

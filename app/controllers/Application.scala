@@ -3,6 +3,7 @@ package controllers
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.NativeAdder
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
@@ -68,6 +69,11 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   def health: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(Ok("Ok"))
+  }
+
+  def testAdd(a: Int, b: Int): Action[AnyContent] = sil.UserAwareAction {
+    val sum = new NativeAdder(a).plus(b)
+    Ok(Json.obj("sum" -> sum))
   }
 
   def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

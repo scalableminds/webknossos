@@ -362,7 +362,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <EditOutlined
             style={{
               cursor: "pointer",
-              color: isInEditMode ? "var(--ant-primary)" : undefined,
+              color: isInEditMode ? "var(--ant-color-primary)" : undefined,
             }}
             className="icon-margin-right"
           />
@@ -789,7 +789,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               >
                 <WarningOutlined
                   style={{
-                    color: "var(--ant-warning)",
+                    color: "var(--ant-color-warning)",
                   }}
                 />
               </Tooltip>
@@ -873,7 +873,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   margin: 0,
                   transition: "transform 0.5s ease 0s",
                   color: layerConfiguration.isInverted
-                    ? "var(--ant-primary)"
+                    ? "var(--ant-color-primary)"
                     : "var(--ant-color-text-secondary)",
                 }}
               />

@@ -930,7 +930,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined
                       style={{
-                        color: "var(--ant-warning)",
+                        color: "var(--ant-color-warning)",
                       }}
                     />
                   </Tooltip>

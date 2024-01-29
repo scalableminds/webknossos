@@ -815,7 +815,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         <ExclamationCircleOutlined
           style={{
             marginLeft: 4,
-            color: "var(--ant-error)",
+            color: "var(--ant-color-error)",
           }}
         />
       </Tooltip>

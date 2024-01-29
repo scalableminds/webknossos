@@ -29,7 +29,7 @@ export const ThrottledColorPicker = ({
           textAlign: "center",
           width: "100%",
           marginTop: "12px",
-          color: "var(--ant-text)",
+          color: "var(--ant-color-text)",
           borderRadius: "4px",
           border: "1px solid var(--ant-border-radius)",
         }}

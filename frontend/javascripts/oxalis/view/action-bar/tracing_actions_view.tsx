@@ -530,7 +530,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             danger
             disabled
             style={{
-              backgroundColor: "var(--ant-warning-dark-5)",
+              backgroundColor: "var(--ant-color-warning)",
             }}
           >
             Read only

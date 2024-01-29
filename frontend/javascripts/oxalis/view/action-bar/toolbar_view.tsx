@@ -83,7 +83,7 @@ const NARROW_BUTTON_STYLE = {
 // The z-index is needed so that the blue border of an active button does override the border color of the neighboring non active button.
 const ACTIVE_BUTTON_STYLE = {
   ...NARROW_BUTTON_STYLE,
-  borderColor: "var(--ant-primary)",
+  borderColor: "var(--ant-color-primary)",
   zIndex: 1,
 };
 const imgStyleForSpaceyIcons = {
@@ -1269,7 +1269,7 @@ function ToolSpecificSettings({
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
           >
-            <i className="fas fa-magic" /> AI
+            <i className="fas fa-magic icon-margin-right" /> AI
           </ButtonComponent>
 
           {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}

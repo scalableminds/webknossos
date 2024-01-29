@@ -166,7 +166,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         <div style={subHeadingStyle}>
           <WarningOutlined
             style={{
-              color: "var(--ant-warning)",
+              color: "var(--ant-color-warning)",
             }}
           />{" "}
           There were warnings during task creation:

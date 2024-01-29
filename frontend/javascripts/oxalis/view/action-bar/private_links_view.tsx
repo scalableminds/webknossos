@@ -262,7 +262,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const maybeWarning =
     Number(new Date()) > linkItem.expirationDateTime ? (
       <Tooltip title="This link has expired">
-        <InfoCircleOutlined style={{ color: "var(--ant-error)" }} />
+        <InfoCircleOutlined style={{ color: "var(--ant-color-error)" }} />
       </Tooltip>
     ) : null;
 

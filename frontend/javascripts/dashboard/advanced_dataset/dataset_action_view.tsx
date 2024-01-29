@@ -17,9 +17,10 @@ import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { MenuProps, Modal } from "antd";
+
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
-  color: "var(--ant-disabled)",
+  color: "var(--ant-color-text-disabled)",
 };
 
 function getDisabledWhenReloadingStyle(isReloading: boolean) {
@@ -68,7 +69,7 @@ function NewAnnotationLink({
       >
         <EllipsisOutlined
           style={{
-            color: "var(--ant-link)",
+            color: "var(--ant-color-link)",
           }}
         />
       </a>

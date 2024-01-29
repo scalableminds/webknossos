@@ -43,7 +43,7 @@ function extendPricingPlan(organization: APIOrganization) {
       sendExtendPricingPlanEmail();
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     },
-    icon: <FieldTimeOutlined style={{ color: "var(--ant-primary-color)" }} />,
+    icon: <FieldTimeOutlined style={{ color: "var(--ant-color-primary)" }} />,
     width: 1000,
     content: (
       <div>
@@ -87,7 +87,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
     <Modal
       title={
         <>
-          <UserAddOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade User Quota
+          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
         </>
       }
       okText={"Request More Users"}
@@ -131,7 +131,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
     <Modal
       title={
         <>
-          <DatabaseOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade Storage Space
+          <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
         </>
       }
       okText={"Request More Storage Space"}
@@ -263,7 +263,7 @@ function UpgradePricingPlanModal({
       open
       title={
         <>
-          <RocketOutlined style={{ color: "var(--ant-primary-color)" }} /> {title}
+          <RocketOutlined style={{ color: "var(--ant-color-primary)" }} /> {title}
         </>
       }
       width={800}

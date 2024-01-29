@@ -168,7 +168,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
-          boxShadow: "var(--ant-box-shadow-base)",
+          boxShadow: "var(--ant-box-shadow)",
           borderRadius: 3,
           border: 0,
         }}
@@ -176,7 +176,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         <div
           style={{
             fontSize: 32,
-            background: "var(--ant-primary)",
+            background: "var(--ant-color-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",

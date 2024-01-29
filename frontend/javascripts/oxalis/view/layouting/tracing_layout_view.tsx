@@ -400,7 +400,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         style={{
                           height: 30,
                           paddingTop: 4,
-                          backgroundColor: "var(--ant-warning)",
+                          backgroundColor: "var(--ant-color-warning)",
                           border: "none",
                           color: "white",
                         }}

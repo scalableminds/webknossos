@@ -353,7 +353,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
       <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
-            color: "var(--ant-warning)",
+            color: "var(--ant-color-warning)",
           }}
         />
       </Tooltip>

@@ -926,12 +926,7 @@ export default function ToolbarView() {
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.MOVE}
         >
-          <i
-            style={{
-              paddingLeft: 4,
-            }}
-            className="fas fa-arrows-alt"
-          />
+          <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
         {hasSkeleton ? (
@@ -954,7 +949,6 @@ export default function ToolbarView() {
             >
               <i
                 style={{
-                  paddingLeft: 4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
                 }}
                 className="fas fa-project-diagram"
@@ -1024,6 +1018,7 @@ export default function ToolbarView() {
                 src="/assets/images/lasso.svg"
                 alt="Trace Tool Icon"
                 style={{
+                  marginRight: 4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
                   ...imgStyleForSpaceyIcons,
                 }}
@@ -1166,12 +1161,7 @@ export default function ToolbarView() {
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.LINE_MEASUREMENT}
         >
-          <i
-            style={{
-              paddingLeft: 4,
-            }}
-            className="fas fa-ruler"
-          />
+          <i className="fas fa-ruler" />
         </ToolRadioButton>
       </Radio.Group>
 

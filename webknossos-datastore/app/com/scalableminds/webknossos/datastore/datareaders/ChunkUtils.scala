@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.webknossos.datastore.datareaders.ChunkUtils.logger
 import com.typesafe.scalalogging.LazyLogging
 
 object ChunkUtils extends LazyLogging {
@@ -40,6 +41,9 @@ object ChunkUtils extends LazyLogging {
         dimIndex = -1
       }
     }
+    logger.info(s"selected offset: ${selectedOffset.mkString(",")}, selectedShape: ${selectedShape
+      .mkString(",")} arrayShapeOpt ${arrayShapeOpt.map(_.mkString(","))} arrayChunkShape ${arrayChunkShape.mkString(
+      ",")}. returning chunkIndices ${chunkIndices.toList.map(_.mkString(","))}")
     chunkIndices.toList
   }
 }

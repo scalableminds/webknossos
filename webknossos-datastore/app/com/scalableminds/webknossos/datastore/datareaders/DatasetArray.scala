@@ -108,11 +108,36 @@ class DatasetArray(vaultPath: VaultPath,
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
     } yield asBytes
 
+  private def printAsInner(values: Array[Int]): String = {
+    val axisNames = Array.fill(rank)("")
+    axisNames(axisOrder.x) = "x"
+    axisNames(axisOrder.y) = "y"
+    axisOrder.z.foreach { zIndex =>
+      axisNames(zIndex) = "z"
+    }
+    axisOrder.c.foreach { cIndex =>
+      axisNames(cIndex) = "c"
+    }
+    additionalAxes.getOrElse(Seq.empty).foreach { axis =>
+      axisNames(axis.index) = axis.name
+    }
+    val raw = axisNames
+      .zip(values)
+      .map { tuple =>
+        f"${tuple._1}=${tuple._2}"
+      }
+      .mkString(",")
+    f"inner($raw)"
+  }
+
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
-
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
+    logger.info(s"reading shape ${shape.mkString(",")} at ${offset.mkString(",")}")
+    logger.info(s"ds shape: ${datasetShape
+      .map(printAsInner)} (permuted to outer(${datasetShape.map(axisOrder.permuteIndicesArrayToWk).map(_.mkString(","))})), chunk shape: ${printAsInner(
+      chunkShape)} (permuted to outer(${axisOrder.permuteIndicesArrayToWk(chunkShape).mkString(",")}))")
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(axisOrder.permuteIndicesArrayToWk),
                                                       axisOrder.permuteIndicesArrayToWk(chunkShape),

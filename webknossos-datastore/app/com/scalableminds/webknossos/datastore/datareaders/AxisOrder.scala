@@ -2,6 +2,14 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import play.api.libs.json.{Json, OFormat}
 
+case class Axis(name: String, index: Int)
+
+class FullAxisOrder(axes: Seq[Axis])
+
+object FullAxisOrder {
+  def fromAxisOrderAndAdditionalCoordinates: FullAxisOrder = ???
+}
+
 // Defines the axis order of a DatasetArray. Note that this ignores transpose codecs/ArrayOrder.F/C.
 // Those will have to be applied on individual chunk’s contents.
 case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {

@@ -107,7 +107,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
                                layer.boundingBox,
                                layer.elementClass,
                                magLocators.toList,
-                               additionalAxes = additionalAxes)),
+                               additionalAxes = additionalAxes)), // TODO their indexes are no longer right
       scale = voxelSize.getOrElse(Vec3Double.ones) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
   }

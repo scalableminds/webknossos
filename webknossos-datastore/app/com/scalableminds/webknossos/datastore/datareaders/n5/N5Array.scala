@@ -19,6 +19,7 @@ object N5Array extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[N5Array] =
     for {
       headerBytes <- (path / N5Header.FILENAME_ATTRIBUTES_JSON)
@@ -32,7 +33,7 @@ object N5Array extends LazyLogging {
                   header,
                   axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
                   channelIndex,
-                  None,
+                  additionalAxes,
                   sharedChunkContentsCache)
 }
 

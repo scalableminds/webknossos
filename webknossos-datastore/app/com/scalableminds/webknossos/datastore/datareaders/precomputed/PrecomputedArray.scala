@@ -25,6 +25,7 @@ object PrecomputedArray extends LazyLogging {
       layerName: String,
       axisOrderOpt: Option[AxisOrder],
       channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
@@ -41,7 +42,7 @@ object PrecomputedArray extends LazyLogging {
         scaleHeader,
         axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
         channelIndex,
-        None,
+        additionalAxes,
         sharedChunkContentsCache
       )
 }

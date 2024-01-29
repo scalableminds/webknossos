@@ -18,6 +18,7 @@ object ZarrArray extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
@@ -25,14 +26,16 @@ object ZarrArray extends LazyLogging {
       header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
     } yield
-      new ZarrArray(path,
-                    dataSourceId,
-                    layerName,
-                    header,
-                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
-                    channelIndex,
-                    None,
-                    sharedChunkContentsCache)
+      new ZarrArray(
+        path,
+        dataSourceId,
+        layerName,
+        header,
+        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+        channelIndex,
+        additionalAxes,
+        sharedChunkContentsCache
+      )
 }
 
 class ZarrArray(vaultPath: VaultPath,

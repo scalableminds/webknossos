@@ -19,6 +19,7 @@ object Zarr3Array extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -31,7 +32,7 @@ object Zarr3Array extends LazyLogging {
                      header,
                      axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
                      channelIndex,
-                     None,
+                     additionalAxes,
                      sharedChunkContentsCache)
 }
 

@@ -43,6 +43,7 @@ class Zarr3BucketProvider(layer: Zarr3Layer,
                       layer.name,
                       magLocator.axisOrder,
                       magLocator.channelIndex,
+                      layer.additionalAxes,
                       chunkContentsCache)
                 .map(new DatasetArrayHandle(_))
             } yield cubeHandle

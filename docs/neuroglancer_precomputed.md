@@ -2,8 +2,7 @@
 
 WEBKNOSSOS can read [Neuroglancer precomputed datasets](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed).
 
-!!!info
-    Neuroglancer datasets can only be opened as [remote dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud) at the moment. Uploading the through the web uploader is not supported. 
+Neuroglancer Precomputed datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud).
 
 ## Examples
 

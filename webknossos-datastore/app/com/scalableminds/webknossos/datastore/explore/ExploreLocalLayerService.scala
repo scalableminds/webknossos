@@ -23,7 +23,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     extends ExploreLayerService
     with FoxImplicits {
 
-  def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "color")(
+  def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
       implicit ec: ExecutionContext): Fox[DataSource] =
     for {
       _ <- Fox.successful(())

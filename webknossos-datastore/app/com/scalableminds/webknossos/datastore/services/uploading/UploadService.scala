@@ -238,25 +238,35 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         _ <- uploadedDataSourceType match {
           case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED =>
             exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
-          case UploadedDataSourceType.EXPLORED        => Fox.successful(())
-          case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
-          case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+          case UploadedDataSourceType.EXPLORED => Fox.successful(())
+          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER =>
+            tryExploringMultipleLayers(unpackToDir, dataSourceId, uploadedDataSourceType)
+          case UploadedDataSourceType.WKW => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
         _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
 
-  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId, typ: UploadedDataSourceType.Value): Fox[Unit] =
+  private def exploreLocalDatasource(path: Path,
+                                     dataSourceId: DataSourceId,
+                                     typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
-      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(
+        addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
 
-  private def tryExploringMultipleZarrLayers(path: Path, dataSourceId: DataSourceId): Fox[Option[Path]] =
+  private def tryExploringMultipleLayers(path: Path,
+                                         dataSourceId: DataSourceId,
+                                         typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
-      layerDirs <- getZarrLayerDirectories(path)
+      layerDirs <- typ match {
+        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path)
+        case UploadedDataSourceType.NEUROGLANCER_MULTILAYER =>
+          PathUtils.listDirectories(path, silent = false).toFox
+      }
       dataSources <- Fox.combined(
         layerDirs
           .map(layerDir =>
@@ -356,8 +366,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       UploadedDataSourceType.EXPLORED
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
-    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir).openOr(false)) {
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).openOr(false)) {
       UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).openOr(false)) {
+      UploadedDataSourceType.NEUROGLANCER_MULTILAYER
     } else {
       UploadedDataSourceType.WKW
     }
@@ -373,8 +385,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     hasFileName(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
 
-  private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path): Box[Boolean] =
-    hasFileName(List(FILENAME_INFO), dataSourceDir, 1)
+  private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    hasFileName(List(FILENAME_INFO), dataSourceDir, maxDepth)
 
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
     hasFileName(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
@@ -504,5 +516,5 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED = Value
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER = Value
 }

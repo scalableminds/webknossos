@@ -2,7 +2,10 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedDataLayer
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrDataLayer
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
@@ -26,7 +29,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       explored = Seq(
         exploreLocalNgffArray(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
-        exploreLocalNeuroglancerPrecomputed(path, dataSourceId)
+        exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory)
       )
       dataSource <- Fox.firstSuccess(explored) ?~> "Could not explore local data source"
     } yield dataSource
@@ -61,23 +64,24 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       dataSource = new DataSource(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
-  private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId)(
+  private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSource] =
     for {
-      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(path.toUri, None))
+      fullPath <- Fox.successful(path.resolve(layerDirectory))
+      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- (new PrecomputedExplorer).explore(vaultPath, None)
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
-      specificLayers = layers.map(_.asInstanceOf[PrecomputedDataLayer])
-      relativeLayers = makePrecomputedPathsRelative(specificLayers).toList
+      relativeLayers = layers.map {
+        case l: PrecomputedDataLayer => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
+        case l: PrecomputedSegmentationLayer =>
+          l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").last))))
+      }.toList
       dataSource = new DataSource(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
   private def makeZarrPathsRelative(layers: Seq[ZarrDataLayer]): Seq[DataLayer] =
     layers.map(l => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").takeRight(2).mkString("/"))))))
-
-  private def makePrecomputedPathsRelative(layers: Seq[PrecomputedDataLayer]): Seq[DataLayer] =
-    layers.map(l => l.copy(mags = l.mags.map(m => m.copy(path = m.path.map(_.split("/").takeRight(1).mkString("/"))))))
 
   def writeLocalDatasourceProperties(dataSource: DataSource, path: Path)(implicit ec: ExecutionContext): Fox[Path] =
     tryo {

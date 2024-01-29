@@ -11,8 +11,6 @@ authors:
 identifiers:
   - type: doi
     value: 10.1038/nmeth.4331
-  - type: url
-    value: 'https://doi.org/10.1038/nmeth.4331'
 abstract: >-
   webKnossos is a browser-based tracing and annotation tool
   for 3D electron microscopy data sets that is optimized for
@@ -64,3 +62,5 @@ preferred-citation:
   end: 694
   issn: 1548-7105
   doi: 10.1038/nmeth.4331
+  volume: 14
+  issue: 7

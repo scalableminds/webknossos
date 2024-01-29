@@ -13,13 +13,23 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, UnsignedInteger, UnsignedIntegerArray, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebknossosAdHocMeshRequest
+}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, FallbackDataHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient, TracingStoreRedisStore}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebKnossosClient,
+  TracingStoreRedisStore
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
@@ -191,34 +201,40 @@ class VolumeTracingService @Inject()(
     for {
       _ <- Fox.successful(())
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution => {
-        val mag = vec3IntFromProto(resolution)
-        for {
-          bucketPositionsRaw <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, a.id, mag, a.additionalCoordinates, dataLayer.additionalAxes)
-          bucketPositions = bucketPositionsRaw.values
-            .map(vec3IntFromProto)
-            .map(_ * mag * DataLayer.bucketLength)
-            .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, a.additionalCoordinates))
-            .toList
-          _ <- Fox.serialCombined(bucketPositions) {
-            bucketPosition =>
-              for {
-                data <- loadBucket(dataLayer, bucketPosition)
-                typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
-                filteredData = typedData.map(elem =>
-                  if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
-                filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
-                _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
-                _ <- updateSegmentIndex(segmentIndexBuffer,
-                                        bucketPosition,
-                                        filteredBytes,
-                                        Some(data),
-                                        volumeTracing.elementClass)
-              } yield ()
-          }
-        } yield ()
-      })
+      possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes)
+      _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution =>
+        Fox.serialCombined(possibleAdditionalCoordinates.toList)(additionalCoordinates => {
+          val mag = vec3IntFromProto(resolution)
+          for {
+            bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              tracingId,
+              a.id,
+              mag,
+              Some(additionalCoordinates),
+              dataLayer.additionalAxes)
+            bucketPositions = bucketPositionsRaw.values
+              .map(vec3IntFromProto)
+              .map(_ * mag * DataLayer.bucketLength)
+              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, Some(additionalCoordinates)))
+              .toList
+            _ <- Fox.serialCombined(bucketPositions) {
+              bucketPosition =>
+                for {
+                  data <- loadBucket(dataLayer, bucketPosition)
+                  typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
+                  filteredData = typedData.map(elem =>
+                    if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
+                  filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
+                  _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
+                  _ <- updateSegmentIndex(segmentIndexBuffer,
+                                          bucketPosition,
+                                          filteredBytes,
+                                          Some(data),
+                                          volumeTracing.elementClass)
+                } yield ()
+            }
+          } yield ()
+        }))
       _ <- segmentIndexBuffer.flush()
     } yield volumeTracing
 

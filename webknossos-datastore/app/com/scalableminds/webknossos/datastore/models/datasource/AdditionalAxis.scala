@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Format, Json}
 
@@ -88,4 +89,27 @@ object AdditionalAxis {
       Failure("dataset.additionalCoordinates.different")
     }
   }
+
+  // All possible values of the additional coordinates for given axes
+  def coordinateSpace(additionalAxes: Option[Seq[AdditionalAxis]]): Seq[Seq[AdditionalCoordinate]] =
+    additionalAxes match {
+      case Some(axes) =>
+        val coordinateSpaces = axes.map { axis =>
+          axis.lowerBound until axis.upperBound
+        }
+        val coordinateSpace = coordinateSpaces.foldLeft(Seq(Seq.empty[Int])) { (acc, space) =>
+          for {
+            a <- acc
+            b <- space
+          } yield a :+ b
+        }
+        coordinateSpace.map { coordinates =>
+          coordinates.zipWithIndex.map {
+            case (coordinate, index) =>
+              AdditionalCoordinate(axes(index).name, coordinate)
+          }
+        }
+      case None => Seq.empty
+    }
+
 }

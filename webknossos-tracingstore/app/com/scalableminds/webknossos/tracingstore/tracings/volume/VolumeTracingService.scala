@@ -201,21 +201,26 @@ class VolumeTracingService @Inject()(
     for {
       _ <- Fox.successful(())
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes)
+      possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes).map(Some(_))
+      additionalCoordinateList = if (possibleAdditionalCoordinates.isEmpty) {
+        List(None)
+      } else {
+        possibleAdditionalCoordinates.toList
+      }
       _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution =>
-        Fox.serialCombined(possibleAdditionalCoordinates.toList)(additionalCoordinates => {
+        Fox.serialCombined(additionalCoordinateList)(additionalCoordinates => {
           val mag = vec3IntFromProto(resolution)
           for {
             bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
               tracingId,
               a.id,
               mag,
-              Some(additionalCoordinates),
+              additionalCoordinates,
               dataLayer.additionalAxes)
             bucketPositions = bucketPositionsRaw.values
               .map(vec3IntFromProto)
               .map(_ * mag * DataLayer.bucketLength)
-              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, Some(additionalCoordinates)))
+              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))
               .toList
             _ <- Fox.serialCombined(bucketPositions) {
               bucketPosition =>

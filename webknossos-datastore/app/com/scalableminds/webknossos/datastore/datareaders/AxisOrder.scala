@@ -15,31 +15,8 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     case None => Math.max(Math.max(x, y), c.getOrElse(-1)) + 1
   }
 
-  def wkToArrayPermutation(rank: Int): Array[Int] =
-    c match {
-      case Some(channel) =>
-        ((0 until (rank - 4)).toList :+ channel :+ x :+ y :+ zWithFallback).toArray
-      case None =>
-        ((0 until (rank - 3)).toList :+ x :+ y :+ zWithFallback).toArray
-    }
-
-  def arrayToWkPermutation(rank: Int): Array[Int] = {
-    val permutationMutable: Array[Int] = Array.fill(rank)(0)
-    wkToArrayPermutation(rank).zipWithIndex.foreach {
-      case (p, i) =>
-        permutationMutable(p) = i
-    }
-    permutationMutable
-  }
-
-  def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
-    wkToArrayPermutation(indices.length).map(indices(_))
-
-  def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
-    arrayToWkPermutation(indices.length).map(indices(_))
-
   def length: Int = {
-    val lengthOfZ = if (z.isDefined) 1 else 0
+    val lengthOfZ = 1 // if z is None, we append it an as adapter
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
@@ -67,7 +44,52 @@ object AxisOrder {
 
 case class Axis(name: String)
 
-case class FullAxisOrder(axes: Seq[Axis])
+case class FullAxisOrder(axes: Seq[Axis]) {
+
+  override def toString: String = axes.map(_.name).mkString("")
+  def toStringWk: String =
+    axesWk.map(_.name).mkString("")
+
+  def axesWk: Array[Axis] = arrayToWkPermutation.map(axes)
+
+  lazy val rank: Int = axes.length
+
+  lazy val arrayToWkPermutation: Array[Int] = {
+    // wk is always the additionalAxes + (c)zxy
+    val permutationMutable: Array[Int] = Array.fill(axes.length)(0)
+
+    var additionalAxisIndex = 0
+    axes.zipWithIndex.foreach {
+      case (axis, index) =>
+        axis.name match {
+          case "z" => permutationMutable(rank - 1) = index
+          case "y" => permutationMutable(rank - 2) = index
+          case "x" => permutationMutable(rank - 3) = index
+          case "c" => permutationMutable(rank - 4) = index
+          case _ =>
+            permutationMutable(additionalAxisIndex) = index
+            additionalAxisIndex += 1
+        }
+    }
+    permutationMutable
+  }
+
+  def wkToArrayPermutation: Array[Int] = {
+    val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
+    arrayToWkPermutation.zipWithIndex.foreach {
+      case (p, i) =>
+        permutationMutable(p) = i
+    }
+    permutationMutable
+  }
+
+  def permuteIndicesWkToArray(indices: Array[Int]): Array[Int] =
+    wkToArrayPermutation.map(indices(_))
+
+  def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
+    arrayToWkPermutation.map(indices(_))
+
+}
 
 object FullAxisOrder {
   def fromAxisOrderAndAdditionalAxes(axisOrder: AxisOrder,
@@ -84,6 +106,15 @@ object FullAxisOrder {
     for (additionalAxis <- additionalAxes.getOrElse(Seq.empty)) {
       asArray(additionalAxis.index) = Axis(additionalAxis.name)
     }
+    if (!axisOrder.hasZAxis) {
+      asArray(asArray.length) = Axis("z") // Adapter for reading 2D datasets
+    }
     FullAxisOrder(asArray.toVector)
   }
+
+  // Use only for debugging/developing, with single-char axis names, no duplicates!
+  @deprecated
+  def fromString(axisOrderLiteral: String): FullAxisOrder =
+    FullAxisOrder(axisOrderLiteral.map(char => Axis(name = char.toString)))
+
 }

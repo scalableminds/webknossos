@@ -125,15 +125,9 @@ object MultiArrayUtils {
     source.permute(permutation)
   }
 
-  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
-    /* create a view in which the last three axes are XYZ, rest unchanged
-     * optionally flip the axes afterwards
-     *
-     * Note that we are at this point unsure if this function should be using the *inverse* permutation.
-     * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
-     * e.g. with axis order ZXY
-     */
-    val permutation = axisOrder.wkToArrayPermutation(source.getRank)
+  def axisOrderXYZView(source: MultiArray, fullAxisOrder: FullAxisOrder, flip: Boolean): MultiArray = {
+    // create a view in which the last axes are (c)XYZ, the rest are the additional axes
+    val permutation = fullAxisOrder.arrayToWkPermutation
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
     source.permute(flippedIfNeeded)
   }

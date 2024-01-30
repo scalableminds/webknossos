@@ -56,15 +56,16 @@ type SegmentInfo = {
 };
 
 const exportStatisticsToCSV = (
-  segmentInformation: Array<SegmentInfo> | null,
+  segmentInformation: Array<SegmentInfo>,
   tracingId: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
 ) => {
-  const segmentStatisticsAsString = (segmentInformation as Array<SegmentInfo>)
+  const segmentStatisticsAsString = segmentInformation
     .map((row) => {
       const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
-      const segmentInfoRow = [
+      return [
+        ...maybeAdditionalCoords,
         row.segmentId,
         row.segmentName,
         row.groupId,
@@ -77,7 +78,6 @@ const exportStatisticsToCSV = (
         .map(String) // convert every value to String
         .map((v) => v.replaceAll('"', '""')) // escape double quotes
         .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)); // quote it if necessary
-      return maybeAdditionalCoords.concat(segmentInfoRow).join(",");
     })
     .join("\n"); // rows starting on new lines
 
@@ -236,9 +236,16 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() =>
-        exportStatisticsToCSV(segmentStatisticsObjects, tracingId, parentGroup, hasAdditionalCoords)
-      }
+      onOk={() => {
+        if (!isErrorCase) {
+          exportStatisticsToCSV(
+            segmentStatisticsObjects,
+            tracingId,
+            parentGroup,
+            hasAdditionalCoords,
+          );
+        }
+      }}
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
@@ -259,7 +266,7 @@ export function SegmentStatisticsModal({
               />
             )}
             <Table
-              dataSource={segmentStatisticsObjects as Array<SegmentInfo>}
+              dataSource={segmentStatisticsObjects}
               columns={columns}
               style={{ whiteSpace: "pre" }}
             />

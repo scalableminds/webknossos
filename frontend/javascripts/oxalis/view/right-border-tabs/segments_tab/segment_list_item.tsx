@@ -418,10 +418,6 @@ function _SegmentListItem({
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
 
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
-
   const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
 
   if (mappingInfo.hideUnmappedIds && mappedId === 0) {
@@ -556,8 +552,7 @@ function _SegmentListItem({
           activeVolumeTracing == null ||
           !activeVolumeTracing.hasSegmentIndex ||
           // Not supported for fallback layers, yet.
-          activeVolumeTracing.fallbackLayer != null ||
-          additionalCoordinates != null,
+          activeVolumeTracing.fallbackLayer != null,
         label: "Delete Segment's Data",
       },
     ],

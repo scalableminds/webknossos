@@ -7,12 +7,15 @@ import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { Segment } from "oxalis/store";
 import React from "react";
-import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
+import {
+  SegmentHierarchyNode,
+  SegmentHierarchyGroup,
+  getVolumeRequestUrl,
+} from "./segments_view_helper";
 import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -90,23 +93,17 @@ export function SegmentStatisticsModal({
   const layersFinestResolution = magInfo.getFinestResolution();
   const dataSetScale = state.dataset.dataSource.scale;
 
-  const datasetName = state.dataset.name;
-  const organization = state.dataset.owningOrganization;
-  const dataStoreHost = state.dataset.dataStore.url;
-  const tracingStoreHost = state.tracing.tracingStore.url;
-
-  const maybeVolumeTracing =
-    "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
-      ? getVolumeTracingById(state.tracing, visibleSegmentationLayer.tracingId)
-      : null;
-  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = maybeVolumeTracing == null;
-  const requestUrl = shouldUseDataStore
-    ? `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}/`
-    : `${tracingStoreHost}/tracings/volume/${tracingId}`;
+  const requestUrl = getVolumeRequestUrl(
+    state.dataset,
+    state.tracing,
+    visibleSegmentationLayer.tracingId,
+    visibleSegmentationLayer,
+  );
+  console.log(requestUrl); //TODO remove
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
+      if (requestUrl == null) return;
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
@@ -210,10 +207,13 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => exportStatisticsToCSV(dataSource, tracingId || datasetName, parentGroup)}
+      onOk={() =>
+        dataSource != null &&
+        exportStatisticsToCSV(dataSource, tracingId || state.dataset.name, parentGroup)
+      }
       okText="Export to CSV"
     >
-      <Spin spinning={dataSource.length === 0}>
+      <Spin spinning={dataSource?.length === 0}>
         <Table dataSource={dataSource} columns={columns} style={{ whiteSpace: "pre" }} />
       </Spin>
     </Modal>

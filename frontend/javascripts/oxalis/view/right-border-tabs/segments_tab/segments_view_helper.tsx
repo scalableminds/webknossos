@@ -1,13 +1,17 @@
 import { Modal } from "antd";
-import type { APIDataLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo, Segment } from "oxalis/store";
+import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { ActiveMappingInfo, HybridTracing, Segment, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getEditableMappingForVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getEditableMappingForVolumeTracingId,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
 
 const { confirm } = Modal;
 
@@ -32,6 +36,46 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return (
     ("fallbackLayer" in segmentationLayer ? segmentationLayer.fallbackLayer : null) ||
     segmentationLayer.name
+  );
+}
+
+export function getVolumeRequestUrl(
+  dataset: APIDataset,
+  tracing: HybridTracing | null,
+  tracingId: string | undefined,
+  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
+) {
+  const datasetName = dataset.name;
+  const organization = dataset.owningOrganization;
+  const dataStoreHost = dataset.dataStore.url;
+
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}`;
+  if (tracing == null) return dataStoreUrl;
+  const tracingStoreHost = tracing?.tracingStore.url;
+
+  const maybeVolumeTracing =
+    "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
+      ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
+      : null;
+  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
+  const shouldUseDataStore = maybeVolumeTracing == null;
+  return shouldUseDataStore ? dataStoreUrl : `${tracingStoreHost}/tracings/volume/${tracingId}`;
+}
+
+export function hasSegmentIndex(
+  visibleSegmentationLayer: APIDataLayer,
+  dataset: APIDataset,
+  tracing: VolumeTracing | null | undefined,
+) {
+  return (
+    visibleSegmentationLayer != null &&
+    (tracing?.hasSegmentIndex ||
+      hasSegmentIndexInDataStore(
+        dataset.dataStore.url,
+        dataset.name,
+        visibleSegmentationLayer.name,
+        dataset.owningOrganization,
+      ))
   );
 }
 

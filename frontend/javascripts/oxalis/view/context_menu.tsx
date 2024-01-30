@@ -56,7 +56,6 @@ import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "li
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
-  getVolumeTracingById,
   hasAgglomerateMapping,
   hasConnectomeFile,
   hasEditableMapping,
@@ -77,7 +76,11 @@ import {
   loadSynapsesOfAgglomerateAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
-import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import {
+  getVolumeRequestUrl,
+  hasSegmentIndex,
+  withMappingActivationConfirmation,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   clickSegmentAction,
@@ -104,11 +107,7 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
-import {
-  getSegmentBoundingBoxes,
-  getSegmentVolumes,
-  hasSegmentIndexInDataStore,
-} from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
@@ -1185,44 +1184,36 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const state = Store.getState();
-  const datasetName = state.dataset.name;
-  const organization = state.dataset.owningOrganization;
-  const dataStoreHost = state.dataset.dataStore.url;
-  const hasSegmentIndex =
-    visibleSegmentationLayer != null &&
-    (volumeTracing?.hasSegmentIndex ||
-      hasSegmentIndexInDataStore(
-        dataStoreHost,
-        datasetName,
-        visibleSegmentationLayer.name,
-        organization,
-      ));
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
+      const tracingId = volumeTracing?.tracingId;
+      if (visibleSegmentationLayer == null) return [];
+      const hasSegmentindex = hasSegmentIndex(
+        visibleSegmentationLayer,
+        state.dataset,
+        volumeTracing,
+      );
+      console.log("hassegmentindex", hasSegmentindex);
       if (
         contextMenuPosition == null ||
         visibleSegmentationLayer == null ||
-        !hasSegmentIndex ||
+        !hasSegmentindex ||
         hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
         return [];
       }
 
-      const tracingId = volumeTracing?.tracingId;
-      const tracingStoreHost = state.tracing.tracingStore.url;
+      const requestUrl = getVolumeRequestUrl(
+        state.dataset,
+        state.tracing,
+        tracingId,
+        visibleSegmentationLayer,
+      );
+      console.log(requestUrl);
+      if (requestUrl == null) return [];
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
       const dataSetScale = state.dataset.dataSource.scale;
-
-      const maybeVolumeTracing =
-        "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
-          ? getVolumeTracingById(state.tracing, visibleSegmentationLayer.tracingId)
-          : null;
-      // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-      const shouldUseDataStore = maybeVolumeTracing == null;
-      const requestUrl = shouldUseDataStore
-        ? `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}/`
-        : `${tracingStoreHost}/tracings/volume/${tracingId}`;
 
       const [segmentSize] = await getSegmentVolumes(requestUrl, layersFinestResolution, [
         segmentIdAtPosition,

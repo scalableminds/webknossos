@@ -39,7 +39,7 @@ export function TeamAndPowerPlanUpgradeCards({
           bodyStyle={{ minHeight: 220, opacity: 0.8 }}
           actions={[
             <Button type="primary" onClick={teamUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+              <PlusCircleOutlined /> Request an Email Quote
             </Button>,
           ]}
         >
@@ -56,7 +56,7 @@ export function TeamAndPowerPlanUpgradeCards({
           bodyStyle={{ minHeight: 220, opacity: 0.8 }}
           actions={[
             <Button type="primary" onClick={powerUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+              <PlusCircleOutlined /> Request an Email Quote
             </Button>,
           ]}
         >

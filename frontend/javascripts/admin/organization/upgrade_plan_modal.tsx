@@ -38,7 +38,7 @@ function extendPricingPlan(organization: APIOrganization) {
 
   Modal.confirm({
     title: "Extend Current Plan",
-    okText: "Request Extension",
+    okText: "Request an Email Quote",
     onOk: () => {
       sendExtendPricingPlanEmail();
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
@@ -90,7 +90,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
           <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
         </>
       }
-      okText={"Request More Users"}
+      okText={"Paid Request for more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
       width={800}
@@ -134,7 +134,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
           <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
         </>
       }
-      okText={"Request More Storage Space"}
+      okText={"Paid request for more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
       width={800}

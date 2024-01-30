@@ -137,11 +137,6 @@ class DatasetArray(vaultPath: VaultPath,
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
-    logger.info(s"full order: $fullAxisOrder")
-    logger.info(s"reading shape ${printAsOuter(shape)} at ${printAsOuter(offset)}")
-    logger.info(
-      s"ds shape: ${datasetShape.map(printAsInner)} (permuted to outer(${datasetShape.map(fullAxisOrder.permuteIndicesArrayToWk).map(printAsOuter)})), chunk shape: ${printAsInner(
-        chunkShape)} (permuted to outer(${printAsOuter(fullAxisOrder.permuteIndicesArrayToWk(chunkShape))}))")
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(fullAxisOrder.permuteIndicesArrayToWk),
                                                       fullAxisOrder.permuteIndicesArrayToWk(chunkShape),
@@ -176,8 +171,8 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
-    s"Copying data from dataset chunk failed. Chunk shape: ${sourceChunk.getShape.mkString(",")}, target shape: ${target.getShape
-      .mkString(",")}, offset: ${offsetInChunk.mkString(",")}"
+    s"Copying data from dataset chunk failed. Chunk shape: ${printAsOuter(sourceChunk.getShape)}, target shape: ${printAsOuter(
+      target.getShape)}, offsetInChunk: ${printAsOuter(offsetInChunk)}. Axis order: $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
@@ -186,11 +181,9 @@ class DatasetArray(vaultPath: VaultPath,
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
-      implicit ec: ExecutionContext): Fox[MultiArray] = {
-    logger.info(s"reading chunk ${printAsInner(chunkIndex)}")
+      implicit ec: ExecutionContext): Fox[MultiArray] =
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
-  }
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext): Fox[MultiArray] =
@@ -238,8 +231,8 @@ class DatasetArray(vaultPath: VaultPath,
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.mkString(",")} chunkShape=${header.chunkShape.mkString(
-      ",")} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
+    s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(printAsInner)} chunkShape=${printAsInner(
+      header.chunkShape)} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }
 

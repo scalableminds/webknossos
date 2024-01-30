@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
 
-object MultiArrayUtils {
+object MultiArrayUtils extends LazyLogging {
 
   def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
     val length = shape.product
@@ -120,11 +121,10 @@ object MultiArrayUtils {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator): Unit
   }
 
-  def axisOrderXYZView(source: MultiArray, fullAxisOrder: FullAxisOrder, flip: Boolean): MultiArray = {
-    // create a view in which the last axes are (c)XYZ, the rest are the additional axes
-    val permutation = fullAxisOrder.arrayToWkPermutation
-    val flippedIfNeeded = if (flip) permutation.reverse else permutation
-    source.permute(flippedIfNeeded)
+  def axisOrderXYZViewF(source: MultiArray, fullAxisOrder: FullAxisOrder, sourceIsF: Boolean): MultiArray = {
+    // create view with F order and wk-compatible axis order
+    val permutation = if (sourceIsF) fullAxisOrder.arrayFToWkFPermutation else fullAxisOrder.arrayCToWkFPermutation
+    source.permute(permutation)
   }
 
 }

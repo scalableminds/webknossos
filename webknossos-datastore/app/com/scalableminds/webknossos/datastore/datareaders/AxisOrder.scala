@@ -74,7 +74,10 @@ case class FullAxisOrder(axes: Seq[Axis]) {
     permutationMutable
   }
 
-  def wkToArrayPermutation: Array[Int] = {
+  lazy val arrayFToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse.map(elem => rank - 1 - elem)
+  lazy val arrayCToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse
+
+  lazy val wkToArrayPermutation: Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
     arrayToWkPermutation.zipWithIndex.foreach {
       case (p, i) =>
@@ -89,6 +92,7 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
 
+  def printPermuted(permutation: Array[Int]): String = permutation.map(axes(_)).map(_.name).mkString("")
 }
 
 object FullAxisOrder {
@@ -112,8 +116,7 @@ object FullAxisOrder {
     FullAxisOrder(asArray.toVector)
   }
 
-  @deprecated(message = "Use only for debugging/developing, with single-char axis names, no duplicates!", since = "0")
-  def fromString(axisOrderLiteral: String): FullAxisOrder =
+  def fromStringForTests(axisOrderLiteral: String): FullAxisOrder =
     FullAxisOrder(axisOrderLiteral.map(char => Axis(name = char.toString)))
 
 }

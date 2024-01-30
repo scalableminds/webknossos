@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
@@ -26,8 +25,7 @@ class DatasetArray(vaultPath: VaultPath,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
-                   sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends LazyLogging {
+                   sharedChunkContentsCache: AlfuCache[String, MultiArray]) {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(axisOrder, additionalAxes)
@@ -111,9 +109,10 @@ class DatasetArray(vaultPath: VaultPath,
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
     } yield asBytes
 
-  private def printAsInner(values: Array[Int]): String = {
+  private def printAsInner(values: Array[Int], flip: Boolean = false): String = {
     val axisNames = fullAxisOrder.axes.map(_.name)
-    val raw = axisNames
+    val axisNamesFlippedIfNeeded = if (flip) axisNames.reverse else axisNames
+    val raw = axisNamesFlippedIfNeeded
       .zip(values)
       .map { tuple =>
         f"${tuple._1}=${tuple._2}"
@@ -122,9 +121,10 @@ class DatasetArray(vaultPath: VaultPath,
     f"inner($raw)"
   }
 
-  private def printAsOuter(values: Array[Int]): String = {
+  private def printAsOuter(values: Array[Int], flip: Boolean = false): String = {
     val axisNames = fullAxisOrder.axesWk.map(_.name)
-    val raw = axisNames
+    val axisNamesFlippedIfNeeded = if (flip) axisNames.reverse else axisNames
+    val raw = axisNamesFlippedIfNeeded
       .zip(values)
       .map { tuple =>
         f"${tuple._1}=${tuple._2}"
@@ -154,9 +154,8 @@ class DatasetArray(vaultPath: VaultPath,
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
-          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
-                                                                               fullAxisOrder,
-                                                                               flip = header.order == ArrayOrder.C)
+          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
+            .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
           offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
           _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)) ?~> formatCopyRangeError(
             offsetInChunkFOrder,
@@ -171,8 +170,9 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
-    s"Copying data from dataset chunk failed. Chunk shape: ${printAsOuter(sourceChunk.getShape)}, target shape: ${printAsOuter(
-      target.getShape)}, offsetInChunk: ${printAsOuter(offsetInChunk)}. Axis order: $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
+    s"Copying data from dataset chunk failed. Chunk shape: ${printAsOuter(sourceChunk.getShape, flip = true)}, target shape: ${printAsOuter(
+      target.getShape,
+      flip = true)}, offsetInChunk: ${printAsOuter(offsetInChunk, flip = true)}. Axis order (C-order): $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
       implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
@@ -231,7 +231,7 @@ class DatasetArray(vaultPath: VaultPath,
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(printAsInner)} chunkShape=${printAsInner(
+    s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(s => printAsInner(s))} chunkShape=${printAsInner(
       header.chunkShape)} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }

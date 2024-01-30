@@ -10,14 +10,14 @@ import java.util
 object MultiArrayUtils {
 
   def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
-    val size = shape.product
+    val length = shape.product
     dataType match {
-      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](size)
-      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](size)
-      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](size)
-      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](size)
-      case ArrayDataType.f4                    => new Array[Float](size)
-      case ArrayDataType.f8                    => new Array[Double](size)
+      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](length)
+      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](length)
+      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](length)
+      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](length)
+      case ArrayDataType.f4                    => new Array[Float](length)
+      case ArrayDataType.f8                    => new Array[Double](length)
     }
   }
 

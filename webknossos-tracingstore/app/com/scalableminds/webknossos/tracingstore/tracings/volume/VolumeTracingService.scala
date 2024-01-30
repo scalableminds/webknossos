@@ -433,13 +433,15 @@ class VolumeTracingService @Inject()(
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
       case VolumeDataZipFormat.wkw =>
-        new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                           tracing.resolutions.map(mag => vec3IntFromProto(mag)))
+        new WKWBucketStreamSink(dataLayer, tracing.fallbackLayer.nonEmpty)(
+          dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+          tracing.resolutions.map(mag => vec3IntFromProto(mag)))
       case VolumeDataZipFormat.zarr3 =>
-        new Zarr3BucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                             tracing.resolutions.map(mag => vec3IntFromProto(mag)),
-                                             tracing.additionalAxes,
-                                             voxelSize)
+        new Zarr3BucketStreamSink(dataLayer, tracing.fallbackLayer.nonEmpty)(
+          dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+          tracing.resolutions.map(mag => vec3IntFromProto(mag)),
+          tracing.additionalAxes,
+          voxelSize)
     }
 
     val before = Instant.now

@@ -156,18 +156,17 @@ class DatasetArray(vaultPath: VaultPath,
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val targetInCOrder: MultiArray = MultiArrayUtils.orderFlippedView(targetMultiArray)
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
-          offsetInChunk = computeOffsetInChunk(chunkIndex, totalOffset)
-          sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
-                                                                             fullAxisOrder,
-                                                                             flip = header.order != ArrayOrder.C)
-          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)) ?~> formatCopyRangeError(
-            offsetInChunk,
-            sourceChunkInCOrder,
-            targetInCOrder)
+          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
+                                                                               fullAxisOrder,
+                                                                               flip = header.order == ArrayOrder.C)
+          offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
+          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)) ?~> formatCopyRangeError(
+            offsetInChunkFOrder,
+            sourceChunkInWkFOrder,
+            targetMultiArray)
         } yield ()
       })
       for {

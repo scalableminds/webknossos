@@ -120,11 +120,6 @@ object MultiArrayUtils {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator): Unit
   }
 
-  def orderFlippedView(source: MultiArray): MultiArray = {
-    val permutation = source.getShape.indices.reverse.toArray
-    source.permute(permutation)
-  }
-
   def axisOrderXYZView(source: MultiArray, fullAxisOrder: FullAxisOrder, flip: Boolean): MultiArray = {
     // create a view in which the last axes are (c)XYZ, the rest are the additional axes
     val permutation = fullAxisOrder.arrayToWkPermutation

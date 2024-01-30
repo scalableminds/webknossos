@@ -112,8 +112,7 @@ object FullAxisOrder {
     FullAxisOrder(asArray.toVector)
   }
 
-  // Use only for debugging/developing, with single-char axis names, no duplicates!
-  @deprecated
+  @deprecated(message = "Use only for debugging/developing, with single-char axis names, no duplicates!", since = "0")
   def fromString(axisOrderLiteral: String): FullAxisOrder =
     FullAxisOrder(axisOrderLiteral.map(char => Axis(name = char.toString)))
 

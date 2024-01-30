@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.datareaders.ChunkUtils.logger
 import com.typesafe.scalalogging.LazyLogging
 
 object ChunkUtils extends LazyLogging {

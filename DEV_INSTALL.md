@@ -42,7 +42,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
+brew install openjdk@21 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc

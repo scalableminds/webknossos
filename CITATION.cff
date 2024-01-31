@@ -8,6 +8,32 @@ type: software
 authors:
   - family-names: Boergens
     given-names: Kevin M
+  - family-names: Berning
+    given-names: Manuel
+  - family-names: Bocklisch
+    given-names: Tom
+  - family-names: Bräunlein
+    given-names: Dominic
+  - family-names: Drawitsch
+    given-names: Florian
+  - family-names: Frohnhofen
+    given-names: Johannes
+  - family-names: Herold
+    given-names: Tom
+  - family-names: Otto
+    given-names: Philipp
+  - family-names: Rzepka
+    given-names: Norman
+  - family-names: Werkmeister
+    given-names: Thomas
+  - family-names: Werner
+    given-names: Daniel
+  - family-names: Wiese
+    given-names: Georg
+  - family-names: Wissler
+    given-names: Heiko
+  - family-names: Helmstaedter
+    given-names: Moritz
 identifiers:
   - type: doi
     value: 10.1038/nmeth.4331

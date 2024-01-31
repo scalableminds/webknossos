@@ -14,7 +14,7 @@ import {
   CloseOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
-import { getJobs, hasSegmentIndexInDataStore, startComputeMeshFileJob } from "admin/admin_rest_api";
+import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import { api, Model } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
@@ -49,7 +49,6 @@ import {
 import {
   getAdditionalCoordinatesAsString,
   getPosition,
-  hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,

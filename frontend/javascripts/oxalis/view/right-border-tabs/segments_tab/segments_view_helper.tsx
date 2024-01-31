@@ -1,6 +1,6 @@
 import { Modal } from "antd";
 import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo, HybridTracing, Segment, VolumeTracing } from "oxalis/store";
+import type { ActiveMappingInfo, HybridTracing, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";

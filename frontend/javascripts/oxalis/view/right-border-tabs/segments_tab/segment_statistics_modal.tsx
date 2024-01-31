@@ -12,7 +12,7 @@ import {
   SegmentHierarchyGroup,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
-import { Store, api } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";

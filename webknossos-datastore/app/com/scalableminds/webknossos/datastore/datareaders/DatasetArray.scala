@@ -64,11 +64,10 @@ class DatasetArray(vaultPath: VaultPath,
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
     }
 
-  def readBytesWithAdditionalCoordinates(
-      shapeXYZ: Vec3Int,
-      offsetXYZ: Vec3Int,
-      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-      shouldReadUint24: Boolean = false)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readBytesWithAdditionalCoordinates(shapeXYZ: Vec3Int,
+                                         offsetXYZ: Vec3Int,
+                                         additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+                                         shouldReadUint24: Boolean)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       (shapeArray, offsetArray) <- tryo(constructShapeAndOffsetArrays(
         shapeXYZ,
@@ -81,7 +80,7 @@ class DatasetArray(vaultPath: VaultPath,
   private def constructShapeAndOffsetArrays(shapeXYZ: Vec3Int,
                                             offsetXYZ: Vec3Int,
                                             additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-                                            shouldReadUint24: Boolean = false): (Array[Int], Array[Int]) = {
+                                            shouldReadUint24: Boolean): (Array[Int], Array[Int]) = {
     val shapeArray: Array[Int] = Array.fill(rank)(1)
     shapeArray(rank - 3) = shapeXYZ.x
     shapeArray(rank - 2) = shapeXYZ.y

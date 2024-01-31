@@ -76,15 +76,18 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 sudo apt install -y curl ca-certificates wget
 # Adding repositories for nodejs, sbt and yarn
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
-sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1 libbrotli1
+sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1
+
+ # Install sdkman, java, scala and sbt
+curl -s "https://get.sdkman.io" | bash
+source "/root/.sdkman/bin/sdkman-init.sh"
+sdk install scala 2.13.12
+sdk install sbt
+sdk install java 21.0.2-tem
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -92,19 +95,15 @@ sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres'
 git clone git@github.com:scalableminds/webknossos.git
 ```
 
-If you already have a different Java version installed, set the default version to Java 11:
-
-* run `sudo update-alternatives --config java`
-* when prompted, select the desired version
-
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
 ## Manual Installation
 
 ### Java
 
-* Install Java JDK 14 (from Oracle or OpenJDK)
+* Install Java JDK 21 (from Oracle or OpenJDK)
 * make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains the path to JDK
+* Also see [SDKMAN!](https://sdkman.io/) for a convenient way to install and manage Java versions
 
 ### sbt
 

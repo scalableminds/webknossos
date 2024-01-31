@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11
+FROM eclipse-temurin:21
 RUN apt-get update \
   && apt-get -y install libblosc1 libbrotli1 \
   && rm -rf /var/lib/apt/lists/*

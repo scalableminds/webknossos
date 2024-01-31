@@ -20,6 +20,7 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
+
 }
 
 object AxisOrder {
@@ -44,6 +45,7 @@ object AxisOrder {
 
 case class Axis(name: String)
 
+// Constructed from AxisOrder and AdditionalAxes. Always contains the full rank (plus 1 for z in 2d adapter case).
 case class FullAxisOrder(axes: Seq[Axis]) {
 
   override def toString: String = axes.map(_.name).mkString("")
@@ -77,7 +79,7 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   lazy val arrayFToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse.map(elem => rank - 1 - elem)
   lazy val arrayCToWkFPermutation: Array[Int] = arrayToWkPermutation.reverse
 
-  lazy val wkToArrayPermutation: Array[Int] = {
+  private lazy val wkToArrayPermutation: Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
     arrayToWkPermutation.zipWithIndex.foreach {
       case (p, i) =>
@@ -92,13 +94,14 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
 
-  def printPermuted(permutation: Array[Int]): String = permutation.map(axes(_)).map(_.name).mkString("")
 }
 
 object FullAxisOrder {
-  def fromAxisOrderAndAdditionalAxes(axisOrder: AxisOrder,
+
+  def fromAxisOrderAndAdditionalAxes(rank: Int,
+                                     axisOrder: AxisOrder,
                                      additionalAxes: Option[Seq[AdditionalAxis]]): FullAxisOrder = {
-    val asArray: Array[Axis] = Array.fill(additionalAxes.map(_.length).getOrElse(0) + axisOrder.length)(Axis(""))
+    val asArray: Array[Axis] = Array.fill(rank)(Axis(""))
     asArray(axisOrder.x) = Axis("x")
     asArray(axisOrder.y) = Axis("y")
     axisOrder.c.foreach { c =>
@@ -107,16 +110,13 @@ object FullAxisOrder {
     axisOrder.z.foreach { z =>
       asArray(z) = Axis("z")
     }
+    if (!axisOrder.hasZAxis) {
+      asArray(asArray.length - 1) = Axis("z") // Adapter for reading 2D datasets
+    }
     for (additionalAxis <- additionalAxes.getOrElse(Seq.empty)) {
       asArray(additionalAxis.index) = Axis(additionalAxis.name)
     }
-    if (!axisOrder.hasZAxis) {
-      asArray(asArray.length) = Axis("z") // Adapter for reading 2D datasets
-    }
     FullAxisOrder(asArray.toVector)
   }
-
-  def fromStringForTests(axisOrderLiteral: String): FullAxisOrder =
-    FullAxisOrder(axisOrderLiteral.map(char => Axis(name = char.toString)))
 
 }

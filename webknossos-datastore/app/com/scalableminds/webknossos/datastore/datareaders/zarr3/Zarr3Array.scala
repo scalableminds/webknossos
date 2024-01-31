@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReade
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange
@@ -25,15 +26,16 @@ object Zarr3Array extends LazyLogging {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
-    } yield
-      new Zarr3Array(path,
-                     dataSourceId,
-                     layerName,
-                     header,
-                     axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
-                     channelIndex,
-                     additionalAxes,
-                     sharedChunkContentsCache)
+      array <- tryo(
+        new Zarr3Array(path,
+                       dataSourceId,
+                       layerName,
+                       header,
+                       axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+                       channelIndex,
+                       additionalAxes,
+                       sharedChunkContentsCache)) ?~> "Could not open zarr3 array"
+    } yield array
 }
 
 class Zarr3Array(vaultPath: VaultPath,

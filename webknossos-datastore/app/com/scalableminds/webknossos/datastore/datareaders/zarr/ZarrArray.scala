@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
@@ -25,17 +26,19 @@ object ZarrArray extends LazyLogging {
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
       header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
-    } yield
-      new ZarrArray(
-        path,
-        dataSourceId,
-        layerName,
-        header,
-        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
-        channelIndex,
-        additionalAxes,
-        sharedChunkContentsCache
-      )
+      array <- tryo(
+        new ZarrArray(
+          path,
+          dataSourceId,
+          layerName,
+          header,
+          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+          channelIndex,
+          additionalAxes,
+          sharedChunkContentsCache
+        )) ?~> "Could not open zarr2 array"
+    } yield array
+
 }
 
 class ZarrArray(vaultPath: VaultPath,

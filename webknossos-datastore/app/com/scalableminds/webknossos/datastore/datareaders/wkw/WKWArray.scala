@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream
@@ -31,7 +32,15 @@ object WKWArray {
         .readBytes() ?~> s"Could not read header at ${WKWDataFormat.FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
-    } yield new WKWArray(path, dataSourceId, layerName, header, AxisOrder.cxyz, None, None, sharedChunkContentsCache)
+      array <- tryo(new WKWArray(path,
+                                 dataSourceId,
+                                 layerName,
+                                 header,
+                                 AxisOrder.cxyz,
+                                 None,
+                                 None,
+                                 sharedChunkContentsCache)) ?~> "Could not open wkw array"
+    } yield array
 }
 
 class WKWArray(vaultPath: VaultPath,

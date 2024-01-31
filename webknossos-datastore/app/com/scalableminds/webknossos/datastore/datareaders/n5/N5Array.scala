@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
@@ -26,15 +27,16 @@ object N5Array extends LazyLogging {
         .readBytes() ?~> s"Could not read header at ${N5Header.FILENAME_ATTRIBUTES_JSON}"
       header <- JsonHelper.parseAndValidateJson[N5Header](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
-    } yield
-      new N5Array(path,
-                  dataSourceId,
-                  layerName,
-                  header,
-                  axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
-                  channelIndex,
-                  additionalAxes,
-                  sharedChunkContentsCache)
+      array <- tryo(
+        new N5Array(path,
+                    dataSourceId,
+                    layerName,
+                    header,
+                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                    channelIndex,
+                    additionalAxes,
+                    sharedChunkContentsCache)) ?~> "Could not open n5 array"
+    } yield array
 }
 
 class N5Array(vaultPath: VaultPath,

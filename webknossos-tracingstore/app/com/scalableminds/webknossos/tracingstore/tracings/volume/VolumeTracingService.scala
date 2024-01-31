@@ -378,7 +378,6 @@ class VolumeTracingService @Inject()(
         new Zarr3BucketStreamSink(dataLayer, tracing.fallbackLayer.nonEmpty)(
           dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
           tracing.resolutions.map(mag => vec3IntFromProto(mag)),
-          tracing.additionalAxes,
           voxelSize)
     }
 

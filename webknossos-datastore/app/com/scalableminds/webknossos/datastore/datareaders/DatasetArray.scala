@@ -28,14 +28,14 @@ class DatasetArray(vaultPath: VaultPath,
                    sharedChunkContentsCache: AlfuCache[String, MultiArray]) {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
-    FullAxisOrder.fromAxisOrderAndAdditionalAxes(axisOrder, additionalAxes)
+    FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
 
   protected lazy val chunkReader: ChunkReader = new ChunkReader(header)
 
   private lazy val additionalAxesMap: Map[String, AdditionalAxis] =
     additionalAxes match {
       case Some(additionalAxis) =>
-        additionalAxis.map(additionalAxis => (additionalAxis.name -> additionalAxis)).toMap
+        additionalAxis.map(additionalAxis => additionalAxis.name -> additionalAxis).toMap
       case None => Map()
     }
 
@@ -68,8 +68,20 @@ class DatasetArray(vaultPath: VaultPath,
       shapeXYZ: Vec3Int,
       offsetXYZ: Vec3Int,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-      shouldReadUint24: Boolean = false)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+      shouldReadUint24: Boolean = false)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    for {
+      (shapeArray, offsetArray) <- tryo(constructShapeAndOffsetArrays(
+        shapeXYZ,
+        offsetXYZ,
+        additionalCoordinatesOpt,
+        shouldReadUint24)) ?~> "failed to construct shape and offset array for requested coordinates"
+      bytes <- readBytes(shapeArray, offsetArray)
+    } yield bytes
 
+  private def constructShapeAndOffsetArrays(shapeXYZ: Vec3Int,
+                                            offsetXYZ: Vec3Int,
+                                            additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+                                            shouldReadUint24: Boolean = false): (Array[Int], Array[Int]) = {
     val shapeArray: Array[Int] = Array.fill(rank)(1)
     shapeArray(rank - 3) = shapeXYZ.x
     shapeArray(rank - 2) = shapeXYZ.y
@@ -99,7 +111,7 @@ class DatasetArray(vaultPath: VaultPath,
         // shapeArray at positions of additional coordinates is always 1
       }
     }
-    readBytes(shapeArray, offsetArray)
+    (shapeArray, offsetArray)
   }
 
   // returns byte array in fortran-order with little-endian values
@@ -121,10 +133,9 @@ class DatasetArray(vaultPath: VaultPath,
     f"inner($raw)"
   }
 
-  private def printAsOuter(values: Array[Int], flip: Boolean = false): String = {
-    val axisNames = fullAxisOrder.axesWk.map(_.name)
-    val axisNamesFlippedIfNeeded = if (flip) axisNames.reverse else axisNames
-    val raw = axisNamesFlippedIfNeeded
+  private def printAsOuterF(values: Array[Int]): String = {
+    val axisNamesFOrder = fullAxisOrder.axesWk.map(_.name).reverse
+    val raw = axisNamesFOrder
       .zip(values)
       .map { tuple =>
         f"${tuple._1}=${tuple._2}"
@@ -170,12 +181,11 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
-    s"Copying data from dataset chunk failed. Chunk shape: ${printAsOuter(sourceChunk.getShape, flip = true)}, target shape: ${printAsOuter(
-      target.getShape,
-      flip = true)}, offsetInChunk: ${printAsOuter(offsetInChunk, flip = true)}. Axis order (C-order): $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
+    s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsOuterF(sourceChunk.getShape)}, target shape (F): ${printAsOuterF(
+      target.getShape)}, offsetInChunk: ${printAsOuterF(offsetInChunk)}. Axis order (C): $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ???
+      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ??? // Defined in subclass
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
@@ -240,5 +250,5 @@ object DatasetArray {
   private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
 
   def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
-    bool2Fox(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of ${chunkSizeLimitBytes}, got ${bytesPerChunk}"
+    bool2Fox(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"
 }

@@ -5,7 +5,7 @@ import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { Segment } from "oxalis/store";
+import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
 import {
   SegmentHierarchyNode,
@@ -16,6 +16,7 @@ import { Store, api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { useSelector } from "react-redux";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -88,18 +89,18 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const state = Store.getState();
+  const { dataset, tracing } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = state.dataset.dataSource.scale;
-
+  const dataSetScale = dataset.dataSource.scale;
+  // Omit checking that all prerequisites for segment stats (such as a segment index) are
+  // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
-    state.dataset,
-    state.tracing,
+    dataset,
+    tracing,
     visibleSegmentationLayer.tracingId,
     visibleSegmentationLayer,
   );
-  console.log(requestUrl); //TODO remove
   const dataSource = useFetch(
     async () => {
       await api.tracing.save();
@@ -209,7 +210,7 @@ export function SegmentStatisticsModal({
       width={700}
       onOk={() =>
         dataSource != null &&
-        exportStatisticsToCSV(dataSource, tracingId || state.dataset.name, parentGroup)
+        exportStatisticsToCSV(dataSource, tracingId || dataset.name, parentGroup)
       }
       okText="Export to CSV"
     >

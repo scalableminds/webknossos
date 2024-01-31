@@ -949,22 +949,6 @@ export function getNewestVersionForTracing(
   );
 }
 
-export function getSegmentVolumesFromTracingStore(
-  tracingStoreUrl: string,
-  tracingId: string,
-  mag: Vector3,
-  segmentIds: Array<number>,
-): Promise<number[]> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
-      {
-        data: { mag, segmentIds },
-      },
-    ),
-  );
-}
-
 export function getSegmentVolumes(requestUrl: string, mag: Vector3, segmentIds: Array<number>) {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {

@@ -62,14 +62,20 @@ export function getVolumeRequestUrl(
   return shouldUseDataStore ? dataStoreUrl : `${tracingStoreHost}/tracings/volume/${tracingId}`;
 }
 
-export function hasSegmentIndex(
+export async function hasSegmentIndex(
   visibleSegmentationLayer: APIDataLayer,
   dataset: APIDataset,
-  tracing: VolumeTracing | null | undefined,
+  tracing: HybridTracing | null | undefined,
 ) {
+  const maybeVolumeTracing =
+    "tracingId" in visibleSegmentationLayer &&
+    visibleSegmentationLayer.tracingId != null &&
+    tracing != null
+      ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
+      : null;
   return (
     visibleSegmentationLayer != null &&
-    (tracing?.hasSegmentIndex ||
+    (maybeVolumeTracing?.hasSegmentIndex ||
       hasSegmentIndexInDataStore(
         dataset.dataStore.url,
         dataset.name,

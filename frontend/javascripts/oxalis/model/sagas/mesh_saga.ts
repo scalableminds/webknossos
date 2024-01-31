@@ -349,7 +349,7 @@ function* loadFullAdHocMesh(
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
   const usePositionsFromSegmentStats =
-    volumeTracing?.hasSegmentIndex &&
+    volumeTracing?.hasSegmentIndex && // TODO soll hier ggf auch der index aus dem datastore stehen?
     !volumeTracing.mappingIsEditable &&
     visibleSegmentationLayer?.tracingId != null &&
     additionalCoordinates == null; // TODO remove in https://github.com/scalableminds/webknossos/pull/7411

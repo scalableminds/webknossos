@@ -1,7 +1,7 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useState } from "react";
 import type {
   APIConnectomeFile,
@@ -113,7 +113,10 @@ import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  setLayerHasSegmentIndexAction,
+} from "oxalis/model/actions/dataset_actions";
 import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -1183,37 +1186,49 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const state = Store.getState();
+  const { dataset, tracing } = useSelector((state: OxalisState) => state);
+  const maybeIsSegmentIndexAvailable = useSelector(
+    (state: OxalisState) =>
+      state.dataset.dataSource.dataLayers.find(
+        (layer) => layer.name === visibleSegmentationLayer?.name,
+      )?.hasSegmentIndex,
+  );
+  useFetch(
+    async () => {
+      if (maybeIsSegmentIndexAvailable === null && visibleSegmentationLayer != null) {
+        const updatedIsSegmentIndexAvailable = await hasSegmentIndex(
+          visibleSegmentationLayer,
+          dataset,
+          tracing,
+        );
+        Store.dispatch(
+          setLayerHasSegmentIndexAction(
+            visibleSegmentationLayer.name,
+            updatedIsSegmentIndexAvailable,
+          ),
+        );
+        return updatedIsSegmentIndexAvailable;
+      }
+    },
+    false,
+    [],
+  );
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       const tracingId = volumeTracing?.tracingId;
       if (visibleSegmentationLayer == null) return [];
-      const hasSegmentindex = hasSegmentIndex(
-        visibleSegmentationLayer,
-        state.dataset,
-        volumeTracing,
-      );
-      console.log("hassegmentindex", hasSegmentindex);
       if (
         contextMenuPosition == null ||
-        visibleSegmentationLayer == null ||
-        !hasSegmentindex ||
+        !maybeIsSegmentIndexAvailable ||
         hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
       ) {
         return [];
       }
 
-      const requestUrl = getVolumeRequestUrl(
-        state.dataset,
-        state.tracing,
-        tracingId,
-        visibleSegmentationLayer,
-      );
-      console.log(requestUrl);
-      if (requestUrl == null) return [];
+      const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const dataSetScale = state.dataset.dataSource.scale;
+      const dataSetScale = dataset.dataSource.scale;
 
       const [segmentSize] = await getSegmentVolumes(requestUrl, layersFinestResolution, [
         segmentIdAtPosition,

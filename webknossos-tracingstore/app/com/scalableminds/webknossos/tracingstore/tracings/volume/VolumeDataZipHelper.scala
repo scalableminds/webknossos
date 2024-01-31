@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.wrap.WKWFile
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -51,7 +51,7 @@ trait VolumeDataZipHelper
       case (fileName, is) =>
         WKWFile.read(is) {
           case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
+            if (header.numChunksPerShard == 1) {
               parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                 if (buckets.hasNext) {
                   val data = buckets.next()
@@ -129,7 +129,7 @@ trait VolumeDataZipHelper
   }
 
   private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
-    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$FILENAME_HEADER_WKW".r
     val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
     path match {
       case wkwHeaderRx(_, magLiteral) =>

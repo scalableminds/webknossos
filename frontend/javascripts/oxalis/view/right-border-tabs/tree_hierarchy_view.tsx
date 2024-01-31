@@ -60,6 +60,7 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -637,7 +638,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
               title: "Hide/Show Edges of This Tree",
-              icon: <span className="hide-tree-edges-icon" />,
+              icon: <HideTreeEdgesIcon />,
               label: "Hide/Show Edges of This Tree",
             },
             isAgglomerateSkeleton

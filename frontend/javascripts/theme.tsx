@@ -35,6 +35,9 @@ export function getAntdTheme(userTheme: Theme) {
       darkItemBg: ColorWKDarkGrey,
       darkPopupBg: ColorWKDarkGrey,
     },
+    Tree: {
+      colorBgContainer: "transparent",
+    },
   };
 
   // Ant Design Customizations

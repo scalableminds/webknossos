@@ -20,7 +20,7 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ## Dependencies
 
-* [Oracle JDK 11 to 14](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 11 to 14](http://openjdk.java.net/) (full JDK, JRE is not enough)
+* [Oracle JDK 21](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)

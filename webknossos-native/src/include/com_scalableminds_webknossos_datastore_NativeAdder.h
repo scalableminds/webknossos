@@ -9,11 +9,11 @@ extern "C" {
 #endif
 /*
  * Class:      com_scalableminds_webknossos_datastore_NativeAdder
- * Method:     plus
- * Signature:  (I)I
+ * Method:     add
+ * Signature:  (II)I
  */
-JNIEXPORT jint JNICALL Java_com_scalableminds_webknossos_datastore_NativeAdder_plus
-  (JNIEnv *, jobject, jint);
+JNIEXPORT jint JNICALL Java_com_scalableminds_webknossos_datastore_NativeAdder_add
+  (JNIEnv *, jobject, jint, jint);
 
 #ifdef __cplusplus
 }

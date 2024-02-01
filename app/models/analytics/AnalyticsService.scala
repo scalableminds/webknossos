@@ -2,10 +2,12 @@ package models.analytics
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
+import net.liftweb.common.Box.tryo
+import play.api.http.Status.UNAUTHORIZED
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
@@ -21,29 +23,28 @@ class AnalyticsService @Inject()(rpc: RPC,
     extends LazyLogging {
 
   private lazy val conf = wkConf.BackendAnalytics
-  private lazy val wellKnownUris = conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap
+  private lazy val wellKnownUris = tryo(conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap)
 
   def track(analyticsEvent: AnalyticsEvent): Unit = {
     for {
       sessionId <- Fox.successful(analyticsSessionService.refreshAndGetSessionId(analyticsEvent.user._multiUser))
       analyticsJson <- analyticsEvent.toJson(analyticsLookUpService, sessionId)
-      _ <- saveInDatabase(List(analyticsJson))
-      _ <- send(Json.toJsObject(analyticsJson))
+      _ <- saveInDatabaseIfEnabled(analyticsJson)
+      _ <- sendIfEnabled(analyticsJson)
     } yield ()
     () // Do not return the Future, so as to not block caller
   }
 
-  def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] = {
-    val allApiKeysAreOk = !jsonEvents.exists(ev => {
-      wellKnownUris.get(ev.userProperties.webknossosUri).exists(wellKnownApiKey => wellKnownApiKey != apiKey)
-    })
+  def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] =
     for {
-      _ <- bool2Fox(allApiKeysAreOk) ?~> "Provided API key is not correct for provided webknossosUri"
+      resolvedWellKnownUris <- wellKnownUris ?~> "wellKnownUris configuration is incorrect"
+      _ <- bool2Fox(jsonEvents.forall(ev => {
+        resolvedWellKnownUris.get(ev.userProperties.webknossosUri).forall(wellKnownApiKey => wellKnownApiKey == apiKey)
+      })) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
       _ <- analyticsDAO.insertMany(jsonEvents)
     } yield ()
-  }
 
-  private def send(analyticsEventJson: JsObject): Fox[Unit] = {
+  private def sendIfEnabled(analyticsEventJson: AnalyticsEventJson): Fox[Unit] = {
     if (conf.uri == "") {
       if (conf.verboseLoggingEnabled) {
         logger.info(s"Not sending analytics event, since uri is not configured. Event was: $analyticsEventJson")
@@ -58,9 +59,16 @@ class AnalyticsService @Inject()(rpc: RPC,
     Fox.successful(())
   }
 
-  private def saveInDatabase(events: List[AnalyticsEventJson]): Fox[Unit] = {
-    if (conf.databaseEnabled) {
-      analyticsDAO.insertMany(events)
+  private def saveInDatabaseIfEnabled(analyticsEventJson: AnalyticsEventJson): Fox[Unit] = {
+    if (conf.saveToDatabaseEnabled) {
+      if (conf.verboseLoggingEnabled) {
+        logger.info(s"Storing analytics event: $analyticsEventJson")
+      }
+      analyticsDAO.insertMany(List(analyticsEventJson))
+    } else {
+      if (conf.verboseLoggingEnabled) {
+        logger.info(s"Not storing analytics event. Event was: $analyticsEventJson")
+      }
     }
     Fox.successful(())
   }

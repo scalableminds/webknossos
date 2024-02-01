@@ -3,11 +3,10 @@ package controllers
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
-import models.analytics.{AnalyticsEventsIngestJson, AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
 import models.user.UserService
 import org.apache.pekko.actor.ActorSystem
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -18,7 +17,6 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Application @Inject()(actorSystem: ActorSystem,
-                            analyticsService: AnalyticsService,
                             userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             organizationDAO: OrganizationDAO,
@@ -50,24 +48,6 @@ class Application @Inject()(actorSystem: ActorSystem,
           ))
       )
     }
-  }
-
-  def ingestAnalyticsEvents: Action[AnalyticsEventsIngestJson] = Action.async(validateJson[AnalyticsEventsIngestJson]) {
-    implicit request =>
-      {
-        for {
-          _ <- bool2Fox(conf.BackendAnalytics.databaseEnabled) ?~> "Database logging of events is not enabled"
-          _ <- analyticsService.ingest(request.body.events, request.body.apiKey)
-        } yield Ok
-      }
-  }
-
-  def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
-    implicit request =>
-      request.identity.foreach { user =>
-        analyticsService.track(FrontendAnalyticsEvent(user, eventType, request.body))
-      }
-      Ok
   }
 
   def features: Action[AnyContent] = sil.UserAwareAction {

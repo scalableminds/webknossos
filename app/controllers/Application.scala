@@ -7,7 +7,7 @@ import models.organization.OrganizationDAO
 import models.user.UserService
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -23,7 +23,7 @@ class Application @Inject()(actorSystem: ActorSystem,
                             conf: WkConf,
                             defaultMails: DefaultMails,
                             storeModules: StoreModules,
-                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with ApiVersioning {
 

@@ -17,6 +17,8 @@ set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
 
+add_subdirectory(draco)
+
 # Setup JNI
 find_package(JNI REQUIRED)
 if (JNI_FOUND)
@@ -26,6 +28,8 @@ endif()
 # Include directories
 include_directories(.)
 include_directories(include)
+include_directories(draco)
+include_directories(draco/src ${CMAKE_BINARY_DIR})
 include_directories(${JNI_INCLUDE_DIRS})
 
 # Sources
@@ -34,6 +38,9 @@ file(GLOB LIB_SRC
   "*.cc"
   "*.cpp"
 )
+
+target_link_libraries(${LIB_NAME} draco_static)
+
 
 # Setup installation targets
 # (required by sbt-jni) major version should always be appended to library name

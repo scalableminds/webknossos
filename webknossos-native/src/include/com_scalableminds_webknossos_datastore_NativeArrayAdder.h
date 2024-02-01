@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:      com_scalableminds_webknossos_datastore_NativeArrayAdder
  * Method:     add
- * Signature:  ([BI)I
+ * Signature:  ([B)[B
  */
-JNIEXPORT jint JNICALL Java_com_scalableminds_webknossos_datastore_NativeArrayAdder_add
-  (JNIEnv *, jobject, jbyteArray, jint);
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeArrayAdder_add
+  (JNIEnv *, jobject, jbyteArray);
 
 #ifdef __cplusplus
 }

@@ -72,8 +72,8 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   def testAdd(a: Int, b: Int): Action[AnyContent] = sil.UserAwareAction {
     val sum = new NativeAdder().add(a, b)
-    val sumArray = new NativeArrayAdder().add(Array[Byte](1, 2, 3, 4), 0);
-    Ok(Json.obj("sum" -> sum, "sumArray" -> sumArray))
+    val sumArray = new NativeArrayAdder().add(Array[Byte](1, 2, 3, 4));
+    Ok(Json.obj("sum" -> sum, "sumArray" -> sumArray.mkString("")))
   }
 
   def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

@@ -9,5 +9,5 @@ class NativeAdder() {
 
 @nativeLoader("webknossosNative0")
 class NativeArrayAdder() {
-  @native def add(a: Array[Byte], b: Int): Int
+  @native def add(a: Array[Byte]): Array[Byte]
 }

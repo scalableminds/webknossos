@@ -701,8 +701,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
-          {modals}
         </Space.Compact>
+        {modals}
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">

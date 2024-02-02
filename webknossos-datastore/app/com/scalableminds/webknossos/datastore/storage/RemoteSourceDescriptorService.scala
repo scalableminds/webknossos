@@ -88,7 +88,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemote
   }
 
   private def localFileUriFromPath(path: Path) =
-    new URI(DataVaultService.schemeFile + "://" + path.toAbsolutePath.toString)
+    path.toAbsolutePath.toUri
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {

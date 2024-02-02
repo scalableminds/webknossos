@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO}
+import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
+                                    userService: UserService,
                                     rpc: RPC,
                                     conf: WkConf,
 )(implicit ec: ExecutionContext)
@@ -144,4 +145,22 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
         bool2Fox(userCount + usersToAddCount <= includedUsers))
     } yield ()
+
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
+      implicit ctx: DBAccessContext): Fox[String] =
+    if (possiblyEmptyEmail.nonEmpty) {
+      Fox.successful(possiblyEmptyEmail)
+    } else {
+      for {
+        owner <- userDAO.findOwnerByOrg(organization._id)
+        ownerEmail <- userService.emailFor(owner)
+      } yield ownerEmail
+    }
+
+  def overTimeMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+    fallbackOnOwnerEmail(organization.overTimeMailingList, organization)
+
+  def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+    fallbackOnOwnerEmail(organization.newUserMailingList, organization)
+
 }

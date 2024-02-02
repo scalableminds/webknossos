@@ -1,6 +1,7 @@
 package models.voxelytics
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.pattern.after
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -42,7 +43,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private def pollUntilServerStartedUp(until: Instant): Fox[Unit] = {
     def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
-        _ <- akka.pattern.after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
+        _ <- after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
         _ <- bool2Fox(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()

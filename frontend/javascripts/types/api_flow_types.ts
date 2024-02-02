@@ -8,7 +8,10 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type {
+  SkeletonTracingStats,
+  TracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -437,6 +440,7 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
+  stats: TracingStats | {};
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
@@ -449,8 +453,10 @@ export type APIAnnotationInfo = {
   readonly modified: number;
   readonly id: string;
   readonly name: string;
+  // Not used by the front-end anymore, but the
+  // backend still serves this for backward-compatibility reasons.
+  readonly stats?: SkeletonTracingStats | {};
   readonly state: string;
-  readonly stats: SkeletonTracingStats | {};
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -467,7 +473,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     modified,
     id,
     name,
-    stats,
     state,
     tags,
     typ,
@@ -487,7 +492,6 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
-    stats,
     tags,
     typ,
     owner,

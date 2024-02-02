@@ -2,8 +2,8 @@ package controllers
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
-import akka.actor.ActorSystem
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
+  AnnotationLayerStatistics,
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
@@ -159,7 +160,8 @@ class AnnotationIOController @Inject()(
           AnnotationLayer(
             savedTracingId,
             AnnotationLayerType.Volume,
-            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString)
+            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
+            AnnotationLayerStatistics.unknown
           )
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
@@ -175,7 +177,8 @@ class AnnotationIOController @Inject()(
           AnnotationLayer(
             mergedTracingId,
             AnnotationLayerType.Volume,
-            AnnotationLayer.defaultVolumeLayerName
+            AnnotationLayer.defaultVolumeLayerName,
+            AnnotationLayerStatistics.unknown
           ))
     }
 
@@ -189,7 +192,11 @@ class AnnotationIOController @Inject()(
           SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
           persistTracing = true)
       } yield
-        List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
+        List(
+          AnnotationLayer(mergedTracingId,
+                          AnnotationLayerType.Skeleton,
+                          AnnotationLayer.defaultSkeletonLayerName,
+                          AnnotationLayerStatistics.unknown))
     }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =

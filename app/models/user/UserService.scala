@@ -1,6 +1,6 @@
 package models.user
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
@@ -22,8 +22,10 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import security.{PasswordHasher, TokenDAO}
+import utils.sql.SqlEscaping
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +46,7 @@ class UserService @Inject()(conf: WkConf,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
+    with SqlEscaping
     with IdentityService[User] {
 
   private lazy val Mailer =
@@ -327,6 +330,7 @@ class UserService @Inject()(conf: WkConf,
     } yield isTeamManager || user.isAdminOf(_organization)
 
   def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
+    // Note that the same logic is implemented in User/findAllCompactWithFilters in SQL
     for {
       otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
       teamMemberships <- teamMembershipsFor(possibleEditee._id)
@@ -367,6 +371,48 @@ class UserService @Inject()(conf: WkConf,
       )
     }
   }
+
+  def publicWritesCompact(user: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
+    for {
+      _ <- Fox.successful(())
+      teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
+        idx =>
+          Json.obj(
+            "id" -> parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral)(idx),
+            "name" -> parseArrayLiteral(userCompactInfo.teamNamesAsArrayLiteral)(idx),
+            "isTeamManager" -> parseArrayLiteral(userCompactInfo.teamManagersAsArrayLiteral)(idx).toBoolean
+        ))
+      experienceJson = Json.obj(
+        parseArrayLiteral(userCompactInfo.experienceValuesAsArrayLiteral).zipWithIndex
+          .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
+          .map(valueAndIndex =>
+            (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
+      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> userCompactInfo.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isOrganizationOwner" -> user.isOrganizationOwner,
+        "isDatasetManager" -> user.isDatasetManager,
+        "isActive" -> !user.isDeactivated,
+        "teams" -> teamsJson,
+        "experiences" -> experienceJson,
+        "lastActivity" -> user.lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> userCompactInfo.isEditable,
+        "organization" -> userCompactInfo.organization_name,
+        "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> userCompactInfo.selectedTheme,
+        "created" -> user.created,
+        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+        "isSuperUser" -> userCompactInfo.isSuperUser,
+        "isEmailVerified" -> userCompactInfo.isEmailVerified,
+      )
+    }
 
   def compactWrites(user: User): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext

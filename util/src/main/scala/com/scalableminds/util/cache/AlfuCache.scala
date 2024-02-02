@@ -6,8 +6,8 @@ import net.liftweb.common.{Box, Failure}
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
 import java.util.function.BiFunction
-import scala.compat.java8.FunctionConverters.asJavaBiFunction
-import scala.compat.java8.FutureConverters.{CompletionStageOps, FutureOps}
+import scala.jdk.FunctionWrappers.AsJavaBiFunction
+import scala.jdk.FutureConverters.{CompletionStageOps, FutureOps}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
@@ -25,7 +25,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
     } yield result
 
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =
-    store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).toScala
+    store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).asScala
 
   def remove(key: K): Unit = store.synchronous().invalidate(key)
 
@@ -73,7 +73,7 @@ object AlfuCache {
   }
 
   private def toJavaMappingFunction[K, V](loadValue: K => Future[V]): BiFunction[K, Executor, CompletableFuture[V]] =
-    asJavaBiFunction[K, Executor, CompletableFuture[V]]((k, _) => loadValue(k).toJava.toCompletableFuture)
+    new AsJavaBiFunction[K, Executor, CompletableFuture[V]]((k, _) => loadValue(k).asJava.toCompletableFuture)
 
 }
 

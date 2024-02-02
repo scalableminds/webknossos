@@ -217,6 +217,8 @@ trait DataLayer extends DataLayerLike {
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
+  def bucketProviderCacheKey: String = this.name
+
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =

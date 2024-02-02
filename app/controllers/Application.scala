@@ -1,6 +1,6 @@
 package controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
@@ -12,7 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
-import utils.{StoreModules, WkConf}
+import utils.{ApiVersioning, StoreModules, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -26,7 +26,8 @@ class Application @Inject()(actorSystem: ActorSystem,
                             defaultMails: DefaultMails,
                             storeModules: StoreModules,
                             sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller
+    with ApiVersioning {
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -39,8 +40,11 @@ class Application @Inject()(actorSystem: ActorSystem,
         Ok(
           Json.obj(
             "webknossos" -> Json.toJson(webknossos.BuildInfo.toMap.view.mapValues(_.toString).toMap),
-            "webknossos-wrap" -> Json.toJson(webknossoswrap.BuildInfo.toMap.view.mapValues(_.toString).toMap),
             "schemaVersion" -> schemaVersion.toOption,
+            "httpApiVersioning" -> Json.obj(
+              "currentApiVersion" -> CURRENT_API_VERSION,
+              "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
+            ),
             "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
             "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
           ))

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{BoxImplicits, ByteUtils, JsonHelper}
+import com.scalableminds.util.tools.{BoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.wrap.WKWFile
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -23,7 +23,11 @@ import org.apache.commons.io.IOUtils
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImplicits with LazyLogging {
+trait VolumeDataZipHelper
+    extends WKWDataFormatHelper
+    with VolumeBucketReversionHelper
+    with BoxImplicits
+    with LazyLogging {
 
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
     for {
@@ -47,11 +51,11 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
       case (fileName, is) =>
         WKWFile.read(is) {
           case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
+            if (header.numChunksPerShard == 1) {
               parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                 if (buckets.hasNext) {
                   val data = buckets.next()
-                  if (!isAllZero(data)) {
+                  if (!isRevertedBucket(data)) {
                     block(bucketPosition, data)
                   }
                 }
@@ -125,7 +129,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils with BoxImp
   }
 
   private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
-    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$FILENAME_HEADER_WKW".r
     val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
     path match {
       case wkwHeaderRx(_, magLiteral) =>

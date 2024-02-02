@@ -7,6 +7,7 @@ import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
+const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
 
 export function getSystemColorTheme(): Theme {
@@ -41,9 +42,10 @@ export function getAntdTheme(userTheme: Theme) {
   };
 
   // Ant Design Customizations
-  let token: Partial<AliasToken> = {
+  let globalDesignToken: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
     colorLink: ColorWKBlue,
+    colorLinkHover: ColorWKLinkHover,
     blue: ColorWKBlue,
     borderRadius: 4,
     fontFamily:
@@ -53,7 +55,7 @@ export function getAntdTheme(userTheme: Theme) {
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
   }
-  return { algorithm, token, components };
+  return { algorithm, token: globalDesignToken, components };
 }
 
 export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {

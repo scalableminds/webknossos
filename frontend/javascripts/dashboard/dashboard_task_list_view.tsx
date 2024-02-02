@@ -400,6 +400,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           <Card
             bordered={false}
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
+            style={{ maxWidth: 460 }}
           >
             <Card.Meta
               title="Request a New Task"

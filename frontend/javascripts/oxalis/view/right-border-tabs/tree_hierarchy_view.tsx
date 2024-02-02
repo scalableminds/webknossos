@@ -527,7 +527,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
           open={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onOpenChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
+          onOpenChange={(isVisible, info) => {
+            if (info.source === "trigger") this.handleGroupDropdownMenuVisibility(id, isVisible);
+          }}
           trigger={["contextMenu"]}
         >
           <span>
@@ -675,9 +677,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottom"
             open={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onOpenChange={(isVisible) =>
-              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-            }
+            onOpenChange={(isVisible, info) => {
+              if (info.source === "trigger")
+                this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+            }}
             trigger={["contextMenu"]}
           >
             <span>

@@ -603,7 +603,9 @@ function _SegmentListItem({
         autoDestroy
         placement="bottom"
         open={activeDropdownSegmentId === segment.id}
-        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(isVisible, segment.id)}
+        onOpenChange={(isVisible, info) => {
+          if (info.source === "trigger") handleSegmentDropdownMenuVisibility(isVisible, segment.id);
+        }}
         trigger={["contextMenu"]}
       >
         <div style={{ display: "inline-flex", alignItems: "center" }}>

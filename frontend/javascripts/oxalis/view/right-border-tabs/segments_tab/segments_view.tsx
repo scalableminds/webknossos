@@ -1698,9 +1698,10 @@ class SegmentsView extends React.Component<Props, State> {
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
                       open={this.state.activeDropdownGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible) =>
-                        this.handleGroupDropdownMenuVisibility(isVisible, id)
-                      }
+                      onOpenChange={(isVisible, info) => {
+                        if (info.source === "trigger")
+                          this.handleGroupDropdownMenuVisibility(isVisible, id);
+                      }}
                       trigger={["contextMenu"]}
                     >
                       <EditableTextLabel

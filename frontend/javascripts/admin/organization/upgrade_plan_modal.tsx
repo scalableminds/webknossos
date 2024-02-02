@@ -90,7 +90,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
           <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
         </>
       }
-      okText={"Paid Request for more Users"}
+      okText={"Buy more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
       width={800}
@@ -134,7 +134,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
           <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
         </>
       }
-      okText={"Paid request for more Storage Space"}
+      okText={"Buy more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
       width={800}

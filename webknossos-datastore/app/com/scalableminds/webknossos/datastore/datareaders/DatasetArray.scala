@@ -143,8 +143,10 @@ class DatasetArray(vaultPath: VaultPath,
     f"outer($raw)"
   }
 
-  // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
-  // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
+  // Read from array. Note that shape and offset should be passed in “wk” order (…CXYZ)
+  // The local variables like chunkIndices are also in this order unless explicitly named.
+  // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
+  // returned, regardless of the array’s internal storage.
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
       implicit ec: ExecutionContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)

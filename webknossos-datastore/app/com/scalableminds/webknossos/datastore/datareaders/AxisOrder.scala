@@ -16,7 +16,7 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
   }
 
   def length: Int = {
-    val lengthOfZ = 1 // if z is None, we append it an as adapter
+    val lengthOfZ = 1 // if z is None, we append it as an adapter
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
@@ -57,7 +57,7 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   lazy val rank: Int = axes.length
 
   lazy val arrayToWkPermutation: Array[Int] = {
-    // wk is always the additionalAxes + (c)zxy
+    // wk is always the additionalAxes + (c)xyz
     val permutationMutable: Array[Int] = Array.fill(axes.length)(0)
 
     var additionalAxisIndex = 0

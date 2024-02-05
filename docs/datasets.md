@@ -41,6 +41,8 @@ In particular, the following file formats are supported for uploading (and conve
 - [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
 - [Multi Layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
 - [Single-file images](#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
+- [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
+- [N5 datasets](./n5.md)
 
 Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.
 

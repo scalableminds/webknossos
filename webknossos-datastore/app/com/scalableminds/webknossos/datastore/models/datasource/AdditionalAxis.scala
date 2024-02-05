@@ -6,8 +6,9 @@ import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive
 case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
-  def lowerBound: Int = bounds(0)
-  def upperBound: Int = bounds(1)
+  lazy val lowerBound: Int = bounds(0)
+  lazy val upperBound: Int = bounds(1)
+  lazy val highestValue: Int = upperBound - 1
 }
 
 object AdditionalAxis {

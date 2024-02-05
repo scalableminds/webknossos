@@ -7,5 +7,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 - WKW datasets can now only be read if they have a `header.wkw` file in their mag directories. If specific datasets can no longer be loaded, consider adding such a file. Backend logging should show according error message. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
+- WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
 
 ### Postgres Evolutions:

@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11
+FROM eclipse-temurin:21
 ARG VERSION_NODE="16.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \

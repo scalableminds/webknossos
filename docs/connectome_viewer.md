@@ -24,7 +24,7 @@ Several segments/cells can be loaded at the same time to highlight their matchin
 In addition to loading the synapse locations and visualizing them as nodes, WEBKNOSSOS will also load the agglomerate skeleton representation of the selected segment(s) for context.
 
 ## Configuration
-For WEBKNOSSOS to detect and load your Connectome file, you need to place it into a `connectome` sub-directory for a respective segmentation layer, e.g.:
+For WEBKNOSSOS to detect and load your Connectome file, you need to place it into a `connectome` subdirectory for a respective segmentation layer, e.g.:
 
 ```
 my_dataset                          # Dataset root

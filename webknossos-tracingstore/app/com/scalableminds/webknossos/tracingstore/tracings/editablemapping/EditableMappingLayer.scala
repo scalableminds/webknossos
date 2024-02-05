@@ -90,6 +90,8 @@ case class EditableMappingLayer(name: String,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
+  override def bucketProviderCacheKey: String = s"$name-token=$token"
+
   override def mappings: Option[Set[String]] = None
 
   override def defaultViewConfiguration: Option[LayerViewConfiguration] = None

@@ -2255,8 +2255,8 @@ export function getBucketPositionsForAdHocMesh(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
       {
         data: {
-          cubeSize: cubeSize.join(","),
-          mag: mag.join("-"),
+          cubeSize,
+          mag,
           additionalCoordinates,
         },
         method: "POST",

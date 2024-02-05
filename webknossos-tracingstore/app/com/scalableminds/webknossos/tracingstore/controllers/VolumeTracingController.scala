@@ -57,29 +57,7 @@ case class GetSegmentIndexParameters(
 )
 
 object GetSegmentIndexParameters {
-  implicit object GetSegmentIndexParametersFormat extends Format[GetSegmentIndexParameters] {
-    override def reads(json: JsValue): JsResult[GetSegmentIndexParameters] =
-      for {
-        magString <- (json \ "mag").validate[String]
-        mag <- Vec3Int
-          .fromMagLiteral(magString, allowScalar = true)
-          .map(JsSuccess(_))
-          .getOrElse(JsError("dataLayer.invalidMag"))
-        cubeSizeString <- (json \ "cubeSize").validate[String]
-        cubeSize <- Vec3Int
-          .fromUriLiteral(cubeSizeString)
-          .map(JsSuccess(_))
-          .getOrElse(JsError("Parsing cube size failed. Use x,y,z format."))
-        additionalCoordinates <- (json \ "additionalCoordinates").validateOpt[Seq[AdditionalCoordinate]]
-      } yield GetSegmentIndexParameters(mag, cubeSize, additionalCoordinates)
-
-    override def writes(o: GetSegmentIndexParameters): JsObject =
-      Json.obj(
-        "mag" -> o.mag,
-        "cubeSize" -> o.cubeSize,
-        "additionalCoordinates" -> o.additionalCoordinates
-      )
-  }
+  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
 }
 
 class VolumeTracingController @Inject()(

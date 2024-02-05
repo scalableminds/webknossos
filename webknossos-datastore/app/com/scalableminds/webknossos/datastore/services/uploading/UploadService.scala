@@ -382,7 +382,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       UploadedDataSourceType.WKW
     }
 
-  private def hasFileName(fileNames: List[String], dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+  private def containsMatchingFile(fileNames: List[String], dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     for {
       listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
                                                          maxDepth = maxDepth,
@@ -391,10 +391,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield listing.nonEmpty
 
   private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
-    hasFileName(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
+    containsMatchingFile(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
 
   private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
-    hasFileName(List(FILENAME_INFO), dataSourceDir, maxDepth)
+    containsMatchingFile(List(FILENAME_INFO), dataSourceDir, maxDepth)
 
   private def looksLikeN5Layer(dataSourceDir: Path): Box[Boolean] =
     for {
@@ -407,14 +407,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
     for {
-      _ <- hasFileName(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
       directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
       detectedLayerBoxes = directories.map(looksLikeN5Layer)
       _ <- bool2Box(detectedLayerBoxes.forall(_.openOr(false)))
     } yield true
 
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
-    hasFileName(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
+    containsMatchingFile(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
 
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {

@@ -1,8 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.typesafe.scalalogging.LazyLogging
-
-object ChunkUtils extends LazyLogging {
+object ChunkUtils {
   def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
                           arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],

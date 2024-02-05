@@ -43,7 +43,7 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsSuccess, JsValue, Json}
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File

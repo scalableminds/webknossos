@@ -171,12 +171,6 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
-  def additionalAxisMap: Map[String, AdditionalAxis] =
-    additionalAxes match {
-      case Some(additionalAxis) =>
-        additionalAxis.map(additionalAxis => (additionalAxis.name -> additionalAxis)).toMap
-      case None => Map()
-    }
 }
 
 object DataLayerLike {

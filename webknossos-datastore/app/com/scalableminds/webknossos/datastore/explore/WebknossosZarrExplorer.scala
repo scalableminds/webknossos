@@ -23,32 +23,33 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: Zarr3SegmentationLayer =>
           for {
-            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
         case l: Zarr3DataLayer =>
           for {
-            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
         case l: ZarrSegmentationLayer =>
           for {
-            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY)
+            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
           } yield l.copy(mags = mags)
         case l: ZarrDataLayer =>
           for {
-            mags <- fixMagsWithRemotePaths(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY)
+            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
           } yield l.copy(mags = mags)
-        case layer => Fox.failure(s"Only remote Zarr or Zarr3 layers are supported, got ${layer.getClass}.")
+        case layer => Fox.failure(s"Only remote Zarr2 or Zarr3 layers are supported, got ${layer.getClass}.")
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale
 
-  private def fixMagsWithRemotePaths(mags: List[MagLocator],
-                                     remoteLayerPath: VaultPath,
-                                     headerFilename: String): Fox[List[MagLocator]] =
+  private def adaptMags(mags: List[MagLocator],
+                        remoteLayerPath: VaultPath,
+                        headerFilename: String,
+                        credentialId: Option[String]): Fox[List[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
-      } yield m.copy(path = magPath))
+      } yield m.copy(path = magPath, credentialId = credentialId))
 
   private def fixRemoteMagPath(mag: MagLocator,
                                remoteLayerPath: VaultPath,

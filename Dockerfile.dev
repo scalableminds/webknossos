@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:java_21__7784920980
+FROM scalableminds/sbt:java_21
 ARG VERSION_NODE="16.x"
 
 ENV DEBIAN_FRONTEND noninteractive

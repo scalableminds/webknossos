@@ -21,7 +21,7 @@ class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits
       }
       "be reversible" in {
         val proto = AdditionalAxis.toProto(Some(Seq(axisT)))
-        val deProtofied = AdditionalAxis.fromProto(proto)
+        val deProtofied = AdditionalAxis.fromProtos(proto)
         assert(definitionsEqual(deProtofied.head, axisT))
       }
     }

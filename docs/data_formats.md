@@ -68,7 +68,7 @@ The underlying data type limits the maximum number of IDs:
 
 
 ### Dataset Metadata
-For each datasets, we stored metadata in a `datasource-properties.json` file.
+For each dataset, we stored metadata in a `datasource-properties.json` file.
 See below for the [full specification](#dataset-metadata-specification).
 This is an example:
 

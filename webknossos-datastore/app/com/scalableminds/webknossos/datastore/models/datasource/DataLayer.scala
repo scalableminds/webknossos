@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
@@ -275,6 +275,86 @@ object DataLayer {
         "dataFormat" -> layer.dataFormat
       )
   }
+}
+
+trait DataLayerWithMagLocators extends DataLayer {
+
+  def mags: List[MagLocator]
+
+  def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
+             defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+             magMapping: MagLocator => MagLocator = m => m,
+             name: String = this.name,
+             coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations)
+    : DataLayerWithMagLocators =
+    this match {
+      case l: ZarrDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: ZarrSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: N5DataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: N5SegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: PrecomputedDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: PrecomputedSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: Zarr3DataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: Zarr3SegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case _ => throw new Exception("Encountered unsupported layer format")
+    }
+
 }
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {

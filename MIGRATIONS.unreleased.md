@@ -12,6 +12,6 @@ archived if they do not contain relevant data. The following SQL query can be us
 ```sql
 UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DISTINCT a._id AS nd_annotations_id FROM webknossos.annotations_ AS a INNER JOIN webknossos.datasets AS d ON a._dataset = d._id INNER JOIN webknossos.dataset_layer_additionalaxes AS dla ON d._id = dla._dataset)
 ```
-
+- WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
 
 ### Postgres Evolutions:

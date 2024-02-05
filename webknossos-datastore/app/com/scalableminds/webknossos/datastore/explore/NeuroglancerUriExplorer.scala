@@ -2,16 +2,9 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
@@ -26,7 +19,8 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
     extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer URI Explorer"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath,
+                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no matching fragment part"
@@ -39,7 +33,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       renamedLayers = exploreLayerService.makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
-  private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     for {
       _ <- Fox.successful(())
       obj <- layerSpec.validate[JsObject].toFox
@@ -54,7 +48,9 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)
     } yield layerWithViewConfiguration
 
-  private def exploreLayer(layerType: String, remotePath: VaultPath, name: String): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreLayer(layerType: String,
+                           remotePath: VaultPath,
+                           name: String): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
@@ -76,22 +72,12 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
   }
 
   private def assignViewConfiguration(
-      value: List[(DataLayer, Vec3Double)],
-      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayer, Vec3Double)]] =
+      value: List[(DataLayerWithMagLocators, Vec3Double)],
+      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)
-      layersWithViewConfigs = layers.map {
-        case l: ZarrDataLayer                => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: ZarrSegmentationLayer        => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: N5DataLayer                  => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: N5SegmentationLayer          => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: PrecomputedDataLayer         => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: PrecomputedSegmentationLayer => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: Zarr3DataLayer               => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: Zarr3SegmentationLayer       => l.copy(defaultViewConfiguration = Some(configuration))
-
-      }
+      layersWithViewConfigs = layers.map(l => l.mapped(defaultViewConfigurationMapping = _ => Some(configuration)))
     } yield layersWithViewConfigs.zip(value.map(_._2))
 
 }

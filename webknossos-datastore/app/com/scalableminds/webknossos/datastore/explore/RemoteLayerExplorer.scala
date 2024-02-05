@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayerWithMagLocators, ElementClass}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Reads
@@ -22,7 +22,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 
-  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, Vec3Double)]]
 
   def name: String
 

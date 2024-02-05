@@ -277,9 +277,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           .map(layerDir =>
             for {
               _ <- addLayerAndResolutionDirIfMissing(layerDir).toFox
-              explored: DataSource <- exploreLocalLayerService.exploreLocal(path,
-                                                                            dataSourceId,
-                                                                            layerDir.getFileName.toString)
+              explored: DataSourceWithMagLocators <- exploreLocalLayerService
+                .exploreLocal(path, dataSourceId, layerDir.getFileName.toString)
             } yield explored)
           .toList)
       combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))

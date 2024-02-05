@@ -352,7 +352,7 @@ trait DataLayerWithMagLocators extends DataLayer {
           name = name,
           coordinateTransformations = coordinateTransformations
         )
-      case _ => throw new Exception("Encountered unsupported layer format during explore remote")
+      case _ => throw new Exception("Encountered unsupported layer format")
     }
 
 }

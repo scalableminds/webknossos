@@ -56,7 +56,7 @@ You can also change the size of the viewports to see more details in your data a
 To create your first annotation, click the `Create Annotation`` button while in “View” mode.
 WEBKNOSSOS will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
-You can perform various actions depending on the current tool - selectable in the tool bar at the top of the screen.
+You can perform various actions depending on the current tool - selectable in the toolbar at the top of the screen.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
 The first tool is the _Move_ tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
 With the _Skeleton_ tool, a left mouse click can be used to place markers in the data, called nodes.

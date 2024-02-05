@@ -352,7 +352,7 @@ function* loadFullAdHocMesh(
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.mappingIsEditable &&
     visibleSegmentationLayer?.tracingId != null &&
-    additionalCoordinates == null; // TODO remove in https://github.com/scalableminds/webknossos/pull/7411
+    (additionalCoordinates == null || additionalCoordinates.length === 0); // TODO remove in https://github.com/scalableminds/webknossos/pull/7411
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,

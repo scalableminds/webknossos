@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -64,7 +63,7 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {

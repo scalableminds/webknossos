@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
-trait ZarrLayer extends DataLayer {
+trait ZarrLayer extends DataLayerWithMagLocators {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
 
@@ -19,8 +19,6 @@ trait ZarrLayer extends DataLayer {
     new ZarrBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
-
-  def mags: List[MagLocator]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 

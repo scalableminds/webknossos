@@ -15,3 +15,5 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 - WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
 
 ### Postgres Evolutions:
+
+- [113-analytics-events.sql](conf/evolutions/113-analytics-events.sql)

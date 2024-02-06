@@ -1,15 +1,14 @@
 package controllers
 
-import org.apache.pekko.actor.ActorSystem
-import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
-import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.organization.OrganizationDAO
 import models.user.UserService
-import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import org.apache.pekko.actor.ActorSystem
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent}
+import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{ApiVersioning, StoreModules, WkConf}
@@ -18,14 +17,13 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Application @Inject()(actorSystem: ActorSystem,
-                            analyticsService: AnalyticsService,
                             userService: UserService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             organizationDAO: OrganizationDAO,
                             conf: WkConf,
                             defaultMails: DefaultMails,
                             storeModules: StoreModules,
-                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with ApiVersioning {
 
@@ -50,14 +48,6 @@ class Application @Inject()(actorSystem: ActorSystem,
           ))
       )
     }
-  }
-
-  def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
-    implicit request =>
-      request.identity.foreach { user =>
-        analyticsService.track(FrontendAnalyticsEvent(user, eventType, request.body))
-      }
-      Ok
   }
 
   def features: Action[AnyContent] = sil.UserAwareAction {

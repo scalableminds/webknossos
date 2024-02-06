@@ -26,7 +26,7 @@ abstract class ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray]
 
   def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType, chunkShape, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType, chunkShapeOrdered(chunkShape), header.fillValueNumber)
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.

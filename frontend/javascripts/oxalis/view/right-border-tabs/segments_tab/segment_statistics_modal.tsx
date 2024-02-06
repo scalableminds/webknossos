@@ -1,20 +1,33 @@
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
-import { Modal, Spin, Table } from "antd";
+import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { Segment } from "oxalis/store";
+import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
 import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
-import { Store, api } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { useSelector } from "react-redux";
+import {
+  getAdditionalCoordinatesAsString,
+  hasAdditionalCoordinates,
+} from "oxalis/model/accessors/flycam_accessor";
+import { pluralize } from "libs/utils";
+
+const MODAL_ERROR_MESSAGE =
+  "Segment statistics could not be fetched. Check the console for more details.";
+const CONSOLE_ERROR_MESSAGE =
+  "Segment statistics could not be fetched due to the following reason:";
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
+
+const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -27,6 +40,8 @@ type Props = {
 };
 
 type SegmentInfo = {
+  key: number;
+  additionalCoordinates: string;
   segmentId: number;
   segmentName: string;
   groupId: number | undefined | null;
@@ -35,37 +50,41 @@ type SegmentInfo = {
   formattedSize: string;
   volumeInVoxel: number;
   boundingBoxTopLeft: Vector3;
+  boundingBoxTopLeftAsString: string;
   boundingBoxPosition: Vector3;
+  boundingBoxPositionAsString: string;
 };
 
 const exportStatisticsToCSV = (
   segmentInformation: Array<SegmentInfo>,
   tracingId: string,
   groupIdToExport: number,
+  hasAdditionalCoords: boolean,
 ) => {
-  if (segmentInformation.length === 0) {
-    return;
-  }
   const segmentStatisticsAsString = segmentInformation
-    .map(
-      (row) =>
-        [
-          row.segmentId,
-          row.segmentName,
-          row.groupId,
-          row.groupName,
-          row.volumeInVoxel,
-          row.volumeInNm3,
-          ...row.boundingBoxTopLeft,
-          ...row.boundingBoxPosition,
-        ]
-          .map(String) // convert every value to String
-          .map((v) => v.replaceAll('"', '""')) // escape double quotes
-          .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-          .join(","), // comma-separated
-    )
+    .map((row) => {
+      const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
+      return [
+        ...maybeAdditionalCoords,
+        row.segmentId,
+        row.segmentName,
+        row.groupId,
+        row.groupName,
+        row.volumeInVoxel,
+        row.volumeInNm3,
+        ...row.boundingBoxTopLeft,
+        ...row.boundingBoxPosition,
+      ]
+        .map(String) // convert every value to String
+        .map((v) => v.replaceAll('"', '""')) // escape double quotes
+        .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)); // quote it if necessary
+    })
     .join("\n"); // rows starting on new lines
-  const csv = [SEGMENT_STATISTICS_CSV_HEADER, segmentStatisticsAsString].join("\n");
+
+  const csv_header = hasAdditionalCoords
+    ? [ADDITIONAL_COORDS_COLUMN, SEGMENT_STATISTICS_CSV_HEADER].join(",")
+    : SEGMENT_STATISTICS_CSV_HEADER;
+  const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
       ? `segmentStatistics_tracing-${tracingId}.csv`
@@ -87,65 +106,84 @@ export function SegmentStatisticsModal({
 }: Props) {
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = Store.getState().dataset.dataSource.scale;
-  const dataSource = useFetch(
+  const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+  const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
+  const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
+    additionalCoordinates,
+    ", ",
+  );
+  const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
-      const segmentStatisticsObjects = await Promise.all([
+      const segmentStatisticsObjects: Array<SegmentInfo> | null = await Promise.all([
         getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           segments.map((segment) => segment.id),
+          additionalCoordinates,
         ),
         getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           segments.map((segment) => segment.id),
+          additionalCoordinates,
         ),
-      ]).then((response) => {
-        const segmentSizes = response[0];
-        const boundingBoxes = response[1];
-        const statisticsObjects = [];
-        for (let i = 0; i < segments.length; i++) {
-          // segments in request and their statistics in the response are in the same order
-          const currentSegment = segments[i];
-          const currentBoundingBox = boundingBoxes[i];
-          const boundingBoxInMag1 = getBoundingBoxInMag1(
-            currentBoundingBox,
-            layersFinestResolution,
-          );
-          const currentSegmentSizeInVx = segmentSizes[i];
-          const volumeInNm3 = voxelToNm3(
-            dataSetScale,
-            layersFinestResolution,
-            currentSegmentSizeInVx,
-          );
-          const currentGroupId = getGroupIdForSegment(currentSegment);
-          const segmentStateObject = {
-            key: currentSegment.id,
-            segmentId: currentSegment.id,
-            segmentName:
-              currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
-            groupId: currentGroupId,
-            groupName: getGroupNameForId(currentGroupId),
-            volumeInVoxel: currentSegmentSizeInVx,
-            volumeInNm3,
-            formattedSize: formatNumberToVolume(volumeInNm3),
-            boundingBoxTopLeft: boundingBoxInMag1.topLeft,
-            boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
-            boundingBoxPosition: [
-              boundingBoxInMag1.width,
-              boundingBoxInMag1.height,
-              boundingBoxInMag1.depth,
-            ] as Vector3,
-            boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
-          };
-          statisticsObjects.push(segmentStateObject);
-        }
-        return statisticsObjects;
-      });
+      ]).then(
+        (response) => {
+          const segmentSizes = response[0];
+          const boundingBoxes = response[1];
+          const statisticsObjects = [];
+          const additionalCoordStringForCsv =
+            getAdditionalCoordinatesAsString(additionalCoordinates);
+          for (let i = 0; i < segments.length; i++) {
+            // segments in request and their statistics in the response are in the same order
+            const currentSegment = segments[i];
+            const currentBoundingBox = boundingBoxes[i];
+            const boundingBoxInMag1 = getBoundingBoxInMag1(
+              currentBoundingBox,
+              layersFinestResolution,
+            );
+            const currentSegmentSizeInVx = segmentSizes[i];
+            const volumeInNm3 = voxelToNm3(
+              dataSetScale,
+              layersFinestResolution,
+              currentSegmentSizeInVx,
+            );
+            const currentGroupId = getGroupIdForSegment(currentSegment);
+            const segmentStateObject: SegmentInfo = {
+              key: currentSegment.id,
+              additionalCoordinates: additionalCoordStringForCsv,
+              segmentId: currentSegment.id,
+              segmentName:
+                currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
+              groupId: currentGroupId,
+              groupName: getGroupNameForId(currentGroupId),
+              volumeInVoxel: currentSegmentSizeInVx,
+              volumeInNm3,
+              formattedSize: formatNumberToVolume(volumeInNm3),
+              boundingBoxTopLeft: boundingBoxInMag1.topLeft,
+              boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
+              boundingBoxPosition: [
+                boundingBoxInMag1.width,
+                boundingBoxInMag1.height,
+                boundingBoxInMag1.depth,
+              ] as Vector3,
+              boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
+            };
+            statisticsObjects.push(segmentStateObject);
+          }
+          return statisticsObjects;
+        },
+        (error) => {
+          console.log(CONSOLE_ERROR_MESSAGE, error);
+          return null;
+        },
+      );
       return segmentStatisticsObjects;
     },
     [],
@@ -190,17 +228,50 @@ export function SegmentStatisticsModal({
     return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
   };
 
+  const isErrorCase = segmentStatisticsObjects == null;
+
   return (
     <Modal
       open
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => exportStatisticsToCSV(dataSource, tracingId, parentGroup)}
+      onOk={() => {
+        if (!isErrorCase) {
+          exportStatisticsToCSV(
+            segmentStatisticsObjects,
+            tracingId,
+            parentGroup,
+            hasAdditionalCoords,
+          );
+        }
+      }}
       okText="Export to CSV"
+      okButtonProps={{ disabled: isErrorCase }}
     >
-      <Spin spinning={dataSource.length === 0}>
-        <Table dataSource={dataSource} columns={columns} style={{ whiteSpace: "pre" }} />
+      <Spin spinning={segmentStatisticsObjects?.length === 0 && segments.length > 0}>
+        {isErrorCase ? (
+          MODAL_ERROR_MESSAGE
+        ) : (
+          <>
+            {hasAdditionalCoords && (
+              <Alert
+                className="segments-stats-info-alert"
+                message={`These statistics only refer to the current additional ${pluralize(
+                  "coordinate",
+                  additionalCoordinates?.length || 0,
+                )} ${additionalCoordinateStringForModal}.`}
+                type="info"
+                showIcon
+              />
+            )}
+            <Table
+              dataSource={segmentStatisticsObjects}
+              columns={columns}
+              style={{ whiteSpace: "pre" }}
+            />
+          </>
+        )}
       </Spin>
     </Modal>
   );

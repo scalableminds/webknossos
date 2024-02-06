@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(112);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(113);
 COMMIT TRANSACTION;
 
 
@@ -636,6 +636,19 @@ CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
     PRIMARY KEY (_artifact, path, timestamp)
 );
 
+CREATE TABLE webknossos.analyticsEvents(
+  _id CHAR(24) PRIMARY KEY,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sessionId BIGINT NOT NULL,
+  eventType VARCHAR(512) NOT NULL,
+  eventProperties JSONB NOT NULL,
+  _user CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  isOrganizationAdmin BOOLEAN NOT NULL,
+  isSuperUser BOOLEAN NOT NULL,
+  webknossosUri VARCHAR(512) NOT NULL,
+  CONSTRAINT eventProperties CHECK(jsonb_typeof(eventProperties) = 'object')
+);
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;

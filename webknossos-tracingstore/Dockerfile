@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11 
+FROM eclipse-temurin:21
 
 RUN mkdir -p /webknossos-tracingstore \
   && groupadd -g 1000 -r webknossos \

@@ -330,7 +330,6 @@ object DeleteSegmentVolumeAction {
 }
 
 case class DeleteSegmentDataVolumeAction(id: Long,
-                                         additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None)
     extends VolumeUpdateAction {

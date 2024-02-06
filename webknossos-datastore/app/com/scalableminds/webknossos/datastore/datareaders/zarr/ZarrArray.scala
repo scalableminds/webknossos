@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
@@ -18,21 +19,26 @@ object ZarrArray extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
       header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes) ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
-    } yield
-      new ZarrArray(path,
-                    dataSourceId,
-                    layerName,
-                    header,
-                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
-                    channelIndex,
-                    None,
-                    sharedChunkContentsCache)
+      array <- tryo(
+        new ZarrArray(
+          path,
+          dataSourceId,
+          layerName,
+          header,
+          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+          channelIndex,
+          additionalAxes,
+          sharedChunkContentsCache
+        )) ?~> "Could not open zarr2 array"
+    } yield array
+
 }
 
 class ZarrArray(vaultPath: VaultPath,

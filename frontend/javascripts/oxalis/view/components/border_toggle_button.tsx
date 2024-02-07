@@ -16,7 +16,7 @@ const DRAG_THRESHOLD = 5;
 
 function BorderToggleButton(props: Props) {
   const { onClick, side, borderOpenStatus, inFooter } = props;
-  const placement = side === "left" ? "right" : "left";
+  const placement = side === "left" ? "topRight" : "topLeft";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
     side === "left" ? "K" : "L"

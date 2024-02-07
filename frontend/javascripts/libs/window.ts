@@ -84,6 +84,7 @@ const _window: Window & typeof globalThis & { Olvy?: Olvy; OlvyConfig?: Object |
         removeEventListener,
         open: (_url: string) => {},
         performance: { now: () => ++performanceCounterForMocking },
+        matchMedia: () => false,
       } as typeof window)
     : window;
 

@@ -222,7 +222,7 @@ function positionToString(
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
-  const lineColor = "var(--ant-text-secondary)";
+  const lineColor = "var(--ant-color-text-secondary)";
   const mouseIconStyle = { margin: 0, marginLeft: -2, height: 18 };
 
   const mapNameToShortcutIcon = (name: string) => {
@@ -885,7 +885,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 <span>
                   Import Agglomerate Skeleton{" "}
                   {!isAgglomerateMappingEnabled.value ? (
-                    <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
+                    <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
                   {shortcutBuilder(["SHIFT", "middleMouse"])}
                 </span>
@@ -959,7 +959,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         <Tooltip title={isConnectomeMappingEnabled.reason}>
           Import Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
-            <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
+            <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
           ) : null}{" "}
         </Tooltip>
       ),

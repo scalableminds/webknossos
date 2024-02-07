@@ -10,13 +10,13 @@ export type HoverButtonProps = Omit<ButtonProps, "icon"> & {
 export function HoverIconButton(props: HoverButtonProps) {
   const [isMouseOver, setIsMouseOver] = useState<boolean>(false);
 
-  const onMouseEnter = (event: React.MouseEvent) => {
+  const onMouseEnter = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setIsMouseOver(true);
     if (props.onMouseEnter != null) {
       props.onMouseEnter(event);
     }
   };
-  const onMouseLeave = (event: React.MouseEvent) => {
+  const onMouseLeave = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setIsMouseOver(false);
     if (props.onMouseLeave != null) {
       props.onMouseLeave(event);

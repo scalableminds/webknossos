@@ -140,7 +140,7 @@ const Toast = {
   },
 
   close(key: string) {
-    notification.close(key);
+    notification.destroy(key);
   },
 };
 export default Toast;

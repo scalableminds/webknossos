@@ -22,13 +22,10 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 
 const VIEW_MODE_TO_ICON = {
-  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large without-icon-margin" />,
-  [constants.MODE_ARBITRARY]: <i className="fas fa-globe without-icon-margin" />,
+  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large" />,
+  [constants.MODE_ARBITRARY]: <i className="fas fa-globe" />,
   [constants.MODE_ARBITRARY_PLANE]: (
-    <i
-      className="fas fa-square-full without-icon-margin"
-      style={{ transform: "scale(0.8, 1) rotate(-45deg)" }}
-    />
+    <i className="fas fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
   ),
 };
 

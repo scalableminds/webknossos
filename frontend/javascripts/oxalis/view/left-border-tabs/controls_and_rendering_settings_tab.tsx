@@ -28,6 +28,7 @@ import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
+import { ArrayElement } from "libs/utils";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -74,7 +75,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
     );
   }
 
-  getViewportOptions = (): CollapseProps["items"] => {
+  getViewportOptions = (): ArrayElement<CollapseProps["items"]> => {
     if (
       this.props.viewMode === Constants.MODE_ARBITRARY ||
       this.props.viewMode === Constants.MODE_ARBITRARY_PLANE

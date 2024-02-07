@@ -116,10 +116,21 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                           dataLayerMapping)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
+
     for {
-      typedData <- getTypedDataForSegment(organizationName, datasetName, dataLayerName, segmentId, mag)
-      volume = calculateSegmentVolume(segmentId, mag, typedData)
-    } yield volume
+      (bucketPositions, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                datasetName,
+                                                                                dataLayerName)
+      mag1BucketPositions = bucketPositions.map(_ / fileMag).distinct.toSeq
+      sumBoxes <- Fox.serialSequence(mag1BucketPositions.toList)(pos =>
+        for {
+          data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(pos), dataLayerMapping)
+          dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
+          count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+        } yield count.toLong)
+      counts <- Fox.combined(sumBoxes.map(_.toFox))
+    } yield counts.sum
   }
 
   def getSegmentBoundingBox(organizationName: String,

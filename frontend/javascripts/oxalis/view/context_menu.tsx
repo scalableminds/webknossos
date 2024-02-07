@@ -1221,7 +1221,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
         contextMenuPosition == null ||
         !maybeIsSegmentIndexAvailable ||
         volumeTracing == null ||
-        !hasNoFallbackLayer ||
         !volumeTracing.hasSegmentIndex
       ) {
         return [];

@@ -1137,19 +1137,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowSegmentStatistics = (id: number): ItemType => {
-<<<<<<< HEAD
     if (!this.props.isSegmentIndexAvailable) return null;
-=======
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (
-      visibleSegmentationLayer == null ||
-      visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex
-    ) {
-      // In this case there is a fallback layer or an ND annotation.
-      return null;
-    }
->>>>>>> master
     return {
       key: "segmentStatistics",
       label: (
@@ -1573,15 +1561,12 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentStatisticsModal = (groupId: number) => {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-<<<<<<< HEAD
     if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
       /* const state = Store.getState();
-=======
     const hasNoFallbackLayer =
       visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
     if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
       const state = Store.getState();
->>>>>>> master
       const tracingId = this.props.activeVolumeTracing?.tracingId;
       if (tracingId == null) {
         const state = Store.getState();

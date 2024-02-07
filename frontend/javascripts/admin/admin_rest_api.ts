@@ -949,11 +949,15 @@ export function getNewestVersionForTracing(
   );
 }
 
-<<<<<<< HEAD
-export function getSegmentVolumes(requestUrl: string, mag: Vector3, segmentIds: Array<number>) {
+export function getSegmentVolumes(
+  requestUrl: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+) {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { mag, segmentIds },
+      data: { additionalCoordinates, mag, segmentIds },
       method: "POST",
     }),
   );
@@ -968,22 +972,6 @@ export function hasSegmentIndexInDataStore(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentIndex?token=${token}`,
-=======
-export function getSegmentVolumes(
-  tracingStoreUrl: string,
-  tracingId: string,
-  mag: Vector3,
-  segmentIds: Array<number>,
-  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
-): Promise<number[]> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
-      {
-        data: { additionalCoordinates, mag, segmentIds },
-        method: "POST",
-      },
->>>>>>> master
     ),
   );
 }
@@ -992,25 +980,13 @@ export function getSegmentBoundingBoxes(
   requestUrl: string,
   mag: Vector3,
   segmentIds: Array<number>,
-<<<<<<< HEAD
-) {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { mag, segmentIds },
-      method: "POST",
-    }),
-=======
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
-      {
-        data: { additionalCoordinates, mag, segmentIds },
-        method: "POST",
-      },
-    ),
->>>>>>> master
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
+      data: { additionalCoordinates, mag, segmentIds },
+      method: "POST",
+    }),
   );
 }
 

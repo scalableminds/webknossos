@@ -7,22 +7,16 @@ import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
-<<<<<<< HEAD
 import {
   SegmentHierarchyNode,
   SegmentHierarchyGroup,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
-=======
-import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
->>>>>>> master
 import { api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
-<<<<<<< HEAD
-=======
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
@@ -33,7 +27,6 @@ const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
 const CONSOLE_ERROR_MESSAGE =
   "Segment statistics could not be fetched due to the following reason:";
->>>>>>> master
 
 const SEGMENT_STATISTICS_CSV_HEADER =
   "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
@@ -117,8 +110,8 @@ export function SegmentStatisticsModal({
   const { dataset, tracing } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-<<<<<<< HEAD
   const dataSetScale = dataset.dataSource.scale;
+  // const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
@@ -127,13 +120,6 @@ export function SegmentStatisticsModal({
     visibleSegmentationLayer.tracingId,
     visibleSegmentationLayer,
   );
-  const dataSource = useFetch(
-    async () => {
-      await api.tracing.save();
-      if (requestUrl == null) return;
-      const segmentStatisticsObjects = await Promise.all([
-=======
-  const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   const additionalCoordinates = useSelector(
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
@@ -142,11 +128,11 @@ export function SegmentStatisticsModal({
     additionalCoordinates,
     ", ",
   );
-  const segmentStatisticsObjects = useFetch(
+  const dataSource = useFetch(
     async () => {
       await api.tracing.save();
-      const segmentStatisticsObjects: Array<SegmentInfo> | null = await Promise.all([
->>>>>>> master
+      if (requestUrl == null) return;
+      const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
           layersFinestResolution,
@@ -262,30 +248,18 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-<<<<<<< HEAD
       onOk={() =>
         dataSource != null &&
-        exportStatisticsToCSV(dataSource, tracingId || dataset.name, parentGroup)
+        exportStatisticsToCSV(
+          dataSource,
+          tracingId || dataset.name,
+          parentGroup,
+          hasAdditionalCoords,
+        )
       }
-=======
-      onOk={() => {
-        if (!isErrorCase) {
-          exportStatisticsToCSV(
-            segmentStatisticsObjects,
-            tracingId,
-            parentGroup,
-            hasAdditionalCoords,
-          );
-        }
-      }}
->>>>>>> master
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
-<<<<<<< HEAD
-      <Spin spinning={dataSource?.length === 0}>
-        <Table dataSource={dataSource} columns={columns} style={{ whiteSpace: "pre" }} />
-=======
       <Spin spinning={segmentStatisticsObjects?.length === 0 && segments.length > 0}>
         {isErrorCase ? (
           MODAL_ERROR_MESSAGE
@@ -309,7 +283,6 @@ export function SegmentStatisticsModal({
             />
           </>
         )}
->>>>>>> master
       </Spin>
     </Modal>
   );

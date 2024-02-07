@@ -113,15 +113,11 @@ import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-<<<<<<< HEAD
 import {
   ensureLayerMappingsAreLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "oxalis/model/actions/dataset_actions";
 import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
-=======
-import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
->>>>>>> master
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1223,12 +1219,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       if (visibleSegmentationLayer == null) return [];
       if (
         contextMenuPosition == null ||
-<<<<<<< HEAD
         !maybeIsSegmentIndexAvailable ||
-        hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
-      ) {
-        return [];
-=======
         volumeTracing == null ||
         !hasNoFallbackLayer ||
         !volumeTracing.hasSegmentIndex
@@ -1267,7 +1258,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
->>>>>>> master
       }
 
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
@@ -1400,14 +1390,10 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 
   const areSegmentStatisticsAvailable =
-<<<<<<< HEAD
     // TODO make sure that segment index <-> segment stats is correct, bc I think there are other cases too
     isHoveredSegmentOrMesh &&
     !hasAdditionalCoordinates(props.additionalCoordinates) &&
     hasSegmentIndex; // TODO change once statistics are available for nd-datasets
-=======
-    hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh;
->>>>>>> master
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

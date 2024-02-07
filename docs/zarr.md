@@ -2,9 +2,9 @@
 
 WEBKNOSSOS works great with [OME-Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
 
-We strongly believe in this community-driven, cloud-native data fromat for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
+We strongly believe in this community-driven, cloud-native data format for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
 
-Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud). For several layers, import the first Zarr group and then use the UI to add more URIs/groups.
+Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud). When streaming and using several layers, import the first Zarr group and then use the UI to add more URIs/groups.
 
 ## Examples
 

@@ -949,6 +949,7 @@ export function getNewestVersionForTracing(
   );
 }
 
+<<<<<<< HEAD
 export function getSegmentVolumes(requestUrl: string, mag: Vector3, segmentIds: Array<number>) {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
@@ -967,6 +968,22 @@ export function hasSegmentIndexInDataStore(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentIndex?token=${token}`,
+=======
+export function getSegmentVolumes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
+      },
+>>>>>>> master
     ),
   );
 }
@@ -975,12 +992,25 @@ export function getSegmentBoundingBoxes(
   requestUrl: string,
   mag: Vector3,
   segmentIds: Array<number>,
+<<<<<<< HEAD
 ) {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
       data: { mag, segmentIds },
       method: "POST",
     }),
+=======
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      {
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
+      },
+    ),
+>>>>>>> master
   );
 }
 
@@ -2221,7 +2251,7 @@ export function computeAdHocMesh(
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
-          additionalCoordinates: additionalCoordinates,
+          additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
@@ -2245,15 +2275,21 @@ export function getBucketPositionsForAdHocMesh(
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.append("token", token);
-    params.append("cubeSize", `${cubeSize.join(",")}`);
-    params.append("mag", `${mag.join("-")}`);
-
-    const positions = await Request.receiveJSON(
+    const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      {
+        data: {
+          cubeSize,
+          mag,
+          additionalCoordinates,
+        },
+        method: "POST",
+      },
     );
     return positions;
   });

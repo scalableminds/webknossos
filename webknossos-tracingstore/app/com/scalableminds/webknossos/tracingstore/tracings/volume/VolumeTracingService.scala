@@ -120,13 +120,17 @@ class VolumeTracingService @Inject()(
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
       fallbackLayer <- getFallbackLayer(tracingId)
+      tracing <- find(tracingId) ?~> "tracing.notFound"
       segmentIndexBuffer <- Fox.successful(
-        new VolumeSegmentIndexBuffer(tracingId,
-                                     volumeSegmentIndexClient,
-                                     updateGroup.version,
-                                     remoteDatastoreClient,
-                                     fallbackLayer,
-                                     userToken))
+        new VolumeSegmentIndexBuffer(
+          tracingId,
+          volumeSegmentIndexClient,
+          updateGroup.version,
+          remoteDatastoreClient,
+          fallbackLayer,
+          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+          userToken
+        ))
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
@@ -211,42 +215,51 @@ class VolumeTracingService @Inject()(
     for {
       _ <- Fox.successful(())
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution => {
-        val mag = vec3IntFromProto(resolution)
-        for {
-          fallbackLayer <- getFallbackLayer(tracingId)
-          bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-            fallbackLayer,
-            tracingId,
-            a.id,
-            mag,
-            None,
-            volumeTracing.mappingName,
-            userToken)
-          bucketPositions = bucketPositionsRaw.values
-            .map(vec3IntFromProto)
-            .map(_ * mag * DataLayer.bucketLength)
-            .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, a.additionalCoordinates))
-            .toList
-          _ <- Fox.serialCombined(bucketPositions) {
-            bucketPosition =>
-              for {
-                data <- loadBucket(dataLayer, bucketPosition)
-                typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
-                filteredData = typedData.map(elem =>
-                  if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
-                filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
-                _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
-                _ <- updateSegmentIndex(segmentIndexBuffer,
-                                        bucketPosition,
-                                        filteredBytes,
-                                        Some(data),
-                                        volumeTracing.elementClass,
-                                        volumeTracing.mappingName)
-              } yield ()
-          }
-        } yield ()
-      })
+      possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes).map(Some(_))
+      additionalCoordinateList = if (possibleAdditionalCoordinates.isEmpty) {
+        List(None)
+      } else {
+        possibleAdditionalCoordinates.toList
+      }
+      _ <- Fox.serialCombined(volumeTracing.resolutions.toList)(resolution =>
+        Fox.serialCombined(additionalCoordinateList)(additionalCoordinates => {
+          val mag = vec3IntFromProto(resolution)
+          for {
+            fallbackLayer <- getFallbackLayer(tracingId)
+            bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              fallbackLayer,
+              tracingId,
+              a.id,
+              mag,
+              None, //TODO: ???
+              volumeTracing.mappingName,
+              additionalCoordinates,
+              dataLayer.additionalAxes,
+              userToken)
+            bucketPositions = bucketPositionsRaw.values
+              .map(vec3IntFromProto)
+              .map(_ * mag * DataLayer.bucketLength)
+              .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))
+              .toList
+            _ <- Fox.serialCombined(bucketPositions) {
+              bucketPosition =>
+                for {
+                  data <- loadBucket(dataLayer, bucketPosition)
+                  typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
+                  filteredData = typedData.map(elem =>
+                    if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
+                  filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
+                  _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
+                  _ <- updateSegmentIndex(segmentIndexBuffer,
+                                          bucketPosition,
+                                          filteredBytes,
+                                          Some(data),
+                                          volumeTracing.elementClass,
+                                          volumeTracing.mappingName)
+                } yield ()
+            }
+          } yield ()
+        }))
       _ <- segmentIndexBuffer.flush()
     } yield volumeTracing
 
@@ -273,6 +286,7 @@ class VolumeTracingService @Inject()(
                                                         newVersion,
                                                         remoteDatastoreClient,
                                                         fallbackLayer,
+                                                        dataLayer.additionalAxes,
                                                         userToken)
       sourceTracing <- find(tracingId, Some(sourceVersion))
       _ <- Fox.serialCombined(bucketStream) {
@@ -340,13 +354,16 @@ class VolumeTracingService @Inject()(
               mergedVolume.largestSegmentId.toLong,
               tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
             destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-            fallBackLayer <- getFallbackLayer(tracingId)
-            segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
-                                                              volumeSegmentIndexClient,
-                                                              tracing.version,
-                                                              remoteDatastoreClient,
-                                                              fallBackLayer,
-                                                              userToken)
+            fallbackLayer <- getFallbackLayer(tracingId)
+            segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+              tracingId,
+              volumeSegmentIndexClient,
+              tracing.version,
+              remoteDatastoreClient,
+              fallbackLayer,
+              AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+              userToken
+            )
             _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
               for {
                 _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
@@ -378,12 +395,15 @@ class VolumeTracingService @Inject()(
       for {
         resolutionSetFox <- for {
           fallbackLayer <- getFallbackLayer(tracingId)
-          segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
-                                                            volumeSegmentIndexClient,
-                                                            tracing.version,
-                                                            remoteDatastoreClient,
-                                                            fallbackLayer,
-                                                            userToken)
+          segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+            tracingId,
+            volumeSegmentIndexClient,
+            tracing.version,
+            remoteDatastoreClient,
+            fallbackLayer,
+            AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+            userToken
+          )
           unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
             if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
               Fox.successful(())
@@ -440,7 +460,6 @@ class VolumeTracingService @Inject()(
         new Zarr3BucketStreamSink(dataLayer, tracing.fallbackLayer.nonEmpty)(
           dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
           tracing.resolutions.map(mag => vec3IntFromProto(mag)),
-          tracing.additionalAxes,
           voxelSize)
     }
 
@@ -529,12 +548,15 @@ class VolumeTracingService @Inject()(
       buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       fallbackLayer <- getFallbackLayer(sourceId)
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(destinationId,
-                                                        volumeSegmentIndexClient,
-                                                        destinationTracing.version,
-                                                        remoteDatastoreClient,
-                                                        fallbackLayer,
-                                                        userToken)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+        destinationId,
+        volumeSegmentIndexClient,
+        destinationTracing.version,
+        remoteDatastoreClient,
+        fallbackLayer,
+        AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes),
+        userToken
+      )
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
@@ -565,7 +587,7 @@ class VolumeTracingService @Inject()(
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
       userToken = userToken,
-      additionalAxes = Some(AdditionalAxis.fromProto(tracing.additionalAxes))
+      additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
   def updateActionLog(tracingId: String,
@@ -692,7 +714,7 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBoxes)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-        Seq(tracingA, tracingB).map(t => Some(AdditionalAxis.fromProto(t.additionalAxes))))
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
       else {
         val labelMap = mergedVolumeStats.labelMaps(indexB)
@@ -784,13 +806,14 @@ class VolumeTracingService @Inject()(
       for {
         _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
-          Some(AdditionalAxis.fromProto(t.additionalAxes)))))
+          AdditionalAxis.fromProtosAsOpt(t.additionalAxes))))
         fallbackLayer <- getFallbackLayer(newId)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,
                                                           remoteDatastoreClient,
                                                           fallbackLayer,
+                                                          mergedAdditionalAxes,
                                                           userToken)
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
@@ -825,6 +848,7 @@ class VolumeTracingService @Inject()(
                                                         currentVersion + 1L,
                                                         remoteDatastoreClient,
                                                         fallbackLayer,
+                                                        sourceDataLayer.additionalAxes,
                                                         userToken)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
@@ -898,6 +922,7 @@ class VolumeTracingService @Inject()(
                                          tracing.version + 1,
                                          remoteDatastoreClient,
                                          fallbackLayer,
+                                         dataLayer.additionalAxes,
                                          userToken))
           _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
             for {

@@ -14,19 +14,20 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
   def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService]
 
   // To be defined in subclass.
-  def openShardOrArrayHandle(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[DataCubeHandle] =
+  def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] =
     Empty
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    cache.withCache(readInstruction)(openShardOrArrayHandleWithTimeout)(
+    cache.withCache(readInstruction)(openDatasetArrayHandleWithTimeout)(
       _.cutOutBucket(readInstruction.bucket, readInstruction.dataLayer))
 
-  private def openShardOrArrayHandleWithTimeout(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DataCubeHandle] = {
+  private def openDatasetArrayHandleWithTimeout(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
     val t = System.currentTimeMillis
     for {
-      result <- openShardOrArrayHandle(readInstruction).futureBox
+      result <- openDatasetArrayHandle(readInstruction).futureBox
       duration = System.currentTimeMillis - t
       _ = if (duration > 500) {
         val className = this.getClass.getName.split("\\.").last

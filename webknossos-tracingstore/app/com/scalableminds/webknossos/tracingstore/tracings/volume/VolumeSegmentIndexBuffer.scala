@@ -6,15 +6,22 @@ import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait SegmentIndexKeyHelper {
-  protected def segmentIndexKey(tracingId: String, segmentId: Long, mag: Vec3Int) =
-    s"$tracingId/$segmentId/${mag.toMagLiteral()}"
+trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
+  protected def segmentIndexKey(tracingId: String,
+                                segmentId: Long,
+                                mag: Vec3Int,
+                                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                axes: Option[Seq[AdditionalAxis]]) =
+    s"$tracingId/$segmentId/${mag
+      .toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
 }
 
 // To introduce buffering for updating the segment-to-bucket index for a volume tracing
@@ -26,6 +33,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
                                version: Long,
                                remoteDatastoreClient: TSRemoteDatastoreClient,
                                fallbackLayer: Option[RemoteFallbackLayer],
+                               additionalAxes: Option[Seq[AdditionalAxis]],
                                userToken: Option[String])
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
@@ -35,15 +43,22 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   private lazy val segmentIndexBuffer: mutable.Map[String, ListOfVec3IntProto] =
     new mutable.HashMap[String, ListOfVec3IntProto]()
 
-  def put(segmentId: Long, mag: Vec3Int, segmentPositions: ListOfVec3IntProto): Unit =
-    segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag)) = segmentPositions
+  def put(segmentId: Long,
+          mag: Vec3Int,
+          additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+          segmentPositions: ListOfVec3IntProto): Unit =
+    segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
+      segmentPositions
 
-  def getWithFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(
+  def getWithFallback(segmentId: Long,
+                      mag: Vec3Int,
+                      mappingName: Option[String],
+                      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
-    val key = segmentIndexKey(tracingId, segmentId, mag)
+    val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     segmentIndexBuffer.get(key) match {
       case Some(positions) => Fox.successful(positions)
-      case None            => getFallback(segmentId, mag, mappingName)
+      case None            => getFallback(segmentId, mag, mappingName, additionalCoordinates)
     }
   }
 
@@ -54,8 +69,11 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       }
     } yield ()
 
-  private def getFallback(segmentId: Long, mag: Vec3Int, mappingName: Option[String])(implicit ec: ExecutionContext) = {
-    val key = segmentIndexKey(tracingId, segmentId, mag)
+  private def getFallback(segmentId: Long,
+                          mag: Vec3Int,
+                          mappingName: Option[String],
+                          additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext) = {
+    val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     for {
       fossilDbData <- volumeSegmentIndexClient
         .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])

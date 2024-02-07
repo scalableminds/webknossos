@@ -106,6 +106,7 @@ trait VolumeTracingDownsampling
                                                         tracing.version,
                                                         tracingService.remoteDatastoreClient,
                                                         fallbackLayer,
+                                                        dataLayer.additionalAxes,
                                                         userToken)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {

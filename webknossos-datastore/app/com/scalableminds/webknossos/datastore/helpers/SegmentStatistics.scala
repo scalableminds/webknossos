@@ -4,12 +4,15 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.UnsignedInteger
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, UnsignedInteger}
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long], mappingName: Option[String])
+case class SegmentStatisticsParameters(mag: Vec3Int,
+                                       segmentIds: List[Long],
+                                       mappingName: Option[String],
+                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
@@ -22,8 +25,12 @@ trait SegmentStatistics extends ProtoGeometryImplicits {
   // Returns the bounding box in voxels in the target mag
   def calculateSegmentBoundingBox(segmentId: Long,
                                   mag: Vec3Int,
+                                  additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                   getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
-                                  getTypedDataForBucketPosition: (Vec3Int, Vec3Int) => Fox[Array[UnsignedInteger]])(
+                                  getTypedDataForBucketPosition: (
+                                      Vec3Int,
+                                      Vec3Int,
+                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       allBucketPositions: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
@@ -34,8 +41,14 @@ trait SegmentStatistics extends ProtoGeometryImplicits {
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(bucketPosition =>
-        extendBoundingBoxByData(mag, segmentId, boundingBoxMutable, bucketPosition, getTypedDataForBucketPosition))
+      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(
+        bucketPosition =>
+          extendBoundingBoxByData(mag,
+                                  segmentId,
+                                  boundingBoxMutable,
+                                  bucketPosition,
+                                  additionalCoordinates,
+                                  getTypedDataForBucketPosition))
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
         BoundingBox.empty
@@ -68,9 +81,12 @@ trait SegmentStatistics extends ProtoGeometryImplicits {
       segmentId: Long,
       mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
       bucketPosition: Vec3Int,
-      getTypedDataForBucketPosition: (Vec3Int, Vec3Int) => Fox[Array[UnsignedInteger]]): Fox[Unit] =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      getTypedDataForBucketPosition: (Vec3Int,
+                                      Vec3Int,
+                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]]): Fox[Unit] =
     for {
-      dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag)
+      dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
     } yield ()

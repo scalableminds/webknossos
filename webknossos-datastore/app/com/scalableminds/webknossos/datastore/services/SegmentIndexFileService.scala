@@ -12,7 +12,13 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, VoxelPosition, datasource}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  VoxelPosition,
+  datasource
+}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
@@ -132,8 +138,10 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
 
     def getTypedDataForBucketPosition(organizationName: String, datasetName: String, dataLayerName: String)(
         bucketPosition: Vec3Int,
-        mag: Vec3Int)(implicit m: MessagesProvider) =
+        mag: Vec3Int,
+        additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider) =
       for {
+        // Additional coordinates parameter ignored, see #7556
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   datasetName,
                                                                                   dataLayerName)
@@ -146,6 +154,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bb <- calculateSegmentBoundingBox(
         segmentId,
         mag,
+        None, // see #7556
         getBucketPositions(organizationName, datasetName, dataLayerName),
         getTypedDataForBucketPosition(organizationName, datasetName, dataLayerName)
       )

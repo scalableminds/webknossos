@@ -351,8 +351,7 @@ function* loadFullAdHocMesh(
   const usePositionsFromSegmentStats =
     volumeTracing?.hasSegmentIndex && // TODO soll hier ggf auch der index aus dem datastore stehen?
     !volumeTracing.mappingIsEditable &&
-    visibleSegmentationLayer?.tracingId != null &&
-    (additionalCoordinates == null || additionalCoordinates.length === 0); // TODO remove in https://github.com/scalableminds/webknossos/pull/7411
+    visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentStats
     ? yield* getChunkPositionsFromSegmentStats(
         tracingStoreHost,
@@ -361,6 +360,7 @@ function* loadFullAdHocMesh(
         cubeSize,
         mag,
         clippedPosition,
+        additionalCoordinates,
       )
     : [clippedPosition];
 
@@ -407,6 +407,7 @@ function* getChunkPositionsFromSegmentStats(
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ) {
   const unscaledPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -415,6 +416,7 @@ function* getChunkPositionsFromSegmentStats(
     segmentId,
     cubeSize,
     mag,
+    additionalCoordinates,
   );
   const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(positions, clippedPosition) as Vector3[];

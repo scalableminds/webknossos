@@ -281,11 +281,12 @@ export function hasAdditionalCoordinates(
 
 export function getAdditionalCoordinatesAsString(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  separator: string = ";",
 ): string {
   if (additionalCoordinates != null && additionalCoordinates.length > 0) {
     return additionalCoordinates
       ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
-      .reduce((a: string, b: string) => a.concat(b, ";"), "") as string;
+      .join(separator);
   }
   return "";
 }

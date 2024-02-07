@@ -11,6 +11,8 @@ import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -38,12 +40,22 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
+
+case class GetSegmentIndexParameters(
+    mag: Vec3Int,
+    cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+)
+
+object GetSegmentIndexParameters {
+  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
+}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
@@ -460,6 +472,7 @@ class VolumeTracingController @Inject()(
                                                             segmentId,
                                                             request.body.mag,
                                                             tracing.mappingName,
+                                                            request.body.additionalCoordinates,
                                                             urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentVolumes))
@@ -476,38 +489,36 @@ class VolumeTracingController @Inject()(
                                                                  segmentId,
                                                                  request.body.mag,
                                                                  tracing.mappingName,
+                                                                 request.body.additionalCoordinates,
                                                                  urlOrHeaderToken(token, request))
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
     }
 
-  def getSegmentIndex(token: Option[String],
-                      tracingId: String,
-                      segmentId: Long,
-                      mag: String,
-                      cubeSize: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def getSegmentIndex(token: Option[String], tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
+    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          cubeSizeParsed <- Vec3Int.fromUriLiteral(cubeSize).toFox ?~> "Parsing cube size failed. Use x,y,z format."
           fallbackLayer <- tracingService.getFallbackLayer(tracingId)
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,
-                                                                   tracingId,
-                                                                   segmentId,
-                                                                   magParsed,
-                                                                   None,
-                                                                   mappingName = tracing.mappingName,
-                                                                   urlOrHeaderToken(token, request))
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              fallbackLayer,
+              tracingId,
+              segmentId,
+              request.body.mag,
+              additionalCoordinates = request.body.additionalCoordinates,
+              additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+              mappingName = tracing.mappingName,
+              userToken = urlOrHeaderToken(token, request)
+            )
           bucketPositionsForCubeSize = bucketPositionsRaw.values
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
-            .map(_ / cubeSizeParsed)
+            .map(_ / request.body.cubeSize)
             .distinct // divide by requested cube size to map them to larger buckets, select unique
-            .map(_ * cubeSizeParsed) // return positions, not indices
+            .map(_ * request.body.cubeSize) // return positions, not indices
         } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }

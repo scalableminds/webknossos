@@ -16,3 +16,5 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 - NodeJS version 18+ is required for snapshot tests with ShadowDOM elements from Antd v5. [#7522](https://github.com/scalableminds/webknossos/pull/7522)
 
 ### Postgres Evolutions:
+
+- [113-analytics-events.sql](conf/evolutions/113-analytics-events.sql)

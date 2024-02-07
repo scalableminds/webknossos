@@ -92,12 +92,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(organizationName: String,
-                       datasetName: String,
-                       dataLayerName: String,
-                       segmentId: Long,
-                       mag: Vec3Int,
-                       dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
+  def getSegmentVolumeOld(organizationName: String,
+                          datasetName: String,
+                          dataLayerName: String,
+                          segmentId: Long,
+                          mag: Vec3Int,
+                          dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
 
     def getTypedDataForSegment(organizationName: String,
                                datasetName: String,
@@ -105,24 +105,24 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                segmentId: Long,
                                mag: Vec3Int)(implicit m: MessagesProvider) =
       for {
-        (bucketPositions, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+        (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   datasetName,
                                                                                   dataLayerName)
         data <- getDataForBucketPositions(dataSource,
                                           dataLayer,
                                           mag,
-                                          bucketPositions.map(_ / fileMag).distinct.toSeq,
+                                          bucketPositionsInFileMag.map(_ / fileMag).distinct.toSeq,
                                           dataLayerMapping)
         dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
       } yield dataTyped
 
     for {
-      (bucketPositions, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName)
-      mag1BucketPositions = bucketPositions.map(_ / fileMag).distinct.toSeq
+      mag1BucketPositions = bucketPositionsInFileMag.map(_ / fileMag).distinct.toSeq
       sumBoxes <- Fox.serialSequence(mag1BucketPositions.toList)(pos =>
         for {
           data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(pos), dataLayerMapping)
@@ -133,33 +133,27 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     } yield counts.sum
   }
 
+  def getSegmentVolume(organizationName: String,
+                       datasetName: String,
+                       dataLayerName: String,
+                       segmentId: Long,
+                       mag: Vec3Int,
+                       dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] =
+    //getSegmentVolumeOld(organizationName, datasetName, dataLayerName, segmentId, mag, dataLayerMapping)
+    calculateSegmentVolume(
+      segmentId,
+      mag,
+      None, // see #7556
+      getBucketPositions(organizationName, datasetName, dataLayerName),
+      getTypedDataForBucketPosition(organizationName, datasetName, dataLayerName, dataLayerMapping)
+    )
+
   def getSegmentBoundingBox(organizationName: String,
                             datasetName: String,
                             dataLayerName: String,
                             segmentId: Long,
                             mag: Vec3Int,
-                            dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[BoundingBox] = {
-
-    def getBucketPositions(organizationName: String, datasetName: String, dataLayerName: String)(segmentId: Long,
-                                                                                                 mag: Vec3Int) =
-      for {
-        (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
-        bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag)).distinct.toSeq
-      } yield ListOfVec3IntProto.of(bucketPositions.map(vec3IntToProto))
-
-    def getTypedDataForBucketPosition(organizationName: String, datasetName: String, dataLayerName: String)(
-        bucketPosition: Vec3Int,
-        mag: Vec3Int,
-        additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider) =
-      for {
-        // Additional coordinates parameter ignored, see #7556
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  datasetName,
-                                                                                  dataLayerName)
-        data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), dataLayerMapping)
-        dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
-      } yield dataTyped
-
+                            dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[BoundingBox] =
     for {
 
       bb <- calculateSegmentBoundingBox(
@@ -167,14 +161,35 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         mag,
         None, // see #7556
         getBucketPositions(organizationName, datasetName, dataLayerName),
-        getTypedDataForBucketPosition(organizationName, datasetName, dataLayerName)
+        getTypedDataForBucketPosition(organizationName, datasetName, dataLayerName, dataLayerMapping)
       )
     } yield bb
 
-  }
-
   def assertSegmentIndexFileExists(organizationName: String, datasetName: String, dataLayerName: String): Fox[Path] =
     Fox.box2Fox(getSegmentIndexFile(organizationName, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound"
+
+  private def getTypedDataForBucketPosition(organizationName: String,
+                                            datasetName: String,
+                                            dataLayerName: String,
+                                            dataLayerMapping: Option[String])(
+      bucketPosition: Vec3Int,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider) =
+    for {
+      // Additional coordinates parameter ignored, see #7556
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                datasetName,
+                                                                                dataLayerName)
+      data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), dataLayerMapping)
+      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
+    } yield dataTyped
+
+  private def getBucketPositions(organizationName: String, datasetName: String, dataLayerName: String)(segmentId: Long,
+                                                                                                       mag: Vec3Int) =
+    for {
+      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+      bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag)).distinct.toSeq
+    } yield ListOfVec3IntProto.of(bucketPositions.map(vec3IntToProto))
 
   private def getDataForBucketPositions(dataSource: datasource.DataSource,
                                         dataLayer: DataLayer,

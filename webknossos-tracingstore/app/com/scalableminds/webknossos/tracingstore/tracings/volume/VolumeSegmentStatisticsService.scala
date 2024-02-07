@@ -27,9 +27,13 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                        mappingName: Option[String],
                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                        userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
-    for {
-      typedData <- getTypedDataForSegmentIndex(tracingId, mappingName, userToken, segmentId, mag, additionalCoordinates)
-    } yield calculateSegmentVolume(segmentId, mag, typedData)
+    calculateSegmentVolume(
+      segmentId,
+      mag,
+      additionalCoordinates,
+      getBucketPositions(tracingId, mappingName, additionalCoordinates, userToken),
+      getTypedDataForBucketPosition(tracingId, userToken)
+    )
 
   def getSegmentBoundingBox(tracingId: String,
                             segmentId: Long,

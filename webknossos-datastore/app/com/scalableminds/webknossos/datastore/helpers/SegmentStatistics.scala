@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, UnsignedInteger}
@@ -17,10 +17,27 @@ object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
 
-trait SegmentStatistics extends ProtoGeometryImplicits {
+trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 
-  def calculateSegmentVolume(segmentId: Long, mag: Vec3Int, typedDataForSegment: Array[UnsignedInteger]): Long =
-    typedDataForSegment.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+  def calculateSegmentVolume(
+      segmentId: Long,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+      getTypedDataForBucketPosition: (
+          Vec3Int,
+          Vec3Int,
+          Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(implicit ec: ExecutionContext): Fox[Long] =
+    for {
+      bucketPositionsProtos: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
+      bucketPositionsInMag = bucketPositionsProtos.values.map(vec3IntFromProto)
+      volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
+        for {
+          dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
+          count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+        } yield count.toLong)
+      counts <- Fox.combined(volumeBoxes.map(_.toFox))
+    } yield counts.sum
 
   // Returns the bounding box in voxels in the target mag
   def calculateSegmentBoundingBox(segmentId: Long,

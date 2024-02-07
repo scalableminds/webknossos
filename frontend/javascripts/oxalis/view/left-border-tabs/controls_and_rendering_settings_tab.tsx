@@ -1,4 +1,4 @@
-import { Collapse, Tooltip } from "antd";
+import { Collapse, CollapseProps, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -28,8 +28,6 @@ import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
-
-const { Panel } = Collapse;
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -76,120 +74,128 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
     );
   }
 
-  getViewportOptions = () => {
+  getViewportOptions = (): CollapseProps["items"] => {
     if (
       this.props.viewMode === Constants.MODE_ARBITRARY ||
       this.props.viewMode === Constants.MODE_ARBITRARY_PLANE
     ) {
-      return (
-        <Panel header="Flight Options" key="2">
-          <LogSliderSetting
-            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
-            roundTo={3}
-            min={this.props.validZoomRange[0]}
-            max={this.props.validZoomRange[1]}
-            value={this.props.zoomStep}
-            onChange={this.props.onChangeZoomStep}
-          />
-          <NumberSliderSetting
-            label={
-              <Tooltip title={settingsTooltips.mouseRotateValue}>
-                {settingsLabels.mouseRotateValue}
-              </Tooltip>
-            }
-            min={userSettings.mouseRotateValue.minimum}
-            max={userSettings.mouseRotateValue.maximum}
-            step={0.001}
-            value={this.props.userConfiguration.mouseRotateValue}
-            onChange={this.onChangeUser.mouseRotateValue}
-          />
-          <NumberSliderSetting
-            label={
-              <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
-            }
-            min={userSettings.rotateValue.minimum}
-            max={userSettings.rotateValue.maximum}
-            step={0.001}
-            value={this.props.userConfiguration.rotateValue}
-            onChange={this.onChangeUser.rotateValue}
-          />
-          <NumberSliderSetting
-            label={
-              <Tooltip title={settingsTooltips.crosshairSize}>
-                {settingsLabels.crosshairSize}
-              </Tooltip>
-            }
-            min={userSettings.crosshairSize.minimum}
-            max={userSettings.crosshairSize.maximum}
-            step={0.01}
-            value={this.props.userConfiguration.crosshairSize}
-            onChange={this.onChangeUser.crosshairSize}
-          />
-          <NumberSliderSetting
-            label={
-              <Tooltip title={settingsTooltips.sphericalCapRadius}>
-                {settingsLabels.sphericalCapRadius}
-              </Tooltip>
-            }
-            min={userSettings.sphericalCapRadius.minimum}
-            max={userSettings.sphericalCapRadius.maximum}
-            step={1}
-            value={this.props.userConfiguration.sphericalCapRadius}
-            onChange={this.onChangeUser.sphericalCapRadius}
-          />
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.displayCrosshair}>
-                {settingsLabels.displayCrosshair}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.displayCrosshair}
-            onChange={this.onChangeUser.displayCrosshair}
-          />
-        </Panel>
-      );
+      return {
+        label: "Flight Options",
+        key: "2",
+        children: (
+          <React.Fragment>
+            <LogSliderSetting
+              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+              roundTo={3}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
+              value={this.props.zoomStep}
+              onChange={this.props.onChangeZoomStep}
+            />
+            <NumberSliderSetting
+              label={
+                <Tooltip title={settingsTooltips.mouseRotateValue}>
+                  {settingsLabels.mouseRotateValue}
+                </Tooltip>
+              }
+              min={userSettings.mouseRotateValue.minimum}
+              max={userSettings.mouseRotateValue.maximum}
+              step={0.001}
+              value={this.props.userConfiguration.mouseRotateValue}
+              onChange={this.onChangeUser.mouseRotateValue}
+            />
+            <NumberSliderSetting
+              label={
+                <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
+              }
+              min={userSettings.rotateValue.minimum}
+              max={userSettings.rotateValue.maximum}
+              step={0.001}
+              value={this.props.userConfiguration.rotateValue}
+              onChange={this.onChangeUser.rotateValue}
+            />
+            <NumberSliderSetting
+              label={
+                <Tooltip title={settingsTooltips.crosshairSize}>
+                  {settingsLabels.crosshairSize}
+                </Tooltip>
+              }
+              min={userSettings.crosshairSize.minimum}
+              max={userSettings.crosshairSize.maximum}
+              step={0.01}
+              value={this.props.userConfiguration.crosshairSize}
+              onChange={this.onChangeUser.crosshairSize}
+            />
+            <NumberSliderSetting
+              label={
+                <Tooltip title={settingsTooltips.sphericalCapRadius}>
+                  {settingsLabels.sphericalCapRadius}
+                </Tooltip>
+              }
+              min={userSettings.sphericalCapRadius.minimum}
+              max={userSettings.sphericalCapRadius.maximum}
+              step={1}
+              value={this.props.userConfiguration.sphericalCapRadius}
+              onChange={this.onChangeUser.sphericalCapRadius}
+            />
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.displayCrosshair}>
+                  {settingsLabels.displayCrosshair}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.displayCrosshair}
+              onChange={this.onChangeUser.displayCrosshair}
+            />
+          </React.Fragment>
+        ),
+      };
     } else {
-      return (
-        <Panel header="Viewport Options" key="2">
-          <LogSliderSetting
-            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
-            roundTo={3}
-            min={this.props.validZoomRange[0]}
-            max={this.props.validZoomRange[1]}
-            value={this.props.zoomStep}
-            onChange={this.props.onChangeZoomStep}
-          />
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.displayCrosshair}>
-                {settingsLabels.displayCrosshair}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.displayCrosshair}
-            onChange={this.onChangeUser.displayCrosshair}
-          />
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.displayScalebars}>
-                {settingsLabels.displayScalebars}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.displayScalebars}
-            onChange={this.onChangeUser.displayScalebars}
-          />
-          <PricingEnforcedSwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.renderWatermark}>
-                {settingsLabels.renderWatermark}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.renderWatermark}
-            onChange={this.onChangeUser.renderWatermark}
-            requiredPricingPlan={PricingPlanEnum.Team}
-            defaultValue={true}
-          />
-        </Panel>
-      );
+      return {
+        label: "Viewport Options",
+        key: "2",
+        children: (
+          <React.Fragment>
+            <LogSliderSetting
+              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+              roundTo={3}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
+              value={this.props.zoomStep}
+              onChange={this.props.onChangeZoomStep}
+            />
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.displayCrosshair}>
+                  {settingsLabels.displayCrosshair}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.displayCrosshair}
+              onChange={this.onChangeUser.displayCrosshair}
+            />
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.displayScalebars}>
+                  {settingsLabels.displayScalebars}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
+            />
+            <PricingEnforcedSwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.renderWatermark}>
+                  {settingsLabels.renderWatermark}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.renderWatermark}
+              onChange={this.onChangeUser.renderWatermark}
+              requiredPricingPlan={PricingPlanEnum.Team}
+              defaultValue={true}
+            />
+          </React.Fragment>
+        ),
+      };
     }
   };
 
@@ -240,6 +246,168 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         onChange={this.onChangeUser.moveValue}
       />
     );
+
+    const collapseItems: CollapseProps["items"] = [
+      {
+        label: "Controls",
+        key: "1",
+        children: (
+          <React.Fragment>
+            <NumberSliderSetting
+              label={
+                <Tooltip title={settingsTooltips.keyboardDelay}>
+                  {settingsLabels.keyboardDelay}
+                </Tooltip>
+              }
+              min={userSettings.keyboardDelay.minimum}
+              max={userSettings.keyboardDelay.maximum}
+              value={this.props.userConfiguration.keyboardDelay}
+              onChange={this.onChangeUser.keyboardDelay}
+            />
+            {moveValueSetting}
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.dynamicSpaceDirection}>
+                  {settingsLabels.dynamicSpaceDirection}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.dynamicSpaceDirection}
+              onChange={this.onChangeUser.dynamicSpaceDirection}
+            />
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.useLegacyBindings}>
+                  {settingsLabels.useLegacyBindings}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.useLegacyBindings}
+              onChange={this.onChangeUser.useLegacyBindings}
+            />
+          </React.Fragment>
+        ),
+      },
+      this.getViewportOptions(),
+      {
+        label: "Data Rendering",
+        key: "3",
+        children: (
+          <React.Fragment>
+            {" "}
+            <DropdownSetting
+              label={
+                <Tooltip title={settingsTooltips.gpuMemoryFactor}>
+                  {settingsLabels.gpuMemoryFactor}
+                </Tooltip>
+              }
+              value={(
+                this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
+              ).toString()}
+              onChange={this.onChangeGpuFactor}
+              disabled={this.props.activeUser == null}
+              disabledReason={
+                this.props.activeUser == null ? "Log in to change this setting." : null
+              }
+              options={getGpuFactorsWithLabels().map(([factor, label]) => ({
+                label,
+                value: factor.toString(),
+              }))}
+            />
+            <DropdownSetting
+              label={
+                <Tooltip title={settingsTooltips.loadingStrategy}>
+                  {settingsLabels.loadingStrategy}
+                </Tooltip>
+              }
+              value={this.props.datasetConfiguration.loadingStrategy}
+              onChange={this.onChangeDataset.loadingStrategy}
+              options={[
+                {
+                  value: "BEST_QUALITY_FIRST",
+                  label: "Best quality first",
+                },
+                {
+                  value: "PROGRESSIVE_QUALITY",
+                  label: "Progressive quality",
+                },
+              ]}
+            />
+            <DropdownSetting
+              label={
+                <Tooltip title={settingsTooltips.blendMode}>{settingsLabels.blendMode}</Tooltip>
+              }
+              value={this.props.datasetConfiguration.blendMode}
+              onChange={this.onChangeDataset.blendMode}
+              options={[
+                {
+                  value: BLEND_MODES.Additive,
+                  label: "Additive",
+                },
+                {
+                  value: BLEND_MODES.Cover,
+                  label: "Cover",
+                },
+              ]}
+            />
+            <SwitchSetting
+              label={<Tooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</Tooltip>}
+              value={this.props.datasetConfiguration.fourBit}
+              onChange={this.onChangeDataset.fourBit}
+            />
+            {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
+              <div>
+                <SwitchSetting
+                  label={
+                    <Tooltip title={settingsTooltips.interpolation}>
+                      {settingsLabels.interpolation}
+                    </Tooltip>
+                  }
+                  value={this.props.datasetConfiguration.interpolation}
+                  onChange={this.onChangeDataset.interpolation}
+                >
+                  {this.props.datasetConfiguration.interpolation && (
+                    <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
+                      {PERFORMANCE_WARNING_ICON}
+                    </Tooltip>
+                  )}
+                </SwitchSetting>
+              </div>
+            )}
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.antialiasRendering}>
+                  {settingsLabels.antialiasRendering}
+                </Tooltip>
+              }
+              value={this.props.userConfiguration.antialiasRendering}
+              disabled={this.props.activeUser == null}
+              disabledReason={
+                this.props.activeUser == null ? "Log in to change this setting." : null
+              }
+              onChange={(arg) => {
+                askUserToReload();
+                this.onChangeUser.antialiasRendering(arg);
+              }}
+            >
+              {this.props.userConfiguration.antialiasRendering && (
+                <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
+                  {PERFORMANCE_WARNING_ICON}
+                </Tooltip>
+              )}
+            </SwitchSetting>
+            <SwitchSetting
+              label={
+                <Tooltip title={settingsTooltips.renderMissingDataBlack}>
+                  {settingsLabels.renderMissingDataBlack}{" "}
+                </Tooltip>
+              }
+              value={this.props.datasetConfiguration.renderMissingDataBlack}
+              onChange={this.onChangeRenderMissingDataBlack}
+            />
+          </React.Fragment>
+        ),
+      },
+    ];
+
     return (
       <Collapse
         bordered={false}
@@ -248,147 +416,8 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         style={{
           padding: 0,
         }}
-      >
-        <Panel header="Controls" key="1">
-          <NumberSliderSetting
-            label={
-              <Tooltip title={settingsTooltips.keyboardDelay}>
-                {settingsLabels.keyboardDelay}
-              </Tooltip>
-            }
-            min={userSettings.keyboardDelay.minimum}
-            max={userSettings.keyboardDelay.maximum}
-            value={this.props.userConfiguration.keyboardDelay}
-            onChange={this.onChangeUser.keyboardDelay}
-          />
-          {moveValueSetting}
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.dynamicSpaceDirection}>
-                {settingsLabels.dynamicSpaceDirection}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.dynamicSpaceDirection}
-            onChange={this.onChangeUser.dynamicSpaceDirection}
-          />
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.useLegacyBindings}>
-                {settingsLabels.useLegacyBindings}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.useLegacyBindings}
-            onChange={this.onChangeUser.useLegacyBindings}
-          />
-        </Panel>
-        {this.getViewportOptions()}
-        <Panel header="Data Rendering" key="3">
-          <DropdownSetting
-            label={
-              <Tooltip title={settingsTooltips.gpuMemoryFactor}>
-                {settingsLabels.gpuMemoryFactor}
-              </Tooltip>
-            }
-            value={(
-              this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
-            ).toString()}
-            onChange={this.onChangeGpuFactor}
-            disabled={this.props.activeUser == null}
-            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
-            options={getGpuFactorsWithLabels().map(([factor, label]) => ({
-              label,
-              value: factor.toString(),
-            }))}
-          />
-          <DropdownSetting
-            label={
-              <Tooltip title={settingsTooltips.loadingStrategy}>
-                {settingsLabels.loadingStrategy}
-              </Tooltip>
-            }
-            value={this.props.datasetConfiguration.loadingStrategy}
-            onChange={this.onChangeDataset.loadingStrategy}
-            options={[
-              {
-                value: "BEST_QUALITY_FIRST",
-                label: "Best quality first",
-              },
-              {
-                value: "PROGRESSIVE_QUALITY",
-                label: "Progressive quality",
-              },
-            ]}
-          />
-          <DropdownSetting
-            label={<Tooltip title={settingsTooltips.blendMode}>{settingsLabels.blendMode}</Tooltip>}
-            value={this.props.datasetConfiguration.blendMode}
-            onChange={this.onChangeDataset.blendMode}
-            options={[
-              {
-                value: BLEND_MODES.Additive,
-                label: "Additive",
-              },
-              {
-                value: BLEND_MODES.Cover,
-                label: "Cover",
-              },
-            ]}
-          />
-          <SwitchSetting
-            label={<Tooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</Tooltip>}
-            value={this.props.datasetConfiguration.fourBit}
-            onChange={this.onChangeDataset.fourBit}
-          />
-          {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
-            <div>
-              <SwitchSetting
-                label={
-                  <Tooltip title={settingsTooltips.interpolation}>
-                    {settingsLabels.interpolation}
-                  </Tooltip>
-                }
-                value={this.props.datasetConfiguration.interpolation}
-                onChange={this.onChangeDataset.interpolation}
-              >
-                {this.props.datasetConfiguration.interpolation && (
-                  <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
-                    {PERFORMANCE_WARNING_ICON}
-                  </Tooltip>
-                )}
-              </SwitchSetting>
-            </div>
-          )}
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.antialiasRendering}>
-                {settingsLabels.antialiasRendering}
-              </Tooltip>
-            }
-            value={this.props.userConfiguration.antialiasRendering}
-            disabled={this.props.activeUser == null}
-            disabledReason={this.props.activeUser == null ? "Log in to change this setting." : null}
-            onChange={(arg) => {
-              askUserToReload();
-              this.onChangeUser.antialiasRendering(arg);
-            }}
-          >
-            {this.props.userConfiguration.antialiasRendering && (
-              <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
-                {PERFORMANCE_WARNING_ICON}
-              </Tooltip>
-            )}
-          </SwitchSetting>
-          <SwitchSetting
-            label={
-              <Tooltip title={settingsTooltips.renderMissingDataBlack}>
-                {settingsLabels.renderMissingDataBlack}{" "}
-              </Tooltip>
-            }
-            value={this.props.datasetConfiguration.renderMissingDataBlack}
-            onChange={this.onChangeRenderMissingDataBlack}
-          />
-        </Panel>
-      </Collapse>
+        items={collapseItems}
+      />
     );
   }
 }

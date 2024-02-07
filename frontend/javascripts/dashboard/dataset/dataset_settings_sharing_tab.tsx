@@ -84,7 +84,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     if (!activeUser || !dataset) return undefined;
     if (!isUserAdminOrTeamManager(activeUser)) return undefined;
 
-    const header = (
+    const panelLabel = (
       <span>
         All users with access permission to work with this dataset{" "}
         <Tooltip title="Based on the specified team permissions and individiual user roles. Any changes will only appear after pressing the Save button.">
@@ -94,11 +94,16 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     );
 
     return (
-      <Collapse collapsible="header">
-        <Collapse.Panel header={header} key="1">
-          <DatasetAccessListView dataset={dataset} />
-        </Collapse.Panel>
-      </Collapse>
+      <Collapse
+        collapsible="header"
+        items={[
+          {
+            label: { panelTitle: panelLabel },
+            key: "1",
+            children: <DatasetAccessListView dataset={dataset} />,
+          },
+        ]}
+      />
     );
   }
 

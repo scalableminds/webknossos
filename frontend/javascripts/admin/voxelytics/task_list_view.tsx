@@ -13,6 +13,7 @@ import {
   Select,
   MenuProps,
   App,
+  CollapseProps,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -51,7 +52,6 @@ import { LOG_LEVELS } from "oxalis/constants";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 
-const { Panel } = Collapse;
 const { Search } = Input;
 
 function getFilteredTasks(
@@ -441,21 +441,23 @@ export default function TaskListView({
     ],
   };
 
-  const renderTaskGroupOrTask = (taskGroup: VoxelyticsTaskConfigWithHierarchy) => {
+  const getTaskGroupOrTaskItems = (
+    taskGroup: VoxelyticsTaskConfigWithHierarchy,
+  ): CollapseProps["items"] => {
     const taskInfo = aggregateTaskInfos(taskGroup, report.tasks, runId);
 
     if (taskGroup.isMetaTask) {
       // If tasks are filtered away by the search query, it can happen that a meta task
       // has "no children", anymore. In that case, don't render the entire meta task.
       const subtasks = taskGroup.subtasks;
-      const children = subtasks.map(renderTaskGroupOrTask).filter((c) => c != null);
-      if (children.length === 0) {
-        return null;
+      const collapseItems = subtasks.flatMap(getTaskGroupOrTaskItems);
+      if (collapseItems.length === 0) {
+        return [];
       }
 
-      return (
-        <Panel
-          header={
+      return [
+        {
+          label: (
             <div className="task-panel-header">
               <div
                 style={{
@@ -474,39 +476,44 @@ export default function TaskListView({
                 <TaskStateTag taskInfo={taskInfo} />
               </span>
             </div>
-          }
-          key={taskGroup.key}
-          id={`task-panel-${taskGroup.key}`}
-        >
-          {openMetatask !== taskGroup.key && (
-            <div style={{ marginBottom: 8 }}>
-              <a
-                href=""
-                style={{ marginRight: 16 }}
-                onClick={(ev) => {
-                  ev.preventDefault();
-                  onToggleExpandedMetaTaskKey(taskGroup.key);
-                }}
-              >
-                {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
-              </a>
-              <Link to={addUrlParam(location, "metatask", taskGroup.key)}>Open in extra View</Link>
-            </div>
-          )}
-          <Collapse>{children}</Collapse>
-        </Panel>
-      );
+          ),
+          key: taskGroup.key,
+          id: `task-panel-${taskGroup.key}`,
+          children: (
+            <React.Fragment>
+              openMetatask !== taskGroup.key && (
+              <div style={{ marginBottom: 8 }}>
+                <a
+                  href=""
+                  style={{ marginRight: 16 }}
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    onToggleExpandedMetaTaskKey(taskGroup.key);
+                  }}
+                >
+                  {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
+                </a>
+                <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
+                  Open in extra View
+                </Link>
+              </div>
+              )
+              <Collapse items={collapseItems} />
+            </React.Fragment>
+          ),
+        },
+      ];
     }
     const task = taskGroup;
 
     const isInFilteredTasks = filteredTasks.find((t) => t.taskName === task.taskName);
     if (!isInFilteredTasks) {
-      return null;
+      return [];
     }
 
-    return (
-      <Panel
-        header={
+    return [
+      {
+        label: (
           <div className="task-panel-header">
             <div
               style={{
@@ -528,22 +535,23 @@ export default function TaskListView({
               <TaskStateTag taskInfo={taskInfo} />
             </span>
           </div>
-        }
-        key={task.taskName}
-        id={`task-panel-${task.taskName}`}
-      >
-        <TaskView
-          taskName={task.taskName}
-          workflowHash={report.workflow.hash}
-          runId={singleRunId}
-          task={task}
-          artifacts={report.artifacts[task.taskName] || []}
-          dag={report.dag}
-          taskInfo={taskInfo}
-          onSelectTask={handleSelectTask}
-        />
-      </Panel>
-    );
+        ),
+        key: task.taskName,
+        id: `task-panel-${task.taskName}`,
+        children: (
+          <TaskView
+            taskName={task.taskName}
+            workflowHash={report.workflow.hash}
+            runId={singleRunId}
+            task={task}
+            artifacts={report.artifacts[task.taskName] || []}
+            dag={report.dag}
+            taskInfo={taskInfo}
+            onSelectTask={handleSelectTask}
+          />
+        ),
+      },
+    ];
   };
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
@@ -649,9 +657,11 @@ export default function TaskListView({
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>
-          <Collapse onChange={handleOnCollapseChange} activeKey={expandedTasks}>
-            {tasksWithHierarchy.map(renderTaskGroupOrTask)}
-          </Collapse>
+          <Collapse
+            onChange={handleOnCollapseChange}
+            activeKey={expandedTasks}
+            items={tasksWithHierarchy.map(getTaskGroupOrTaskItems)}
+          />
         </div>
       </Col>
     </Row>

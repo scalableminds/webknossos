@@ -38,7 +38,6 @@ import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 
-const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
@@ -551,13 +550,20 @@ function AddZarrLayer({
       {exploreLog ? (
         <Row gutter={8}>
           <Col span={24}>
-            <Collapse defaultActiveKey="1">
-              <Panel header="Error Log" key="1">
-                <Hint style={{ width: "90%" }}>
-                  <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
-                </Hint>
-              </Panel>
-            </Collapse>
+            <Collapse
+              defaultActiveKey="1"
+              items={[
+                {
+                  key: "1",
+                  label: "Error Log",
+                  children: (
+                    <Hint style={{ width: "90%" }}>
+                      <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+                    </Hint>
+                  ),
+                },
+              ]}
+            />
           </Col>
         </Row>
       ) : null}

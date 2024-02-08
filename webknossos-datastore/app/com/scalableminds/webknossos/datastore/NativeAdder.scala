@@ -11,3 +11,7 @@ class NativeAdder() {
 class NativeArrayAdder() {
   @native def add(a: Array[Byte]): Array[Byte]
 }
+@nativeLoader("webknossosNative0")
+class NativeDracoToStlConverter() {
+  @native def dracoToStl(a: Array[Byte]): Array[Byte]
+}

@@ -1,8 +1,18 @@
-#include "com_scalableminds_webknossos_datastore_NativeArrayAdder.h"
+#include "com_scalableminds_webknossos_datastore_NativeDracoToStlConverter.h"
+#include <draco/compression/encode.h>
+#include <draco/compression/decode.h>
+#include <draco/core/cycle_timer.h>
+#include <draco/io/file_utils.h>
+#include <draco/io/obj_encoder.h>
+#include <draco/io/parser_utils.h>
+#include <draco/io/ply_encoder.h>
+#include <draco/io/point_cloud_io.h>
+#include <draco/io/mesh_io.h>
+
 #include <stdint.h>
 #include <vector>
 
-JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeArrayAdder_add
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeDracoToStlConverter_dracoToStl
   (JNIEnv* env, jobject instance, jbyteArray a)
 {
   jsize inputLength = env->GetArrayLength(a);
@@ -15,6 +25,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeA
       buffer.push_back(data[i]);
     }
   }
+
+  draco::DecoderBuffer dracoBuffer;
 
   env->ReleaseByteArrayElements(a, dataAsJByte, 0);
 

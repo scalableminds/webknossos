@@ -197,7 +197,6 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             onChange={this.onChangeInput}
             disabled={disabled}
             size="small"
-            variant="borderless"
           />
         </Col>
       </Row>

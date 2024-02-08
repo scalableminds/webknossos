@@ -223,9 +223,9 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
+        icon: <PlusOutlined />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <PlusOutlined />
             {newFolderText}
           </PricingEnforcedSpan>
         ),
@@ -234,9 +234,9 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
+        icon: <EditOutlined />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <EditOutlined />
             Edit Folder
           </PricingEnforcedSpan>
         ),

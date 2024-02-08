@@ -353,7 +353,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
       <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
-            color: "var(--ant-warning)",
+            color: "var(--ant-color-warning)",
           }}
         />
       </Tooltip>
@@ -414,7 +414,7 @@ function Infos() {
             totalDownloadedByteCount,
           )} of Image Data (after decompression)`}
         >
-          <DownloadOutlined />
+          <DownloadOutlined className="icon-margin-right" />
           {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
         </Tooltip>
       </span>

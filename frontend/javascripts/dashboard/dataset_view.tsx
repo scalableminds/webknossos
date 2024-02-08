@@ -12,6 +12,7 @@ import {
   Tooltip,
   Alert,
   Select,
+  Space,
 } from "antd";
 import {
   LoadingOutlined,
@@ -211,7 +212,7 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Input.Group compact style={{ display: "flex" }}>
+    <Space.Compact style={{ display: "flex" }}>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -220,7 +221,7 @@ function DatasetView(props: Props) {
           </Badge>
         </Button>
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   ) : (
     searchBox
   );
@@ -376,7 +377,7 @@ function GlobalSearchHeader({
       <div style={{ float: "right" }}>
         <Select
           options={SEARCH_OPTIONS}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {
               setActiveFolderId(null);
@@ -403,7 +404,7 @@ function GlobalSearchHeader({
         <SearchOutlined />
         Search Results for &quot;{searchQuery}&quot;
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
             (only showing the first {SEARCH_RESULTS_LIMIT} results)
           </span>
         ) : null}

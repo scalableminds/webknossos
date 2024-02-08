@@ -92,6 +92,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             onChange={this._onChange}
             size="small"
             disabled={disabled}
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -293,6 +294,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
             value={value}
             step={step}
             size="small"
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -337,6 +339,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
         value={value}
         step={step}
         size="small"
+        variant="borderless"
       />
     </div>
   );

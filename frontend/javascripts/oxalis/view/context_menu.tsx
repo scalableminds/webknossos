@@ -1217,12 +1217,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
       if (visibleSegmentationLayer == null) return [];
-      if (
-        contextMenuPosition == null ||
-        !maybeIsSegmentIndexAvailable ||
-        volumeTracing == null ||
-        !volumeTracing.hasSegmentIndex
-      ) {
+      if (contextMenuPosition == null || !maybeIsSegmentIndexAvailable) {
         return [];
       } else {
         const requestUrl = getVolumeRequestUrl(

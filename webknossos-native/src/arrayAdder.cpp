@@ -1,13 +1,13 @@
 #include "com_scalableminds_webknossos_datastore_NativeArrayAdder.h"
-#include <draco/src/draco/compression/encode.h>
-#include <draco/src/draco/compression/decode.h>
-#include <draco/src/draco/core/cycle_timer.h>
-#include <draco/src/draco/io/file_utils.h>
-#include <draco/src/draco/io/obj_encoder.h>
-#include <draco/src/draco/io/parser_utils.h>
-#include <draco/src/draco/io/ply_encoder.h>
-#include <draco/src/draco/io/point_cloud_io.h>
-#include <draco/src/draco/io/mesh_io.h>
+#include <draco/compression/encode.h>
+#include <draco/compression/decode.h>
+#include <draco/core/cycle_timer.h>
+#include <draco/io/file_utils.h>
+#include <draco/io/obj_encoder.h>
+#include <draco/io/parser_utils.h>
+#include <draco/io/ply_encoder.h>
+#include <draco/io/point_cloud_io.h>
+#include <draco/io/mesh_io.h>
 
 #include <stdint.h>
 #include <vector>

@@ -70,7 +70,7 @@ object AnalyticsEventJson {
       for {
         eventType <- (json \ "event_type").orElse(json \ "eventType").validate[String]
         userId <- (json \ "user_id").orElse(json \ "userId").validate[ObjectId]
-        time <- (json \ "time").validate[Instant]
+        time <- (json \ "time").validate[String].map(_.toLong).orElse((json \ "time").validate[Long]).map(Instant.apply)
         userProperties <- (json \ "user_properties")
           .orElse(json \ "userProperties")
           .validate[AnalyticsEventJsonUserProperties]

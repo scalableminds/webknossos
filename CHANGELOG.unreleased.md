@@ -29,6 +29,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where importing remote datasets with existing datasource-properties.jsons would not properly register the remote credentials. [#7601](https://github.com/scalableminds/webknossos/pull/7601)
 - Fixed a bug in ND volume annotation downloads where the additionalAxes metadata had wrong indices. [#7592](https://github.com/scalableminds/webknossos/pull/7592)
 - Fixed a bug in proofreading aka editable mapping annotations where splitting would sometimes give the new id to the selected segment rather than to the split-off one. [#7608](https://github.com/scalableminds/webknossos/pull/7608)
+- Fixed small styling errors as a follow up to the antd v5 upgrade [#7612](https://github.com/scalableminds/webknossos/pull/7612)
+
 
 ### Removed
 

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
@@ -23,6 +24,20 @@ class DSMeshController @Inject()(
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def testStl: Action[AnyContent] = Action.async { implicit request =>
+    for {
+      (dracoMeshFragmentBytes, encoding) <- meshFileService.readMeshChunkV3(
+        "sample_organization",
+        "test-agglomerate-file",
+        "segmentation",
+        MeshChunkDataRequestV3List("meshfile_1-1-1", List(MeshChunkDataRequestV3(15226L, 14338)))
+      )
+      _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
+      decodedArray = new NativeDracoToStlConverter().dracoToStl(dracoMeshFragmentBytes)
+    } yield
+      Ok(decodedArray) //Ok(Json.obj("decodedArrayFirst100Bytes" -> decodedArray.take(100).mkString(""), "encoding" -> encoding))
+  }
 
   def listMeshFiles(token: Option[String],
                     organizationName: String,

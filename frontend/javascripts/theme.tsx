@@ -38,6 +38,7 @@ export function getAntdTheme(userTheme: Theme) {
     },
     Tree: {
       colorBgContainer: "transparent",
+      directoryNodeSelectedBg: ColorWKBlue,
     },
   };
 

@@ -117,7 +117,6 @@ import {
   ensureLayerMappingsAreLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "oxalis/model/actions/dataset_actions";
-import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1186,7 +1185,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const { dataset, tracing } = useSelector((state: OxalisState) => state);
+  const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
   const maybeIsSegmentIndexAvailable = useSelector(
     (state: OxalisState) =>
       state.dataset.dataSource.dataLayers.find(
@@ -1216,6 +1215,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       const tracingId = volumeTracing?.tracingId;
+      const additionalCoordinates = flycam.additionalCoordinates;
       if (visibleSegmentationLayer == null) return [];
       if (
         contextMenuPosition == null ||
@@ -1225,23 +1225,24 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ) {
         return [];
       } else {
-        const state = Store.getState();
-        const tracingId = volumeTracing.tracingId;
-        const tracingStoreUrl = state.tracing.tracingStore.url;
+        const requestUrl = getVolumeRequestUrl(
+          dataset,
+          tracing,
+          tracingId,
+          visibleSegmentationLayer,
+        );
         const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
         const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = state.dataset.dataSource.scale;
-        const additionalCoordinates = state.flycam.additionalCoordinates;
+        const dataSetScale = dataset.dataSource.scale;
+
         const [segmentSize] = await getSegmentVolumes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
           [segmentIdAtPosition],
           additionalCoordinates,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
           [segmentIdAtPosition],
           additionalCoordinates,
@@ -1258,31 +1259,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       }
-
-      const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
-      const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-      const layersFinestResolution = magInfo.getFinestResolution();
-      const dataSetScale = dataset.dataSource.scale;
-
-      const [segmentSize] = await getSegmentVolumes(requestUrl, layersFinestResolution, [
-        segmentIdAtPosition,
-      ]);
-      const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-        requestUrl,
-        layersFinestResolution,
-        [segmentIdAtPosition],
-      );
-      const boundingBoxInMag1 = getBoundingBoxInMag1(
-        boundingBoxInRequestedMag,
-        layersFinestResolution,
-      );
-      const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
-      const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-      const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
-      return [
-        formatNumberToVolume(volumeInNm3),
-        `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
-      ];
     },
     ["loading", "loading"],
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
@@ -1390,9 +1366,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const areSegmentStatisticsAvailable =
     // TODO make sure that segment index <-> segment stats is correct, bc I think there are other cases too
-    isHoveredSegmentOrMesh &&
-    !hasAdditionalCoordinates(props.additionalCoordinates) &&
-    hasSegmentIndex; // TODO change once statistics are available for nd-datasets
+    isHoveredSegmentOrMesh && hasSegmentIndex;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

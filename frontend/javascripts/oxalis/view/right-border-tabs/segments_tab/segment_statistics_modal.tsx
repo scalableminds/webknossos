@@ -128,7 +128,7 @@ export function SegmentStatisticsModal({
     additionalCoordinates,
     ", ",
   );
-  const dataSource = useFetch(
+  const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
       if (requestUrl == null) return;
@@ -249,9 +249,9 @@ export function SegmentStatisticsModal({
       onCancel={onCancel}
       width={700}
       onOk={() =>
-        dataSource != null &&
+        segmentStatisticsObjects != null &&
         exportStatisticsToCSV(
-          dataSource,
+          segmentStatisticsObjects,
           tracingId || dataset.name,
           parentGroup,
           hasAdditionalCoords,

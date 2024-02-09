@@ -483,7 +483,7 @@ export default function TaskListView({
         ),
         children: (
           <React.Fragment>
-            openMetatask !== taskGroup.key && (
+            {openMetatask !== taskGroup.key && (
             <div style={{ marginBottom: 8 }}>
               <a
                 href=""
@@ -497,7 +497,8 @@ export default function TaskListView({
               </a>
               <Link to={addUrlParam(location, "metatask", taskGroup.key)}>Open in extra View</Link>
             </div>
-            ){/* <Collapse items={collapseItems} /> */}
+            )}
+            <Collapse items={collapseItems} />
           </React.Fragment>
         ),
       };

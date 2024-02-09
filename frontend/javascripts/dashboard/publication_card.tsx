@@ -201,8 +201,10 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
 
   return (
     <Card
-      bodyStyle={{
-        padding: 0,
+      styles={{
+        body: {
+          padding: 0,
+        },
       }}
       className="publication-item-card"
       bordered={false}

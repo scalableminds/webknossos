@@ -161,16 +161,18 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
     >
       <Card
         bordered={false}
-        bodyStyle={{
-          textAlign: "center",
-          height,
-          width: 350,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-around",
-          boxShadow: "var(--ant-box-shadow)",
-          borderRadius: 3,
-          border: 0,
+        styles={{
+          body: {
+            textAlign: "center",
+            height,
+            width: 350,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-around",
+            boxShadow: "var(--ant-box-shadow)",
+            borderRadius: 3,
+            border: 0,
+          },
         }}
       >
         <div

@@ -70,7 +70,6 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_LAYER_HAS_SEGMENT_INDEX": {
       const { layerName, hasSegmentIndex } = action;
-      console.log("set layer has index");
       const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
         if (layer.name === layerName) {
           return {

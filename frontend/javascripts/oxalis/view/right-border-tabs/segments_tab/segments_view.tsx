@@ -44,6 +44,7 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
+  getMaybeSegmentIndexAvailability as getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -178,9 +179,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
-  const isSegmentIndexAvailable = state.dataset.dataSource.dataLayers.find(
-    (layer) => layer.name === visibleSegmentationLayer?.name,
-  )?.hasSegmentIndex;
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    state.dataset,
+    visibleSegmentationLayer?.name,
+  );
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
@@ -407,7 +409,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.tree = React.createRef();
   }
 
-  async componentDidMount() {
+  componentDidMount() {
     Store.dispatch(
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
     );

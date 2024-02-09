@@ -6,7 +6,6 @@ export type EnsureLayerMappingsAreLoadedAction = ReturnType<
   typeof ensureLayerMappingsAreLoadedAction
 >;
 type SetLayerHasSegmentIndexAction = ReturnType<typeof setLayerHasSegmentIndexAction>;
-export type EnsureSegmentIndexIsLoadedAction = ReturnType<typeof ensureSegmentIndexIsLoadedAction>;
 
 export type DatasetAction =
   | SetDatasetAction

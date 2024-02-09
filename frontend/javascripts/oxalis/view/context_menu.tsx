@@ -70,6 +70,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
   getResolutionInfo,
+  getMaybeSegmentIndexAvailability,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -1190,26 +1191,25 @@ function ContextMenuInner(propsWithInputRef: Props) {
   // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
   // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
   // Thus the segment id is always unambiguous / clearly defined.
-  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
+  const isHoveredSegmentOrMesh = clickedSegmentOrMeshId > 0;
 
   const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
-  const isSegmentIndexAvailable = (state: OxalisState) =>
-    state.dataset.dataSource.dataLayers.find(
-      (layer) => layer.name === visibleSegmentationLayer?.name,
-    )?.hasSegmentIndex;
+  const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
+    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  );
   const isLoadingVolumeAndBB = ["loading", "loading"];
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
-      // The value that is loaded if the context menu is closed is shown if it's still loading
+      // The value that is returned if the context menu is closed is shown if it's still loading
       if (contextMenuPosition == null || !isHoveredSegmentOrMesh) return isLoadingVolumeAndBB;
+      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
-      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();

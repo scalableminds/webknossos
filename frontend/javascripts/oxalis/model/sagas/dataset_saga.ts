@@ -8,6 +8,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import {
   getEnabledLayers,
+  getMaybeSegmentIndexAvailability,
   getResolutionInfo,
   getTransformsForLayer,
   getVisibleSegmentationLayer,
@@ -156,11 +157,8 @@ export function* watchZ1Downsampling(): Saga<void> {
 export function* ensureSegmentIndexIsLoaded(): Saga<void> {
   function* maybeFetchHasSegmentIndex(): Saga<void> {
     const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
-    const maybeIsSegmentIndexAvailable = yield* select(
-      (state) =>
-        state.dataset.dataSource.dataLayers.find(
-          (layer) => layer.name === visibleSegmentationLayer?.name,
-        )?.hasSegmentIndex,
+    const maybeIsSegmentIndexAvailable = yield* select((state) =>
+      getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
     );
     if (maybeIsSegmentIndexAvailable == null && visibleSegmentationLayer != null) {
       const { dataset, tracing } = yield* select((state) => state);

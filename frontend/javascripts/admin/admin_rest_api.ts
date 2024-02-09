@@ -954,7 +954,7 @@ export function getSegmentVolumes(
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
-) {
+): Promise<number[]> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds },

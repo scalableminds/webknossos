@@ -247,7 +247,7 @@ export function SegmentStatisticsModal({
       onCancel={onCancel}
       width={700}
       onOk={() =>
-        segmentStatisticsObjects != null &&
+        !isErrorCase &&
         exportStatisticsToCSV(
           segmentStatisticsObjects,
           tracingId || dataset.name,

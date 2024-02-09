@@ -601,7 +601,7 @@ function _DownloadModalView({
       </Row>
       {activeTabKey === "export" &&
       (!features().jobsEnabled ||
-        !dataset.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF)) ? (
+        !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF)) ? (
         workerInfo
       ) : (
         <div>

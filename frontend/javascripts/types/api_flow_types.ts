@@ -122,6 +122,8 @@ export type APIDataStore = {
   readonly url: string;
   readonly isScratch: boolean;
   readonly allowsUpload: boolean;
+  readonly jobsEnabled: boolean;
+  readonly jobsSupportedByAvailableWorkers: APIJobType[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -174,8 +176,6 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  jobsEnabled: boolean;
-  jobsSupportedByAvailableWorkers: APIJobType[];
   sortingKey: number;
   owningOrganization: string;
   publication: null | undefined;

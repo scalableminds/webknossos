@@ -186,6 +186,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",

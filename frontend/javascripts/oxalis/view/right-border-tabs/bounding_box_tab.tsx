@@ -109,12 +109,14 @@ export default function BoundingBoxTab() {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
-            isExportEnabled={dataset.jobsEnabled}
+            isExportEnabled={dataset.dataStore.jobsEnabled}
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
             onExport={
-              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
+              dataset.dataStore.jobsEnabled
+                ? _.partial(setSelectedBoundingBoxForExport, bb)
+                : () => {}
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}

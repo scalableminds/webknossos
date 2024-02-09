@@ -627,8 +627,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
-      this.props.dataset.jobsEnabled &&
-      this.props.dataset.jobsSupportedByAvailableWorkers.includes(
+      this.props.dataset.dataStore.jobsEnabled &&
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
       )
         ? {

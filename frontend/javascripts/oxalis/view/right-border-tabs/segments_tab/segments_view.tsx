@@ -683,12 +683,14 @@ class SegmentsView extends React.Component<Props, State> {
 
     if (
       !features().jobsEnabled ||
-      !this.props.dataset.jobsSupportedByAvailableWorkers.includes(APIJobType.COMPUTE_MESH_FILE)
+      !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
     ) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
-    } else if (!this.props.dataset.jobsEnabled) {
+    } else if (!this.props.dataset.dataStore.jobsEnabled) {
       title =
         "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to webknossos.org to use this feature.";
     } else if (this.props.hasVolumeTracing) {

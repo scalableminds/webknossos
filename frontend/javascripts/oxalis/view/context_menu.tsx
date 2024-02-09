@@ -116,9 +116,7 @@ import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
-  setLayerHasSegmentIndexAction,
 } from "oxalis/model/actions/dataset_actions";
-import { ensureSegmentIndexIsLoaded } from "oxalis/model/sagas/dataset_saga";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

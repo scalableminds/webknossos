@@ -99,7 +99,6 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
   SegmentHierarchyNode,
   getBaseSegmentationName,
-  hasSegmentIndex,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React, { Key } from "react";

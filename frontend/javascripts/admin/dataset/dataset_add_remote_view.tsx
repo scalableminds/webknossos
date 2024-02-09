@@ -10,6 +10,7 @@ import {
   Modal,
   Divider,
   List,
+  Upload,
 } from "antd";
 import { connect } from "react-redux";
 import React, { useEffect, useState } from "react";
@@ -32,7 +33,7 @@ import DatasetSettingsDataTab, {
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
+import { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";

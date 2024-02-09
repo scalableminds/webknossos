@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/24.02.0...HEAD)
 
 ### Added
-- Added support for storing analytics events in the Postgres. [#7594](https://github.com/scalableminds/webknossos/pull/7594) 
+- Added support for storing analytics events in the Postgres. [#7594](https://github.com/scalableminds/webknossos/pull/7594) [#7609](https://github.com/scalableminds/webknossos/pull/7609)
 - Segment statistics are now available for ND datases. [#7411](https://github.com/scalableminds/webknossos/pull/7411)
 - Added support for uploading N5 and Neuroglancer Precomputed datasets. [#7578](https://github.com/scalableminds/webknossos/pull/7578)
 - Webknossos can now open ND Zarr datasets with arbitrary axis orders (not limited to `**xyz` anymore). [#7592](https://github.com/scalableminds/webknossos/pull/7592)
@@ -29,7 +29,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where importing remote datasets with existing datasource-properties.jsons would not properly register the remote credentials. [#7601](https://github.com/scalableminds/webknossos/pull/7601)
 - Fixed a bug in ND volume annotation downloads where the additionalAxes metadata had wrong indices. [#7592](https://github.com/scalableminds/webknossos/pull/7592)
 - Fixed a bug in proofreading aka editable mapping annotations where splitting would sometimes give the new id to the selected segment rather than to the split-off one. [#7608](https://github.com/scalableminds/webknossos/pull/7608)
+- Fixed small styling errors as a follow up to the antd v5 upgrade [#7612](https://github.com/scalableminds/webknossos/pull/7612)
 -Fixed deprecation warnings caused by Antd <Collapse> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
+
 
 ### Removed
 

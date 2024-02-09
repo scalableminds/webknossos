@@ -50,7 +50,6 @@ import {
 import {
   getAdditionalCoordinatesAsString,
   getPosition,
-  hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
@@ -932,7 +931,10 @@ class SegmentsView extends React.Component<Props, State> {
   getMeshesHeader = () => (
     <>
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
-        <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
+        <ConfigProvider
+          renderEmpty={renderEmptyMeshFileSelect}
+          theme={{ cssVar: { key: "antd-app-theme" } }}
+        >
           <Select
             style={{
               width: 180,
@@ -945,7 +947,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
-            dropdownMatchSelectWidth={false}
+            popupMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (
@@ -976,18 +978,19 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             marginLeft: 8,
           }}
+          className="icon-margin-right"
         >
           Reload from Server
         </ReloadOutlined>
       </Tooltip>
       <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
         <Tooltip title="Add a precomputed mesh file">
-          <PlusOutlined />
+          <PlusOutlined className="icon-margin-right" />
         </Tooltip>
       </Popover>
       {this.state.activeMeshJobId != null ? (
         <Tooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
-          <LoadingOutlined />
+          <LoadingOutlined className="icon-margin-right" />
         </Tooltip>
       ) : null}
       <Tooltip title="Configure ad-hoc mesh computation">
@@ -1014,14 +1017,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: (
-        <i
-          className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -1033,7 +1029,6 @@ class SegmentsView extends React.Component<Props, State> {
             this.setGroupColor(groupId, color);
           }}
           rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
-          hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
       ),
     };
@@ -1043,14 +1038,7 @@ class SegmentsView extends React.Component<Props, State> {
     const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
-      icon: (
-        <i
-          className="fas fa-undo"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-undo" />,
       label: (
         <div
           title={title}
@@ -1123,9 +1111,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (
       visibleSegmentationLayer == null ||
       visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      // TODO change once statistics are available for nd-datasets
-      hasAdditionalCoordinates(this.props.flycam.additionalCoordinates)
+      !this.props.activeVolumeTracing?.hasSegmentIndex
     ) {
       // In this case there is a fallback layer or an ND annotation.
       return null;
@@ -1555,12 +1541,7 @@ class SegmentsView extends React.Component<Props, State> {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     const hasNoFallbackLayer =
       visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
-    if (
-      hasNoFallbackLayer &&
-      this.props.hasVolumeTracing &&
-      segments != null &&
-      segments.length > 0
-    ) {
+    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
       const state = Store.getState();
       const tracingId = this.props.activeVolumeTracing?.tracingId;
       if (tracingId == null) return null;
@@ -1712,9 +1693,10 @@ class SegmentsView extends React.Component<Props, State> {
                       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
                       autoDestroy
                       open={this.state.activeDropdownGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible) =>
-                        this.handleGroupDropdownMenuVisibility(isVisible, id)
-                      }
+                      onOpenChange={(isVisible, info) => {
+                        if (info.source === "trigger")
+                          this.handleGroupDropdownMenuVisibility(isVisible, id);
+                      }}
                       trigger={["contextMenu"]}
                     >
                       <EditableTextLabel
@@ -1757,7 +1739,7 @@ class SegmentsView extends React.Component<Props, State> {
                       title="Open the search via CTRL + Shift + F"
                       style={{ marginRight: 8 }}
                     >
-                      <SearchOutlined className="without-icon-margin" />
+                      <SearchOutlined />
                     </ButtonComponent>
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}

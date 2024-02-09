@@ -12,7 +12,7 @@ import {
   Tooltip,
   Select,
   MenuProps,
-  Modal,
+  App,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -258,6 +258,7 @@ export default function TaskListView({
   onToggleExpandedMetaTaskKey: (v: string) => void;
   onReload: () => void;
 }) {
+  const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const { runId } = useSearchParams();
   const history = useHistory();
@@ -357,7 +358,7 @@ export default function TaskListView({
   }
 
   function showArtifactsDiskUsageList() {
-    Modal.info({
+    modal.info({
       title: "Disk Usage of Artifacts",
       content: (
         <ArtifactsDiskUsageList

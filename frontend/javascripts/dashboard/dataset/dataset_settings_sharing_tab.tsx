@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse } from "antd";
+import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
 import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -123,7 +123,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
           </span>
         }
       >
-        <Input.Group compact>
+        <Space.Compact>
           <Input
             value={getSharingLink()}
             onClick={handleSelectCode}
@@ -132,13 +132,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
             }}
             readOnly
           />
-          <Button
-            onClick={handleCopySharingLink}
-            style={{
-              width: "10%",
-            }}
-            icon={<CopyOutlined />}
-          >
+          <Button onClick={handleCopySharingLink} icon={<CopyOutlined />}>
             Copy
           </Button>
           {!form.getFieldValue("dataset.isPublic") && (
@@ -150,18 +144,12 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
                 </span>
               }
             >
-              <AsyncButton
-                onClick={handleRevokeSharingLink}
-                style={{
-                  width: "10%",
-                }}
-                icon={<RetweetOutlined />}
-              >
+              <AsyncButton onClick={handleRevokeSharingLink} icon={<RetweetOutlined />}>
                 Renew
               </AsyncButton>
             </Tooltip>
           )}
-        </Input.Group>
+        </Space.Compact>
       </FormItemWithInfo>
       {getUserAccessList()}
     </div>

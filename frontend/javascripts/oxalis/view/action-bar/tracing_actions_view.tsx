@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -179,6 +179,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 
   return {
     key: "layout-menu",
+    icon: <LayoutOutlined />,
     label: (
       <span
         style={{
@@ -186,7 +187,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
           minWidth: 120,
         }}
       >
-        <LayoutOutlined />
         Layout
         <Tooltip placement="top" title={layoutMissingHelpTitle}>
           <InfoCircleOutlined
@@ -530,7 +530,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             danger
             disabled
             style={{
-              backgroundColor: "var(--ant-warning-dark-5)",
+              backgroundColor: "var(--ant-color-warning)",
             }}
           >
             Read only
@@ -697,12 +697,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     return (
       <>
-        <div className="antd-legacy-group">
+        <Space.Compact>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
-          {modals}
-        </div>
+        </Space.Compact>
+        {modals}
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">

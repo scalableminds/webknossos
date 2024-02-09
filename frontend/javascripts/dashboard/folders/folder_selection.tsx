@@ -58,7 +58,7 @@ export default function FolderSelection({
       dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
       placeholder="Select Folder"
       allowClear
-      dropdownMatchSelectWidth={false}
+      popupMatchSelectWidth={false}
       treeDefaultExpandAll
       onChange={onChange}
       treeData={treeData}

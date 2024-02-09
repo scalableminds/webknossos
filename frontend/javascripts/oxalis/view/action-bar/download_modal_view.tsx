@@ -190,7 +190,9 @@ export function Hint({
   style: React.CSSProperties;
 }) {
   return (
-    <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>{children}</div>
+    <div style={{ ...style, fontSize: 12, color: "var(--ant-color-text-secondary)" }}>
+      {children}
+    </div>
   );
 }
 

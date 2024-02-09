@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.DataCubeHandle
+import com.scalableminds.webknossos.datastore.dataformats.DatasetArrayHandle
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
@@ -35,7 +35,7 @@ object CachedCube {
 }
 
 class DataCubeCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedCube, Fox[DataCubeHandle]]
+    extends LRUConcurrentCache[CachedCube, Fox[DatasetArrayHandle]]
     with FoxImplicits
     with LazyLogging {
 
@@ -43,8 +43,8 @@ class DataCubeCache(val maxEntries: Int)
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[DataCubeHandle])(
-      f: DataCubeHandle => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
+  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[DatasetArrayHandle])(
+      f: DatasetArrayHandle => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube(): Fox[T] = {
@@ -84,6 +84,6 @@ class DataCubeCache(val maxEntries: Int)
     }
   }
 
-  override def onElementRemoval(key: CachedCube, value: Fox[DataCubeHandle]): Unit =
+  override def onElementRemoval(key: CachedCube, value: Fox[DatasetArrayHandle]): Unit =
     value.map(_.scheduleForRemoval())
 }

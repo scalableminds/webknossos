@@ -313,13 +313,12 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                   >
                     <Badge
                       count={record.sharedByCount}
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: "var(--ant-success)"; } |... Remove this comment to see the full error message
                       style={
                         isSharedByAll
                           ? {
-                              backgroundColor: "var(--ant-success)",
+                              backgroundColor: "var(--ant-color-success)",
                             }
-                          : null
+                          : undefined
                       }
                     />
                   </Tooltip>

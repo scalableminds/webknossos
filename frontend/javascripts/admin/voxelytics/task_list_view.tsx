@@ -484,19 +484,21 @@ export default function TaskListView({
         children: (
           <React.Fragment>
             {openMetatask !== taskGroup.key && (
-            <div style={{ marginBottom: 8 }}>
-              <a
-                href=""
-                style={{ marginRight: 16 }}
-                onClick={(ev) => {
-                  ev.preventDefault();
-                  onToggleExpandedMetaTaskKey(taskGroup.key);
-                }}
-              >
-                {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
-              </a>
-              <Link to={addUrlParam(location, "metatask", taskGroup.key)}>Open in extra View</Link>
-            </div>
+              <div style={{ marginBottom: 8 }}>
+                <a
+                  href=""
+                  style={{ marginRight: 16 }}
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    onToggleExpandedMetaTaskKey(taskGroup.key);
+                  }}
+                >
+                  {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
+                </a>
+                <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
+                  Open in extra View
+                </Link>
+              </div>
             )}
             <Collapse items={collapseItems} />
           </React.Fragment>

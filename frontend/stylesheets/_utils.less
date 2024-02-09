@@ -66,6 +66,18 @@ td.nowrap * {
   float: right !important;
 }
 
+.clearfix::before {
+  // sometimes required by .pull-right
+  display: table;
+  content: '';
+}
+.clearfix::after {
+  // sometimes required by .pull-right
+  display: table;
+  clear: both;
+  content: '';
+}
+
 .circle {
   display: inline-block;
   width: 10px;

@@ -1197,7 +1197,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
-  });
+  }, [visibleSegmentationLayer]);
   const isSegmentIndexAvailable = (state: OxalisState) =>
     state.dataset.dataSource.dataLayers.find(
       (layer) => layer.name === visibleSegmentationLayer?.name,
@@ -1215,29 +1215,34 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const layersFinestResolution = magInfo.getFinestResolution();
       const dataSetScale = dataset.dataSource.scale;
 
-      const [segmentSize] = await getSegmentVolumes(
-        requestUrl,
-        layersFinestResolution,
-        [clickedSegmentOrMeshId],
-        additionalCoordinates,
-      );
-      const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-        requestUrl,
-        layersFinestResolution,
-        [clickedSegmentOrMeshId],
-        additionalCoordinates,
-      );
-      const boundingBoxInMag1 = getBoundingBoxInMag1(
-        boundingBoxInRequestedMag,
-        layersFinestResolution,
-      );
-      const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
-      const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-      const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
-      return [
-        formatNumberToVolume(volumeInNm3),
-        `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
-      ];
+      try {
+        const [segmentSize] = await getSegmentVolumes(
+          requestUrl,
+          layersFinestResolution,
+          [clickedSegmentOrMeshId],
+          additionalCoordinates,
+        );
+        const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
+          requestUrl,
+          layersFinestResolution,
+          [clickedSegmentOrMeshId],
+          additionalCoordinates,
+        );
+        const boundingBoxInMag1 = getBoundingBoxInMag1(
+          boundingBoxInRequestedMag,
+          layersFinestResolution,
+        );
+        const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
+        const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
+        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        return [
+          formatNumberToVolume(volumeInNm3),
+          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+        ];
+      } catch (_error) {
+        const notFetchedMessage = "could not be fetched";
+        return [notFetchedMessage, notFetchedMessage];
+      }
     },
     isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.

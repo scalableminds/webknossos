@@ -265,7 +265,6 @@ export function SegmentStatisticsModal({
           <>
             {hasAdditionalCoords && (
               <Alert
-                className="segments-stats-info-alert"
                 message={`These statistics only refer to the current additional ${pluralize(
                   "coordinate",
                   additionalCoordinates?.length || 0,

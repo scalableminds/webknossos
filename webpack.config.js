@@ -61,9 +61,6 @@ module.exports = function (env = {}) {
     experiments: { asyncWebAssembly: true },
     entry: {
       main: "main.tsx",
-      theme: "theme.tsx",
-      light: "style_light.ts",
-      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {

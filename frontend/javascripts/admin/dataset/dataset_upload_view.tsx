@@ -932,7 +932,7 @@ function FileUploadArea({
         <InboxOutlined
           style={{
             fontSize: 48,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
         <p

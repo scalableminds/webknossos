@@ -609,10 +609,16 @@ class EditableMappingService @Inject()(
     tryo {
       val minCutImpl = new PushRelabelMFImpl(g)
       minCutImpl.calculateMinCut(segmentId1, segmentId2)
+      val sourcePartition: util.Set[Long] = minCutImpl.getSourcePartition
       val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
-      minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
+      minCutEdges.asScala.toList.map(e =>
+        setDirectionForCutting(g.getEdgeSource(e), g.getEdgeTarget(e), sourcePartition))
     }
   }
+
+  // the returned edges must be directed so that when they are passed to the split action, the source segment keeps its agglomerate id
+  private def setDirectionForCutting(node1: Long, node2: Long, sourcePartition: util.Set[Long]): (Long, Long) =
+    if (sourcePartition.contains(node1)) (node1, node2) else (node2, node1)
 
   private def annotateEdgesWithPositions(edges: List[(Long, Long)],
                                          agglomerateGraph: AgglomerateGraph): List[EdgeWithPositions] =

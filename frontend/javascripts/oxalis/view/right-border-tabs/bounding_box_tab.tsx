@@ -1,4 +1,4 @@
-import { Tooltip } from "antd";
+import { Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
@@ -126,7 +126,7 @@ export default function BoundingBoxTab() {
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
-      <div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>
+      <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
       {allowUpdate ? (
         <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
           <Tooltip title="Click to add another bounding box.">

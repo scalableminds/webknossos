@@ -9,7 +9,11 @@ import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
-import { watchMaximumRenderableLayers, watchZ1Downsampling } from "oxalis/model/sagas/dataset_saga";
+import {
+  ensureSegmentIndexIsLoaded,
+  watchMaximumRenderableLayers,
+  watchZ1Downsampling,
+} from "oxalis/model/sagas/dataset_saga";
 import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
@@ -68,6 +72,7 @@ function* restartableSaga(): Saga<void> {
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
+      call(ensureSegmentIndexIsLoaded),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

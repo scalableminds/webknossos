@@ -2,10 +2,11 @@ import type { APIDataset, CoordinateTransformation } from "types/api_flow_types"
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
 type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
-type SetLayerHasSegmentIndexAction = ReturnType<typeof setLayerHasSegmentIndexAction>;
 export type EnsureLayerMappingsAreLoadedAction = ReturnType<
   typeof ensureLayerMappingsAreLoadedAction
 >;
+type SetLayerHasSegmentIndexAction = ReturnType<typeof setLayerHasSegmentIndexAction>;
+export type EnsureSegmentIndexIsLoadedAction = ReturnType<typeof ensureSegmentIndexIsLoadedAction>;
 
 export type DatasetAction =
   | SetDatasetAction
@@ -53,4 +54,10 @@ export const setLayerHasSegmentIndexAction = (layerName: string, hasSegmentIndex
     type: "SET_LAYER_HAS_SEGMENT_INDEX",
     layerName,
     hasSegmentIndex,
+  } as const);
+
+export const ensureSegmentIndexIsLoadedAction = (layerName?: string) =>
+  ({
+    type: "ENSURE_SEGMENT_INDEX_IS_LOADED",
+    layerName,
   } as const);

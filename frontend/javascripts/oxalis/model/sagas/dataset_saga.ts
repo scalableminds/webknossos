@@ -1,4 +1,4 @@
-import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -10,6 +10,7 @@ import {
   getEnabledLayers,
   getResolutionInfo,
   getTransformsForLayer,
+  getVisibleSegmentationLayer,
   invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
@@ -17,6 +18,8 @@ import { getCurrentResolution } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { Identity4x4 } from "oxalis/constants";
+import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { setLayerHasSegmentIndexAction } from "../actions/dataset_actions";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -148,4 +151,32 @@ export function* watchZ1Downsampling(): Saga<void> {
     ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],
     maybeShowWarning,
   );
+}
+
+export function* ensureSegmentIndexIsLoaded(): Saga<void> {
+  function* maybeFetchHasSegmentIndex(): Saga<void> {
+    const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+    const maybeIsSegmentIndexAvailable = yield* select(
+      (state) =>
+        state.dataset.dataSource.dataLayers.find(
+          (layer) => layer.name === visibleSegmentationLayer?.name,
+        )?.hasSegmentIndex,
+    );
+    if (maybeIsSegmentIndexAvailable == null && visibleSegmentationLayer != null) {
+      const { dataset, tracing } = yield* select((state) => state);
+      const updatedIsSegmentIndexAvailable = yield* call(
+        hasSegmentIndex,
+        visibleSegmentationLayer,
+        dataset,
+        tracing,
+      );
+      yield* put(
+        setLayerHasSegmentIndexAction(
+          visibleSegmentationLayer.name,
+          updatedIsSegmentIndexAvailable,
+        ),
+      );
+    }
+  }
+  yield* takeEvery("ENSURE_SEGMENT_INDEX_IS_LOADED", maybeFetchHasSegmentIndex);
 }

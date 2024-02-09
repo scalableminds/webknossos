@@ -2,7 +2,7 @@ import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
 import { connect, useSelector } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useState } from "react";
+import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -115,8 +115,10 @@ import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
+  ensureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "oxalis/model/actions/dataset_actions";
+import { ensureSegmentIndexIsLoaded } from "oxalis/model/sagas/dataset_saga";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1186,38 +1188,19 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
-  const maybeIsSegmentIndexAvailable = useSelector(
-    (state: OxalisState) =>
-      state.dataset.dataSource.dataLayers.find(
-        (layer) => layer.name === visibleSegmentationLayer?.name,
-      )?.hasSegmentIndex,
-  );
-  useFetch(
-    async () => {
-      if (maybeIsSegmentIndexAvailable === null && visibleSegmentationLayer != null) {
-        const updatedIsSegmentIndexAvailable = await hasSegmentIndex(
-          visibleSegmentationLayer,
-          dataset,
-          tracing,
-        );
-        Store.dispatch(
-          setLayerHasSegmentIndexAction(
-            visibleSegmentationLayer.name,
-            updatedIsSegmentIndexAvailable,
-          ),
-        );
-        return updatedIsSegmentIndexAvailable;
-      }
-    },
-    false,
-    [],
-  );
+  useEffect(() => {
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
+  });
+  const isSegmentIndexAvailable = (state: OxalisState) =>
+    state.dataset.dataSource.dataLayers.find(
+      (layer) => layer.name === visibleSegmentationLayer?.name,
+    )?.hasSegmentIndex;
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
       if (visibleSegmentationLayer == null) return [];
-      if (contextMenuPosition == null || !maybeIsSegmentIndexAvailable) {
+      if (contextMenuPosition == null || !isSegmentIndexAvailable) {
         return [];
       } else {
         const requestUrl = getVolumeRequestUrl(

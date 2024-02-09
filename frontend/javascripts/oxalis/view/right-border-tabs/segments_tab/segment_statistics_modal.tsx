@@ -36,7 +36,6 @@ const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 type Props = {
   onCancel: (...args: Array<any>) => any;
   tracingId: string | undefined;
-  tracingStoreUrl: string;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
   parentGroup: number;
@@ -111,7 +110,6 @@ export function SegmentStatisticsModal({
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
   const dataSetScale = dataset.dataSource.scale;
-  // const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(

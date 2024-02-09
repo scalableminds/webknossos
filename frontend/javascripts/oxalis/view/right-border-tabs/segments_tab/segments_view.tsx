@@ -122,7 +122,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
-import { setLayerHasSegmentIndexAction } from "oxalis/model/actions/dataset_actions";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -179,7 +179,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
-  const maybeHasSegmentIndex = state.dataset.dataSource.dataLayers.find(
+  const isSegmentIndexAvailable = state.dataset.dataSource.dataLayers.find(
     (layer) => layer.name === visibleSegmentationLayer?.name,
   )?.hasSegmentIndex;
 
@@ -192,7 +192,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     mappingInfo,
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
-    isSegmentIndexAvailable: maybeHasSegmentIndex,
+    isSegmentIndexAvailable,
     segments,
     segmentGroups,
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
@@ -417,20 +417,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.pollJobData();
     }
 
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (visibleSegmentationLayer != null) {
-      const { dataset, tracing } = Store.getState();
-      const isSegmentIndexAvailable = await hasSegmentIndex(
-        visibleSegmentationLayer,
-        dataset,
-        tracing,
-      );
-      if (isSegmentIndexAvailable !== this.props.isSegmentIndexAvailable) {
-        Store.dispatch(
-          setLayerHasSegmentIndexAction(visibleSegmentationLayer.name, isSegmentIndexAvailable),
-        );
-      }
-    }
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -1562,29 +1549,6 @@ class SegmentsView extends React.Component<Props, State> {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
-      /* const state = Store.getState();
-    const hasNoFallbackLayer =
-      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
-    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
-      const state = Store.getState();
-      const tracingId = this.props.activeVolumeTracing?.tracingId;
-      if (tracingId == null) {
-        const state = Store.getState();
-        const datasetName = state.dataset.name;
-        const organization = state.dataset.owningOrganization;
-        const dataStoreHost = state.dataset.dataStore.url;
-        const hasSegmentIndex = hasSegmentIndexInDataStore(
-          dataStoreHost,
-          datasetName,
-          visibleSegmentationLayer.name,
-          organization,
-        );
-      }
-      const tracingStoreUrl = state.tracing.tracingStore.url; */
-
-      const { dataset, tracing } = Store.getState();
-      const isSegmentIndexAvailable = hasSegmentIndex(visibleSegmentationLayer, dataset, tracing);
-      if (!isSegmentIndexAvailable) return null;
       return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal
           onCancel={() => {
@@ -1592,7 +1556,6 @@ class SegmentsView extends React.Component<Props, State> {
           }}
           visibleSegmentationLayer={visibleSegmentationLayer}
           tracingId={this.props.activeVolumeTracing?.tracingId}
-          tracingStoreUrl={tracing.tracingStore.url}
           relevantSegments={segments}
           parentGroup={groupId}
           groupTree={this.state.searchableTreeItemList}

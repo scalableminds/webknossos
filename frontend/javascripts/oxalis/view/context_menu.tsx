@@ -1185,6 +1185,15 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
+  const clickedSegmentOrMeshId =
+    maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
+
   const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
@@ -1197,7 +1206,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
       // The value that is loaded if the context menu is closed is shown if it's still loading
-      if (contextMenuPosition == null) return isLoadingVolumeAndBB;
+      if (contextMenuPosition == null || !isHoveredSegmentOrMesh) return isLoadingVolumeAndBB;
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
@@ -1209,13 +1218,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const [segmentSize] = await getSegmentVolumes(
         requestUrl,
         layersFinestResolution,
-        [segmentIdAtPosition],
+        [clickedSegmentOrMeshId],
         additionalCoordinates,
       );
       const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
         requestUrl,
         layersFinestResolution,
-        [segmentIdAtPosition],
+        [clickedSegmentOrMeshId],
         additionalCoordinates,
       );
       const boundingBoxInMag1 = getBoundingBoxInMag1(
@@ -1233,18 +1242,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
     isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
+    [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
-
-  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-  // Thus the segment id is always unambiguous / clearly defined.
-  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1334,9 +1337,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  const areSegmentStatisticsAvailable =
-    // TODO make sure that segment index <-> segment stats is correct, bc I think there are other cases too
-    isHoveredSegmentOrMesh && hasSegmentIndex;
+  const areSegmentStatisticsAvailable = isHoveredSegmentOrMesh && hasSegmentIndex;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(
@@ -1385,13 +1386,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
   }
 
   if (isHoveredSegmentOrMesh) {
-    const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
     infoRows.push(
       getInfoMenuItem(
         "copy-cell",
         <>
           <div className="cell-context-icon" />
-          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
+          Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
+          {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </>,
       ),
     );

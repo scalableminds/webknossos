@@ -1195,50 +1195,44 @@ function ContextMenuInner(propsWithInputRef: Props) {
     state.dataset.dataSource.dataLayers.find(
       (layer) => layer.name === visibleSegmentationLayer?.name,
     )?.hasSegmentIndex;
+  const isLoadingVolumeAndBB = ["loading", "loading"];
   const [segmentVolume, boundingBoxInfo] = useFetch(
     async () => {
+      // The value that is loaded if the context menu is closed is shown if it's still loading
+      if (contextMenuPosition == null) return isLoadingVolumeAndBB;
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
-      if (visibleSegmentationLayer == null) return [];
-      if (contextMenuPosition == null || !isSegmentIndexAvailable) {
-        return [];
-      } else {
-        const requestUrl = getVolumeRequestUrl(
-          dataset,
-          tracing,
-          tracingId,
-          visibleSegmentationLayer,
-        );
-        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-        const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = dataset.dataSource.scale;
+      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
+      const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
+      const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+      const layersFinestResolution = magInfo.getFinestResolution();
+      const dataSetScale = dataset.dataSource.scale;
 
-        const [segmentSize] = await getSegmentVolumes(
-          requestUrl,
-          layersFinestResolution,
-          [segmentIdAtPosition],
-          additionalCoordinates,
-        );
-        const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          requestUrl,
-          layersFinestResolution,
-          [segmentIdAtPosition],
-          additionalCoordinates,
-        );
-        const boundingBoxInMag1 = getBoundingBoxInMag1(
-          boundingBoxInRequestedMag,
-          layersFinestResolution,
-        );
-        const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
-        const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
-        return [
-          formatNumberToVolume(volumeInNm3),
-          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
-        ];
-      }
+      const [segmentSize] = await getSegmentVolumes(
+        requestUrl,
+        layersFinestResolution,
+        [segmentIdAtPosition],
+        additionalCoordinates,
+      );
+      const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
+        requestUrl,
+        layersFinestResolution,
+        [segmentIdAtPosition],
+        additionalCoordinates,
+      );
+      const boundingBoxInMag1 = getBoundingBoxInMag1(
+        boundingBoxInRequestedMag,
+        layersFinestResolution,
+      );
+      const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
+      const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
+      const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+      return [
+        formatNumberToVolume(volumeInNm3),
+        `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+      ];
     },
-    ["loading", "loading"],
+    isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
     [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],

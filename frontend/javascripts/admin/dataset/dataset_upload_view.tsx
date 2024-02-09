@@ -11,12 +11,13 @@ import { useDropzone, FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
 import { Link, RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type {
-  APITeam,
-  APIDataStore,
-  APIUser,
-  APIDatasetId,
-  APIOrganization,
+import {
+  type APITeam,
+  type APIDataStore,
+  type APIUser,
+  type APIDatasetId,
+  type APIOrganization,
+  APIJobType,
 } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
@@ -613,6 +614,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { needsConversion } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
+    const selectedDatastore = hasOnlyOneDatastoreOrNone
+      ? uploadableDatastores[0]
+      : this.getDatastoreForUrl(this.state.datastoreUrl);
+    const isDatasetConversionEnabled =
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      false;
+
     return (
       <div
         className="dataset-administration"
@@ -828,6 +837,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   this.validateFiles(files);
                 }}
                 fileList={[]}
+                isDatasetConversionEnabled={isDatasetConversionEnabled}
               />
             </FormItem>
             <FormItem
@@ -859,9 +869,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 function FileUploadArea({
   fileList,
   onChange,
+  isDatasetConversionEnabled,
 }: {
   fileList: FileWithPath[];
   onChange: (files: FileWithPath[]) => void;
+  isDatasetConversionEnabled: boolean;
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -880,6 +892,7 @@ function FileUploadArea({
     <li key={file.path}>{file.path}</li>
   ));
   const showSmallFileList = files.length > 10;
+
   const list = (
     <List
       itemLayout="horizontal"
@@ -917,6 +930,7 @@ function FileUploadArea({
       )}
     />
   );
+
   return (
     <div>
       <div
@@ -944,7 +958,7 @@ function FileUploadArea({
         >
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
           archive or a folder.{" "}
-          {features().jobsEnabled ? (
+          {features().jobsEnabled && isDatasetConversionEnabled ? (
             <>
               <br />
               <br />

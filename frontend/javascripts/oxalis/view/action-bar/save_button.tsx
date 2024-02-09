@@ -131,7 +131,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         icon={this.getSaveButtonIcon()}
         className={this.props.className}
         style={{
-          background: showUnsavedWarning ? "var(--ant-error)" : undefined,
+          background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
         }}
       >
         <Tooltip

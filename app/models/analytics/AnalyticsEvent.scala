@@ -70,12 +70,12 @@ object AnalyticsEventJson {
       for {
         eventType <- (json \ "event_type").orElse(json \ "eventType").validate[String]
         userId <- (json \ "user_id").orElse(json \ "userId").validate[ObjectId]
-        time <- (json \ "time").validate[String].map(_.toLong).map(Instant.apply)
+        time <- (json \ "time").validate[Instant]
         userProperties <- (json \ "user_properties")
           .orElse(json \ "userProperties")
           .validate[AnalyticsEventJsonUserProperties]
-        eventProperties <- (json \ "event_properties").orElse(json \ "event_properties").validate[JsObject]
-        sessionId <- (json \ "session_id").validate[Long]
+        eventProperties <- (json \ "event_properties").orElse(json \ "eventProperties").validate[JsObject]
+        sessionId <- (json \ "session_id").orElse(json \ "sessionId").validate[Long]
       } yield
         AnalyticsEventJson(
           eventType,

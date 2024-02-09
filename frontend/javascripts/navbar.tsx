@@ -43,7 +43,7 @@ import Request from "libs/request";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
@@ -54,6 +54,7 @@ import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItem
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner } from "maintenance_banner";
+import { getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
 
@@ -241,7 +242,11 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   return {
     key: "adminMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Administration",
+      <TeamOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: adminstrationSubMenuItems,
   };
 }
@@ -250,7 +255,11 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "statisticMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Statistics",
+      <BarChartOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
@@ -405,7 +414,11 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
-    label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Help",
+      <QuestionCircleOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: helpSubMenuItems,
   };
 }
@@ -414,7 +427,11 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Dashboard",
+      <HomeOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
       { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
@@ -459,11 +476,7 @@ function NotificationIcon({
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button
-            onClick={handleShowWhatsNewView}
-            shape="circle"
-            icon={<BellOutlined className="without-icon-margin" />}
-          />
+          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
         </Badge>
       </Tooltip>
     </div>
@@ -503,46 +516,12 @@ function LoggedInAvatar({
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
 
-  const setSelectedTheme = async (theme: APIUserTheme) => {
-    let newTheme = theme;
+  const setSelectedTheme = async (newTheme: APIUserTheme) => {
+    if (newTheme === "auto") newTheme = getSystemColorTheme();
 
-    if (newTheme === "auto") {
-      newTheme =
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    }
-
-    const styleEl = document.getElementById("primary-stylesheet") as HTMLLinkElement;
-    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
-    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
-
-    if (oldTheme !== newTheme) {
-      const newStyleEl = styleEl.cloneNode();
-      const parentEl = styleEl.parentNode;
-
-      if (parentEl != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
-        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
-        newStyleEl.addEventListener(
-          "load",
-          () => {
-            parentEl.removeChild(styleEl);
-          },
-          {
-            once: true,
-          },
-        );
-        parentEl.insertBefore(newStyleEl, styleEl);
-        Store.dispatch(setThemeAction(newTheme));
-      }
-    }
-
-    if (selectedTheme !== theme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+    if (selectedTheme !== newTheme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
+      Store.dispatch(setThemeAction(newTheme));
       Store.dispatch(setActiveUserAction(newUser));
     }
   };
@@ -550,6 +529,7 @@ function LoggedInAvatar({
   const isMultiMember = switchableOrganizations.length > 0;
   return (
     <Menu
+      selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
         paddingTop:

@@ -22,29 +22,10 @@ td.nowrap * {
 }
 
 .bordered {
-  border: 1px solid @border-color-base;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
   padding: 4px 11px;
   width: fit-content;
-}
-
-// Export antd color vars
-:root {
-  --ant-primary: @primary-color;
-  --ant-success: @success-color;
-  --ant-info: @info-color;
-  --ant-warning: @warning-color;
-  --ant-warning-dark-5: darken(@warning-color, 5%);
-  --ant-error: @error-color;
-  --ant-highlight: @highlight-color;
-  --ant-text: @text-color;
-  --ant-text-secondary: @text-color-secondary;
-  --ant-link: @link-color;
-  --ant-border-base: @border-color-base;
-  --ant-body-background: @body-background;
-  --ant-component-background: @component-background;
-  --ant-disabled: @disabled-color;
-  --ant-box-shadow-base: @box-shadow-base;
 }
 
 // Layout util classes
@@ -133,7 +114,7 @@ td.nowrap * {
 .background-organelles {
   height: 100%;
   min-height: calc(100vh - var(--navbar-height));
-  background: @background-blue-organelles;
+  background: var(--background-blue-organelles);
 }
 
 .full-viewport-height {

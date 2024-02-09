@@ -1,5 +1,5 @@
 FROM scalableminds/sbt:master__7785473656
-ARG VERSION_NODE="16.x"
+ARG VERSION_NODE="18.x"
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV SBT_OPTS "${SBT_OPTS} -XX:MaxMetaspaceSize=512m -Xms1024m -Xmx1024m"

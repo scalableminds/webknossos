@@ -405,7 +405,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
       open
       title={
         <>
-          <i className="fas fa-magic" />
+          <i className="fas fa-magic icon-margin-right" />
           AI Analysis
         </>
       }

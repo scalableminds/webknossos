@@ -50,12 +50,11 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       case Empty                  => NmlParseEmpty(name)
     }
 
-  def extractFromZip(
-      file: File,
-      zipFileName: Option[String] = None,
-      useZipName: Boolean,
-      overwritingDatasetName: Option[String],
-      isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult = {
+  def extractFromZip(file: File,
+                     zipFileName: Option[String] = None,
+                     useZipName: Boolean,
+                     overwritingDatasetName: Option[String],
+                     isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var parseResults = List.empty[NmlParseResult]
@@ -63,11 +62,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
         val result =
-          extractFromNml(inputStream,
-                         filename.toString,
-                         overwritingDatasetName,
-                         isTaskUpload,
-                         Some(file.getPath))
+          extractFromNml(inputStream, filename.toString, overwritingDatasetName, isTaskUpload, Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
@@ -162,8 +157,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
                     isTaskUpload
                   ))
               else
-                acc.combineWith(
-                  extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
+                acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
             case _ => acc
           } else
           acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))

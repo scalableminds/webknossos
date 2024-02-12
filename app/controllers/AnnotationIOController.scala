@@ -99,9 +99,7 @@ class AnnotationIOController @Inject()(
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
-          annotationUploadService.extractFromFiles(attachedFiles,
-                                                   useZipName = true,
-                                                   overwritingDatasetName)
+          annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDatasetName)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)

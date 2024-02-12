@@ -49,35 +49,6 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       getTypedDataForBucketPosition(tracingId, userToken)
     )
 
-  private def getTypedDataForSegmentIndex(
-      tracingId: String,
-      mappingName: Option[String],
-      userToken: Option[String],
-      segmentId: Long,
-      mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext) =
-    for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
-      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
-      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,
-                                                               tracingId,
-                                                               segmentId,
-                                                               mag,
-                                                               None,
-                                                               mappingName,
-                                                               additionalCoordinates,
-                                                               AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-                                                               userToken)
-      volumeData <- getVolumeDataForPositions(tracing,
-                                              tracingId,
-                                              mag,
-                                              bucketPositions,
-                                              additionalCoordinates,
-                                              userToken)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
-    } yield dataTyped
-
   private def getTypedDataForBucketPosition(tracingId: String, userToken: Option[String])(
       bucketPosition: Vec3Int,
       mag: Vec3Int,
@@ -115,19 +86,6 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                                additionalAxes,
                                                                userToken)
     } yield allBucketPositions
-
-  private def getVolumeDataForPositions(tracing: VolumeTracing,
-                                        tracingId: String,
-                                        mag: Vec3Int,
-                                        bucketPositions: ListOfVec3IntProto,
-                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                        userToken: Option[String]): Fox[Array[Byte]] =
-    getVolumeDataForPositions(tracing,
-                              tracingId,
-                              mag,
-                              bucketPositions.values.map(vec3IntFromProto),
-                              additionalCoordinates,
-                              userToken)
 
   private def getVolumeDataForPositions(tracing: VolumeTracing,
                                         tracingId: String,

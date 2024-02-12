@@ -32,14 +32,20 @@ export default function* listenToQuickSelect(): Saga<void> {
     "COMPUTE_QUICK_SELECT_FOR_RECT",
     function* guard(action: ComputeQuickSelectForRectAction) {
       try {
-        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
         // As changes to the volume layer will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
         const volumeTracing: VolumeTracing | null | undefined = yield* select(
           getActiveSegmentationTracing,
         );
         if (volumeTracing) {
-          yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+          const { isMappingPinnedIfNeeded } = yield* call(
+            ensureMaybeActiveMappingIsPinned,
+            volumeTracing,
+          );
+          if (!isMappingPinnedIfNeeded) {
+            return;
+          }
         }
+        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
 
         yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {

@@ -1,7 +1,6 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
-const { Panel } = Collapse;
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -59,19 +58,19 @@ const Toast = {
             background: "transparent",
             marginLeft: -16,
           }}
-        >
-          <Panel
-            key="toast-panel"
-            header="Show more information"
-            style={{
-              background: "transparent",
-              border: 0,
-              fontSize: 10,
-            }}
-          >
-            {details}
-          </Panel>
-        </Collapse>
+          items={[
+            {
+              key: "toast-panel",
+              label: "Show more information",
+              style: {
+                background: "transparent",
+                border: 0,
+                fontSize: 10,
+              },
+              children: details,
+            },
+          ]}
+        />
       </div>
     );
   },

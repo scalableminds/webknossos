@@ -366,7 +366,7 @@ class UserService @Inject()(conf: WkConf,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
         "isSuperUser" -> multiUser.isSuperUser,
-        "isEmailVerified" -> multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated,
+        "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated),
       )
     }
   }

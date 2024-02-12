@@ -93,6 +93,7 @@ class MappingSettingsView extends React.Component<Props, State> {
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
     this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
+
   handleChangeMapping = (packedMappingNameWithCategory: string): void => {
     const [mappingName, mappingType] = unpackMappingNameAndCategory(packedMappingNameWithCategory);
 

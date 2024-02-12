@@ -51,7 +51,7 @@ type EnsureMappingIsPinnedReturnType = {
   reason?: string;
 };
 
-function askUserForPinningActiveMapping(
+export function askUserForPinningActiveMapping(
   volumeTracing: VolumeTracing,
   activeMappingByLayer: Record<string, ActiveMappingInfo>,
 ): Promise<EnsureMappingIsPinnedReturnType> {
@@ -101,7 +101,9 @@ export function* ensureMaybeActiveMappingIsPinned(
   const isSomeMappingActive =
     volumeTracing.tracingId in activeMappingByLayer &&
     activeMappingByLayer[volumeTracing.tracingId].mappingStatus === MappingStatusEnum.ENABLED;
-  const isHDF5Mapping = activeMappingByLayer[volumeTracing.tracingId]?.mappingType === "HDF5";
+  const isHDF5Mapping =
+    volumeTracing.tracingId in activeMappingByLayer &&
+    activeMappingByLayer[volumeTracing.tracingId]?.mappingType === "HDF5";
   if (isSomeMappingActive && isHDF5Mapping) {
     return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
   } else {

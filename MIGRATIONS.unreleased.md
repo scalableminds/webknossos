@@ -6,17 +6,17 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...HEAD)
-- The config `setting play.http.secret.key` (secret random string) now requires a minimum length of 32 bytes.
-- If your setup contains webknossos-workers, postgres evolution 110 introduces the column `supportedJobCommands`. This needs to be filled in manually for your workers. Currently available job commands are `compute_mesh_file`, `compute_segment_index_file`, `convert_to_wkw`, `export_tiff`, `find_largest_segment_id`, `infer_nuclei`, `infer_neurons`, `materialize_volume_annotation`, `render_animation`. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
-- If your setup contains webknossos-workers,  postgres evolution 110 introduces the columns `maxParallelHighPriorityJobs` and `maxParallelLowPriorityJobs`. Make sure to set those values to match what you want for your deployment. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
-- If your setup contains webknossos-workers, you may want to add the new available worker job `compute_segment_index_file` to the `supportedJobCommands` column of one or more of your workers. [#7493](https://github.com/scalableminds/webknossos/pull/7493)
-- The WEBKNOSSOS api version has changed to 6. The `isValidNewName` route for datasets now returns 200 regardless of whether the name is valid or not. The body contains a JSON object with the key "isValid". [#7550](https://github.com/scalableminds/webknossos/pull/7550)
-- If your setup contains ND datasets, run the python3 script at `tools/migrate-axis-bounds/migration.py` on your datastores to update the datasource-properties.jsons of the ND datasets.
-- With the upgrade to Play 3 and the migration to pekko, configuration keys using akka need to be changed. For the default configuration this results in the following changes:
-  - akka.requestTimeout → pekko.requestTimeout
-  - akka.actor.default-dispatcher → pekko.actor.default-dispatcher
+- WKW datasets can now only be read if they have a `header.wkw` file in their mag directories. If specific datasets can no longer be loaded, consider adding such a file. Backend logging should show according error message. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
+- Content Security Policy (CSP) settings are now relaxed by default. To keep stricter CSP rules, add them to your specific `application.conf`. [#7589](https://github.com/scalableminds/webknossos/pull/7589)
+- The way the segment index is stored for nd-annotations has been changed ([#7411](https://github.com/scalableminds/webknossos/pull/7411)). Annotations with old segment indices should be
+archived if they do not contain relevant data. The following SQL query can be used:
+```sql
+UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DISTINCT a._id AS nd_annotations_id FROM webknossos.annotations_ AS a INNER JOIN webknossos.datasets AS d ON a._dataset = d._id INNER JOIN webknossos.dataset_layer_additionalaxes AS dla ON d._id = dla._dataset)
+```
+- WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
+- NodeJS version 18+ is required for snapshot tests with ShadowDOM elements from Antd v5. [#7522](https://github.com/scalableminds/webknossos/pull/7522)
+- Email verification is disabled by default. To enable it, set `webKnossos.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620)
 
 ### Postgres Evolutions:
 
-- [110-worker-config.sql](conf/evolutions/110-worker-config.sql)
+- [113-analytics-events.sql](conf/evolutions/113-analytics-events.sql)

@@ -3,7 +3,7 @@ import * as React from "react";
 import _ from "lodash";
 
 type InputComponentState = {
-  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"];
+  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | BigInt;
 };
 
 /*

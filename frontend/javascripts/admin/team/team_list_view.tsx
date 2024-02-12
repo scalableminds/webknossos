@@ -207,7 +207,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         >
           <div className="pull-right">
             <Button
-              icon={<PlusOutlined />}
+              icon={<PlusOutlined className="icon-margin-right" />}
               style={marginRight}
               type="primary"
               onClick={() =>
@@ -275,13 +275,13 @@ class TeamListView extends React.PureComponent<Props, State> {
                           })
                         }
                       >
-                        <UserOutlined />
+                        <UserOutlined className="icon-margin-right" />
                         Add / Remove Users
                       </LinkButton>
                     </div>
                     <div>
                       <LinkButton onClick={_.partial(this.deleteTeam, team)}>
-                        <DeleteOutlined />
+                        <DeleteOutlined className="icon-margin-right" />
                         Delete
                       </LinkButton>
                     </div>

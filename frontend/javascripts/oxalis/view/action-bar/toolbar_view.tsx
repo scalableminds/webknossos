@@ -83,7 +83,7 @@ const NARROW_BUTTON_STYLE = {
 // The z-index is needed so that the blue border of an active button does override the border color of the neighboring non active button.
 const ACTIVE_BUTTON_STYLE = {
   ...NARROW_BUTTON_STYLE,
-  borderColor: "var(--ant-primary)",
+  borderColor: "var(--ant-color-primary)",
   zIndex: 1,
 };
 const imgStyleForSpaceyIcons = {
@@ -91,6 +91,7 @@ const imgStyleForSpaceyIcons = {
   height: 19,
   lineHeight: 10,
   marginTop: -2,
+  verticalAlign: "middle",
 };
 
 function getSkeletonToolHint(
@@ -216,6 +217,7 @@ function ToolRadioButton({
   name,
   description,
   disabledExplanation,
+  onOpenChange,
   ...props
 }: {
   name: string;
@@ -232,6 +234,7 @@ function ToolRadioButton({
     <RadioButtonWithTooltip
       title={`${name} – ${description}`}
       disabledTitle={`${name} – ${disabledExplanation}`}
+      onOpenChange={onOpenChange}
       {...props}
     />
   );
@@ -295,14 +298,22 @@ function OverwriteModeSwitch({
         style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
-        <img src="/assets/images/overwrite-all.svg" alt="Overwrite All Icon" />
+        <img
+          src="/assets/images/overwrite-all.svg"
+          alt="Overwrite All Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
         style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
-        <img src="/assets/images/overwrite-empty.svg" alt="Overwrite Empty Icon" />
+        <img
+          src="/assets/images/overwrite-empty.svg"
+          alt="Overwrite Empty Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );
@@ -318,7 +329,7 @@ function VolumeInterpolationButton() {
     (state: OxalisState) => state.userConfiguration.interpolationMode,
   );
 
-  const onInterpolateClick = (e: React.MouseEvent<HTMLButtonElement> | null) => {
+  const onInterpolateClick = (e: React.MouseEvent<HTMLElement> | null) => {
     e?.currentTarget.blur();
     dispatch(interpolateSegmentationLayerAction());
   };
@@ -597,9 +608,7 @@ function BrushPresetButton({
   return (
     <>
       <div style={{ textAlign: "center" }}>
-        <ButtonComponent className="without-icon-margin" onClick={onClick}>
-          {icon}
-        </ButtonComponent>
+        <ButtonComponent onClick={onClick}>{icon}</ButtonComponent>
       </div>
       <div style={{ textAlign: "center" }}>{name}</div>
       <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
@@ -922,12 +931,7 @@ export default function ToolbarView() {
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.MOVE}
         >
-          <i
-            style={{
-              paddingLeft: 4,
-            }}
-            className="fas fa-arrows-alt"
-          />
+          <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
         {hasSkeleton ? (
@@ -950,7 +954,6 @@ export default function ToolbarView() {
             >
               <i
                 style={{
-                  paddingLeft: 4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
                 }}
                 className="fas fa-project-diagram"
@@ -1020,7 +1023,9 @@ export default function ToolbarView() {
                 src="/assets/images/lasso.svg"
                 alt="Trace Tool Icon"
                 style={{
+                  marginRight: 4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
+                  ...imgStyleForSpaceyIcons,
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.TRACE ? multiSliceAnnotationInfoIcon : null}
@@ -1102,10 +1107,8 @@ export default function ToolbarView() {
             src="/assets/images/quick-select-tool.svg"
             alt="Quick Select Icon"
             style={{
-              height: 20,
-              width: 20,
-              marginTop: -1,
               opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+              ...imgStyleForSpaceyIcons,
             }}
           />
         </ToolRadioButton>
@@ -1163,12 +1166,7 @@ export default function ToolbarView() {
           style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.LINE_MEASUREMENT}
         >
-          <i
-            style={{
-              paddingLeft: 4,
-            }}
-            className="fas fa-ruler"
-          />
+          <i className="fas fa-ruler" />
         </ToolRadioButton>
       </Radio.Group>
 
@@ -1227,41 +1225,35 @@ function ToolSpecificSettings({
   return (
     <>
       {showCreateTreeButton ? (
-        <Space
-          size={0}
-          className="antd-legacy-group"
+        <Space.Compact
           style={{
             marginLeft: 10,
           }}
         >
           <CreateTreeButton />
           <AdditionalSkeletonModesButtons />
-        </Space>
+        </Space.Compact>
       ) : null}
 
       {showNewBoundingBoxButton ? (
-        <Space
-          size={0}
-          className="antd-legacy-group"
+        <Space.Compact
           style={{
             marginLeft: 10,
           }}
         >
           <CreateNewBoundingBoxButton />
-        </Space>
+        </Space.Compact>
       ) : null}
 
       {showCreateCellButton || showChangeBrushSizeButton ? (
-        <Space
-          size={0}
+        <Space.Compact
           style={{
             marginLeft: 12,
           }}
-          className="antd-legacy-group"
         >
           {showCreateCellButton ? <CreateCellButton /> : null}
           {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
-        </Space>
+        </Space.Compact>
       ) : null}
 
       <OverwriteModeSwitch
@@ -1282,7 +1274,7 @@ function ToolSpecificSettings({
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
           >
-            <i className="fas fa-magic" /> AI
+            <i className="fas fa-magic icon-margin-right" /> AI
           </ButtonComponent>
 
           {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}
@@ -1323,7 +1315,7 @@ function QuickSelectSettingsPopover() {
       <ButtonComponent
         title="Configure Quick Select"
         tooltipPlacement="right"
-        className="narrow without-icon-margin"
+        className="narrow"
         type={isQuickSelectActive ? "primary" : "default"}
         style={{ marginLeft: 12, marginRight: 12 }}
       >
@@ -1377,13 +1369,12 @@ function ProofReadingComponents() {
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
-        className="narrow without-icon-margin"
+        className="narrow"
         style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>
       <ButtonComponent
-        className="without-icon-margin"
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
         style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
@@ -1426,7 +1417,11 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.AREA_MEASUREMENT}
       >
-        <img src="/assets/images/area-measurement.svg" alt="Measurement Tool Icon" />
+        <img
+          src="/assets/images/area-measurement.svg"
+          alt="Measurement Tool Icon"
+          style={imgStyleForSpaceyIcons}
+        />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

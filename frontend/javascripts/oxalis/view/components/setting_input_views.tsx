@@ -1,4 +1,15 @@
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
+import {
+  Row,
+  Col,
+  Slider,
+  InputNumber,
+  Switch,
+  Tooltip,
+  Input,
+  Select,
+  Popover,
+  PopoverProps,
+} from "antd";
 import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -72,7 +83,6 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
             min={min}
             max={max}
             style={{
@@ -82,6 +92,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             onChange={this._onChange}
             size="small"
             disabled={disabled}
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -174,7 +185,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
+            variant={"borderless"}
             min={min}
             max={max}
             style={{
@@ -283,6 +294,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
             value={value}
             step={step}
             size="small"
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -294,14 +306,14 @@ type NumberInputPopoverSettingProps = {
   value: number | null | undefined;
   label: string | React.ReactNode;
   detailedLabel: string | React.ReactNode;
-  placement?: string;
+  placement?: PopoverProps["placement"];
   max?: number;
   min?: number;
   step?: number;
 };
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
-  const placement = props.placement || "top";
+  const placement: PopoverProps["placement"] = props.placement || "top";
   const onChangeGuarded = (val: number | null) => {
     if (val != null) {
       onChange(val);
@@ -318,7 +330,6 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
       </div>
       <InputNumber
         controls={false}
-        bordered={false}
         style={{
           width: 140,
         }}
@@ -328,11 +339,11 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
         value={value}
         step={step}
         size="small"
+        variant="borderless"
       />
     </div>
   );
   return (
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'TooltipPl... Remove this comment to see the full error message
     <Popover content={numberInput} trigger="click" placement={placement}>
       <span
         style={{
@@ -661,7 +672,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
               defaultValue={value.toString()}
               size="small"
-              dropdownMatchSelectWidth={false}
+              popupMatchSelectWidth={false}
               options={this.props.options}
               disabled={this.props.disabled}
             />

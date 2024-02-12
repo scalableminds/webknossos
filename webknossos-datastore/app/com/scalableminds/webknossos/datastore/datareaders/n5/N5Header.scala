@@ -5,7 +5,6 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders._
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -26,9 +25,9 @@ case class N5Header(
   val fill_value: Either[String, Number] = Right(0)
   val order: ArrayOrder = ArrayOrder.F
 
-  lazy val datasetShape: Array[Int] = dimensions
+  override lazy val datasetShape: Option[Array[Int]] = Some(dimensions)
 
-  lazy val chunkSize: Array[Int] = blockSize
+  lazy val chunkShape: Array[Int] = blockSize
 
   override lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
@@ -38,9 +37,7 @@ case class N5Header(
   lazy val resolvedDataType: ArrayDataType =
     N5DataType.toArrayDataType(N5DataType.fromString(dataType).get)
 
-  lazy val elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
-
-  lazy val voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
+  lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }
 
 object N5Header extends JsonImplicits {

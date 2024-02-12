@@ -66,10 +66,8 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
           removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
-      _ <- Fox.serialCombined(additions.toList)(
-        segmentId =>
-          // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-          addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.addBucket.failed"
+      // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
+      _ <- addBucketToSegmentIndex(segmentIndexBuffer, additions.toList, bucketPosition, mappingName) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
@@ -97,17 +95,24 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     } yield ()
 
   private def addBucketToSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                                      segmentId: Long,
+                                      segmentIds: List[Long],
                                       bucketPosition: BucketPosition,
                                       mappingName: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer,
-                                                                     segmentId,
-                                                                     bucketPosition.mag,
-                                                                     mappingName,
-                                                                     bucketPosition.additionalCoordinates)
-      newBucketList = ListOfVec3IntProto((bucketPosition.toVec3IntProto +: previousBucketList.values).distinct)
-      _ <- segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
+      previousBuckets <- segmentIndexBuffer.getSegmentToBucketIndexMap(segmentIds,
+                                                                       bucketPosition.mag,
+                                                                       mappingName,
+                                                                       bucketPosition.additionalCoordinates)
+      _ <- Fox.serialCombined(previousBuckets) {
+        case (segmentId, previousBucketList) =>
+          val newBucketList = ListOfVec3IntProto(
+            (bucketPosition.toVec3IntProto +: ListOfVec3IntProto
+              .of(previousBucketList.map(vec3IntToProto))
+              .values).distinct)
+          segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
+          Fox.successful(())
+        case _ => Fox.successful(())
+      }
     } yield ()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(

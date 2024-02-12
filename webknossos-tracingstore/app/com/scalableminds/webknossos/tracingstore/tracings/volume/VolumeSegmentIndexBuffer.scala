@@ -87,4 +87,50 @@ class VolumeSegmentIndexBuffer(tracingId: String,
     } yield ListOfVec3IntProto(data.map(vec3IntToProto))
   }
 
+  private def getSegmentsFromFossilDBNoteNonHits(
+      tracingId: String,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      segmentIds: List[Long])(implicit ec: ExecutionContext): Fox[(List[(Long, Seq[Vec3Int])], List[Long])] = {
+    var misses = List[Long]()
+    var hits = List[(Long, Seq[Vec3Int])]()
+    for {
+      _ <- Fox.serialCombined(segmentIds)(segmentId =>
+        for {
+          _ <- Fox.successful(())
+          key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
+          bucketPositions <- volumeSegmentIndexClient
+            .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
+            .map(_.value)
+            .fillEmpty(ListOfVec3IntProto.of(Seq()))
+          wasMiss = bucketPositions.length == 0
+          _ = if (wasMiss) misses = segmentId :: misses
+          else hits = (segmentId, bucketPositions.values.map(vec3IntFromProto)) :: hits
+        } yield ())
+    } yield (hits, misses)
+  }
+
+  def getSegmentToBucketIndexMap(segmentIds: List[Long],
+                                 mag: Vec3Int,
+                                 mappingName: Option[String],
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
+    for {
+      (mutableIndexHits, mutableIndexMisses) <- getSegmentsFromFossilDBNoteNonHits(tracingId,
+                                                                                   mag,
+                                                                                   additionalCoordinates,
+                                                                                   additionalAxes,
+                                                                                   segmentIds)
+      fileBucketPositions <- fallbackLayer match {
+        case Some(layer) =>
+          remoteDatastoreClient.querySegmentIndexForMultipleSegments(layer,
+                                                                     mutableIndexMisses,
+                                                                     mag,
+                                                                     mappingName,
+                                                                     userToken)
+        case _ => Fox.successful(List[(Long, Seq[Vec3Int])]())
+      }
+    } yield (mutableIndexHits ++ fileBucketPositions)
+
 }

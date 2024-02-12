@@ -14,3 +14,20 @@ case class GetSegmentIndexParameters(
 object GetSegmentIndexParameters {
   implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
 }
+
+case class GetMultipleSegmentIndexParameters(
+    segmentIds: List[Long],
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    mappingName: Option[String]
+)
+
+object GetMultipleSegmentIndexParameters {
+  implicit val format: Format[GetMultipleSegmentIndexParameters] = Json.format[GetMultipleSegmentIndexParameters]
+}
+
+case class SegmentIndexData(segmentId: Long, positions: Seq[Vec3Int])
+
+object SegmentIndexData {
+  implicit val format: Format[SegmentIndexData] = Json.format[SegmentIndexData]
+}

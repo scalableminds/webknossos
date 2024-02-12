@@ -3,7 +3,12 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, SegmentStatisticsParameters}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  SegmentIndexData,
+  SegmentStatisticsParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
@@ -593,6 +598,28 @@ class DataSourceController @Inject()(
             .distinct // divide by requested cube size to map them to larger buckets, select unique
             .map(_ * request.body.cubeSize) // return positions, not indices
         } yield Ok(Json.toJson(bucketPositionsForCubeSize))
+      }
+    }
+
+  def querySegmentIndex(token: Option[String],
+                        organizationName: String,
+                        datasetName: String,
+                        dataLayerName: String): Action[GetMultipleSegmentIndexParameters] =
+    Action.async(validateJson[GetMultipleSegmentIndexParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        logger.info("Querying segment index for " + request.body.segmentIds.mkString(","))
+        for {
+          segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            for {
+              (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
+                                                                              datasetName,
+                                                                              dataLayerName,
+                                                                              segmentId)
+              bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, request.body.mag, fileMag)
+            } yield SegmentIndexData(segmentId, bucketPositions)
+          }
+        } yield Ok(Json.toJson(segmentIdsAndBucketPositions))
       }
     }
 

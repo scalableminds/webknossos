@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, MissingBucketHeaders}
+import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, MissingBucketHeaders, SegmentIndexData}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -130,7 +130,7 @@ class TSRemoteDatastoreClient @Inject()(
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
         .addQueryStringOptional("token", userToken)
-        .silent
+//        .silent
         .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](
           GetSegmentIndexParameters(mag,
                                     cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here
@@ -139,6 +139,26 @@ class TSRemoteDatastoreClient @Inject()(
 
       indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
     } yield indices
+
+
+
+  def querySegmentIndexForMultipleSegments(remoteFallbackLayer: RemoteFallbackLayer,
+                                           segmentIds: Seq[Long],
+                                           mag: Vec3Int,
+                                           mappingName: Option[String],
+                                           userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      result <- rpc(s"$remoteLayerUri/segmentIndex")
+        .addQueryStringOptional("token", userToken)
+        .silent
+        .postJsonWithJsonResponse[GetMultipleSegmentIndexParameters, Seq[SegmentIndexData]](
+          GetMultipleSegmentIndexParameters(segmentIds.toList,
+                                            mag,
+                                            additionalCoordinates = None,
+                                            mappingName = mappingName))
+
+    } yield result.map(data => (data.segmentId, data.positions))
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {

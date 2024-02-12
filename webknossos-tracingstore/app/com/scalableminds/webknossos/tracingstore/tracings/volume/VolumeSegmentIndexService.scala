@@ -57,19 +57,19 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
       // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
-      previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.udpate.getPreviousBucket.failed"
+      previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.udpate.collectSegmentIds.failed"
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
       _ <- Fox.serialCombined(removals.toList)(
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.udpate.removeBucket.failed"
+          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
       _ <- Fox.serialCombined(additions.toList)(
         segmentId =>
           // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-          addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.udpate.addBucket.failed"
+          addBucketToSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(

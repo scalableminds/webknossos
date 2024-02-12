@@ -6,8 +6,9 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
+import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, MissingBucketHeaders}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
@@ -127,13 +128,17 @@ class TSRemoteDatastoreClient @Inject()(
                         userToken: Option[String]): Fox[Seq[Vec3Int]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
+      positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
         .addQueryStringOptional("token", userToken)
-        .addQueryString("mag" -> mag.toMagLiteral())
-        .addQueryStringOptional("mappingName", mappingName)
         .silent
-        .getWithJsonResponse[Seq[Vec3Int]]
-    } yield result
+        .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](
+          GetSegmentIndexParameters(mag,
+                                    cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here
+                                    additionalCoordinates = None,
+                                    mappingName = mappingName))
+
+      indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
+    } yield indices
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {

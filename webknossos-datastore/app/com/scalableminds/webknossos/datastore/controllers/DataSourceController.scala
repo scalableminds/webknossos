@@ -1,16 +1,15 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.SegmentStatisticsParameters
+import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
   UnusableInboxDataSource
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
@@ -578,19 +577,22 @@ class DataSourceController @Inject()(
                       organizationName: String,
                       datasetName: String,
                       dataLayerName: String,
-                      segmentId: String,
-                      mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+                      segmentId: String): Action[GetSegmentIndexParameters] =
+    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
           (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
                                                                           datasetName,
                                                                           dataLayerName,
                                                                           segmentId.toLong)
-          bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, magParsed, fileMag)
-        } yield Ok(Json.toJson(bucketPositions))
+          bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, request.body.mag, fileMag)
+          bucketPositionsForCubeSize = bucketPositions
+            .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
+            .map(_ / request.body.cubeSize)
+            .distinct // divide by requested cube size to map them to larger buckets, select unique
+            .map(_ * request.body.cubeSize) // return positions, not indices
+        } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }
 

@@ -8,11 +8,14 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatisticsParameters}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetSegmentIndexParameters,
+  ProtoGeometryImplicits,
+  SegmentStatisticsParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebknossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -40,22 +43,12 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
-
-case class GetSegmentIndexParameters(
-    mag: Vec3Int,
-    cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-)
-
-object GetSegmentIndexParameters {
-  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
-}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,

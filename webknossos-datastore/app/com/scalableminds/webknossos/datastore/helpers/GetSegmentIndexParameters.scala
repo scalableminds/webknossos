@@ -1,0 +1,16 @@
+package com.scalableminds.webknossos.datastore.helpers
+
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import play.api.libs.json.{Format, Json}
+
+case class GetSegmentIndexParameters(
+    mag: Vec3Int,
+    cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    mappingName: Option[String] // Specify the mapping when querying the datastore
+)
+
+object GetSegmentIndexParameters {
+  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
+}

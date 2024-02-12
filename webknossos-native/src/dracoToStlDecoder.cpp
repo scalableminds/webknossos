@@ -17,8 +17,11 @@
 #include <vector>
 #include <iostream>
 
+
+// Takes a byte array containing a DRACO-Encoded mesh, adds offsetX, offsetY, offsetZ to each vertex
+// And encodes the results as STL faces (50 bytes per face) BUT WITH NO STL HEADER.
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeDracoToStlConverter_dracoToStl
-  (JNIEnv* env, jobject instance, jbyteArray inputJavaArray)
+  (JNIEnv* env, jobject instance, jbyteArray inputJavaArray, jfloat offsetX, jfloat offsetY, jfloat offsetZ)
 {
   jsize inputLength = env->GetArrayLength(inputJavaArray);
   jbyte* dataAsJByte = env->GetByteArrayElements(inputJavaArray, NULL);
@@ -32,27 +35,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
   std::vector<uint8_t> buffer;
   if (statusOrMesh.ok()) {
     std::unique_ptr<draco::Mesh> mesh = std::move(statusOrMesh).value();
-
     draco::EncoderBuffer encodeBuffer;
 
-    /*
-    std::stringstream out;
-    out << std::left << std::setw(80)
-        << "generated using WEBKNOSSOS";  // header is 80 bytes fixed size.
-    const std::string header_str = out.str();
-    encodeBuffer.Encode(header_str.data(), header_str.length());
-    */
-
-    uint32_t num_faces = mesh->num_faces();
-
-    // encodeBuffer.Encode(&num_faces, 4);
-
-    std::vector<uint8_t> stl_face;
-
     const int positionAttributeId = mesh->GetNamedAttributeId(draco::GeometryAttribute::POSITION);
-
-    // TODO error handling
-
     uint16_t unused = 0;
 
     for (draco::FaceIndex i(0); i < mesh->num_faces(); ++i) {
@@ -67,16 +52,15 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
       norm.Normalize();
       encodeBuffer.Encode(norm.data(), sizeof(float) * 3);
 
-      for (int c = 0; c < 3; ++c) {
-        encodeBuffer.Encode(positionAttribute->GetAddress(positionAttribute->mapped_index(face[c])),
-                         positionAttribute->byte_stride());
+      for (int vertexIndex = 0; vertexIndex < 3; ++vertexIndex) {
+        pos[vertexIndex][0] += offsetX;
+        pos[vertexIndex][1] += offsetY;
+        pos[vertexIndex][2] += offsetZ;
+        encodeBuffer.Encode(&pos[vertexIndex], sizeof(float) * 3);
       }
 
-      encodeBuffer.Encode(&unused, 2);
+      encodeBuffer.Encode(&unused, 2); // we write no face attributes, so attribute byte count is zero
     }
-
-
-    std::cout << "num_faces: " << num_faces << ", encodeBuffer size: " << encodeBuffer.size() << std::endl;
 
     env->ReleaseByteArrayElements(inputJavaArray, dataAsJByte, 0);
 
@@ -85,6 +69,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
     env->SetByteArrayRegion(result, 0, outputLength, reinterpret_cast<const jbyte*>(encodeBuffer.data()));
     return result;
   } else {
+    // TODO java create exception?
     buffer.push_back(1);
   }
 

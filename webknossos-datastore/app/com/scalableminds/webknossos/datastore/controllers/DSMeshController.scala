@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -35,46 +37,49 @@ class DSMeshController @Inject()(
     val meshfileName = "meshfile_4-4-2"
     val listMeshChunksRequest = ListMeshChunksRequest(
       meshfileName,
-      355
+      55834
     )
+    val before = Instant.now
     for {
       chunkInfos: WebknossosSegmentInfo <- meshFileService
         .listMeshChunksForSegmentV3(organizationName, datasetName, layerName, listMeshChunksRequest)
         .toFox
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
-      // TODO write to buffer directly?
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationName, datasetName, layerName, meshfileName, chunkRange)
       }
-      numFaces = stlEncodedChunks.map(_.length / 50).sum
-      constantStlHeader = Array.fill[Byte](80)(0)
-      outputNumBytes = 80 + 4 + stlEncodedChunks.map(_.length).sum
-      output = ByteBuffer.allocate(outputNumBytes)
-      _ = output.order(ByteOrder.LITTLE_ENDIAN)
-      _ = output.put(constantStlHeader)
-      _ = output.putInt(numFaces)
-      _ = stlEncodedChunks.foreach(output.put)
-      array = byteBufferToArray(output, outputNumBytes)
-      _ = logger.info(s"output size: ${array.length}")
-    } yield
-      Ok(array) //Ok(Json.obj("decodedArrayFirst100Bytes" -> decodedArray.take(100).mkString(""), "encoding" -> encoding))
+      stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
+      _ = logger.info(s"output size: ${stlOutput.length}. took ${Instant.since(before)}")
+    } yield Ok(stlOutput)
+  }
+
+  private def combineEncodedChunksToStl(stlEncodedChunks: Seq[Array[Byte]]): Array[Byte] = {
+    val numFaces = stlEncodedChunks.map(_.length / 50).sum // our stl implementation writes exactly 50 bytes per face
+    val constantStlHeader = Array.fill[Byte](80)(0)
+    val outputNumBytes = 80 + 4 + stlEncodedChunks.map(_.length).sum
+    val output = ByteBuffer.allocate(outputNumBytes)
+    output.order(ByteOrder.LITTLE_ENDIAN)
+    output.put(constantStlHeader)
+    output.putInt(numFaces)
+    stlEncodedChunks.foreach(output.put)
+    byteBufferToArray(output, outputNumBytes)
   }
 
   private def readMeshChunkAsStl(organizationName: String,
                                  datasetName: String,
                                  layerName: String,
                                  meshfileName: String,
-                                 chunkRange: MeshChunk): Fox[Array[Byte]] =
+                                 chunkInfo: MeshChunk): Fox[Array[Byte]] =
     for {
-      (dracoMeshFragmentBytes, encoding) <- meshFileService.readMeshChunkV3(
+      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunkV3(
         organizationName,
         datasetName,
         layerName,
-        MeshChunkDataRequestV3List(meshfileName,
-                                   List(MeshChunkDataRequestV3(chunkRange.byteOffset, chunkRange.byteSize)))
+        MeshChunkDataRequestV3List(meshfileName, List(MeshChunkDataRequestV3(chunkInfo.byteOffset, chunkInfo.byteSize)))
       )
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
-      stlEncodedChunk = converter.dracoToStl(dracoMeshFragmentBytes)
+      stlEncodedChunk <- tryo(
+        converter.dracoToStl(dracoMeshChunkBytes, chunkInfo.position.x, chunkInfo.position.y, chunkInfo.position.z))
     } yield stlEncodedChunk
 
   private def byteBufferToArray(buf: ByteBuffer, numBytes: Int): Array[Byte] = {

@@ -10,6 +10,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
 class DSMeshController @Inject()(
@@ -23,20 +24,64 @@ class DSMeshController @Inject()(
     extends Controller
     with FoxImplicits {
 
+  private lazy val converter = new NativeDracoToStlConverter()
+
   override def allowRemoteOrigin: Boolean = true
 
   def testStl: Action[AnyContent] = Action.async { implicit request =>
+    val organizationName = "sample_organization"
+    val datasetName = "l4dense_mesh_test"
+    val layerName = "segmentation"
+    val meshfileName = "meshfile_4-4-2"
+    val listMeshChunksRequest = ListMeshChunksRequest(
+      meshfileName,
+      355
+    )
+    for {
+      chunkInfos: WebknossosSegmentInfo <- meshFileService
+        .listMeshChunksForSegmentV3(organizationName, datasetName, layerName, listMeshChunksRequest)
+        .toFox
+      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
+      // TODO write to buffer directly?
+      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
+        readMeshChunkAsStl(organizationName, datasetName, layerName, meshfileName, chunkRange)
+      }
+      numFaces = stlEncodedChunks.map(_.length / 50).sum
+      constantStlHeader = Array.fill[Byte](80)(0)
+      outputNumBytes = 80 + 4 + stlEncodedChunks.map(_.length).sum
+      output = ByteBuffer.allocate(outputNumBytes)
+      _ = output.order(ByteOrder.LITTLE_ENDIAN)
+      _ = output.put(constantStlHeader)
+      _ = output.putInt(numFaces)
+      _ = stlEncodedChunks.foreach(output.put)
+      array = byteBufferToArray(output, outputNumBytes)
+      _ = logger.info(s"output size: ${array.length}")
+    } yield
+      Ok(array) //Ok(Json.obj("decodedArrayFirst100Bytes" -> decodedArray.take(100).mkString(""), "encoding" -> encoding))
+  }
+
+  private def readMeshChunkAsStl(organizationName: String,
+                                 datasetName: String,
+                                 layerName: String,
+                                 meshfileName: String,
+                                 chunkRange: MeshChunk): Fox[Array[Byte]] =
     for {
       (dracoMeshFragmentBytes, encoding) <- meshFileService.readMeshChunkV3(
-        "sample_organization",
-        "test-agglomerate-file",
-        "segmentation",
-        MeshChunkDataRequestV3List("meshfile_1-1-1", List(MeshChunkDataRequestV3(15226L, 14338)))
+        organizationName,
+        datasetName,
+        layerName,
+        MeshChunkDataRequestV3List(meshfileName,
+                                   List(MeshChunkDataRequestV3(chunkRange.byteOffset, chunkRange.byteSize)))
       )
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
-      decodedArray = new NativeDracoToStlConverter().dracoToStl(dracoMeshFragmentBytes)
-    } yield
-      Ok(decodedArray) //Ok(Json.obj("decodedArrayFirst100Bytes" -> decodedArray.take(100).mkString(""), "encoding" -> encoding))
+      stlEncodedChunk = converter.dracoToStl(dracoMeshFragmentBytes)
+    } yield stlEncodedChunk
+
+  private def byteBufferToArray(buf: ByteBuffer, numBytes: Int): Array[Byte] = {
+    val arr = new Array[Byte](numBytes)
+    buf.rewind()
+    buf.get(arr)
+    arr
   }
 
   def listMeshFiles(token: Option[String],

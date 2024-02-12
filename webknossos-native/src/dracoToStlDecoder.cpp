@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <stdint.h>
 #include <vector>
+#include <iostream>
 
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeDracoToStlConverter_dracoToStl
   (JNIEnv* env, jobject instance, jbyteArray inputJavaArray)
@@ -34,15 +35,17 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
 
     draco::EncoderBuffer encodeBuffer;
 
+    /*
     std::stringstream out;
     out << std::left << std::setw(80)
         << "generated using WEBKNOSSOS";  // header is 80 bytes fixed size.
     const std::string header_str = out.str();
     encodeBuffer.Encode(header_str.data(), header_str.length());
+    */
 
     uint32_t num_faces = mesh->num_faces();
 
-    encodeBuffer.Encode(&num_faces, 4);
+    // encodeBuffer.Encode(&num_faces, 4);
 
     std::vector<uint8_t> stl_face;
 
@@ -71,6 +74,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
 
       encodeBuffer.Encode(&unused, 2);
     }
+
+
+    std::cout << "num_faces: " << num_faces << ", encodeBuffer size: " << encodeBuffer.size() << std::endl;
 
     env->ReleaseByteArrayElements(inputJavaArray, dataAsJByte, 0);
 

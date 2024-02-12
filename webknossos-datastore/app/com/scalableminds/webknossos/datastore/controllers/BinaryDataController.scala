@@ -28,14 +28,14 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
 class BinaryDataController @Inject()(
-                                      dataSourceRepository: DataSourceRepository,
-                                      config: DataStoreConfig,
-                                      accessTokenService: DataStoreAccessTokenService,
-                                      binaryDataServiceHolder: BinaryDataServiceHolder,
-                                      mappingService: MappingService,
-                                      slackNotificationService: DSSlackNotificationService,
-                                      adHocMeshServiceHolder: AdHocMeshServiceHolder,
-                                      findDataService: FindDataService,
+    dataSourceRepository: DataSourceRepository,
+    config: DataStoreConfig,
+    accessTokenService: DataStoreAccessTokenService,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    mappingService: MappingService,
+    slackNotificationService: DSSlackNotificationService,
+    adHocMeshServiceHolder: AdHocMeshServiceHolder,
+    findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {

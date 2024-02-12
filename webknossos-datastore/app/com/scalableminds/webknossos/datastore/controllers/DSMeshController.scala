@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
+import com.scalableminds.webknossos.datastore.{DataStoreConfig, NativeDracoToStlConverter}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
@@ -25,11 +25,17 @@ class DSMeshController @Inject()(
     dataSourceRepository: DataSourceRepository,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
     dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+    mappingService: MappingService,
+    config: DataStoreConfig,
     dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
+
+  val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
+  adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
+    (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
 
   private lazy val converter = new NativeDracoToStlConverter()
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
@@ -41,18 +47,17 @@ class DSMeshController @Inject()(
     val datasetName = "l4_sample_zarr3_sharded"
     val layerName = "segmentation"
     val segmentId = 1997
-    val seedPosition = Vec3Int(3665, 3556, 1024)
+    val seedPosition = Vec3Int(3455, 3455, 1023)
 
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 layerName) ~> NOT_FOUND
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
-      topLeft = seedPosition - Vec3Int(100, 100, 100)
       adHocMeshRequest = AdHocMeshRequest(
         Some(dataSource),
         segmentationLayer,
-        Cuboid(VoxelPosition(topLeft.x, topLeft.y, topLeft.z, Vec3Int.ones), 200, 200, 200),
+        Cuboid(VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)), 33, 33, 129),
         segmentId,
         Vec3Int.ones,
         dataSource.scale,
@@ -64,14 +69,26 @@ class DSMeshController @Inject()(
       // consecutive 3D points (i.e., nine floats) form a triangle.
       // There are no shared vertices between triangles.
       (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-    } yield {
-      // We need four bytes for each float
-      val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-      responseBuffer.asFloatBuffer().put(vertices)
-      Ok(responseBuffer.array())
-    }
-
-    Fox.successful(Ok)
+      _ = logger.info(s"returned ${vertices.length} vertices.")
+      numFaces = vertices.length / (3 * 3 * 4) // a face has three vertices, a vertex has three four-byte floats.
+      constantStlHeader = Array.fill[Byte](80)(0)
+      outputNumBytes = 80 + 4 + numFaces * 50
+      output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
+      unused = Array.fill[Byte](4)(0)
+      _ = output.order(ByteOrder.LITTLE_ENDIAN)
+      _ = output.put(constantStlHeader)
+      _ = output.putInt(numFaces)
+      _ = for (faceIndex <- 0 until numFaces) {
+        for (vertexIndex <- 0 until 3) {
+          for (dimIndex <- 0 until 3) {
+            output.putFloat(vertices(faceIndex + vertexIndex + dimIndex))
+            // TODO face normals
+          }
+        }
+        output.put(unused)
+      }
+      array = byteBufferToArray(output, outputNumBytes)
+    } yield Ok(array)
   }
 
   def testStl: Action[AnyContent] = Action.async { implicit request =>

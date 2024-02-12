@@ -81,7 +81,10 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import {
+  ensureMaybeActiveMappingIsPinned,
+  takeEveryUnlessBusy,
+} from "oxalis/model/sagas/saga_helpers";
 import {
   deleteSegmentDataVolumeAction,
   UpdateAction,
@@ -107,9 +110,7 @@ import {
   labelWithVoxelBuffer2D,
   BooleanBox,
 } from "./volume/helpers";
-import maybeInterpolateSegmentationLayer, {
-  ensureMaybeActiveMappingIsPinned,
-} from "./volume/volume_interpolation_saga";
+import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 
@@ -709,9 +710,11 @@ export function* diffVolumeTracing(
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
       prevVolumeTracing.mappingIsPinned !== volumeTracing.mappingIsPinned
     ) {
+      // Once the first volume action is performed on a volume layer, the mapping state is pinned.
+      // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
-        volumeTracing.mappingName,
-        volumeTracing.mappingIsEditable,
+        volumeTracing.mappingName || null,
+        volumeTracing.mappingIsEditable || null,
         volumeTracing.mappingIsPinned,
       );
       yield action;

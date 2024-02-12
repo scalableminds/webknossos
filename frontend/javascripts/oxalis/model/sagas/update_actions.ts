@@ -412,7 +412,7 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
-  isEditable: boolean | undefined,
+  isEditable: boolean | null | undefined,
   isPinned: boolean | undefined,
 ) {
   return {

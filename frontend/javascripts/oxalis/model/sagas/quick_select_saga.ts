@@ -18,9 +18,9 @@ import performQuickSelectML, {
 } from "./quick_select_ml_saga";
 import { AnnotationToolEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { ensureMaybeActiveMappingIsPinned } from "./volume/volume_interpolation_saga";
 import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
 import { VolumeTracing } from "oxalis/store";
+import { ensureMaybeActiveMappingIsPinned } from "./saga_helpers";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);

@@ -120,6 +120,16 @@ function _getDisabledInfoForProofreadTool(
   activeOrganization: APIOrganization | null,
   activeUser: APIUser | null | undefined,
 ) {
+  // The explanations are prioritized according to effort the user has to put into
+  // activating proofreading.
+  // 1) If a non editable mapping is pinned to the annotation, proofreading actions are
+  //    not allowed for this annotation.
+  // 2) If no agglomerate mapping is available (or activated), the user should know
+  //    about this requirement and be able to set it up (this can be the most difficult
+  //    step).
+  // 3) If a mapping is available, the pricing plan is potentially warned upon.
+  // 4) In the end, a potentially missing skeleton is warned upon (quite rare, because
+  //    most annotations have a skeleton).
   const isDisabled =
     !hasSkeleton ||
     !agglomerateState.value ||
@@ -138,6 +148,9 @@ function _getDisabledInfoForProofreadTool(
     } else {
       explanation = disabledSkeletonExplanation;
     }
+  } else {
+    explanation =
+      "A mapping that does not support proofreading actions is pinned to this annotation.";
   }
   return {
     isDisabled,

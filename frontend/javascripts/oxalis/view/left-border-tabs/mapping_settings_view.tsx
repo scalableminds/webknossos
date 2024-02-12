@@ -1,4 +1,4 @@
-import { Select } from "antd";
+import { Select, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
@@ -175,6 +175,11 @@ class MappingSettingsView extends React.Component<Props, State> {
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
     const isDisabled = this.props.isEditableMappingActive || this.props.isMappingPinned;
+    const disabledMessage = this.props.isEditableMappingActive
+      ? "Editable mappings from proofreading actions cannot be disabled"
+      : this.props.mapping
+      ? "This mapping has been pinned to this annotation and thus cannot be disabled."
+      : "This annotation was started with no mapping enabled. To ensure a consistent state, mappings cannot be enabled.";
     return (
       <React.Fragment>
         {
@@ -182,20 +187,24 @@ class MappingSettingsView extends React.Component<Props, State> {
          to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
             <React.Fragment>
-              <div
-                style={{
-                  marginBottom: 6,
-                }}
-              >
-                <SwitchSetting
-                  onChange={this.handleSetMappingEnabled}
-                  value={shouldMappingBeEnabled}
-                  label="ID Mapping"
-                  // Assume that the mappings are being loaded if they are null
-                  loading={shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null}
-                  disabled={isDisabled}
-                />
-              </div>
+              <Tooltip title={isDisabled ? disabledMessage : null}>
+                <div
+                  style={{
+                    marginBottom: 6,
+                  }}
+                >
+                  <SwitchSetting
+                    onChange={this.handleSetMappingEnabled}
+                    value={shouldMappingBeEnabled}
+                    label="ID Mapping"
+                    // Assume that the mappings are being loaded if they are null
+                    loading={
+                      shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null
+                    }
+                    disabled={isDisabled}
+                  />
+                </div>
+              </Tooltip>
 
               {/*
                 Show mapping-select even when the mapping is disabled but the UI was used before

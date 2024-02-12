@@ -1,10 +1,17 @@
+import { Modal } from "antd";
+import messages from "messages";
 import type { Action } from "oxalis/model/actions/actions";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
+import { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
+import { call, put, takeEvery } from "typed-redux-saga";
+import Toast from "libs/toast";
+import { Store } from "oxalis/singletons";
 // @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
 import type { Pattern } from "redux-saga";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { setMappingIsPinnedAction } from "../actions/volumetracing_actions";
+import { MappingStatusEnum } from "oxalis/constants";
 
 export function* takeEveryUnlessBusy(
   actionDescriptor: Pattern,
@@ -37,6 +44,70 @@ export function* takeEveryUnlessBusy(
   }
 
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
+}
+
+type EnsureMappingIsPinnedReturnType = {
+  isMappingPinnedIfNeeded: boolean;
+  reason?: string;
+};
+
+function askUserForPinningActiveMapping(
+  volumeTracing: VolumeTracing,
+  activeMappingByLayer: Record<string, ActiveMappingInfo>,
+): Promise<EnsureMappingIsPinnedReturnType> {
+  return new Promise((resolve, reject) => {
+    if (!volumeTracing.mappingIsPinned) {
+      const pinMapping = async () => {
+        // A mapping that is active and is being annotated needs to be pinned to ensure a consistent state in the future.
+        // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
+        const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
+        if (activeMapping.mappingName) {
+          Store.dispatch(setMappingIsPinnedAction());
+          const message = messages["tracing.pin_mapping_confirmed"](activeMapping.mappingName);
+          Toast.info(message, { timeout: 10000 });
+          console.log(message);
+          resolve({ isMappingPinnedIfNeeded: true, reason: "User confirmed." });
+        } else {
+          // Having an active mapping without a name should be impossible. Therefore, no further error handling is done.
+          reject({ isMappingPinnedIfNeeded: false, reason: "No mapping name." });
+        }
+      };
+      Modal.confirm({
+        title: "Should the active Mapping be pinned?",
+        content: messages["tracing.pin_mapping_info"],
+        okText: "Pin Mapping",
+        cancelText: "Abort Annotation Action",
+        width: 600,
+        onOk: pinMapping,
+        onCancel: async () => {
+          reject({ isMappingPinnedIfNeeded: false, reason: "User aborted." });
+        },
+      });
+    } else {
+      resolve({ isMappingPinnedIfNeeded: true, reason: "No active mapping." });
+    }
+  });
+}
+
+export function* ensureMaybeActiveMappingIsPinned(
+  volumeTracing: VolumeTracing,
+): Saga<EnsureMappingIsPinnedReturnType> {
+  if (volumeTracing.mappingIsPinned) {
+    return { isMappingPinnedIfNeeded: true, reason: "Mapping is already pinned." };
+  }
+  const activeMappingByLayer = yield* select(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const isSomeMappingActive =
+    volumeTracing.tracingId in activeMappingByLayer &&
+    activeMappingByLayer[volumeTracing.tracingId].mappingStatus === MappingStatusEnum.ENABLED;
+  const isHDF5Mapping = activeMappingByLayer[volumeTracing.tracingId]?.mappingType === "HDF5";
+  if (isSomeMappingActive && isHDF5Mapping) {
+    return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
+  } else {
+    yield* put(setMappingIsPinnedAction());
+    return { isMappingPinnedIfNeeded: true, reason: "Pinned that no mapping is active." };
+  }
 }
 
 export default {};

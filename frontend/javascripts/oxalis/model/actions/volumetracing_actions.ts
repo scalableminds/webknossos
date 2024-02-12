@@ -112,6 +112,8 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
+  "SET_MAPPING_IS_EDITABLE",
+  "SET_MAPPING_IS_PINNED",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

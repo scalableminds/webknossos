@@ -399,10 +399,10 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING_IS_EDITABLE": {
-      // Editable mappings cannot be disabled or switched for now
-      // An editable mapping is always pinned.
-      if (volumeTracing.mappingIsEditable && volumeTracing.mappingIsPinned) return state;
+      // Editable mappings cannot be disabled or switched for now.
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsPinned) return state;
 
+      // An editable mapping is always pinned.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
         mappingIsPinned: true,

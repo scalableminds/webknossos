@@ -257,7 +257,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.pin_mapping_info":
     "The active volume annotation layer has an active mapping. In order to change the volume annotation while the mapping is active and ensure a consistent future state, this current mapping needs to be pinned to this annotation. Do you want to pin this mapping for future versions or abort the current volume annotation action?",
   "tracing.pin_mapping_confirmed": (mappingName: string) =>
-    `The mapping ${mappingName} is from now on pinned to this annotation.\nTo undo this, please restore an older version of the annotation where the mapping was not pinned yet.`,
+    `The mapping ${mappingName} is from now on pinned to this annotation.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

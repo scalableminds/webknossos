@@ -75,14 +75,13 @@ class DSMeshController @Inject()(
       outputNumBytes = 80 + 4 + numFaces * 50
       output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
       unused = Array.fill[Byte](2)(0)
-      _ = output.order(ByteOrder.LITTLE_ENDIAN)
       _ = output.put(constantStlHeader)
       _ = output.putInt(numFaces)
       _ = for (faceIndex <- 0 until numFaces) {
         val v1 = Vec3Float(vertices(faceIndex), vertices(faceIndex + 1), vertices(faceIndex + 2))
         val v2 = Vec3Float(vertices(faceIndex + 3), vertices(faceIndex + 4), vertices(faceIndex + 5))
         val v3 = Vec3Float(vertices(faceIndex + 6), vertices(faceIndex + 7), vertices(faceIndex + 8))
-        val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1)
+        val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
         output.putFloat(norm.x)
         output.putFloat(norm.y)
         output.putFloat(norm.z)
@@ -124,8 +123,7 @@ class DSMeshController @Inject()(
     val numFaces = stlEncodedChunks.map(_.length / 50).sum // our stl implementation writes exactly 50 bytes per face
     val constantStlHeader = Array.fill[Byte](80)(0)
     val outputNumBytes = 80 + 4 + stlEncodedChunks.map(_.length).sum
-    val output = ByteBuffer.allocate(outputNumBytes)
-    output.order(ByteOrder.LITTLE_ENDIAN)
+    val output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
     output.put(constantStlHeader)
     output.putInt(numFaces)
     stlEncodedChunks.foreach(output.put)

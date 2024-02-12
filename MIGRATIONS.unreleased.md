@@ -15,6 +15,7 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 ```
 - WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
 - NodeJS version 18+ is required for snapshot tests with ShadowDOM elements from Antd v5. [#7522](https://github.com/scalableminds/webknossos/pull/7522)
+- Email verification is disabled by default. To enable it, set `webKnossos.emailVerification` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620)
 
 ### Postgres Evolutions:
 

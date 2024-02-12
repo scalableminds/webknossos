@@ -63,20 +63,31 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging {
+trait AdditionalCoordinateKey {
+  protected def additionalCoordinatesKeyPart(additionalCoordinates: Seq[AdditionalCoordinate],
+                                             additionalAxes: Seq[AdditionalAxis],
+                                             prefix: String = ""): String = {
+    // Bucket key additional coordinates need to be ordered to be found later.
+    val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
+    val sortedValues = additionalAxes.sortBy(_.index).map(a => valueMap(a.name))
+    if (sortedValues.nonEmpty) {
+      f"$prefix${sortedValues.map(_.toString).mkString(",")}"
+    } else {
+      ""
+    }
+  }
+}
+
+trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging with AdditionalCoordinateKey {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        // Bucket key additional coordinates need to be ordered to be found later.
-        val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
-        val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))
-
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${sortedValues
-          .map(_.toString)
-          .mkString(",")}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${additionalCoordinatesKeyPart(
+          additionalCoordinates,
+          axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
         s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }

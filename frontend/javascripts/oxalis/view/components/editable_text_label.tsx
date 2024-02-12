@@ -130,7 +130,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       size: "small",
       autoFocus: true,
     };
-    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
+    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
 
     if (this.state.isEditing) {
       return (

@@ -210,8 +210,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
         style={{ marginLeft: 12, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
+        icon={<i className="fas fa-magic" />}
       >
-        <i className="fas fa-magic" /> AI Analysis
+        AI Analysis
       </ButtonComponent>
     );
   }

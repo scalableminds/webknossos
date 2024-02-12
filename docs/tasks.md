@@ -20,7 +20,7 @@ It is possible to download all annotations that belong to either a _Project_ or 
 
 First, a _Task Type_ needs to be created:
 
-1. Open the `Task Types` screen of the admininstration section and click on `Add Task Type`.
+1. Open the `Task Types` screen of the administration section and click on `Add Task Type`.
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](./users.md#organizations).
@@ -38,7 +38,7 @@ Next, you need to set up a _Project_:
 
 Now, you are ready to create _Tasks_:
 
-1. Open the `Tasks` screen of the admininstration section and click on `Add Task`.
+1. Open the `Tasks` screen of the administration section and click on `Add Task`.
 2. Fill out the form create the Task.
    - Enter the starting positions in the lower part of the form.
    - Alternatively, you can upload an NML file that contains nodes that will be used as starting positions.
@@ -80,9 +80,9 @@ When users request a new task from their dashboard ("Tasks" tab), a set of crite
 ## Manual Task Assignment
 
 In contrast to the automated task distribution system, an admin user can also manually assign a task instance to users.
-Note, manual assignments bypass the assignment criterias enforced by the automated system and allow for fine-grained and direct assignments to individual user.
+Note, manual assignments bypass the assignment criteria enforced by the automated system and allow for fine-grained and direct assignments to individual user.
 
-Manual assignments can done by:
+Manual assignments can be done by:
 
 1. Navigate to the task list
 2. Search for your task by setting the appropriate filters
@@ -90,7 +90,7 @@ Manual assignments can done by:
 4. Select a user for the assignment from the dropdown
 5. Confirm the assignment with "ok"
 
-Existing, active and finished task instances can also be transfered to other users, e.g. for proofreading, continued annotation or to change ownership:
+Existing, active and finished task instances can also be transferred to other users, e.g. for proofreading, continued annotation or to change ownership:
 
 1. Navigate to the task list
 2. Search for your task by setting the appropriate filters

@@ -115,7 +115,6 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { hasAdditionalCoordinates } from "oxalis/model/accessors/flycam_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -227,7 +226,7 @@ function positionToString(
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
-  const lineColor = "var(--ant-text-secondary)";
+  const lineColor = "var(--ant-color-text-secondary)";
   const mouseIconStyle = { margin: 0, marginLeft: -2, height: 18 };
 
   const mapNameToShortcutIcon = (name: string) => {
@@ -890,7 +889,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 <span>
                   Import Agglomerate Skeleton{" "}
                   {!isAgglomerateMappingEnabled.value ? (
-                    <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
+                    <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
                   {shortcutBuilder(["SHIFT", "middleMouse"])}
                 </span>
@@ -964,7 +963,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         <Tooltip title={isConnectomeMappingEnabled.reason}>
           Import Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
-            <WarningOutlined style={{ color: "var(--ant-disabled)" }} />
+            <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
           ) : null}{" "}
         </Tooltip>
       ),
@@ -1192,27 +1191,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
         contextMenuPosition == null ||
         volumeTracing == null ||
         !hasNoFallbackLayer ||
-        !volumeTracing.hasSegmentIndex ||
-        hasAdditionalCoordinates(props.additionalCoordinates) // TODO change once statistics are available for nd-datasets
+        !volumeTracing.hasSegmentIndex
       ) {
         return [];
       } else {
+        const state = Store.getState();
         const tracingId = volumeTracing.tracingId;
-        const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
+        const tracingStoreUrl = state.tracing.tracingStore.url;
         const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
         const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = Store.getState().dataset.dataSource.scale;
+        const dataSetScale = state.dataset.dataSource.scale;
+        const additionalCoordinates = state.flycam.additionalCoordinates;
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           [segmentIdAtPosition],
+          additionalCoordinates,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           tracingStoreUrl,
           tracingId,
           layersFinestResolution,
           [segmentIdAtPosition],
+          additionalCoordinates,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(
           boundingBoxInRequestedMag,
@@ -1342,10 +1344,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 
   const areSegmentStatisticsAvailable =
-    hasNoFallbackLayer &&
-    volumeTracing?.hasSegmentIndex &&
-    isHoveredSegmentOrMesh &&
-    !hasAdditionalCoordinates(props.additionalCoordinates); // TODO change once statistics are available for nd-datasets
+    hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

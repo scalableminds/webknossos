@@ -344,7 +344,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         >
-          <ScanOutlined />
+          <ScanOutlined className="icon-margin-right" />
           Jump to data
         </div>
       </Tooltip>
@@ -356,7 +356,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <div onClick={() => this.reloadLayerData(layerName)}>
-          <ReloadOutlined />
+          <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
       </Tooltip>
@@ -373,8 +373,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <EditOutlined
             style={{
               cursor: "pointer",
-              color: isInEditMode ? "var(--ant-primary)" : undefined,
+              color: isInEditMode ? "var(--ant-color-primary)" : undefined,
             }}
+            className="icon-margin-right"
           />
           {isInEditMode ? "Stop editing" : "Edit"} histogram range
         </div>
@@ -384,7 +385,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
     <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
-      <i className="fas fa-object-ungroup" />
+      <i className="fas fa-object-ungroup icon-margin-right" />
       Merge this volume annotation with its fallback layer
     </div>
   );
@@ -393,14 +394,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     <Tooltip title="Delete this annotation layer.">
       <i
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash"
+        className="fas fa-trash icon-margin-right"
       />
     </Tooltip>
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
     <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
-      <i className="fas fa-trash" />
+      <i className="fas fa-trash icon-margin-right" />
       Delete this annotation layer
     </div>
   );
@@ -451,6 +452,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               cursor: "pointer",
               transform: "rotate(90deg)",
             }}
+            className="icon-margin-right"
           />
           Clip histogram
         </div>
@@ -482,7 +484,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <div onClick={triggerComputeSegmentIndexFileJob}>
-        <i className="fas fa-database" />
+        <i className="fas fa-database icon-margin-right" />
         Compute a Segment Index file
       </div>
     );
@@ -749,7 +751,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
               placement="left"
             >
-              <InfoCircleOutlined />
+              <InfoCircleOutlined className="icon-margin-right" />
             </Tooltip>
             {canBeMadeEditable ? (
               <Tooltip
@@ -782,7 +784,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <i
-                  className="fas fa-paint-brush"
+                  className="fas fa-paint-brush icon-margin-right"
                   style={{
                     opacity: 0.7,
                   }}
@@ -798,7 +800,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               >
                 <WarningOutlined
                   style={{
-                    color: "var(--ant-warning)",
+                    color: "var(--ant-color-warning)",
                   }}
                 />
               </Tooltip>
@@ -882,8 +884,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   margin: 0,
                   transition: "transform 0.5s ease 0s",
                   color: layerConfiguration.isInverted
-                    ? "var(--ant-primary)"
-                    : "var(--ant-text-secondary)",
+                    ? "var(--ant-color-primary)"
+                    : "var(--ant-color-text-secondary)",
                 }}
               />
             </div>

@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { document } from "libs/window";
 import { Provider } from "react-redux";
+import GlobalThemeProvider from "theme";
 
 type DestroyFunction = () => void; // The returned promise gets resolved once the element is destroyed.
 
@@ -33,7 +34,9 @@ export default function renderIndependently(
 
       ReactDOM.render(
         // @ts-ignore
-        <Provider store={Store}>{getComponent(destroy)}</Provider>,
+        <Provider store={Store}>
+          <GlobalThemeProvider>{getComponent(destroy)}</GlobalThemeProvider>
+        </Provider>,
         div,
       );
     });

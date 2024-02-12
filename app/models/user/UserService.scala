@@ -1,10 +1,5 @@
 package models.user
 
-import org.apache.pekko.actor.ActorSystem
-import play.silhouette.api.LoginInfo
-import play.silhouette.api.services.IdentityService
-import play.silhouette.api.util.PasswordInfo
-import play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
@@ -15,18 +10,22 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
+import models.organization.OrganizationDAO
 import models.team._
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Full}
+import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
+import play.silhouette.api.LoginInfo
+import play.silhouette.api.services.IdentityService
+import play.silhouette.api.util.PasswordInfo
+import play.silhouette.impl.providers.CredentialsProvider
+import security.{PasswordHasher, TokenDAO}
+import utils.sql.SqlEscaping
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
-import models.organization.OrganizationDAO
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
-import security.{PasswordHasher, TokenDAO}
-import utils.sql.SqlEscaping
-
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
@@ -367,7 +366,7 @@ class UserService @Inject()(conf: WkConf,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
         "isSuperUser" -> multiUser.isSuperUser,
-        "isEmailVerified" -> multiUser.isEmailVerified,
+        "isEmailVerified" -> multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated,
       )
     }
   }

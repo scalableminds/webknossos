@@ -1,4 +1,5 @@
 import cwise from "cwise";
+import { Modal } from "antd";
 import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -12,7 +13,7 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import { Model, api } from "oxalis/singletons";
+import { Model, Store, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -36,34 +37,74 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
-import { OxalisState, VolumeTracing } from "oxalis/store";
+import { ActiveMappingInfo, OxalisState, VolumeTracing } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import messages from "messages";
+
+type EnsureMappingIsPinnedReturnType = {
+  isMappingPinnedIfNeeded: boolean;
+  reason?: string;
+};
 
 // This saga should be within volumetracing_saga.tsx but is placed here to avoid cyclic dependencies.
-export function* ensureMaybeActiveMappingIsPinned(volumeTracing: VolumeTracing): Saga<void> {
+function askUserForPinningActiveMapping(
+  volumeTracing: VolumeTracing,
+  activeMappingByLayer: Record<string, ActiveMappingInfo>,
+): Promise<EnsureMappingIsPinnedReturnType> {
+  return new Promise((resolve, reject) => {
+    if (!volumeTracing.mappingIsPinned) {
+      const pinMapping = async () => {
+        // A mapping that is active and is annotated on needs to be pinned to ensure a consistent state in the future.
+        // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
+        const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
+        if (activeMapping.mappingName) {
+          Store.dispatch(
+            setMappingNameAction(
+              volumeTracing.tracingId,
+              activeMapping.mappingName,
+              activeMapping.mappingType,
+            ),
+          );
+          Store.dispatch(setMappingIsPinnedAction());
+          const message = messages["tracing.pin_mapping_confirmed"](activeMapping.mappingName);
+          Toast.info(message, { timeout: 10000 });
+          console.log(message);
+          resolve({ isMappingPinnedIfNeeded: true, reason: "User confirmation." });
+        } else {
+          // Having an active mapping without a name should be impossible. Therefore, no further error handling is done.
+          reject({ isMappingPinnedIfNeeded: false, reason: "No mapping name." });
+        }
+      };
+      Modal.confirm({
+        title: "Should the active Mapping be pinned?",
+        content: messages["tracing.pin_mapping_info"],
+        okText: "Pin Mapping",
+        cancelText: "Abort Annotation Action",
+        width: 600,
+        onOk: pinMapping,
+        onCancel: async () => {
+          reject({ isMappingPinnedIfNeeded: false, reason: "User aborted." });
+        },
+      });
+    } else {
+      resolve({ isMappingPinnedIfNeeded: true, reason: "No active mapping." });
+    }
+  });
+}
+
+export function* ensureMaybeActiveMappingIsPinned(
+  volumeTracing: VolumeTracing,
+): Saga<EnsureMappingIsPinnedReturnType> {
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const isSomeMappingActive = volumeTracing.tracingId in activeMappingByLayer;
   if (isSomeMappingActive && !volumeTracing.mappingIsPinned) {
-    // A mapping that is active and is annotated on needs to be pinned to ensure a consistent state in the future.
-    // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
-    const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
-    if (activeMapping.mappingName) {
-      yield* put(
-        setMappingNameAction(
-          volumeTracing.tracingId,
-          activeMapping.mappingName,
-          activeMapping.mappingType,
-        ),
-      );
-      yield* put(setMappingIsPinnedAction());
-      const message = `The mapping ${activeMapping.mappingName} is from now on pinned to this annotation due to annotating the volume while this mapping was active.\nTo undo this, please restore an older version of the annotation where the mapping was not pinned yet.`;
-      Toast.info(message, { timeout: 10000 });
-      console.log(message);
-    }
+    return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
+  } else {
+    return { isMappingPinnedIfNeeded: true, reason: "No active mapping." };
   }
 }
 
@@ -462,7 +503,10 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
   // As the interpolation will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
-  yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+  const { isMappingPinnedIfNeeded } = yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+  if (!isMappingPinnedIfNeeded) {
+    return;
+  }
 
   // In the extrusion case, we don't need any distance transforms. The binary
   // masks are enough to decide whether a voxel needs to be written.

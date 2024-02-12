@@ -222,7 +222,13 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
     // As changes to the volume layer will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
-    yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+    const { isMappingPinnedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsPinned,
+      volumeTracing,
+    );
+    if (!isMappingPinnedIfNeeded) {
+      continue;
+    }
 
     if (isDrawing && activeCellId === 0) {
       yield* call(

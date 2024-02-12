@@ -92,54 +92,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolumeOld(organizationName: String,
-                          datasetName: String,
-                          dataLayerName: String,
-                          segmentId: Long,
-                          mag: Vec3Int,
-                          dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] = {
-
-    def getTypedDataForSegment(organizationName: String,
-                               datasetName: String,
-                               dataLayerName: String,
-                               segmentId: Long,
-                               mag: Vec3Int)(implicit m: MessagesProvider) =
-      for {
-        (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                  datasetName,
-                                                                                  dataLayerName)
-        data <- getDataForBucketPositions(dataSource,
-                                          dataLayer,
-                                          mag,
-                                          bucketPositionsInFileMag.map(_ / fileMag).distinct.toSeq,
-                                          dataLayerMapping)
-        dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
-      } yield dataTyped
-
-    for {
-      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
-                                                                                datasetName,
-                                                                                dataLayerName)
-      mag1BucketPositions = bucketPositionsInFileMag.map(_ / fileMag).distinct.toSeq
-      sumBoxes <- Fox.serialSequence(mag1BucketPositions.toList)(pos =>
-        for {
-          data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(pos), dataLayerMapping)
-          dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
-          count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
-        } yield count.toLong)
-      counts <- Fox.combined(sumBoxes.map(_.toFox))
-    } yield counts.sum
-  }
-
   def getSegmentVolume(organizationName: String,
                        datasetName: String,
                        dataLayerName: String,
                        segmentId: Long,
                        mag: Vec3Int,
                        dataLayerMapping: Option[String])(implicit m: MessagesProvider): Fox[Long] =
-    //getSegmentVolumeOld(organizationName, datasetName, dataLayerName, segmentId, mag, dataLayerMapping)
     calculateSegmentVolume(
       segmentId,
       mag,

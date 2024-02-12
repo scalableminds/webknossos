@@ -98,7 +98,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
         collapsible="header"
         items={[
           {
-            label: { panelTitle: panelLabel },
+            label: panelLabel,
             key: "1",
             children: <DatasetAccessListView dataset={dataset} />,
           },

@@ -7,9 +7,14 @@ case class Vec3Float(x: Float, y: Float, z: Float) {
   def scale(s: Float): Vec3Float = Vec3Float(x * s, y * s, z * s)
 
   def *(s: Float): Vec3Float = scale(s)
+
   def *(s: Double): Vec3Float = scale(s.toFloat)
+
   def *(that: Vec3Float): Vec3Float = Vec3Float(x * that.x, y * that.y, z * that.z)
+
   def +(that: Vec3Float): Vec3Float = Vec3Float(x + that.x, y + that.y, z + that.z)
+
+  def -(that: Vec3Float): Vec3Float = Vec3Float(x - that.x, y - that.y, z - that.z)
 
   def toList: List[Float] = List(x, y, z)
 }
@@ -34,4 +39,6 @@ object Vec3Float {
       JsArray(l.map(toJson(_)))
     }
   }
+
+  def crossProduct(a: Vec3Float, b: Vec3Float): Vec3Float = a // TODO
 }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.{DataStoreConfig, NativeDracoToStlConverter}
@@ -74,15 +74,21 @@ class DSMeshController @Inject()(
       constantStlHeader = Array.fill[Byte](80)(0)
       outputNumBytes = 80 + 4 + numFaces * 50
       output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
-      unused = Array.fill[Byte](4)(0)
+      unused = Array.fill[Byte](2)(0)
       _ = output.order(ByteOrder.LITTLE_ENDIAN)
       _ = output.put(constantStlHeader)
       _ = output.putInt(numFaces)
       _ = for (faceIndex <- 0 until numFaces) {
+        val v1 = Vec3Float(vertices(faceIndex), vertices(faceIndex + 1), vertices(faceIndex + 2))
+        val v2 = Vec3Float(vertices(faceIndex + 3), vertices(faceIndex + 4), vertices(faceIndex + 5))
+        val v3 = Vec3Float(vertices(faceIndex + 6), vertices(faceIndex + 7), vertices(faceIndex + 8))
+        val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1)
+        output.putFloat(norm.x)
+        output.putFloat(norm.y)
+        output.putFloat(norm.z)
         for (vertexIndex <- 0 until 3) {
           for (dimIndex <- 0 until 3) {
             output.putFloat(vertices(faceIndex + vertexIndex + dimIndex))
-            // TODO face normals
           }
         }
         output.put(unused)

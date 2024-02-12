@@ -28,14 +28,14 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
 class BinaryDataController @Inject()(
-    dataSourceRepository: DataSourceRepository,
-    config: DataStoreConfig,
-    accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
-    mappingService: MappingService,
-    slackNotificationService: DSSlackNotificationService,
-    adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
-    findDataService: FindDataService,
+                                      dataSourceRepository: DataSourceRepository,
+                                      config: DataStoreConfig,
+                                      accessTokenService: DataStoreAccessTokenService,
+                                      binaryDataServiceHolder: BinaryDataServiceHolder,
+                                      mappingService: MappingService,
+                                      slackNotificationService: DSSlackNotificationService,
+                                      adHocMeshServiceHolder: AdHocMeshServiceHolder,
+                                      findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {
@@ -43,9 +43,9 @@ class BinaryDataController @Inject()(
   override def allowRemoteOrigin: Boolean = true
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  adHocMeshingServiceHolder.dataStoreAdHocMeshingConfig =
+  adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
-  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
+  val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   def requestViaWebKnossos(
       token: Option[String],
@@ -271,7 +271,7 @@ class BinaryDataController @Inject()(
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+          (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

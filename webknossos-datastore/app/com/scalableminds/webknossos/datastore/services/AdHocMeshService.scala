@@ -47,7 +47,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
     case request: AdHocMeshRequest =>
       sender() ! Await.result(service.requestAdHocMesh(request).futureBox, timeout)
     case _ =>
-      sender() ! Failure("Unexpected message sent to AdHocMeshingActor.")
+      sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
 }
 

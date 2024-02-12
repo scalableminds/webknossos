@@ -4,6 +4,7 @@
 # Health endpoint
 GET           /health                                                                                                                         @com.scalableminds.webknossos.datastore.controllers.Application.health
 GET           /test.stl                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DSMeshController.testStl
+GET           /testAdHoc.stl                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSMeshController.testAdHocStl
 
 # Read image data
 POST          /datasets/:organizationName/:datasetName/layers/:dataLayerName/data                                                             @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebKnossos(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String)

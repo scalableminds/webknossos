@@ -1,10 +1,13 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import net.liftweb.common.Box.tryo
@@ -19,6 +22,8 @@ class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     fullMeshService: FullMeshService,
+    dataSourceRepository: DataSourceRepository,
+    adHocMeshServiceHolder: AdHocMeshServiceHolder,
     dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
     dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     binaryDataServiceHolder: BinaryDataServiceHolder
@@ -27,8 +32,47 @@ class DSMeshController @Inject()(
     with FoxImplicits {
 
   private lazy val converter = new NativeDracoToStlConverter()
+  val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   override def allowRemoteOrigin: Boolean = true
+
+  def testAdHocStl: Action[AnyContent] = Action.async { implicit request =>
+    val organizationName = "sample_organization"
+    val datasetName = "l4_sample_zarr3_sharded"
+    val layerName = "segmentation"
+    val segmentId = 1997
+    val seedPosition = Vec3Int(3665, 3556, 1024)
+
+    for {
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                datasetName,
+                                                                                layerName) ~> NOT_FOUND
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      topLeft = seedPosition - Vec3Int(100, 100, 100)
+      adHocMeshRequest = AdHocMeshRequest(
+        Some(dataSource),
+        segmentationLayer,
+        Cuboid(VoxelPosition(topLeft.x, topLeft.y, topLeft.z, Vec3Int.ones), 200, 200, 200),
+        segmentId,
+        Vec3Int.ones,
+        dataSource.scale,
+        None,
+        None,
+        None
+      )
+      // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
+      // consecutive 3D points (i.e., nine floats) form a triangle.
+      // There are no shared vertices between triangles.
+      (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+    } yield {
+      // We need four bytes for each float
+      val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+      responseBuffer.asFloatBuffer().put(vertices)
+      Ok(responseBuffer.array())
+    }
+
+    Fox.successful(Ok)
+  }
 
   def testStl: Action[AnyContent] = Action.async { implicit request =>
     val organizationName = "sample_organization"
@@ -272,9 +316,7 @@ class DSMeshController @Inject()(
                                                        dataLayerName,
                                                        request.body) ?~> "mesh.file.loadChunk.failed"
 
-        } yield {
-          Ok(data)
-        }
+        } yield Ok(data)
       }
     }
 }

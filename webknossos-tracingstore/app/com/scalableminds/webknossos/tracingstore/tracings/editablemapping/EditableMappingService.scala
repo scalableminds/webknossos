@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
   AdHocMeshRequest,
   AdHocMeshService,
-  AdHocMeshingServiceHolder
+  AdHocMeshServiceHolder
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -71,10 +71,10 @@ object EdgeWithPositions {
 }
 
 class EditableMappingService @Inject()(
-    val tracingDataStore: TracingDataStore,
-    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
-    val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+                                        val tracingDataStore: TracingDataStore,
+                                        val adHocMeshServiceHolder: AdHocMeshServiceHolder,
+                                        val remoteDatastoreClient: TSRemoteDatastoreClient,
+                                        val remoteWebKnossosClient: TSRemoteWebKnossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -87,8 +87,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
-  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
+  private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -522,7 +522,7 @@ class EditableMappingService @Inject()(
         mappingType = None,
         findNeighbors = request.findNeighbors
       )
-      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =

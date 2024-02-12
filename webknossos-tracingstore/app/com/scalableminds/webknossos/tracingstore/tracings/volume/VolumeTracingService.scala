@@ -46,7 +46,7 @@ import scala.concurrent.duration._
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
-    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
+    val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
     implicit val ec: ExecutionContext,
@@ -87,8 +87,8 @@ class VolumeTracingService @Inject()(
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
 
-  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
+  val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -578,7 +578,7 @@ class VolumeTracingService @Inject()(
         request.additionalCoordinates,
         request.findNeighbors
       )
-      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def findData(tracingId: String): Fox[Option[Vec3Int]] =

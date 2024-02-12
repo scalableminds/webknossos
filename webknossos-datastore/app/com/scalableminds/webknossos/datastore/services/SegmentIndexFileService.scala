@@ -35,7 +35,6 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     with SegmentStatistics {
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val segmentIndexDir = "segmentIndex"
-  private val segmentIndexFileExtension = "hdf5"
 
   private lazy val fileHandleCache = new Hdf5FileCache(10)
 
@@ -44,9 +43,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       _ <- Full("")
       layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
       segmentIndexDir = layerDir.resolve(this.segmentIndexDir)
-      files <- PathUtils.listFiles(segmentIndexDir,
-                                   silent = false,
-                                   PathUtils.fileExtensionFilter(segmentIndexFileExtension))
+      files <- PathUtils.listFiles(segmentIndexDir, silent = false, PathUtils.fileExtensionFilter(hdf5FileExtension))
       file <- files.headOption
     } yield file
 
@@ -60,10 +57,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
       nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
       mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
+
       bucketIndex = hashFunction(segmentId) % nBuckets
       bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
+
       segmentExists = bucketEnd - bucketStart != 0
       topLefts <- Fox.runIf(segmentExists)(for {
         _ <- Fox.successful(())

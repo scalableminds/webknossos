@@ -184,7 +184,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val meshesDir = "meshes"
-  private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
@@ -192,7 +191,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def exploreMeshFiles(organizationName: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
-      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(meshFileExtension))
+      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
@@ -200,12 +199,12 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .getOrElse(Nil)
 
     val meshFileVersions = meshFileNames.map { fileName =>
-      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
+      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$hdf5FileExtension")
       mappingVersionForMeshFile(meshFilePath)
     }
 
     val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
-      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
+      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$hdf5FileExtension")
       mappingNameForMeshFile(meshFilePath, fileVersion)
     }
 
@@ -243,7 +242,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+        .resolve(s"${listMeshChunksRequest.meshFile}.$hdf5FileExtension")
 
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val chunkPositionLiterals = cachedMeshFile.reader
@@ -265,7 +264,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+        .resolve(s"${listMeshChunksRequest.meshFile}.$hdf5FileExtension")
 
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val segmentId = listMeshChunksRequest.segmentId
@@ -362,7 +361,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(datasetName)
       .resolve(dataLayerName)
       .resolve(meshesDir)
-      .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
+      .resolve(s"${meshChunkDataRequest.meshFile}.$hdf5FileExtension")
 
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val encoding = cachedMeshFile.reader.string().getAttr("/", "metadata/encoding")
@@ -389,7 +388,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
           .resolve(datasetName)
           .resolve(dataLayerName)
           .resolve(meshesDir)
-          .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")
+          .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
 
         executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
           val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")

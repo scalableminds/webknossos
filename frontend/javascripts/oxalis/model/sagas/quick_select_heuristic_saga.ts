@@ -23,6 +23,7 @@ import {
 import {
   CancelQuickSelectAction,
   ComputeQuickSelectForRectAction,
+  ComputeSAMForSkeletonAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
@@ -75,7 +76,11 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction | SAMNodeSelect,
+  action:
+    | ComputeQuickSelectForRectAction
+    | MaybePrefetchEmbeddingAction
+    | SAMNodeSelect
+    | ComputeSAMForSkeletonAction,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;

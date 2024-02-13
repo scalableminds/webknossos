@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -28,8 +28,7 @@ type CacheEntry = {
 };
 export type SAMNodeSelect = {
   nodePosition: Vector3;
-  startPosition: Vector3;
-  endPosition: Vector3;
+  bounds: BoundingBoxType;
   viewport: OrthoView;
 };
 const MAXIMUM_CACHE_SIZE = 5;
@@ -190,7 +189,6 @@ min
   // @ts-ignore
   // const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
   // const bestMaskIndex = 1;
-  // debugger;
   console.log("bestIndex", bestMaskIndex);
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
   // Fill the mask data with a for loop (slicing/mapping would incur additional
@@ -306,7 +304,10 @@ export default function* performQuickSelect(
     volumeTracing,
     colorLayer,
   } = preparation;
-  const { startPosition, endPosition } = action;
+  const { startPosition, endPosition } =
+    "startPosition" in action
+      ? action
+      : { startPosition: action.bounds.min, endPosition: action.bounds.max };
   const quickSelectGeometry = "type" in action ? action.quickSelectGeometry : null;
   const nodePosition = "nodePosition" in action ? action.nodePosition : null;
 

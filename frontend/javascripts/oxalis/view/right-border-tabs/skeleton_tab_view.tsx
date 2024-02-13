@@ -85,12 +85,9 @@ import InputComponent from "oxalis/view/components/input_component";
 import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
-  SkeletonTracing,
-  Tracing,
   Tree,
   TreeMap,
   TreeGroup,
-  UserConfiguration,
   MutableTreeMap,
   UserBoundingBox,
 } from "oxalis/store";

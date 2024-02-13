@@ -313,7 +313,7 @@ function serializeTransform(state: OxalisState): string[] {
     state.datasetConfiguration.nativelyRenderedLayerName,
   );
 
-  if (transform == IdentityTransform) {
+  if (transform === IdentityTransform) {
     return [];
   }
 

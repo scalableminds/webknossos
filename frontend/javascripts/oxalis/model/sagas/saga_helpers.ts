@@ -75,7 +75,7 @@ export function askUserForPinningActiveMapping(
       Modal.confirm({
         title: "Should the active Mapping be pinned?",
         content: messages["tracing.pin_mapping_info"],
-        okText: "Enable Permanently",
+        okText: "Enable Mapping Permanently",
         cancelText: "Abort Annotation Action",
         width: 600,
         onOk: pinMapping,

@@ -255,9 +255,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.invalid_json_url_hash":
     "Cannot parse JSON URL hash. More information was printed to the browser's console.",
   "tracing.pin_mapping_info":
-    "The active volume annotation layer has an active mapping. Once you start mutating the layer, the mapping will be permanently enabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
+    "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently enabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
   "tracing.pin_mapping_confirmed": (mappingName: string) =>
-    `The mapping ${mappingName} is from now on permanently enabled for this annotation.`,
+    `The mapping ${mappingName} is now permanently enabled for this annotation and can no longer be changed or disabled.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

@@ -177,10 +177,10 @@ class MappingSettingsView extends React.Component<Props, State> {
       this.props.hideUnmappedIds != null;
     const isDisabled = this.props.isEditableMappingActive || this.props.isMappingPinned;
     const disabledMessage = this.props.isEditableMappingActive
-      ? "Editable mappings from proofreading actions cannot be disabled"
+      ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
       : this.props.mapping
-      ? "This mapping has been pinned to this annotation and thus cannot be disabled."
-      : "This annotation was started with no mapping enabled. To ensure a consistent state, mappings cannot be enabled.";
+      ? "This mapping has been permanently enabled, because the segmentation was modified while it was active. It can no longer be disabled or changed."
+      : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
       <React.Fragment>
         {

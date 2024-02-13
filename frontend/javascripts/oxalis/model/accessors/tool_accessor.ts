@@ -150,7 +150,7 @@ function _getDisabledInfoForProofreadTool(
     }
   } else {
     explanation =
-      "A mapping that does not support proofreading actions is pinned to this annotation.";
+      "A mapping that does not support proofreading actions is pinned to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
   }
   return {
     isDisabled,

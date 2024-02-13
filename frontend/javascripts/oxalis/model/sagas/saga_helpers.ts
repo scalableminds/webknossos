@@ -83,8 +83,6 @@ export function askUserForPinningActiveMapping(
           reject({ isMappingPinnedIfNeeded: false, reason: "User aborted." });
         },
       });
-    } else {
-      resolve({ isMappingPinnedIfNeeded: true, reason: "No active mapping." });
     }
   });
 }
@@ -103,7 +101,7 @@ export function* ensureMaybeActiveMappingIsPinned(
     activeMappingByLayer[volumeTracing.tracingId].mappingStatus === MappingStatusEnum.ENABLED;
   const isHDF5Mapping =
     volumeTracing.tracingId in activeMappingByLayer &&
-    activeMappingByLayer[volumeTracing.tracingId]?.mappingType === "HDF5";
+    activeMappingByLayer[volumeTracing.tracingId].mappingType === "HDF5";
   if (isSomeMappingActive && isHDF5Mapping) {
     return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
   } else {

@@ -933,7 +933,7 @@ export default function ToolbarView() {
           <ToolRadioButton
             name={TOOL_NAMES.SKELETON}
             description={skeletonToolDescription}
-            disabledExplanation=""
+            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.SKELETON].explanation}
             disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.SKELETON}

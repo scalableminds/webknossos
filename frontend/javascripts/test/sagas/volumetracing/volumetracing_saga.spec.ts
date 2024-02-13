@@ -14,7 +14,6 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 import { enforce } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
-import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";

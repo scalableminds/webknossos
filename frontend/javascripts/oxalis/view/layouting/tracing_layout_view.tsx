@@ -15,7 +15,7 @@ import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
 import {
@@ -53,6 +53,7 @@ const { Sider } = Layout;
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
+  UITheme: Theme;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
@@ -399,7 +400,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         style={{
                           height: 30,
                           paddingTop: 4,
-                          backgroundColor: "var(--ant-warning)",
+                          backgroundColor: "var(--ant-color-warning)",
                           border: "none",
                           color: "white",
                         }}
@@ -446,7 +447,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (
-                <Sider id="version-restore-sider" width={400}>
+                <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView allowUpdate={isUpdateTracingAllowed} />
                 </Sider>
               ) : null}
@@ -479,6 +480,7 @@ function mapStateToProps(state: OxalisState) {
     distanceMeasurementTooltipPosition:
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
+    UITheme: state.uiInformation.theme,
   };
 }
 

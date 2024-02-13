@@ -16,6 +16,6 @@ Creating an animation is easy:
 6. Click the `Start animation` button to launch the animation creation.
 
 
-Either periodically check the [background jobs page](./jobs.md) or wait for a an email confirmation to download the animation video file. Creating an animation may take a while, depending on the selected bounding box size and the number of included 3D meshes.
+Either periodically check the [background jobs page](./jobs.md) or wait for an email confirmation to download the animation video file. Creating an animation may take a while, depending on the selected bounding box size and the number of included 3D meshes.
 
 WEBKNOSSOS Team plans and above have access to high definition (HD) resolution videos and more options.

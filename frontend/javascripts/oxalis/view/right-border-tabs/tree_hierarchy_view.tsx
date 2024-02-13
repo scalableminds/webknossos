@@ -62,6 +62,7 @@ import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import features from "features";
 import { computeSAMForSkeletonAction } from "oxalis/model/actions/volumetracing_actions";
+import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -500,6 +501,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "setTreeGroupColor",
           disabled: isEditingDisabled,
+          icon: <i className="fas fa-eye-dropper fa-sm " />,
           label: (
             <ChangeColorMenuItemContent
               title="Change Tree Group Color"
@@ -528,7 +530,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
           open={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onOpenChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
+          onOpenChange={(isVisible, info) => {
+            if (info.source === "trigger") this.handleGroupDropdownMenuVisibility(id, isVisible);
+          }}
           trigger={["contextMenu"]}
         >
           <span>
@@ -583,6 +587,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             {
               key: "changeTreeColor",
               disabled: isEditingDisabled,
+              icon: <i className="fas fa-eye-dropper fa-sm " />,
               label: (
                 <ChangeColorMenuItemContent
                   title="Change Tree Color"
@@ -639,7 +644,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
               title: "Hide/Show Edges of This Tree",
-              icon: <span className="hide-tree-edges-icon" />,
+              icon: <HideTreeEdgesIcon />,
               label: "Hide/Show Edges of This Tree",
             },
             features().segmentAnythingEnabled
@@ -690,9 +695,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottom"
             open={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onOpenChange={(isVisible) =>
-              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-            }
+            onOpenChange={(isVisible, info) => {
+              if (info.source === "trigger")
+                this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+            }}
             trigger={["contextMenu"]}
           >
             <span>

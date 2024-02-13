@@ -262,22 +262,22 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
               render={(__, taskType: APITaskType) => (
                 <span>
                   <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
-                    <EyeOutlined />
+                    <EyeOutlined className="icon-margin-right" />
                     View
                   </Link>
                   <br />
                   <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
-                    <EditOutlined />
+                    <EditOutlined className="icon-margin-right" />
                     Edit
                   </Link>
                   <br />
                   <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                    <ScheduleOutlined />
+                    <ScheduleOutlined className="icon-margin-right" />
                     Tasks
                   </Link>
                   <br />
                   <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
-                    <EyeOutlined />
+                    <EyeOutlined className="icon-margin-right" />
                     Projects
                   </Link>
                   <br />
@@ -292,13 +292,13 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                       );
                     }}
                     title="Download all Finished Annotations"
-                    icon={<DownloadOutlined />}
+                    icon={<DownloadOutlined className="icon-margin-right" />}
                   >
                     Download
                   </AsyncLink>
                   <br />
                   <LinkButton onClick={_.partial(this.deleteTaskType, taskType)}>
-                    <DeleteOutlined />
+                    <DeleteOutlined className="icon-margin-right" />
                     Delete
                   </LinkButton>
                 </span>

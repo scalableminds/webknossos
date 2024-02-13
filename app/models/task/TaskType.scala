@@ -183,4 +183,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       countList <- run(q"select count(_id) from $existingCollectionName where _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
+
+  override def deleteOne(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(taskTypeId, nameColumn = "summary")
 }

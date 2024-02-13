@@ -8,6 +8,7 @@ import {
   Switch,
   RadioChangeEvent,
   MenuProps,
+  Space,
 } from "antd";
 import {
   StopOutlined,
@@ -58,7 +59,6 @@ function TDViewControls({
                 value={tdViewDisplayPlanes}
                 onChange={onChangeTdViewDisplayPlanes}
                 size="small"
-                className="without-icon-margin"
               >
                 <Tooltip title="Hide Planes">
                   <Radio.Button value={TDViewDisplayModeEnum.NONE}>
@@ -116,7 +116,7 @@ function TDViewControls({
   };
 
   return (
-    <div id="TDViewControls" className="antd-legacy-group">
+    <Space.Compact id="TDViewControls">
       <Button size="small" onClick={() => api.tracing.rotate3DViewToDiagonal()}>
         3D
       </Button>
@@ -137,7 +137,7 @@ function TDViewControls({
           <SettingOutlined />
         </Button>
       </Dropdown>
-    </div>
+    </Space.Compact>
   );
 }
 

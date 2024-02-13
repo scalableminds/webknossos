@@ -403,22 +403,22 @@ class TaskListView extends React.PureComponent<Props, State> {
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Pending Instances">
-                    <PlayCircleOutlined />
+                    <PlayCircleOutlined className="icon-margin-right" />
                     {status.pending}
                   </span>
                   <br />
                   <span title="Active Instances">
-                    <ForkOutlined />
+                    <ForkOutlined className="icon-margin-right" />
                     {status.active}
                   </span>
                   <br />
                   <span title="Finished Instances">
-                    <CheckCircleOutlined />
+                    <CheckCircleOutlined className="icon-margin-right" />
                     {status.finished}
                   </span>
                   <br />
                   <span title="Annotation Time">
-                    <ClockCircleOutlined />
+                    <ClockCircleOutlined className="icon-margin-right" />
                     {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
                 </div>
@@ -486,21 +486,21 @@ class TaskListView extends React.PureComponent<Props, State> {
                         href={`/annotations/CompoundTask/${task.id}`}
                         title="View all Finished Annotations"
                       >
-                        <EyeOutlined />
+                        <EyeOutlined className="icon-margin-right" />
                         View
                       </a>
                     </div>
                   ) : null}
                   <div>
                     <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </a>
                   </div>
                   {task.status.pending > 0 ? (
                     <div>
                       <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
-                        <UserAddOutlined />
+                        <UserAddOutlined className="icon-margin-right" />
                         Manually Assign to User
                       </LinkButton>
                     </div>
@@ -514,7 +514,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                           return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
                         }}
                         title="Download all Finished Annotations"
-                        icon={<DownloadOutlined />}
+                        icon={<DownloadOutlined className="icon-margin-right" />}
                       >
                         Download
                       </AsyncLink>
@@ -522,7 +522,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   ) : null}
                   <div>
                     <LinkButton onClick={_.partial(this.deleteTask, task)}>
-                      <DeleteOutlined />
+                      <DeleteOutlined className="icon-margin-right" />
                       Delete
                     </LinkButton>
                   </div>

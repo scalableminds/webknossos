@@ -144,9 +144,14 @@ export default function* listenToQuickSelect(): Saga<void> {
             const currentPredictionSaga = call(performQuickSelectML, nodeSelect);
             const currentPrediction = { saga: currentPredictionSaga, bounds: prefetchBounds };
             if (previousPrediction) {
-              interpolationSagas.push(
-                call(interpolateBetweenPredictions, currentPrediction, previousPrediction),
-              );
+              const isTooCloseToPreviousPrediction =
+                Math.abs(previousPrediction.bounds.max[thirdDim] - prefetchBounds.min[thirdDim]) <
+                2;
+              if (!isTooCloseToPreviousPrediction) {
+                interpolationSagas.push(
+                  call(interpolateBetweenPredictions, currentPrediction, previousPrediction),
+                );
+              }
             }
             previousPrediction = currentPrediction;
           }

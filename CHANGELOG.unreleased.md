@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Segment statistics are now available for ND datases. [#7411](https://github.com/scalableminds/webknossos/pull/7411)
 - Added support for uploading N5 and Neuroglancer Precomputed datasets. [#7578](https://github.com/scalableminds/webknossos/pull/7578)
 - Webknossos can now open ND Zarr datasets with arbitrary axis orders (not limited to `**xyz` anymore). [#7592](https://github.com/scalableminds/webknossos/pull/7592)
+- Added support for skeleton annotations within datasets that have transformed layers. The skeleton nodes will move according to the transforms when rendering a specific layer natively. Also, downloading visible trees can be done by incorporating the current transforms. However, note that the back-end export does not take transforms into account. [#7588](https://github.com/scalableminds/webknossos/pull/7588)
 
 ### Changed
 - Datasets stored in WKW format are no longer loaded with memory mapping, reducing memory demands. [#7528](https://github.com/scalableminds/webknossos/pull/7528)

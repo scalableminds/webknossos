@@ -33,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug in proofreading aka editable mapping annotations where splitting would sometimes give the new id to the selected segment rather than to the split-off one. [#7608](https://github.com/scalableminds/webknossos/pull/7608)
 - Fixed small styling errors as a follow up to the antd v5 upgrade [#7612](https://github.com/scalableminds/webknossos/pull/7612)
 -Fixed deprecation warnings caused by Antd <Collapse> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
+- Fixed small styling error with a welcome notification for new users on webknossos.org. [7623](https://github.com/scalableminds/webknossos/pull/7623)
 
 
 ### Removed

@@ -1010,6 +1010,50 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      Neuroglancer Precomputed datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      N5 datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
                   <li>Single-file images (tif, czi, nifti, raw)</li>
 
                   <li>KNOSSOS file hierarchy</li>

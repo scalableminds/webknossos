@@ -199,6 +199,7 @@ async function testThatParserThrowsWithState(
     invalidState.tracing,
     enforceSkeletonTracing(invalidState.tracing),
     BUILD_INFO,
+    false,
   );
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
 }
@@ -230,6 +231,7 @@ test("NML serializing and parsing should yield the same state", async (t) => {
     initialState.tracing,
     enforceSkeletonTracing(initialState.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   t.deepEqual(initialSkeletonTracing.trees, trees);
@@ -259,6 +261,7 @@ test("NML serializing and parsing should yield the same state even when using sp
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -289,6 +292,7 @@ test("NML serializing and parsing should yield the same state even when using mu
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -323,6 +327,7 @@ test("NML serializing and parsing should yield the same state even when addition
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -348,6 +353,7 @@ test("NML Serializer should only serialize visible trees", async (t) => {
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -375,6 +381,7 @@ test("NML Serializer should only serialize groups with visible trees", async (t)
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -388,6 +395,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     initialState.tracing,
     enforceSkeletonTracing(initialState.tracing),
     BUILD_INFO,
+    false,
   );
   t.snapshot(serializedNml, {
     id: "nml",
@@ -432,6 +440,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     adaptedState.tracing,
     enforceSkeletonTracing(adaptedState.tracing),
     BUILD_INFO,
+    false,
   );
   t.snapshot(serializedNml, {
     id: "nml-with-additional-coordinates",
@@ -464,6 +473,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   // Explicitly check for the encoded characters
   t.true(
@@ -803,6 +813,7 @@ test("NML Parser should split up disconnected trees", async (t) => {
     disconnectedTreeState.tracing,
     enforceSkeletonTracing(disconnectedTreeState.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
     nmlWithDisconnectedTree,

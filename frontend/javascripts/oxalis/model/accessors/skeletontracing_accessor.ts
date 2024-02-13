@@ -22,7 +22,10 @@ import {
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeType, Vector3 } from "oxalis/constants";
-import { getTransformsForSkeletonLayer } from "./dataset_accessor";
+import {
+  getTransformsForSkeletonLayer,
+  getTransformsForSkeletonLayerOrNull,
+} from "./dataset_accessor";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
@@ -194,6 +197,15 @@ export function getNodeAndTreeOrNull(
       tree: null,
       node: null,
     });
+}
+
+export function isSkeletonLayerTransformed(state: OxalisState) {
+  return (
+    getTransformsForSkeletonLayerOrNull(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ) != null
+  );
 }
 
 export function getNodePosition(node: Node, state: OxalisState): Vector3 {

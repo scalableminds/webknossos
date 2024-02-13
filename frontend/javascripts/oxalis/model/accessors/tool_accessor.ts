@@ -20,6 +20,7 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
@@ -288,8 +289,7 @@ export function getDisabledInfoForTools(
   state: OxalisState,
 ): Record<AnnotationToolEnum, DisabledInfo> {
   const hasSkeleton = state.tracing.skeleton != null;
-  const isSkeletonLayerTransformed = state.datasetConfiguration.nativelyRenderedLayerName != null;
-  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed);
+  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {

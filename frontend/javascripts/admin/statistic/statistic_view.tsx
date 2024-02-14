@@ -5,7 +5,8 @@ import _ from "lodash";
 import dayjs from "dayjs";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
-import { APIUser } from "types/api_flow_types";
+import { APIProject, APITeam, APIUser } from "types/api_flow_types";
+import { getProjects, getTeams } from "admin/admin_rest_api";
 
 const { Column } = Table;
 
@@ -26,6 +27,8 @@ type State = {
   isTimeEntriesLoading: boolean;
   startDate: dayjs.Dayjs;
   endDate: dayjs.Dayjs;
+  projects: APIProject[];
+  teams: APITeam[];
 };
 
 type GoogleCharts = {
@@ -46,9 +49,13 @@ class StatisticView extends React.PureComponent<{}, State> {
     graphData: {
       timeGroupedByInterval: [],
     },
+    teams: [],
+    projects: [],
   };
 
-  componentDidMount() {
+  async componentDidMount() {
+    await this.fetchTeams();
+    await this.fetchProjects();
     this.fetchGraphData();
     this.fetchTimeEntryData();
   }
@@ -57,6 +64,7 @@ class StatisticView extends React.PureComponent<{}, State> {
     return date.unix() * 1000;
   }
 
+  // TODO only last 12 months
   async fetchGraphData() {
     const graphDataURL = "/api/time/groupedByInterval?interval=week";
     const graphData = await Request.receiveJSON(graphDataURL);
@@ -72,15 +80,28 @@ class StatisticView extends React.PureComponent<{}, State> {
     });
   }
 
+  // TODO make sure this works
   async fetchTimeEntryData() {
-    const timeEntriesURL = `/api/statistics/users?interval=week&start=${this.toTimestamp(
+    const timeEntriesURL = `api/time/summed/userList?start=${this.toTimestamp(
       this.state.startDate,
-    )}&end=${this.toTimestamp(this.state.endDate)}&limit=5&onlyCountTasks=false`;
+    )}&end=${this.toTimestamp(this.state.endDate)}&onlyCountTasks=false&teamIds=${this.state.teams
+      .map((team) => team.id)
+      .join(",")}&projectIds=${this.state.projects.map((project) => project.id).join(",")}`;
     const timeEntries = await Request.receiveJSON(timeEntriesURL);
     this.setState({
       isTimeEntriesLoading: false,
       timeEntries,
     });
+  }
+
+  async fetchProjects() {
+    const projects = await getProjects();
+    this.setState({ projects });
+  }
+
+  async fetchTeams() {
+    const teams = await getTeams();
+    this.setState({ teams });
   }
 
   selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
@@ -167,51 +188,6 @@ class StatisticView extends React.PureComponent<{}, State> {
                     }}
                   />
                 ) : null}
-              </Spin>
-            </Card>
-          </Col>
-        </Row>
-        <Row gutter={16}>
-          <Col span={24}>
-            <Card
-              title={`Busiest Annotators for Week ${this.state.startDate.format(
-                "DD.MM",
-              )} - ${this.state.endDate.format("DD.MM.YYYY")}`}
-              style={{
-                marginTop: 30,
-                marginBottom: 30,
-              }}
-            >
-              <Spin spinning={this.state.isTimeEntriesLoading} size="large">
-                <Table
-                  dataSource={this.state.timeEntries}
-                  rowKey={(entry) => entry.user.id}
-                  style={{
-                    marginTop: 30,
-                    marginBottom: 30,
-                  }}
-                  pagination={false}
-                >
-                  <Column
-                    title="User"
-                    dataIndex="user"
-                    key="user"
-                    render={(user) => `${user.lastName}, ${user.firstName} (${user.email})`}
-                  />
-                  <Column
-                    title="Duration"
-                    dataIndex="tracingTimes"
-                    key="tracingTimes"
-                    render={(tracingTimes: TimeEntry[]) => {
-                      const duration = _.sumBy(tracingTimes, (timeEntry) => timeEntry.tracingTime);
-
-                      const minutes = duration / 1000 / 60;
-                      const hours = Utils.zeroPad(Math.floor(minutes / 60));
-                      const remainingMinutes = Utils.zeroPad(Math.floor(minutes % 60));
-                      return `${hours}h ${remainingMinutes}m`;
-                    }}
-                  />
-                </Table>
               </Spin>
             </Card>
           </Col>

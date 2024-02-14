@@ -253,6 +253,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
     label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
+      { key: "/timetracking", label: <Link to="/timetracking">Time Tracking Overview</Link> },
       {
         key: "/reports/timetracking",
         label: (

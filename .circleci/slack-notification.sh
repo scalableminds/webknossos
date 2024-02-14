@@ -19,6 +19,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${author/Dagobert42/<@Arthur>}
     author=${author/leowe/<@leo>}
     author=${author/frcroth/<@felix.roth>}
+    author=${author/dieknolle3333/<@charlie.meister>}
     channel="webknossos-bots"
     commitmsg="$(git log --format=%s -n 1)"
     pullregex="(.*)#([0-9]+)(.*)"

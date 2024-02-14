@@ -3,12 +3,12 @@ import {
   Button,
   Dropdown,
   Empty,
-  Input,
   Spin,
   Modal,
   Tooltip,
   notification,
   MenuProps,
+  Space,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -38,7 +38,7 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   getTree,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -68,8 +68,8 @@ import {
   toggleInactiveTreesAction,
   setActiveTreeAction,
   deselectActiveTreeAction,
-  deselectActiveGroupAction,
-  setActiveGroupAction,
+  deselectActiveTreeGroupAction,
+  setActiveTreeGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
@@ -103,7 +103,6 @@ import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
 
 const { confirm } = Modal;
-const InputGroup = Input.Group;
 const treeTabId = "tree-list";
 
 type TreeOrTreeGroup = {
@@ -218,7 +217,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw Error("Zip file doesn't contain an NML file.");
         }
 
-        const nmlBlob = await nmlFileEntry.getData(new BlobWriter());
+        // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+        const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
         const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
 
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
@@ -228,7 +228,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         );
 
         if (dataFileEntry) {
-          const dataBlob = await dataFileEntry.getData(new BlobWriter());
+          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+          const dataBlob = await dataFileEntry.getData!(new BlobWriter());
           const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
@@ -667,7 +668,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
-      this.props.onSetActiveGroup(selectedElement.id);
+      this.props.onSetActiveTreeGroup(selectedElement.id);
     }
   };
 
@@ -805,7 +806,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const activeTreeName = getActiveTree(skeletonTracing)
       .map((activeTree) => activeTree.name)
       .getOrElse("");
-    const activeGroupName = getActiveGroup(skeletonTracing)
+    const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
@@ -840,7 +841,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <InputGroup compact className="compact-icons">
+                <Space.Compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -894,8 +895,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
-                <InputGroup compact className="compact-icons compact-items">
+                </Space.Compact>
+                <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
@@ -924,12 +925,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
+                </Space.Compact>
                 {!showSkeletons ? (
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined
                       style={{
-                        color: "var(--ant-warning)",
+                        color: "var(--ant-color-warning)",
                       }}
                     />
                   </Tooltip>
@@ -1033,12 +1034,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deselectActiveTreeAction());
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onDeselectActiveGroup() {
-    dispatch(deselectActiveGroupAction());
+    dispatch(deselectActiveTreeGroupAction());
   },
 
   showDropzoneModal() {

@@ -4,11 +4,13 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
+
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
-import models.binary.PublicationDAO
-import play.api.libs.iteratee.Enumerator
+import models.dataset.PublicationDAO
+import org.apache.commons.io.output.ByteArrayOutputStream
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.{ExecutionContext, Future}
 
 case class SitemapURL(url: String,
@@ -21,17 +23,18 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(im
   private val proxyURLs = wkConf.Proxy.routes.filter(!_.contains("*")).map(SitemapURL(_))
   private lazy val outputFactory = XMLOutputFactory.newInstance()
 
-  def toSitemapStream(prefix: String): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
+  def getSitemap(prefix: String): Fox[String] = {
+    val os = new ByteArrayOutputStream()
     implicit val writer: IndentingXMLStreamWriter =
       new IndentingXMLStreamWriter(outputFactory.createXMLStreamWriter(os))
 
     for {
-      sitemap <- toSitemap(prefix)
+      _ <- writeSitemapWithImplicitWriter(prefix)
       _ = os.close()
-    } yield sitemap
+    } yield new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  private def toSitemap(prefix: String)(implicit writer: XMLStreamWriter): Fox[Unit] =
+  private def writeSitemapWithImplicitWriter(prefix: String)(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       _ = writer.writeStartDocument()

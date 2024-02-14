@@ -30,12 +30,17 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfoForSupportedLayer,
   getUnifiedAdditionalCoordinates,
+  getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import ButtonComponent from "./components/button_component";
+import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
+import features from "features";
+import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
   <Alert
@@ -55,6 +60,7 @@ type StateProps = {
   isReadOnly: boolean;
   is2d: boolean;
   viewMode: ViewMode;
+  aiJobModalState: StartAIJobModalState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -104,7 +110,7 @@ function AdditionalCoordinatesInputView() {
                 label={coord.name}
                 key={coord.name}
                 min={bounds[0]}
-                max={bounds[1]}
+                max={bounds[1] - 1}
                 value={coord.value}
                 spans={[2, 18, 4]}
                 onChange={(newCoord) => {
@@ -193,6 +199,24 @@ class ActionBarView extends React.PureComponent<Props, State> {
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
+  renderStartAIJobButton(disabled: boolean): React.ReactNode {
+    const tooltipText = disabled
+      ? "The dataset needs to have a color layer to start AI processing jobs."
+      : "Start a processing job using AI";
+    return (
+      <ButtonComponent
+        key="ai-job-button"
+        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+        style={{ marginLeft: 12, pointerEvents: "auto" }}
+        disabled={disabled}
+        title={tooltipText}
+        icon={<i className="fas fa-magic" />}
+      >
+        AI Analysis
+      </ButtonComponent>
+    );
+  }
+
   renderStartTracingButton(): React.ReactNode {
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
     const ButtonWithAuthentication = withAuthentication(AsyncButton);
@@ -214,6 +238,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
+      dataset,
       is2d,
       isReadOnly,
       showVersionRestore,
@@ -224,6 +249,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
+    const isAIAnalysisEnabled = () => {
+      const activeUser = this.props.activeUser;
+      const jobsEnabled = features().jobsEnabled;
+      if (isViewMode) {
+        return jobsEnabled && activeUser != null && activeUser.isSuperUser;
+      }
+      return jobsEnabled;
+    };
 
     const layoutMenu = getLayoutMenu({
       ...layoutProps,
@@ -237,6 +270,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
+    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+
     return (
       <React.Fragment>
         <div className="action-bar">
@@ -249,6 +284,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {isAIAnalysisEnabled() ? this.renderStartAIJobButton(!datasetHasColorLayer) : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
@@ -261,6 +297,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
+        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }
@@ -275,6 +312,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
+  aiJobModalState: state.uiInformation.aIJobModalState,
 });
 
 const connector = connect(mapStateToProps);

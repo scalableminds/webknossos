@@ -1,22 +1,20 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.MultiUserDAO
 import net.liftweb.common.Empty
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@Api
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
                                     sil: Silhouette[WkEnv],
@@ -25,23 +23,20 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     with FoxImplicits {
 
   private val dataStoreReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'key).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromForm _)
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "key").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm _)
 
   private val dataStorePublicReads: Reads[DataStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
-  @ApiOperation(value = "List all available datastores", nickname = "datastoreList")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON list of objects containing datastore information"),
-          new ApiResponse(code = 400, message = badRequestLabel)))
+    ((__ \ "name").read[String] and
+      (__ \ "url").read[String] and
+      (__ \ "publicUrl").read[String] and
+      (__ \ "isScratch").readNullable[Boolean] and
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
+
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"
@@ -51,7 +46,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStoreReads) { dataStore =>
       dataStoreDAO.findOneByName(dataStore.name).futureBox.flatMap {
@@ -66,7 +60,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
@@ -75,7 +68,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     } yield Ok
   }
 
-  @ApiOperation(hidden = true, value = "")
   def update(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStorePublicReads) { dataStore =>
       for {

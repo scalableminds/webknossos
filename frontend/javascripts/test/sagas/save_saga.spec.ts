@@ -120,7 +120,8 @@ test("SaveSaga should send request to server", (t) => {
     version: LAST_VERSION,
     type: TRACING_TYPE,
   });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
+  t.is(versionIncrement, 2);
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -136,7 +137,8 @@ test("SaveSaga should retry update actions", (t) => {
     [[UpdateActions.createEdge(1, 0, 1)], [UpdateActions.createEdge(1, 1, 2)]],
     TIMESTAMP,
   );
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
+  t.is(versionIncrement, 2);
   const requestWithTokenCall = call(
     sendRequestWithToken,
     `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`,
@@ -175,7 +177,8 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
     version: LAST_VERSION,
     type: TRACING_TYPE,
   });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
+  t.is(versionIncrement, 2);
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -351,7 +354,8 @@ test("SaveSaga addVersionNumbers should set the correct version numbers", (t) =>
 
     TIMESTAMP,
   );
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
+  t.is(versionIncrement, 3);
   t.is(saveQueueWithVersions[0].version, LAST_VERSION + 1);
   t.is(saveQueueWithVersions[1].version, LAST_VERSION + 2);
   t.is(saveQueueWithVersions[2].version, LAST_VERSION + 3);

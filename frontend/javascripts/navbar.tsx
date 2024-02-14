@@ -43,7 +43,7 @@ import Request from "libs/request";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { HelpModal } from "oxalis/view/help_modal";
@@ -52,6 +52,9 @@ import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
+import constants from "oxalis/constants";
+import { MaintenanceBanner } from "maintenance_banner";
+import { getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
 
@@ -67,9 +70,9 @@ type StateProps = {
   othersMayEdit: boolean;
   allowUpdate: boolean;
   blockedByUser: APIUserCompact | null | undefined;
+  navbarHeight: number;
 };
 type Props = OwnProps & StateProps;
-export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
@@ -239,7 +242,11 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   return {
     key: "adminMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Administration", <TeamOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Administration",
+      <TeamOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: adminstrationSubMenuItems,
   };
 }
@@ -248,7 +255,11 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "statisticMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Statistics", <BarChartOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Statistics",
+      <BarChartOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
@@ -403,7 +414,11 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
-    label: getCollapsibleMenuTitle("Help", <QuestionCircleOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Help",
+      <QuestionCircleOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: helpSubMenuItems,
   };
 }
@@ -412,7 +427,11 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
     className: collapse ? "hide-on-small-screen" : "",
-    label: getCollapsibleMenuTitle("Dashboard", <HomeOutlined />, collapse),
+    label: getCollapsibleMenuTitle(
+      "Dashboard",
+      <HomeOutlined className="icon-margin-right" />,
+      collapse,
+    ),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
       { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
@@ -424,7 +443,13 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
+function NotificationIcon({
+  activeUser,
+  navbarHeight,
+}: {
+  activeUser: APIUser;
+  navbarHeight: number;
+}) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
@@ -445,15 +470,13 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
         position: "relative",
         display: "flex",
         marginRight: 12,
+        paddingTop:
+          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button
-            onClick={handleShowWhatsNewView}
-            shape="circle"
-            icon={<BellOutlined className="without-icon-margin" />}
-          />
+          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
         </Badge>
       </Tooltip>
     </div>
@@ -478,7 +501,12 @@ export const switchTo = async (org: APIOrganization) => {
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-}: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void } & SubMenuProps) {
+  navbarHeight,
+}: {
+  activeUser: APIUser;
+  handleLogout: (event: React.SyntheticEvent) => void;
+  navbarHeight: number;
+} & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
@@ -488,46 +516,12 @@ function LoggedInAvatar({
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
 
-  const setSelectedTheme = async (theme: APIUserTheme) => {
-    let newTheme = theme;
+  const setSelectedTheme = async (newTheme: APIUserTheme) => {
+    if (newTheme === "auto") newTheme = getSystemColorTheme();
 
-    if (newTheme === "auto") {
-      newTheme =
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-        // @ts-ignore
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    }
-
-    const styleEl = document.getElementById("primary-stylesheet") as HTMLLinkElement;
-    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
-    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
-
-    if (oldTheme !== newTheme) {
-      const newStyleEl = styleEl.cloneNode();
-      const parentEl = styleEl.parentNode;
-
-      if (parentEl != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
-        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
-        newStyleEl.addEventListener(
-          "load",
-          () => {
-            parentEl.removeChild(styleEl);
-          },
-          {
-            once: true,
-          },
-        );
-        parentEl.insertBefore(newStyleEl, styleEl);
-        Store.dispatch(setThemeAction(newTheme));
-      }
-    }
-
-    if (selectedTheme !== theme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+    if (selectedTheme !== newTheme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
+      Store.dispatch(setThemeAction(newTheme));
       Store.dispatch(setActiveUserAction(newUser));
     }
   };
@@ -535,9 +529,12 @@ function LoggedInAvatar({
   const isMultiMember = switchableOrganizations.length > 0;
   return (
     <Menu
+      selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        lineHeight: "48px",
+        paddingTop:
+          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -703,6 +700,7 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  navbarHeight,
 }: Props) {
   const history = useHistory();
 
@@ -774,12 +772,19 @@ function Navbar({
         />,
       );
     }
-    trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);
+    trailingNavItems.push(
+      <NotificationIcon
+        key="notification-icon"
+        activeUser={loggedInUser}
+        navbarHeight={navbarHeight}
+      />,
+    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
+        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -809,12 +814,17 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <MaintenanceBanner />
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          lineHeight: "48px",
+          paddingTop:
+            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
+              ? constants.MAINTENANCE_BANNER_HEIGHT
+              : 0,
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
         subMenuCloseDelay={subMenuCloseDelay}
@@ -836,6 +846,10 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
+          paddingTop:
+            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
+              ? constants.MAINTENANCE_BANNER_HEIGHT
+              : 0,
         }}
       />
 
@@ -859,6 +873,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const connector = connect(mapStateToProps);

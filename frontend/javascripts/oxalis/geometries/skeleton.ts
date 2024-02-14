@@ -359,14 +359,20 @@ class Skeleton {
         }
 
         case "createTree": {
-          this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
+          this.updateTreeColor(
+            update.value.id,
+            update.value.color,
+            update.value.isVisible,
+            update.value.edgesAreVisible,
+          );
           break;
         }
 
-        case "updateTreeVisibility": {
+        case "updateTreeVisibility":
+        case "updateTreeEdgesVisibility": {
           const { treeId } = update.value;
           const tree = skeletonTracing.trees[treeId];
-          this.updateTreeColor(treeId, tree.color, tree.isVisible);
+          this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
           break;
         }
 
@@ -399,7 +405,7 @@ class Skeleton {
           });
 
           if (tree.color !== prevTree.color) {
-            this.updateTreeColor(treeId, update.value.color, tree.isVisible);
+            this.updateTreeColor(treeId, update.value.color, tree.isVisible, tree.edgesAreVisible);
           }
 
           break;
@@ -499,7 +505,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target);
     }
 
-    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible);
+    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
   }
 
   /**
@@ -679,14 +685,20 @@ class Skeleton {
    * Updates a node/edge's color based on the tree color. Colors are stored in
    * a texture shared between the node and edge shader.
    */
-  updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
-    const rgba = this.getTreeRGBA(color, isVisible);
+  updateTreeColor(
+    treeId: number,
+    color: Vector3,
+    isVisible: boolean = true,
+    edgesAreVisible: boolean = true,
+  ) {
+    const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean): Vector4 {
-    return [...color, isVisible ? 1 : 0];
+  getTreeRGBA(color: Vector3, isVisible: boolean, areEdgesVisible: boolean): Vector4 {
+    const alpha = isVisible ? (areEdgesVisible ? 1 : 0.5) : 0;
+    return [...color, alpha];
   }
 }
 

@@ -1,14 +1,20 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  WebKnossosDataRequest,
+  WebknossosAdHocMeshRequest
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -20,7 +26,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
+  SegmentStatisticsParameters,
   UpdateMappingNameAction,
+  VolumeDataZipFormat,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
   VolumeTracingService
@@ -35,14 +43,22 @@ import com.scalableminds.webknossos.tracingstore.{
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.streams.IterateeStreams
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
+
+case class GetSegmentIndexParameters(
+    mag: Vec3Int,
+    cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+)
+
+object GetSegmentIndexParameters {
+  implicit val format: Format[GetSegmentIndexParameters] = Json.format[GetSegmentIndexParameters]
+}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
@@ -127,27 +143,19 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def allData(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-          } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
-            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
-          }
-        }
-      }
-  }
-
-  def allDataBlocking(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def allDataZip(token: Option[String],
+                 tracingId: String,
+                 volumeDataZipFormat: String,
+                 version: Option[Long],
+                 voxelSize: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            data <- tracingService.allDataFile(tracingId, tracing)
+            volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
+            voxelSizeParsed <- Fox.runOptional(voxelSize)(vs => Vec3Double.fromUriLiteral(vs))
+            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed, voxelSizeParsed)
           } yield Ok.sendFile(data)
         }
       }
@@ -189,7 +197,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             _ = logger.info(s"Duplicating volume tracing $tracingId...")
-            dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
+            datasetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
@@ -202,7 +210,7 @@ class VolumeTracingController @Inject()(
               tracingId,
               tracing,
               fromTask.getOrElse(false),
-              dataSetBoundingBox,
+              datasetBoundingBox,
               resolutionRestrictions,
               editPositionParsed,
               editRotationParsed,
@@ -234,6 +242,32 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def addSegmentIndex(token: Option[String], tracingId: String, dryRun: Boolean): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
+            currentVersion <- tracingService.currentVersion(tracingId)
+            before = Instant.now
+            processedBucketCountOpt <- tracingService.addSegmentIndex(tracingId,
+                                                                      tracing,
+                                                                      currentVersion,
+                                                                      urlOrHeaderToken(token, request),
+                                                                      dryRun) ?~> "addSegmentIndex.failed"
+            currentVersionNew <- tracingService.currentVersion(tracingId)
+            _ <- Fox.runIf(!dryRun)(bool2Fox(
+              processedBucketCountOpt.isEmpty || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime.")
+            duration = Instant.since(before)
+            _ = processedBucketCountOpt.foreach { processedBucketCount =>
+              logger.info(
+                s"Added segment index (dryRun=$dryRun) for tracing $tracingId. Took $duration for $processedBucketCount buckets")
+            }
+          } yield Ok
+        }
+      }
+    }
+
   def updateActionLog(token: Option[String],
                       tracingId: String,
                       newestVersion: Option[Long] = None,
@@ -247,17 +281,17 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def requestIsosurface(token: Option[String], tracingId: String): Action[WebKnossosIsosurfaceRequest] =
-    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+  def requestAdHocMesh(token: Option[String], tracingId: String): Action[WebknossosAdHocMeshRequest] =
+    Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
-            editableMappingService.createIsosurface(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
-          else tracingService.createIsosurface(tracingId, request.body, urlOrHeaderToken(token, request))
+            editableMappingService.createAdHocMesh(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
+          else tracingService.createAdHocMesh(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -278,7 +312,7 @@ class VolumeTracingController @Inject()(
       for {
         positionOpt <- tracingService.findData(tracingId)
       } yield {
-        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int(1, 1, 1))))
+        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
       }
     }
   }
@@ -321,9 +355,9 @@ class VolumeTracingController @Inject()(
                                                List(volumeUpdate),
                                                None,
                                                None,
-                                               None,
-                                               None,
-                                               None),
+                                               "dummyTransactionId",
+                                               1,
+                                               0),
               tracing.version,
               urlOrHeaderToken(token, request)
             )
@@ -428,16 +462,55 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def getSegmentVolume(token: Option[String], tracingId: String, mag: String, segmentId: Long): Action[AnyContent] =
-    Action.async { implicit request =>
+  def getSegmentVolume(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> "dataLayer.invalidMag"
-          segmentVolume <- volumeSegmentStatisticsService.getSegmentVolume(tracingId,
-                                                                           segmentId,
-                                                                           magParsed,
-                                                                           urlOrHeaderToken(token, request))
-        } yield Ok(Json.toJson(segmentVolume))
+          segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentVolume(tracingId,
+                                                            segmentId,
+                                                            request.body.mag,
+                                                            request.body.additionalCoordinates,
+                                                            urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentVolumes))
+      }
+    }
+
+  def getSegmentBoundingBox(token: Option[String], tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
+                                                                 segmentId,
+                                                                 request.body.mag,
+                                                                 request.body.additionalCoordinates,
+                                                                 urlOrHeaderToken(token, request))
+          }
+        } yield Ok(Json.toJson(segmentBoundingBoxes))
+      }
+    }
+
+  def getSegmentIndex(token: Option[String], tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
+    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
+          bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
+            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              tracingId,
+              segmentId,
+              request.body.mag,
+              request.body.additionalCoordinates,
+              AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
+          bucketPositionsForCubeSize = bucketPositionsRaw.values
+            .map(vec3IntFromProto)
+            .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
+            .map(_ / request.body.cubeSize)
+            .distinct // divide by requested cube size to map them to larger buckets, select unique
+            .map(_ * request.body.cubeSize) // return positions, not indices
+        } yield Ok(Json.toJson(bucketPositionsForCubeSize))
       }
     }
 

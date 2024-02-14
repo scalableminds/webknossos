@@ -10,16 +10,16 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
+  AdHocMeshRequest,
+  AdHocMeshService,
+  AdHocMeshingServiceHolder
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
@@ -39,7 +39,7 @@ import java.util
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.jdk.CollectionConverters.asScalaSetConverter
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
@@ -72,7 +72,7 @@ object EdgeWithPositions {
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient
 )(implicit ec: ExecutionContext)
@@ -87,8 +87,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
-  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
-  private val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
+  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
+  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -436,7 +436,7 @@ class EditableMappingService @Inject()(
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
-      dataSetName = remoteFallbackLayer.dataSetName,
+      datasetName = remoteFallbackLayer.dataSetName,
       trees = trees
     )
     skeleton.toByteArray
@@ -462,26 +462,26 @@ class EditableMappingService @Inject()(
 
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],
-              elementClass: ElementClass): Fox[Array[Byte]] = {
+              elementClass: ElementClassProto): Fox[Array[Byte]] = {
     val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toPositiveLong))
     for {
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
   }
 
-  private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[Long]] =
+  private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray.map(_.toPositiveLong)
 
-  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[UnsignedInteger]] =
+  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[UnsignedInteger]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray
 
-  private def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
+  private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
@@ -504,14 +504,14 @@ class EditableMappingService @Inject()(
       editableMappingService = this
     )
 
-  def createIsosurface(tracing: VolumeTracing,
-                       tracingId: String,
-                       request: WebKnossosIsosurfaceRequest,
-                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
+  def createAdHocMesh(tracing: VolumeTracing,
+                      tracingId: String,
+                      request: WebknossosAdHocMeshRequest,
+                      userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox
       segmentationLayer = editableMappingLayer(mappingName, tracing, tracingId, userToken)
-      isosurfaceRequest = IsosurfaceRequest(
+      adHocMeshRequest = AdHocMeshRequest(
         dataSource = None,
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
@@ -519,9 +519,10 @@ class EditableMappingService @Inject()(
         subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
-        mappingType = None
+        mappingType = None,
+        findNeighbors = request.findNeighbors
       )
-      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
@@ -608,10 +609,16 @@ class EditableMappingService @Inject()(
     tryo {
       val minCutImpl = new PushRelabelMFImpl(g)
       minCutImpl.calculateMinCut(segmentId1, segmentId2)
+      val sourcePartition: util.Set[Long] = minCutImpl.getSourcePartition
       val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
-      minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
+      minCutEdges.asScala.toList.map(e =>
+        setDirectionForCutting(g.getEdgeSource(e), g.getEdgeTarget(e), sourcePartition))
     }
   }
+
+  // the returned edges must be directed so that when they are passed to the split action, the source segment keeps its agglomerate id
+  private def setDirectionForCutting(node1: Long, node2: Long, sourcePartition: util.Set[Long]): (Long, Long) =
+    if (sourcePartition.contains(node1)) (node1, node2) else (node2, node1)
 
   private def annotateEdgesWithPositions(edges: List[(Long, Long)],
                                          agglomerateGraph: AgglomerateGraph): List[EdgeWithPositions] =

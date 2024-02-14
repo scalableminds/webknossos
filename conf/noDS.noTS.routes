@@ -1,4 +1,3 @@
 -> /api/                         webknossos.versioned.Routes
 
-GET   /swagger.json              controllers.ApiHelpController.getResources
 GET   /.well-known/security.txt  controllers.Application.getSecurityTxt

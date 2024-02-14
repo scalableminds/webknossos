@@ -25,26 +25,36 @@ trait SqlEscaping {
     }
   }
 
-  protected def enumArrayLiteral(elements: List[Enumeration#Value]): String = {
-    val commaSeparated = elements.map(e => s""""$e"""").mkString(",")
-    s"'{$commaSeparated}'"
-  }
-
-  protected def parseArrayLiteral(literal: String): List[String] = {
-    val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty)
-      List.empty
+  protected def parseArrayLiteral(literal: String): List[String] =
+    if (literal == null) List.empty
     else {
-      val split = trimmed.split(",", -1).toList.map(unescapeInArrayLiteral)
-      split.map { item =>
-        if (item.startsWith("\"") && item.endsWith("\"")) {
-          item.drop(1).dropRight(1)
-        } else item
+      val trimmed = literal.drop(1).dropRight(1)
+      if (trimmed.isEmpty)
+        List.empty
+      else {
+        // Removing the escaped quotes to split at commas not surrounded by quotes
+        // Splitting *the original string* at split positions obtained from matching there
+        val withoutEscapedQuotes = trimmed.replace("\\\"", "__")
+        val splitPositions: List[Int] =
+          ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".r.findAllMatchIn(withoutEscapedQuotes).map(_.start).toList.sorted
+        val split = splitAtPositions(splitPositions, trimmed)
+        split.map(unescapeInArrayLiteral)
       }
     }
+
+  // Split a string at specified positions. Drop 1 character at every split
+  private def splitAtPositions(positions: List[Int], aString: String): List[String] = positions match {
+    case pos :: remainingPositions =>
+      aString.substring(0, pos) :: splitAtPositions(remainingPositions.map(_ - pos - 1), aString.substring(pos + 1))
+    case Nil => List(aString)
   }
 
-  protected def unescapeInArrayLiteral(aString: String): String =
-    aString.replaceAll("""\\"""", """"""").replaceAll("""\\,""", ",")
+  private def unescapeInArrayLiteral(aString: String): String = {
+    val withUnescapedQuotes =
+      aString.replace("\\\"", """"""").replace("\\,", ",").replace("\\\\", "\\")
+    if (withUnescapedQuotes.startsWith("\"") && withUnescapedQuotes.endsWith("\"")) {
+      withUnescapedQuotes.drop(1).dropRight(1)
+    } else withUnescapedQuotes
+  }
 
 }

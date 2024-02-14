@@ -38,7 +38,7 @@ object ExtendedTypes {
       * A dynamic sliding window is a sliding window which is moved n steps
       * according to the return value of the passed function.
       */
-    def dynamicSliding(windowSize: Int)(f: List[A] => Int) {
+    def dynamicSliding(windowSize: Int)(f: List[A] => Int): Unit = {
       val iterator = array.sliding(windowSize, 1)
       while (iterator.hasNext) {
         val steps = f(iterator.next().toList)
@@ -188,32 +188,6 @@ object ExtendedTypes {
         case f: Failure =>
           Future.successful(f)
       }
-  }
-
-  implicit class ExtendedBooleanFuture(future: Future[Boolean]) {
-    def failIfFalse(errorMsg: String): Future[Box[Boolean]] =
-      future.map {
-        case true  => Full(true)
-        case false => Failure(errorMsg)
-      }
-
-    def failIfTrue(errorMsg: String): Future[Box[Boolean]] =
-      future.map {
-        case false => Full(false)
-        case true  => Failure(errorMsg)
-      }
-  }
-
-  implicit class ExtendedBoolean(val b: Boolean) extends AnyVal {
-    def failIfFalse(errorMsg: String): Box[Boolean] = b match {
-      case true  => Full(true)
-      case false => Failure(errorMsg)
-    }
-
-    def failIfTrue(errorMsg: String): Box[Boolean] = b match {
-      case false => Full(false)
-      case true  => Failure(errorMsg)
-    }
   }
 
   implicit class CappedQueue[A](q: Queue[A]) {

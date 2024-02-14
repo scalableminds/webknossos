@@ -1,11 +1,22 @@
-@( conf: utils.WkConf, selectedTheme: String )
+@( conf: utils.WkConf, selectedTheme: String, openGraphTitle: Option[String], openGraphDescription:
+Option[String], openGraphImage: Option[String] )
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
+    <meta name="selected-theme" content="@(selectedTheme)" />
+    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
+    <meta name="google-analytics-tracking-id" content="@(conf.GoogleAnalytics.trackingId)" />
+    }
     <title>@(conf.WebKnossos.tabTitle)</title>
-    @if(conf.Features.isWkorgInstance){
+    @openGraphTitle.map { ogt =>
+    <meta property="og:title" content="@ogt" />
+    } @openGraphDescription.map { ogd =>
+    <meta property="og:description" content="@ogd" />
+    } @openGraphImage.map { ogi =>
+    <meta property="og:image" content="@ogi" />
+    } @if(conf.Features.isWkorgInstance){
     <meta
       name="description"
       content="Annotate and explore large 3D datasets with WEBKNOSSOS. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
@@ -24,30 +35,12 @@
       media="screen"
       href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
-    <script>
-      let initialTheme = "@(selectedTheme)";
-      if (initialTheme === "auto") {
-        initialTheme =
-          window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
-      }
-      document.documentElement.style.display = "none";
-      document.head.insertAdjacentHTML(
-        "beforeend",
-        "<link " +
-          'id="primary-stylesheet" ' +
-          'rel="stylesheet" ' +
-          'type="text/css" ' +
-          'media="screen" ' +
-          'href="/assets/bundle/' +
-          initialTheme +
-          '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
-          "onload=\"document.documentElement.style.display = ''\" " +
-          "/>",
-      );
-    </script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+    />
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
@@ -56,10 +49,6 @@
     <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
-    <script>
-      // Suppress warning emitted by Olvy because it tries to eagerly initialize
-      window.OlvyConfig = null;
-    </script>
   </head>
   <body>
     <main id="main-container"></main>
@@ -70,12 +59,14 @@
       src="https://www.googletagmanager.com/gtag/js?id=@(conf.GoogleAnalytics.trackingId)"
     ></script>
     <script>
+      const metaElement = document.querySelector("meta[name='google-analytics-tracking-id']");
+      const googleAnalyticsTrackingId = metaElement ? metaElement.getAttribute("content") : null;
       window.dataLayer = window.dataLayer || [];
       function gtag() {
         dataLayer.push(arguments);
       }
       gtag("js", new Date());
-      gtag("config", "@(conf.GoogleAnalytics.trackingId)", {
+      gtag("config", googleAnalyticsTrackingId, {
         anonymize_ip: true,
         cookie_expires: 0,
       });

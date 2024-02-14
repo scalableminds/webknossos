@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{Multigraph, _}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 object MultiComponentTreeSplitter {
 

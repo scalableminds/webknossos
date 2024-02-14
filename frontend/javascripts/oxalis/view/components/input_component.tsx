@@ -2,20 +2,32 @@ import { Input, InputProps, InputRef, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
+type InputComponentState = {
+  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | BigInt;
+};
+
 /*
- * A lightweight wrapper around <Input> which does:
- * - automatically blur on Escape
- * - maintain the cursor position / selection even when mutating the input value
+ * A lightweight wrapper around <Input> which:
+ * - automatically blurs on Escape
+ * - fixes cursor-jumping bugs by keeping a local copy of the input's value
+ *   within state.currentValue. Without it, editing the name of trees or
+ *   comments would always move the cursor to the input's end after each key press.
+ *   The fix is inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
+ * - maintains the cursor position / selection even when mutating the input value
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */
 
-class InputComponent extends React.PureComponent<InputProps, {}> {
+class InputComponent extends React.PureComponent<InputProps, InputComponentState> {
   inputRef = React.createRef<InputRef>();
   static defaultProps: InputProps = {
     onChange: _.noop,
     placeholder: "",
     value: "",
     style: {},
+  };
+
+  state = {
+    currentValue: this.props.value,
   };
 
   getSnapshotBeforeUpdate(_prevProps: InputProps, _prevState: {}): [number | null, number | null] {
@@ -33,10 +45,16 @@ class InputComponent extends React.PureComponent<InputProps, {}> {
   }
 
   componentDidUpdate(
-    _prevProps: InputProps,
+    prevProps: InputProps,
     _prevState: {},
     snapshot: [number | null, number | null],
   ) {
+    if (prevProps.value !== this.props.value) {
+      this.setState({
+        currentValue: this.props.value,
+      });
+    }
+
     // Restore the remembered selection when necessary
     try {
       // @ts-ignore
@@ -47,32 +65,24 @@ class InputComponent extends React.PureComponent<InputProps, {}> {
   }
 
   handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      currentValue: e.target.value,
+    });
     if (this.props.onChange) {
       this.props.onChange(e);
     }
   };
 
   handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    this.setState({
-      isFocused: true,
-    });
-
     if (this.props.onFocus) {
       this.props.onFocus(e);
     }
   };
 
   handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    this.setState(
-      {
-        isFocused: false,
-      },
-      () => {
-        if (this.props.onBlur) {
-          this.props.onBlur(e);
-        }
-      },
-    );
+    if (this.props.onBlur) {
+      this.props.onBlur(e);
+    }
   };
 
   blurYourself = () =>
@@ -98,7 +108,7 @@ class InputComponent extends React.PureComponent<InputProps, {}> {
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
-        value={this.props.value}
+        value={this.state.currentValue}
         onKeyDown={this.blurOnEscape}
       />
     );

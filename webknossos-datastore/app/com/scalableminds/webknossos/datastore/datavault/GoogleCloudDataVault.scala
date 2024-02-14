@@ -4,7 +4,8 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.ByteArrayInputStream
 import java.net.URI
@@ -51,9 +52,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           case SuffixLength(l) =>
             val blobReader = storage.reader(blobId)
             blobReader.seek(-l)
-            val bb = ByteBuffer.allocateDirect(l.toInt)
+            val bb = ByteBuffer.allocateDirect(l)
             blobReader.read(bb)
-            val arr = new Array[Byte](l.toInt)
+            val arr = new Array[Byte](l)
             bb.position(0)
             bb.get(arr)
             Fox.successful(arr)
@@ -71,6 +72,16 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     } yield (bytes, encoding)
   }
 
+  private def getUri = uri
+  private def getCredential = credential
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: GoogleCloudDataVault => other.getUri == uri && other.getCredential == credential
+    case _                           => false
+  }
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(uri).append(credential).toHashCode
 }
 
 object GoogleCloudDataVault {

@@ -1,9 +1,10 @@
 import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIDataset,
   APISegmentationLayer,
+  AdditionalCoordinate,
   AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
@@ -34,6 +35,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import {
   getFlooredPosition,
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
 } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
@@ -41,6 +43,9 @@ import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import messages from "messages";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { Store } from "oxalis/singletons";
+import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -76,13 +81,13 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing | APIAnnotationInfo,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
@@ -97,7 +102,7 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  annotation: APIAnnotation | HybridTracing,
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
@@ -204,7 +209,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   }
 
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getLowestResolutionIndex();
+  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
   // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
@@ -221,7 +226,7 @@ export function getMaximumBrushSize(state: OxalisState) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getLowestResolutionIndex();
+  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
   return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
@@ -361,6 +366,59 @@ export function getVisibleSegments(state: OxalisState): {
   // There aren't any segment groups for view-only layers
   const { segments } = state.localSegmentationData[layer.name];
   return { segments, segmentGroups: [] };
+}
+
+// Next to returning a clean list of selected segments or group, this method returns
+// a callback function that updates the selectedIds in store if segments are stored
+// there that are not visible in the segments view tab.
+// The returned segment and group ids are all visible in the segments view tab.
+export function getSelectedIds(state: OxalisState): [
+  {
+    segments: number[];
+    group: number | null;
+  },
+  (() => void) | null,
+] {
+  // Ensure that the ids of previously selected segments are removed
+  // if these segments aren't visible in the segments tab anymore.
+  const nothingSelectedObject = { segments: [], group: null };
+  let maybeSetSelectedSegmentsOrGroupsAction = null;
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (visibleSegmentationLayer == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
+  const { segments, group } = segmentationLayerData.selectedIds;
+  if (segments.length === 0 && group == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const currentVisibleSegments = getVisibleSegments(state);
+  const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
+  let cleanedSelectedGroup = null;
+  if (group != null) {
+    const availableGroups = currentVisibleSegments.segmentGroups
+      .map((group) => group.groupId)
+      .concat(MISSING_GROUP_ID);
+    cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
+  }
+  const selectedIds = {
+    segments: segments.filter((id) => currentSegmentIds.has(id)),
+    group: cleanedSelectedGroup,
+  };
+  const haveSegmentsOrGroupBeenRemovedFromList =
+    selectedIds.segments.length !== segments.length || selectedIds.group !== group;
+  if (haveSegmentsOrGroupBeenRemovedFromList) {
+    maybeSetSelectedSegmentsOrGroupsAction = () => {
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          selectedIds.segments,
+          selectedIds.group,
+          visibleSegmentationLayer.name,
+        ),
+      );
+    };
+  }
+  return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
 }
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
@@ -663,4 +721,36 @@ export function hasAgglomerateMapping(state: OxalisState) {
   }
 
   return AGGLOMERATE_STATES.YES;
+}
+
+export function getMeshesForAdditionalCoordinates(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  layerName: string,
+) {
+  const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const meshRecords = state.localSegmentationData[layerName].meshes;
+  if (meshRecords?.[addCoordKey] != null) {
+    return meshRecords[addCoordKey];
+  }
+  return null;
+}
+
+export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState, layerName: string) {
+  return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates, layerName);
+}
+
+export function getMeshInfoForSegment(
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+  layerName: string,
+  segmentId: number,
+) {
+  const meshesForAddCoords = getMeshesForAdditionalCoordinates(
+    state,
+    additionalCoordinates,
+    layerName,
+  );
+  if (meshesForAddCoords == null) return null;
+  return meshesForAddCoords[segmentId];
 }

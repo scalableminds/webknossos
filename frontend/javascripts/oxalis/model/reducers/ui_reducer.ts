@@ -1,6 +1,6 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
-import { updateKey } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   setToolReducer,
   getNextTool,
@@ -96,15 +96,15 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_AI_NUCLEI_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_AI_JOB_MODAL_STATE": {
       return updateKey(state, "uiInformation", {
-        showAINucleiSegmentationModal: action.visible,
+        aIJobModalState: action.state,
       });
     }
 
-    case "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
-        showAINeuronSegmentationModal: action.visible,
+        showRenderAnimationModal: action.visible,
       });
     }
 
@@ -129,6 +129,28 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_ARE_QUICK_SELECT_SETTINGS_OPEN": {
       return updateKey(state, "uiInformation", {
         areQuickSelectSettingsOpen: action.isOpen,
+      });
+    }
+
+    case "HIDE_MEASUREMENT_TOOLTIP": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        lastMeasuredPosition: null,
+      });
+    }
+
+    case "SET_LAST_MEASURED_POSITION": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        lastMeasuredPosition: action.position,
+      });
+    }
+    case "SET_IS_MEASURING": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        isMeasuring: action.isMeasuring,
+      });
+    }
+    case "SET_NAVBAR_HEIGHT": {
+      return updateKey(state, "uiInformation", {
+        navbarHeight: action.navbarHeight,
       });
     }
 

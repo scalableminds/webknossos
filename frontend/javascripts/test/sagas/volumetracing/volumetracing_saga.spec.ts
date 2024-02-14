@@ -299,6 +299,9 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   saga.next(addToLayerActionFn([1, 2, 3]));
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
+  const wroteVoxelsBox = {
+    value: false,
+  };
   expectValueDeepEqual(
     t,
     saga.next(finishEditingAction),
@@ -310,6 +313,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
       OrthoViews.PLANE_XY,
+      wroteVoxelsBox,
     ),
   );
 });
@@ -354,6 +358,9 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next("action_channel");
   saga.next(addToLayerActionFn([1, 2, 3]));
   saga.next(OrthoViews.PLANE_XY);
+  const wroteVoxelsBox = {
+    value: false,
+  };
   // Validate that finishLayer was called
   expectValueDeepEqual(
     t,
@@ -366,6 +373,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
       OrthoViews.PLANE_XY,
+      wroteVoxelsBox,
     ),
   );
 });

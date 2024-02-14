@@ -68,4 +68,4 @@ In our workflows, we make heavy use of skeleton annotations for proofreading and
 - we encode additional metadata for any given segment in the skeleton tree names, groups, and comments, i.e. the biological cell type for a segment
 - we manually annotate classification mistakes or interesting features in the data and download/bring them back into our Python workflows for correction and further processing
 
-This system is very flexible, though requires a little bit of creativity and coding skills with the [WEBKNOSSOS Python library](./tooling.md#webknossos-python-library).
+This system is very flexible, though requires a little bit of creativity and coding skills with the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py).

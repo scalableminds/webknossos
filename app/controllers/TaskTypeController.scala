@@ -1,13 +1,12 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
-import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
@@ -15,6 +14,7 @@ import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
@@ -27,12 +27,12 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     with FoxImplicits {
 
   private val taskTypePublicReads =
-    ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ 'description).read[String] and
-      (__ \ 'teamId).read[ObjectId] and
-      (__ \ 'settings).read[AnnotationSettings] and
-      (__ \ 'recommendedConfiguration).readNullable[JsValue] and
-      (__ \ 'tracingType).read[TracingType.Value])(taskTypeService.fromForm _)
+    ((__ \ "summary").read[String](minLength[String](2) or maxLength[String](50)) and
+      (__ \ "description").read[String] and
+      (__ \ "teamId").read[ObjectId] and
+      (__ \ "settings").read[AnnotationSettings] and
+      (__ \ "recommendedConfiguration").readNullable[JsValue] and
+      (__ \ "tracingType").read[TracingType.Value])(taskTypeService.fromForm _)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>

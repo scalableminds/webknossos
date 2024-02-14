@@ -72,7 +72,7 @@ object CumsumParser extends LazyLogging {
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
     val formRx = "([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)".r
-    val list = mutable.MutableList[String]()
+    val list = mutable.ListBuffer[String]()
     reader.beginObject()
     while (reader.hasNext) {
       list += reader.nextName()

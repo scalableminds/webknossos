@@ -1,6 +1,6 @@
 package models.job
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Formatter
@@ -8,24 +8,24 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.binary.{DataSetDAO, DataStoreDAO}
+import models.dataset.{DatasetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import oxalis.telemetry.SlackNotificationService
-import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 
 case class Job(
     _id: ObjectId,
@@ -54,7 +54,7 @@ case class Job(
       s <- started
     } yield (e - s).millis
 
-  def effectiveState: JobState = manualState.getOrElse(state)
+  private def effectiveState: JobState = manualState.getOrElse(state)
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
@@ -70,7 +70,7 @@ case class Job(
           datasetName.map { dsName =>
             s"/datasets/$organizationName/$dsName/view"
           }
-        case JobCommand.export_tiff =>
+        case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
           returnValue.map { resultDatasetName =>
@@ -126,41 +126,66 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
+    q"""
+      _owner = $requestingUserId
+      OR
+      (_owner IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)))
+      OR
+      ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+      OR
+      ($requestingUserId IN
+        (
+          SELECT u._id
+          FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
+          WHERE m.isSuperUser
+        )
+      )
+     """
+
+  private def listAccessQ(requestingUserId: ObjectId) =
     q"""_owner = $requestingUserId"""
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[JobsRow])
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery and _id = $jobId".as[JobsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery AND _id = $jobId".as[JobsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
-  def countUnassignedPendingForDataStore(dataStoreName: String): Fox[Int] =
-    for {
-      r <- run(q"""select count(_id) from $existingCollectionName
-                   where state = ${JobState.PENDING}
-                   and manualState is null
-                   and _dataStore = $dataStoreName
-                   and _worker is null""".as[Int])
-      head <- r.headOption
-    } yield head
+  def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""SELECT COUNT(_id) from $existingCollectionName
+                   WHERE state = ${JobState.PENDING}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
+                   AND manualState IS NULL
+                   AND _dataStore = $dataStoreName
+                   AND _worker IS NULL""".as[Int])
+        head <- r.headOption
+      } yield head
+    }
 
-  def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
-    for {
-      r <- run(q"""SELECT COUNT(_id)
+  def countUnfinishedByWorker(workerId: ObjectId, jobCommands: Set[JobCommand]): Fox[Int] =
+    if (jobCommands.isEmpty) Fox.successful(0)
+    else {
+      for {
+        r <- run(q"""SELECT COUNT(_id)
                    FROM $existingCollectionName
                    WHERE _worker = $workerId
-                   AND state in ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL""".as[Int])
-      head <- r.headOption
-    } yield head
+        head <- r.headOption
+      } yield head
+    }
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
@@ -205,7 +230,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"""update webknossos.jobs set manualState = $manualState where _id = $id""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
@@ -216,43 +241,47 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    returnValue = ${s.returnValue},
                    started = ${s.started},
                    ended = ${s.ended}
-                   where _id = $jobId""".asUpdate)
+                   WHERE _id = $jobId""".asUpdate)
     } yield ()
 
-  def reserveNextJob(worker: Worker): Fox[Unit] = {
-    val query = q"""
-          with subquery as (
-            select _id
-            from $existingCollectionName
-            where
+  def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =
+    if (jobCommands.isEmpty) Fox.successful(())
+    else {
+      val query =
+        q"""
+          WITH subquery AS (
+            SELECT _id
+            FROM $existingCollectionName
+            WHERE
               state = ${JobState.PENDING}
-              and _dataStore = ${worker._dataStore}
-              and manualState is NULL
-              and _worker is NULL
-            order by created
-            limit 1
+              AND _dataStore = ${worker._dataStore}
+              AND manualState IS NULL
+              AND _worker IS NULL
+              AND command IN ${SqlToken.tupleFromList(jobCommands)}
+            ORDER BY created
+            LIMIT 1
           )
-          update webknossos.jobs_ j
-          set _worker = ${worker._id}
-          from subquery
-          where j._id = subquery._id
+          UPDATE webknossos.jobs_ j
+          SET _worker = ${worker._id}
+          FROM subquery
+          WHERE j._id = subquery._id
           """.asUpdate
-    for {
-      _ <- run(
-        query.withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
-    } yield ()
-  }
+      for {
+        _ <- run(
+          query.withTransactionIsolation(Serializable),
+          retryCount = 50,
+          retryIfErrorContains = List(transactionSerializationError)
+        )
+      } yield ()
+    }
 
   def countByState: Fox[Map[String, Int]] =
     for {
-      result <- run(q"""select state, count(_id)
-                        from webknossos.jobs_
-                        where manualState is null
-                        group by state
-                        order by state
+      result <- run(q"""SELECT state, count(_id)
+                        FROM webknossos.jobs_
+                        WHERE manualState IS NULL
+                        GROUP BY state
+                        ORDER BY state
                         """.as[(String, Int)])
     } yield result.toMap
 
@@ -267,7 +296,7 @@ class JobService @Inject()(wkConf: WkConf,
                            workerDAO: WorkerDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
-                           dataSetDAO: DataSetDAO,
+                           datasetDAO: DatasetDAO,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
@@ -360,6 +389,12 @@ class JobService @Inject()(wkConf: WkConf,
               "Mesh Generation",
               "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
             ))
+        case JobCommand.render_animation =>
+          Some(
+            genericEmailTemplate(
+              "Dataset Animation",
+              "Your animation of a WEBKNOSSOS dataset has been sucessfully created and is ready for download."
+            ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"
       // some jobs, e.g. "find largest segment ideas", do not require an email notification
@@ -384,8 +419,8 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
         organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
-        _ <- dataSetDAO.deleteDataset(dataset._id)
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
 
@@ -417,29 +452,33 @@ class JobService @Inject()(wkConf: WkConf,
       "job_kwargs" -> job.commandArgs
     )
 
-  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String)(
-      implicit ctx: DBAccessContext): Fox[Job] =
+  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- assertDataStoreHasWorkers(dataStoreName) ?~> "job.noWorkerForDatastore"
+      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastore"
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  private def assertDataStoreHasWorkers(dataStoreName: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
-      _ <- dataStoreDAO.findOneByName(dataStoreName)
-      _ <- workerDAO.findOneByDataStore(dataStoreName)
-    } yield ()
+      workers <- workerDAO.findAllByDataStore(dataStoreName)
+      jobs = if (workers.isEmpty) Set[JobCommand]() else workers.map(_.supportedJobCommands).reduce(_.union(_))
+    } yield jobs
 
-  def assertTiffExportBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
+  private def jobIsSupportedByAvailableWorkers(command: JobCommand, dataStoreName: String): Fox[Boolean] =
     for {
-      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.export.tiff.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.export.tiff.invalidMag"
+      jobs <- jobsSupportedByAvailableWorkers(dataStoreName)
+    } yield jobs.contains(command)
+
+  def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
+    for {
+      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
+      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
       boundingBoxInMag = parsedBoundingBox / parsedMag
-      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
-      _ <- bool2Fox(boundingBoxInMag.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
+      _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
 }

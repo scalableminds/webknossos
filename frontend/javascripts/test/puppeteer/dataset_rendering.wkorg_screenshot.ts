@@ -9,6 +9,7 @@ import {
   withRetry,
   checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
+import { encodeUrlHash } from "oxalis/controller/url_manager";
 
 checkBrowserstackCredentials();
 
@@ -24,6 +25,22 @@ setupBeforeEachAndAfterEach();
 const demoDatasetName = "l4dense_motta_et_al_demo";
 const owningOrganization = "scalable_minds";
 
+const viewOverrides: Record<string, string> = {
+  l4dense_motta_et_al_demo: encodeUrlHash(
+    JSON.stringify({
+      position: [2816, 4352, 1792],
+      mode: "orthogonal",
+      zoomStep: 1.3,
+      additionalCoordinates: [],
+      stateByLayer: {
+        color: { isDisabled: false },
+        predictions: { isDisabled: true },
+        segmentation: { isDisabled: false },
+      },
+    }),
+  ),
+};
+
 test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) => {
   await withRetry(
     3,
@@ -36,6 +53,7 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         await getNewPage(t.context.browser),
         URL,
         datasetId,
+        viewOverrides[demoDatasetName],
       );
       const changedPixels = await compareScreenshot(
         screenshot,

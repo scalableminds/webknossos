@@ -18,21 +18,21 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
-  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
+  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext()
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
-  private def fetchNext =
-    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
+  private def fetchNext() =
+    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
 
   private def fetchNextAndSave = {
-    currentBatchIterator = fetchNext
+    currentBatchIterator = fetchNext()
     currentBatchIterator
   }
 
   @tailrec
   private def getNextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
-      val keyValuePair = currentBatchIterator.next
+      val keyValuePair = currentBatchIterator.next()
       currentStartAfterKey = Some(keyValuePair.key)
       Some(keyValuePair)
     } else {
@@ -47,7 +47,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
       nextKeyValuePair.isDefined
     }
 
-  override def next: VersionedKeyValuePair[Array[Byte]] = {
+  override def next(): VersionedKeyValuePair[Array[Byte]] = {
     val nextRes = nextKeyValuePair match {
       case Some(value) => value
       case None        => getNextKeyValuePair.get

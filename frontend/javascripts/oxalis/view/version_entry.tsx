@@ -25,6 +25,7 @@ import type {
   RevertToVersionUpdateAction,
   UpdateNodeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
   CreateEdgeUpdateAction,
   DeleteEdgeUpdateAction,
@@ -36,6 +37,7 @@ import type {
   MoveTreeComponentUpdateAction,
   MergeTreeUpdateAction,
   UpdateMappingNameUpdateAction,
+  DeleteSegmentDataUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -132,6 +134,10 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Updated the visibility of the tree with id ${action.value.treeId}.`,
     icon: <EyeOutlined />,
   }),
+  updateTreeEdgesVisibility: (action: UpdateTreeEdgesVisibilityUpdateAction): Description => ({
+    description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
+    icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
+  }),
   updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
     description: `Updated the visibility of the group with id ${
       action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
@@ -161,6 +167,14 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
   deleteSegment: (action: DeleteSegmentUpdateAction): Description => ({
     description: `Deleted the segment with id ${action.value.id} from the segments list.`,
     icon: <DeleteOutlined />,
+  }),
+  deleteSegmentData: (action: DeleteSegmentDataUpdateAction): Description => ({
+    description: `Deleted the data of segment ${action.value.id}. All voxels with that id were overwritten with 0.`,
+    icon: <DeleteOutlined />,
+  }),
+  addSegmentIndex: (): Description => ({
+    description: "Added segment index to enable segment statistics.",
+    icon: <EditOutlined />,
   }),
   // This should never be shown since currently this update action can only be triggered
   // by merging or splitting trees which is recognized separately, before this description

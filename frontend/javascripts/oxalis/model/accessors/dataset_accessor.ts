@@ -579,21 +579,6 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-// Currently, only used for valid task range
-function _keyResolutionsByMax(dataset: APIDataset, layerName: string): Record<number, Vector3> {
-  const resolutions = getDenseResolutionsForLayerName(dataset, layerName);
-  return _.keyBy(resolutions, (res) => Math.max(...res));
-}
-
-const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
-export function getResolutionByMax(
-  dataset: APIDataset,
-  layerName: string,
-  maxDim: number,
-): Vector3 {
-  const keyedResolutionsByMax = keyResolutionsByMax(dataset, layerName);
-  return keyedResolutionsByMax[maxDim];
-}
 export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
@@ -609,6 +594,10 @@ export function isLayerVisible(
   const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+}
+
+export function hasFallbackLayer(layer: APIDataLayer) {
+  return "fallbackLayer" in layer && layer.fallbackLayer != null;
 }
 
 function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
@@ -827,3 +816,14 @@ export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector
 export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
   return M4x4.transpose(M4x4.inverse(mat));
 });
+
+export function getEffectiveIntensityRange(
+  dataset: APIDataset,
+  layerName: string,
+  datasetConfiguration: DatasetConfiguration,
+): [number, number] {
+  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
+  const layerConfiguration = datasetConfiguration.layers[layerName];
+
+  return layerConfiguration.intensityRange || defaultIntensityRange;
+}

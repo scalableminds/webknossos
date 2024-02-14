@@ -92,6 +92,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
       groupId: 3,
       type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
     },
     "2": {
       treeId: 2,
@@ -118,6 +119,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       isVisible: true,
       groupId: 2,
       type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
     },
   },
   treeGroups: [

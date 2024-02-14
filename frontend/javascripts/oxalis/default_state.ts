@@ -1,6 +1,5 @@
 import type { OxalisState } from "oxalis/store";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
-import { document } from "libs/window";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -10,6 +9,9 @@ import Constants, {
   InterpolationModeEnum,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import constants from "oxalis/constants";
+import { getSystemColorTheme } from "theme";
+
 const defaultViewportRect = {
   top: 0,
   left: 0,
@@ -43,9 +45,6 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
-const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
-  "primary-stylesheet",
-) as HTMLLinkElement;
 const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
@@ -229,8 +228,8 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    showAINucleiSegmentationModal: false,
-    showAINeuronSegmentationModal: false,
+    aIJobModalState: "invisible",
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
@@ -240,12 +239,17 @@ const defaultState: OxalisState = {
       right: false,
       left: false,
     },
-    theme: primaryStylesheetElement?.href.includes("dark.css") ? "dark" : "light",
+    theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
     },
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
+    measurementToolInfo: {
+      lastMeasuredPosition: null,
+      isMeasuring: false,
+    },
+    navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
   },
   localSegmentationData: {},
 };

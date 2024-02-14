@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWit
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.codec.digest.MurmurHash3
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
@@ -18,9 +18,9 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 case class ListMeshChunksRequest(
     meshFile: String,
@@ -118,7 +118,12 @@ object NeuroglancerSegmentManifest {
         }
       }
 
-      chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
+      chunkPositionsList.append(
+        currentChunkPositions._1
+          .lazyZip(currentChunkPositions._2)
+          .lazyZip(currentChunkPositions._3)
+          .map(Vec3Int(_, _, _))
+          .toList)
 
       val currentChunkSizes = ListBuffer[Long]()
       for (_ <- 0 until numChunksPerLod(lod)) {
@@ -162,8 +167,9 @@ case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: St
       chunks = MeshSegmentInfo(
         chunks.chunkShape,
         chunks.gridOrigin,
-        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
-          MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
+        lods = chunks.lods
+          .lazyZip(that.chunks.lods)
+          .map((lod1, lod2) => MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
       )
     )
 }
@@ -190,8 +196,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
+  def exploreMeshFiles(organizationName: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+    val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(meshFileExtension))
       .map { paths =>
@@ -205,7 +211,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       mappingVersionForMeshFile(meshFilePath)
     }
 
-    val mappingNameFoxes = (meshFileNames, meshFileVersions).zipped.map { (fileName, fileVersion) =>
+    val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
       val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
       mappingNameForMeshFile(meshFilePath, fileVersion)
     }
@@ -214,7 +220,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
 
       mappingNameOptions = mappingNameBoxes.map(_.toOption)
-      zipped = (meshFileNames, mappingNameOptions, meshFileVersions).zipped
+      zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
     } yield zipped.map(MeshFileInfo(_, _, _)).toSet
   }
 
@@ -235,13 +241,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     }.toOption.getOrElse(0)
 
   def listMeshChunksForSegmentV0(organizationName: String,
-                                 dataSetName: String,
+                                 datasetName: String,
                                  dataLayerName: String,
                                  listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Vec3Int]] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
-        .resolve(dataSetName)
+        .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
@@ -253,17 +259,17 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .asScala
         .toList
       Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    }.flatten ?~> "mesh.file.open.failed"
+    }.toFox.flatten ?~> "mesh.file.open.failed"
   }
 
   def listMeshChunksForSegmentV3(organizationName: String,
-                                 dataSetName: String,
+                                 datasetName: String,
                                  dataLayerName: String,
                                  listMeshChunksRequest: ListMeshChunksRequest): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
-        .resolve(dataSetName)
+        .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
@@ -355,12 +361,12 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   }
 
   def readMeshChunkV0(organizationName: String,
-                      dataSetName: String,
+                      datasetName: String,
                       dataLayerName: String,
                       meshChunkDataRequest: MeshChunkDataRequestV0): Fox[(Array[Byte], String)] = {
     val meshFilePath = dataBaseDir
       .resolve(organizationName)
-      .resolve(dataSetName)
+      .resolve(datasetName)
       .resolve(dataLayerName)
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
@@ -375,7 +381,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   }
 
   def readMeshChunkV3(organizationName: String,
-                      dataSetName: String,
+                      datasetName: String,
                       dataLayerName: String,
                       meshChunkDataRequests: MeshChunkDataRequestV3List,
   ): Fox[(Array[Byte], String)] =
@@ -387,7 +393,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         val meshChunkDataRequest = requestAndIndex._1
         val meshFilePath = dataBaseDir
           .resolve(organizationName)
-          .resolve(dataSetName)
+          .resolve(datasetName)
           .resolve(dataLayerName)
           .resolve(meshesDir)
           .resolve(s"${meshChunkDataRequests.meshFile}.$meshFileExtension")

@@ -1,6 +1,17 @@
 import React from "react";
 import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton } from "antd";
+import {
+  Form,
+  Button,
+  Card,
+  Input,
+  Row,
+  FormInstance,
+  Col,
+  Skeleton,
+  Typography,
+  Space,
+} from "antd";
 import {
   MailOutlined,
   TagOutlined,
@@ -81,14 +92,27 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 
   handleDeleteButtonClicked = async (): Promise<void> => {
     const isDeleteConfirmed = await confirmAsync({
-      title: (
-        <p>
-          Deleting an organization cannot be undone. Are you certain you want to delete the
-          organization {this.props.organization.displayName}? <br />
-          Attention: You will be logged out.
-        </p>
+      title: "Danger Zone",
+      content: (
+        <div>
+          <Typography.Title level={4} type="danger">
+            You will lose access to all the datasets and annotations uploaded/created as part of
+            this organization!
+          </Typography.Title>
+          <Typography.Title level={4} type="danger">
+            Unless you are part of another WEBKNOSSOS organization, you can NOT login again with
+            this account and will lose access to WEBKNOSSOS.
+          </Typography.Title>
+          <p>
+            Deleting an organization{" "}
+            <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
+            want to delete the organization {this.props.organization.displayName}?
+          </p>
+        </div>
       ),
-      okText: "Yes, delete this organization now.",
+      okText: <>Yes, delete this organization now and log me out.</>,
+      okType: "danger",
+      width: 500,
     });
 
     if (isDeleteConfirmed) {
@@ -162,7 +186,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
             }}
           >
             <FormItem label="Organization ID">
-              <Input.Group compact>
+              <Space.Compact>
                 <Input
                   prefix={<IdcardOutlined />}
                   value={this.props.organization.name}
@@ -172,11 +196,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   readOnly
                   disabled
                 />
-                <Button
-                  onClick={this.handleCopyNameButtonClicked}
-                  icon={<CopyOutlined className="without-icon-margin" />}
-                />
-              </Input.Group>
+                <Button onClick={this.handleCopyNameButtonClicked} icon={<CopyOutlined />} />
+              </Space.Compact>
             </FormItem>
             <FormItem label="Organization Owner">
               <Input

@@ -56,7 +56,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
-import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
@@ -159,7 +159,8 @@ function* checkForAgglomerateSkeletonModification(
 
   getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
     Toast.warning(
-      "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges.",
+      "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the skeleton to a normal tree via right-click in the Skeleton tab.",
+      { timeout: 10000 },
     );
   });
 }
@@ -488,7 +489,7 @@ function* clearProofreadingByproducts() {
   const layerName = volumeTracingLayer.tracingId;
 
   for (const segmentId of coarselyLoadedSegmentIds) {
-    yield* put(removeIsosurfaceAction(layerName, segmentId));
+    yield* put(removeMeshAction(layerName, segmentId));
   }
   coarselyLoadedSegmentIds = [];
 }
@@ -654,8 +655,8 @@ function* prepareSplitOrMerge(
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
-  const agglomerateFileMag = resolutionInfo.getLowestResolution();
-  const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
+  const agglomerateFileMag = resolutionInfo.getFinestResolution();
+  const agglomerateFileZoomstep = resolutionInfo.getFinestResolutionIndex();
 
   const getDataValue = (position: Vector3) => {
     const { additionalCoordinates } = Store.getState().flycam;
@@ -730,9 +731,9 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
 ) {
   if (proofreadUsingMeshes()) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    yield* put(removeIsosurfaceAction(layerName, sourceAgglomerateId));
+    yield* put(removeMeshAction(layerName, sourceAgglomerateId));
     if (targetAgglomerateId !== sourceAgglomerateId) {
-      yield* put(removeIsosurfaceAction(layerName, targetAgglomerateId));
+      yield* put(removeMeshAction(layerName, targetAgglomerateId));
     }
 
     // Segmentations with more than 3 dimensions are currently not compatible
@@ -765,7 +766,7 @@ function* createGetUnmappedDataValueFn(
   const layerName = volumeTracingLayer.tracingId;
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const mag = resolutionInfo.getLowestResolution();
+  const mag = resolutionInfo.getFinestResolution();
 
   const fallbackLayerName = volumeTracingLayer.fallbackLayer;
   if (fallbackLayerName == null) return null;

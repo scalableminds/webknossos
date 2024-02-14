@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import type {
   APIActiveUser,
   APIAnnotation,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIAnnotationWithTask,
@@ -63,6 +63,10 @@ import type {
   VoxelyticsLogLine,
   APIUserCompact,
   APIDatasetCompact,
+  MaintenanceInfo,
+  AdditionalCoordinate,
+  RenderAnimationOptions,
+  LayerLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -549,33 +553,20 @@ export function deletePrivateLink(linkId: string): Promise<{
 }
 
 // ### Annotations
-export function getCompactAnnotations(
-  isFinished: boolean,
-  pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
-  return Request.receiveJSON(
-    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
-  );
-}
-
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 
-export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
-  return Request.receiveJSON("/api/annotations/shared");
-}
-
 export function getReadableAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationCompact>> {
+): Promise<Array<APIAnnotationInfo>> {
   return Request.receiveJSON(
     `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -917,7 +908,7 @@ export async function getTracingForAnnotationType(
   tracing.typ = typ;
 
   // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
-  delete tracing.dataSetName;
+  delete tracing.datasetName;
   // @ts-ignore
   delete tracing.organizationName;
 
@@ -955,6 +946,42 @@ export function getNewestVersionForTracing(
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
+  );
+}
+
+export function getSegmentVolumes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): Promise<number[]> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
+      {
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
+      },
+    ),
+  );
+}
+
+export function getSegmentBoundingBoxes(
+  tracingStoreUrl: string,
+  tracingId: string,
+  mag: Vector3,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
+      {
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -1001,21 +1028,33 @@ export async function downloadAnnotation(
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
+  downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const possibleVersionString = Object.entries(versions)
-    .map(([key, val]) => `${key}Version=${val}`)
-    .join("&");
+  const searchParams = new URLSearchParams();
+  Object.entries(versions).forEach(([key, val]) => {
+    if (val != null) {
+      searchParams.append(`${key}Version`, val.toString());
+    }
+  });
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
       timeout: 12000,
     });
   }
-  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
-  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
+  if (!includeVolumeData) {
+    searchParams.append("skipVolumeData", "true");
+  } else {
+    if (downloadFileFormat === "nml") {
+      throw new Error(
+        "Cannot download annotation with nml-only format while includeVolumeData is true",
+      );
+    }
+    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+  }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
   await downloadWithFilename(downloadUrl);
 }
 
@@ -1085,7 +1124,7 @@ export async function getJobs(): Promise<APIJob[]> {
           annotationId: job.commandArgs.annotation_id,
           annotationType: job.commandArgs.annotation_type,
           mergeSegments: job.commandArgs.merge_segments,
-          state: adaptJobState(job.command, job.state, job.manualState),
+          state: adaptJobState(job.state, job.manualState),
           manualState: job.manualState,
           result: job.returnValue,
           resultLink: job.resultLink,
@@ -1112,7 +1151,7 @@ export async function getJob(jobId: string): Promise<APIJob> {
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
     mergeSegments: job.commandArgs.merge_segments,
-    state: adaptJobState(job.command, job.state, job.manualState),
+    state: adaptJobState(job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
     resultLink: job.resultLink,
@@ -1121,21 +1160,14 @@ export async function getJob(jobId: string): Promise<APIJob> {
 }
 
 function adaptJobState(
-  command: string,
   celeryState: APIJobCeleryState,
   manualState: APIJobManualState,
 ): APIJobState {
   if (manualState) {
     return manualState;
-  } else if (celeryState === "FAILURE" && isManualPassJobType(command)) {
-    return "MANUAL";
   }
 
   return celeryState || "UNKNOWN";
-}
-
-function isManualPassJobType(command: string) {
-  return ["convert_to_wkw"].includes(command);
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
@@ -1224,6 +1256,22 @@ export function startComputeMeshFileJob(
   );
 }
 
+export function startComputeSegmentIndexFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  const params = new URLSearchParams();
+  params.append("layerName", layerName);
+
+  return Request.receiveJSON(
+    `/api/jobs/run/computeSegmentIndexFile/${organizationName}/${datasetName}?${params}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export function startNucleiInferralJob(
   organizationName: string,
   datasetName: string,
@@ -1243,14 +1291,32 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    outputSegmentationLayerName,
+    newDatasetName,
+  });
   return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
-      ",",
-    )}&newDatasetName=${newDatasetName}`,
+    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
+    },
+  );
+}
+
+export function startRenderAnimationJob(
+  organizationName: string,
+  datasetName: string,
+  animationOptions: RenderAnimationOptions,
+): Promise<APIJob> {
+  return Request.sendJSONReceiveJSON(
+    `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}`,
+    {
+      data: animationOptions,
     },
   );
 }
@@ -1357,10 +1423,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 export function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+    options,
   );
 }
 
@@ -1438,6 +1506,22 @@ export function updateDatasetDefaultConfiguration(
 export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
+  );
+}
+
+type DatasetCompositionArgs = {
+  newDatasetName: string;
+  targetFolderId: string;
+  organizationName: string;
+  scale: Vector3;
+  layers: LayerLink[];
+};
+
+export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
+      data: payload,
+    }),
   );
 }
 
@@ -1581,17 +1665,13 @@ export async function isDatasetNameValid(
     return "The dataset name must not be empty.";
   }
 
-  try {
-    await Request.receiveJSON(
-      `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-      {
-        showErrorToast: false,
-      },
-    );
+  const response = await Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
+  );
+  if (response.isValid) {
     return null;
-  } catch (ex) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'msg' implicitly has an 'any' type.
-    return ex.messages.map((msg) => Object.values(msg)[0]).join(". ");
+  } else {
+    return response.errors[0];
   }
 }
 
@@ -2072,10 +2152,18 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance", {
-    doNotInvestigate: true,
-  });
-  return info.isMaintenance;
+  const allMaintenances: Array<MaintenanceInfo> = await Request.receiveJSON(
+    "/api/maintenances/listCurrentAndUpcoming",
+  );
+  const currentEpoch = Date.now();
+  const currentMaintenance = allMaintenances.find(
+    (maintenance) => maintenance.startTime < currentEpoch,
+  );
+  return currentMaintenance != null;
+}
+
+export async function listCurrentAndUpcomingMaintenances(): Promise<Array<MaintenanceInfo>> {
+  return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
 export function setMaintenance(bool: boolean): Promise<void> {
@@ -2088,57 +2176,59 @@ window.setMaintenance = setMaintenance;
 
 // Meshes
 
-// These parameters are bundled into an object to avoid that the computeIsosurface function
+// These parameters are bundled into an object to avoid that the computeAdHocMesh function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type IsosurfaceRequest = {
+type MeshRequest = {
   // The position is in voxels in mag 1
   position: Vector3;
+  additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
-  segmentId: number;
+  segmentId: number; // Segment to build mesh for
   subsamplingStrides: Vector3;
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
+  findNeighbors: boolean;
 };
 
-export function computeIsosurface(
+export function computeAdHocMesh(
   requestUrl: string,
-  isosurfaceRequest: IsosurfaceRequest,
+  meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
   const {
     position,
-    mag,
-    segmentId,
-    subsamplingStrides,
+    additionalCoordinates,
     cubeSize,
-    scale,
     mappingName,
-    mappingType,
-  } = isosurfaceRequest;
+    subsamplingStrides,
+
+    ...rest
+  } = meshRequest;
+
   return doWithToken(async (token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/isosurface?token=${token}`,
+      `${requestUrl}/adHocMesh?${params}`,
       {
         data: {
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
-          mag,
-          // Segment to build mesh for
-          segmentId,
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           subsamplingStrides,
-          scale,
+          ...rest,
         },
       },
     );
@@ -2147,6 +2237,32 @@ export function computeIsosurface(
       buffer,
       neighbors,
     };
+  });
+}
+
+export function getBucketPositionsForAdHocMesh(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+  cubeSize: Vector3,
+  mag: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+): Promise<Vector3[]> {
+  return doWithToken(async (token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    const positions = await Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      {
+        data: {
+          cubeSize,
+          mag,
+          additionalCoordinates,
+        },
+        method: "POST",
+      },
+    );
+    return positions;
   });
 }
 
@@ -2348,6 +2464,7 @@ export async function getSamEmbedding(
   layerName: string,
   mag: Vector3,
   embeddingBoxMag1: BoundingBox,
+  additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
   const params = new URLSearchParams();
@@ -2359,7 +2476,7 @@ export async function getSamEmbedding(
   const buffer = await Request.sendJSONReceiveArraybuffer(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox() },
+      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
       showErrorToast: false,
     },
   );

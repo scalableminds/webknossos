@@ -17,9 +17,10 @@ import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { MenuProps, Modal } from "antd";
+
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
-  color: "var(--ant-disabled)",
+  color: "var(--ant-color-text-disabled)",
 };
 
 function getDisabledWhenReloadingStyle(isReloading: boolean) {
@@ -49,14 +50,14 @@ function NewAnnotationLink({
         title="New Annotation (Skeleton + Volume)"
         disabled={isReloading}
       >
-        <PlusOutlined />
+        <PlusOutlined className="icon-margin-right" />
         New Annotation
       </LinkWithDisabled>
       <span
         style={{
           marginLeft: 8,
           marginRight: 8,
-          color: "var(--ant-border-base)",
+          color: "var(--ant-color-border)",
         }}
       >
         |
@@ -68,7 +69,7 @@ function NewAnnotationLink({
       >
         <EllipsisOutlined
           style={{
-            color: "var(--ant-link)",
+            color: "var(--ant-color-link)",
           }}
         />
       </a>
@@ -151,7 +152,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         style={disabledWhenReloadingStyle}
         type="link"
       >
-        {isReloading ? <LoadingOutlined /> : <ReloadOutlined />}
+        {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
         Reload
       </a>
     );
@@ -161,7 +162,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
           className="import-dataset"
         >
-          <PlusCircleOutlined />
+          <PlusCircleOutlined className="icon-margin-right" />
           Import
         </Link>
         {reloadLink}
@@ -169,7 +170,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           onClick={() =>
             Modal.error({
               title: "Cannot load this dataset",
-              content: dataset.status,
+              content: (
+                <div>
+                  <p>{dataset.status}</p>
+                  {dataset.status === "Deleted by user." ? (
+                    <p>
+                      Even though this dataset was deleted by a user, it is still shown here,
+                      because it was referenced by at least one annotation.
+                    </p>
+                  ) : null}
+                </div>
+              ),
             })
           }
         >
@@ -203,7 +214,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               title="View Dataset"
               disabled={isReloading}
             >
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </LinkWithDisabled>
             {dataset.isEditable ? (
@@ -213,7 +224,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   title="Open Dataset Settings"
                   disabled={isReloading}
                 >
-                  <SettingOutlined />
+                  <SettingOutlined className="icon-margin-right" />
                   Settings
                 </LinkWithDisabled>
                 {reloadLink}

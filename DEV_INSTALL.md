@@ -2,7 +2,7 @@
 
 ## Docker
 
-This is only recommended for local testing. Docker 19.03.0+ and Docker Compose 2.+ are required.
+This is only recommended for local testing (not for development). Docker 19.03.0+ and Docker Compose 2.+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -20,13 +20,13 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ## Dependencies
 
-* [Oracle JDK 11 to 14](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 11 to 14](http://openjdk.java.net/) (full JDK, JRE is not enough)
+* [Oracle JDK 21](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
-* [node.js 16 or 18](http://nodejs.org/download/)
+* [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -42,7 +42,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli
+brew install openjdk@21 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -76,26 +76,24 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 sudo apt install -y curl ca-certificates wget
 # Adding repositories for nodejs, sbt and yarn
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
-sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1 libbrotli1
+sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1
+
+ # Install sdkman, java, scala and sbt
+curl -s "https://get.sdkman.io" | bash
+source "/root/.sdkman/bin/sdkman-init.sh"
+sdk install scala 2.13.12
+sdk install sbt
+sdk install java 21.0.2-tem
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 # Clone the git repo to the current directory
-git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
+git clone git@github.com:scalableminds/webknossos.git
 ```
-
-If you already have a different Java version installed, set the default version to Java 11:
-
-* run `sudo update-alternatives --config java`
-* when prompted, select the desired version
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
@@ -103,8 +101,9 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### Java
 
-* Install Java JDK 14 (from Oracle or OpenJDK)
+* Install Java JDK 21 (from Oracle or OpenJDK)
 * make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains the path to JDK
+* Also see [SDKMAN!](https://sdkman.io/) for a convenient way to install and manage Java versions
 
 ### sbt
 
@@ -134,6 +133,8 @@ yarn install
 ```
 
 Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing WEBKNOSSOS, you can safely ignore this error.
+
+Note: If you are getting node version incompatibility errors, it is usually safe to call yarn with [`--ignore-engines`](https://classic.yarnpkg.com/lang/en/docs/cli/install/#toc-yarn-install-ignore-engines).
 
 To start WEBKNOSSOS, use
 

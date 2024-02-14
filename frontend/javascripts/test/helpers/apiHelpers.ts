@@ -11,6 +11,7 @@ import sinon from "sinon";
 import window from "libs/window";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
+import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -219,6 +220,11 @@ export function __setupOxalis(
   Request.sendJSONReceiveJSON
     .withArgs(sinon.match((arg) => arg === `/api/users/${dummyUser.id}/taskTypeId`))
     .returns(Promise.resolve(dummyUser));
+
+  setSceneController({
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    segmentMeshController: { meshesGroupsPerSegmentationId: {} },
+  });
 
   return Model.fetch(
     ANNOTATION_TYPE,

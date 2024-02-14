@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -82,9 +82,7 @@ trait VolumeTracingDownsampling
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
-      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]() {
-        override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
-      }
+      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => Array[Byte](0))
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
       updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
@@ -99,7 +97,10 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
+                                                        volumeSegmentIndexClient,
+                                                        tracing.version,
+                                                        dataLayer.additionalAxes)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
@@ -116,7 +117,7 @@ trait VolumeTracingDownsampling
     } yield sourceMag :: magsToCreate
   }
 
-  private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
+  private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.Map[BucketPosition, Array[Byte]],
                                               tracingId: String,
                                               dataLayer: VolumeTracingLayer,
                                               sourceMag: Vec3Int): Unit = {
@@ -137,7 +138,7 @@ trait VolumeTracingDownsampling
   private def downsampleMagFromMag(previousMag: Vec3Int,
                                    requiredMag: Vec3Int,
                                    originalBucketPositions: List[BucketPosition],
-                                   bucketDataMapMutable: mutable.HashMap[BucketPosition, Array[Byte]],
+                                   bucketDataMapMutable: mutable.Map[BucketPosition, Array[Byte]],
                                    updatedBucketsMutable: mutable.ListBuffer[BucketPosition],
                                    bucketVolume: Int,
                                    elementClass: ElementClass.Value,
@@ -233,7 +234,7 @@ trait VolumeTracingDownsampling
   }
 
   private def mode[T](items: Seq[T]): T =
-    items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
+    items.groupBy(i => i).view.mapValues(_.size).maxBy(_._2)._1
 
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)

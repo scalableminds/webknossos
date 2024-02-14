@@ -3,13 +3,13 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
-import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -23,9 +23,9 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     with FoxImplicits {
 
   private val scriptPublicReads =
-    ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[ObjectId])(Script.fromForm _)
+    ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
+      (__ \ "gist").read[String] and
+      (__ \ "owner").read[ObjectId])(Script.fromForm _)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>

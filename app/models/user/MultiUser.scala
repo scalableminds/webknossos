@@ -1,6 +1,6 @@
 package models.user
 
-import com.mohiva.play.silhouette.api.util.PasswordInfo
+import play.silhouette.api.util.PasswordInfo
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant

@@ -5,7 +5,6 @@ import Dropzone, { DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
-import { navbarHeight } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
@@ -26,6 +25,7 @@ type OwnProps = {
 type StateProps = {
   showDropzoneModal: boolean;
   hideDropzoneModal: () => void;
+  navbarHeight: number;
 };
 type Props = StateProps & OwnProps;
 
@@ -59,7 +59,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(--ant-primary)",
+            color: "var(color-primary)",
           }}
         />
       </div>
@@ -132,7 +132,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   size="large"
                   icon={<FileOutlined />}
                   style={{
-                    backgroundColor: "var(--ant-primary)",
+                    backgroundColor: "var(--ant-color-primary)",
                   }}
                 />
               }
@@ -272,7 +272,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              height: `calc(100vh - ${navbarHeight}px)`,
+              height: `calc(100vh - ${this.props.navbarHeight}px)`,
             }}
             className="flex-column"
           >
@@ -310,6 +310,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

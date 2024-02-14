@@ -10,7 +10,7 @@ import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
@@ -56,8 +56,8 @@ class FossilDBClient(collection: String,
 
   def checkHealth: Fox[Unit] = {
     val resultFox = for {
-      reply: HealthCheckResponse <- Grpc.guavaFuture2ScalaFuture(
-        healthStub.check(HealthCheckRequest.getDefaultInstance))
+      reply: HealthCheckResponse <- wrapException(
+        Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
       replyString = reply.getStatus.toString
       _ <- bool2Fox(replyString == "SERVING") ?~> replyString
       _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
@@ -84,7 +84,15 @@ class FossilDBClient(collection: String,
           case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
             new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
           case e: Exception =>
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${e.getMessage}", Full(e), Empty)
+            val messageWithCauses = new StringBuilder
+            messageWithCauses.append(e.toString)
+            var cause: Throwable = e.getCause
+            while (cause != null) {
+              messageWithCauses.append(" <- ")
+              messageWithCauses.append(cause.toString)
+              cause = cause.getCause
+            }
+            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
         }
         Future.successful(box)
     }
@@ -123,9 +131,9 @@ class FossilDBClient(collection: String,
       version: Option[Long] = None,
       limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
-      val boxTuples: List[Box[(A, B, C)]] = (keys, versions, values).zipped.map {
-        case (k, v, Full(value)) => Full(k, v, value)
-        case _                   => Empty
+      val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
+        case ((k, v), Full(value)) => Full(k, v, value)
+        case _                     => Empty
       }
       boxTuples.flatten
     }

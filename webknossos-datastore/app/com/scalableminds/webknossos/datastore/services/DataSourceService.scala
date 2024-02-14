@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
@@ -47,7 +47,7 @@ class DataSourceService @Inject()(
 
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
-  private val propertiesFileName = Paths.get("datasource-properties.json")
+  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
@@ -116,13 +116,15 @@ class DataSourceService @Inject()(
     val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
-      dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
+      looksLikeWKWDataSource <- WKWDataFormat.looksLikeWKWDataSource(path)
+      dataSource <- if (looksLikeWKWDataSource) WKWDataFormat.exploreDataSource(id, path, previous, report)
+      else WKWDataFormat.dummyDataSource(id, previous, report)
     } yield (dataSource, report.messages.toList)
   }
 
-  def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -177,11 +179,11 @@ class DataSourceService @Inject()(
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
 
-  def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
+  private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
     val propertiesFile = dataSourcePath.resolve(propertiesFileName)
     val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
       val previousContentSource = Source.fromFile(propertiesFile.toString)
-      val previousContent = previousContentSource.getLines.mkString("\n")
+      val previousContent = previousContentSource.getLines().mkString("\n")
       previousContentSource.close()
       previousContent
     } else {
@@ -252,8 +254,11 @@ class DataSourceService @Inject()(
           case _                       => None
         }
         removedEntriesCount = magsOpt match {
-          case Some(mags) => mags.map(mag => remoteSourceDescriptorService.removeVaultFromCache(mag)); mags.length
-          case None       => 0
+          case Some(mags) =>
+            mags.map(mag =>
+              remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+            mags.length
+          case None => 0
         }
       } yield removedEntriesCount
     } yield removedEntriesList.sum

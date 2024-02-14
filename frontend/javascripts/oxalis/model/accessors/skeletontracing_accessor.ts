@@ -22,12 +22,6 @@ import {
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeType } from "oxalis/constants";
 
-export type SkeletonTracingStats = {
-  treeCount: number;
-  nodeCount: number;
-  edgeCount: number;
-  branchPointCount: number;
-};
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
     return Maybe.Just(tracing.skeleton);
@@ -81,7 +75,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
 
   return Maybe.Nothing();
 }
-export function getActiveGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
+export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
   const { activeGroupId } = skeletonTracing;
 
   if (activeGroupId != null) {
@@ -222,16 +216,7 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
     _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints),
   );
 }
-export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
-  return getSkeletonTracing(tracing)
-    .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
-    .map((trees) => ({
-      treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-    }));
-}
+
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(
     mapGroupsToGenerator(

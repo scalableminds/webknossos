@@ -13,7 +13,7 @@ object MarchingCubes {
                        subsamplingStrides: Vec3Double,
                        offset: Vec3Double,
                        scale: Vec3Double,
-                       vertexBuffer: mutable.ArrayBuffer[Vec3Double]) {
+                       vertexBuffer: mutable.ArrayBuffer[Vec3Double]): Unit = {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))

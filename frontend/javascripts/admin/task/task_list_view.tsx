@@ -18,7 +18,7 @@ import React from "react";
 import _ from "lodash";
 import features from "features";
 import { AsyncLink } from "components/async_clickables";
-import type { APITask, APITaskType, APIUser } from "types/api_flow_types";
+import type { APITask, APITaskType, APIUser, TaskStatus } from "types/api_flow_types";
 import { deleteTask, getTasks, downloadAnnotation, assignTaskToUser } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
@@ -397,6 +397,49 @@ class TaskListView extends React.PureComponent<Props, State> {
               sorter={Utils.localeCompareBy(typeHint, (task) => task.dataSet)}
             />
             <Column
+              title="Stats"
+              dataIndex="status"
+              key="status"
+              render={(status, task: APITask) => (
+                <div className="nowrap">
+                  <span title="Pending Instances">
+                    <PlayCircleOutlined className="icon-margin-right" />
+                    {status.pending}
+                  </span>
+                  <br />
+                  <span title="Active Instances">
+                    <ForkOutlined className="icon-margin-right" />
+                    {status.active}
+                  </span>
+                  <br />
+                  <span title="Finished Instances">
+                    <CheckCircleOutlined className="icon-margin-right" />
+                    {status.finished}
+                  </span>
+                  <br />
+                  <span title="Annotation Time">
+                    <ClockCircleOutlined className="icon-margin-right" />
+                    {formatSeconds((task.tracingTime || 0) / 1000)}
+                  </span>
+                </div>
+              )}
+              filters={[
+                {
+                  text: "Has Pending Instances",
+                  value: "pending",
+                },
+                {
+                  text: "Has Active Instances",
+                  value: "active",
+                },
+                {
+                  text: "Has Finished Instances",
+                  value: "finished",
+                },
+              ]}
+              onFilter={(key, task: APITask) => task.status[key as unknown as keyof TaskStatus] > 0}
+            />
+            <Column
               title="Edit Position / Bounding Box"
               dataIndex="editPosition"
               key="editPosition"
@@ -431,34 +474,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               render={(created) => <FormattedDate timestamp={created} />}
             />
             <Column
-              title="Stats"
-              dataIndex="status"
-              key="status"
-              render={(status, task: APITask) => (
-                <div className="nowrap">
-                  <span title="Pending Instances">
-                    <PlayCircleOutlined />
-                    {status.pending}
-                  </span>
-                  <br />
-                  <span title="Active Instances">
-                    <ForkOutlined />
-                    {status.active}
-                  </span>
-                  <br />
-                  <span title="Finished Instances">
-                    <CheckCircleOutlined />
-                    {status.finished}
-                  </span>
-                  <br />
-                  <span title="Annotation Time">
-                    <ClockCircleOutlined />
-                    {formatSeconds((task.tracingTime || 0) / 1000)}
-                  </span>
-                </div>
-              )}
-            />
-            <Column
               title="Action"
               key="actions"
               width={170}
@@ -471,21 +486,21 @@ class TaskListView extends React.PureComponent<Props, State> {
                         href={`/annotations/CompoundTask/${task.id}`}
                         title="View all Finished Annotations"
                       >
-                        <EyeOutlined />
+                        <EyeOutlined className="icon-margin-right" />
                         View
                       </a>
                     </div>
                   ) : null}
                   <div>
                     <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </a>
                   </div>
                   {task.status.pending > 0 ? (
                     <div>
                       <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
-                        <UserAddOutlined />
+                        <UserAddOutlined className="icon-margin-right" />
                         Manually Assign to User
                       </LinkButton>
                     </div>
@@ -499,7 +514,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                           return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
                         }}
                         title="Download all Finished Annotations"
-                        icon={<DownloadOutlined />}
+                        icon={<DownloadOutlined className="icon-margin-right" />}
                       >
                         Download
                       </AsyncLink>
@@ -507,7 +522,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   ) : null}
                   <div>
                     <LinkButton onClick={_.partial(this.deleteTask, task)}>
-                      <DeleteOutlined />
+                      <DeleteOutlined className="icon-margin-right" />
                       Delete
                     </LinkButton>
                   </div>

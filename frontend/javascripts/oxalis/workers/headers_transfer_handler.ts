@@ -11,6 +11,7 @@ export const requestOptionsTransferHandler = {
     const clone = Object.assign({}, obj);
 
     if (obj.headers && clone.headers) {
+      // @ts-ignore
       const headers: Array<[string, string]> = Array.from(obj.headers.entries());
       // @ts-expect-error ts-migrate(2739) FIXME: Type '[string, string][]' is missing the following... Remove this comment to see the full error message
       clone.headers = headers;

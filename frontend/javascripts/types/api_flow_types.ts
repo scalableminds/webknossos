@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type {
   BoundingBoxObject,
   Edge,
@@ -7,7 +8,10 @@ import type {
   SegmentGroup,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type {
+  SkeletonTracingStats,
+  TracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -84,6 +88,14 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+export type LayerLink = {
+  datasetId: APIDatasetId;
+  sourceName: string;
+  newName: string;
+  transformations: CoordinateTransformation[];
+};
+
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
   numberOfElements: number;
@@ -177,9 +189,16 @@ export type APIDataset = APIDatasetBase & {
   readonly isActive: true;
 };
 
+export type MaintenanceInfo = {
+  startTime: number;
+  endTime: number;
+  id: string;
+  message: string;
+};
+
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
-export type APIDatasetCompactWithoutStatus = Pick<
+export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   APIMaybeUnimportedDataset,
   | "owningOrganization"
   | "name"
@@ -192,12 +211,19 @@ export type APIDatasetCompactWithoutStatus = Pick<
   | "tags"
   | "isUnreported"
 >;
-export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
+  colorLayerNames: Array<string>;
+  segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  const [colorLayerNames, segmentationLayerNames] = _.partition(
+    dataset.dataSource.dataLayers,
+    (layer) => layer.category === "segmentation",
+  ).map((layers) => layers.map((layer) => layer.name).sort());
+
   return {
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
@@ -210,6 +236,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
+    colorLayerNames: colorLayerNames,
+    segmentationLayerNames: segmentationLayerNames,
   };
 }
 
@@ -248,6 +276,7 @@ export type NovelUserExperienceInfoType = {
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
+  latestAcknowledgedMaintenanceInfo?: string;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -389,7 +418,6 @@ export type APITask = {
   readonly dataSet: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
-  readonly formattedHash: string;
   readonly id: string;
   readonly neededExperience: {
     readonly domain: string;
@@ -408,24 +436,24 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
+  stats: TracingStats | {};
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
-export type APIAnnotationCompact = {
+export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
-  readonly formattedHash: string;
   readonly modified: number;
   readonly id: string;
-  readonly visibility: APIAnnotationVisibility;
   readonly name: string;
+  // Not used by the front-end anymore, but the
+  // backend still serves this for backward-compatibility reasons.
+  readonly stats?: SkeletonTracingStats | {};
   readonly state: string;
-  readonly stats: SkeletonTracingStats | {};
   readonly tags: Array<string>;
-  readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
   // or due to missing permissions).
@@ -434,25 +462,21 @@ export type APIAnnotationCompact = {
   readonly othersMayEdit: boolean;
 };
 
-export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
   const {
-    annotationLayers,
     dataSetName,
-    organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
     state,
-    stats,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
     othersMayEdit,
+    organization,
+    annotationLayers,
   } = annotation;
 
   return {
@@ -460,15 +484,11 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     dataSetName,
     organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
     state,
-    stats,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
@@ -484,7 +504,10 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-type APIAnnotationBase = APIAnnotationCompact & {
+type APIAnnotationBase = APIAnnotationInfo & {
+  readonly visibility: APIAnnotationVisibility;
+  readonly tracingTime: number | null | undefined;
+
   readonly dataStore: APIDataStore;
   readonly tracingStore: APITracingStore;
   readonly restrictions: APIRestrictions;
@@ -609,11 +632,13 @@ export type APIFeatureToggles = {
 };
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
+export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
   "CONVERT_TO_WKW" = "convert_to_wkw",
   "EXPORT_TIFF" = "export_tiff",
+  "RENDER_ANIMATION" = "render_animation",
   "COMPUTE_MESH_FILE" = "compute_mesh_file",
+  "COMPUTE_SEGMENT_INDEX_FILE" = "compute_segment_index_file",
   "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
   "INFER_NUCLEI" = "infer_nuclei",
   "INFER_NEURONS" = "infer_neurons",
@@ -634,7 +659,7 @@ export type APIJob = {
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
   readonly state: APIJobState;
-  readonly manualState: string;
+  readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
@@ -691,6 +716,7 @@ export type ServerSkeletonTracingTree = {
   groupId?: number | null | undefined;
   isVisible?: boolean;
   type?: TreeType;
+  edgesAreVisible?: boolean;
 };
 type ServerSegment = {
   segmentId: number;
@@ -1039,4 +1065,29 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+};
+
+export enum CAMERA_POSITIONS {
+  MOVING = "MOVING",
+  STATIC_XZ = "STATIC_XZ",
+  STATIC_YZ = "STATIC_YZ",
+}
+
+export enum MOVIE_RESOLUTIONS {
+  SD = "SD",
+  HD = "HD",
+}
+
+export type RenderAnimationOptions = {
+  layerName: string;
+  segmentationLayerName?: string;
+  meshFileName?: string;
+  meshSegmentIds: number[];
+  boundingBox: BoundingBoxObject;
+  includeWatermark: boolean;
+  intensityMin: number;
+  intensityMax: number;
+  magForTextures: Vector3;
+  movieResolution: MOVIE_RESOLUTIONS;
+  cameraPosition: CAMERA_POSITIONS;
 };

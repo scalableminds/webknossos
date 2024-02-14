@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrthoViews, Vector3 } from "oxalis/constants";
+import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
@@ -13,10 +13,16 @@ export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 export class ContourGeometry {
   color: THREE.Color;
   line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  connectingLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
+  connectingLinePositions: Float32Array;
+  viewport: OrthoView;
+  showConnectingLine: boolean;
 
-  constructor() {
+  constructor(showConnectingLine: boolean = false) {
     this.color = CONTOUR_COLOR_NORMAL;
+    this.viewport = OrthoViews.PLANE_XY;
+    this.showConnectingLine = showConnectingLine;
 
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
@@ -28,22 +34,62 @@ export class ContourGeometry {
         linewidth: 2,
       }),
     );
+    const connectingLineGeometry = new THREE.BufferGeometry();
+    this.connectingLinePositions = new Float32Array(6);
+    const connectingLinePositionAttribute = new THREE.BufferAttribute(
+      this.connectingLinePositions,
+      3,
+    );
+    connectingLinePositionAttribute.setUsage(THREE.DynamicDrawUsage);
+    connectingLineGeometry.setAttribute("position", connectingLinePositionAttribute);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    this.connectingLine = new THREE.Line(
+      connectingLineGeometry,
+      new THREE.LineBasicMaterial({
+        linewidth: 2,
+      }),
+    );
     this.vertexBuffer = new ResizableBuffer(3, Float32Array);
+    this.connectingLine.visible = false;
     this.reset();
   }
 
   reset() {
+    this.viewport = OrthoViews.PLANE_XY;
     this.line.material.color = this.color;
+    this.connectingLine.material.color = new THREE.Color(0x00ffff);
     this.vertexBuffer.clear();
+    this.connectingLinePositions.fill(0);
     this.finalizeMesh();
   }
 
+  setViewport(viewport: OrthoView) {
+    this.viewport = viewport;
+  }
+
   getMeshes() {
-    return [this.line];
+    return [this.line, this.connectingLine];
   }
 
   addEdgePoint(pos: Vector3) {
     this.vertexBuffer.push(pos);
+    const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
+    // Setting start and end point to form the connecting line.
+    this.connectingLinePositions.set(startPoint, 0);
+    this.connectingLinePositions.set(pos, 3);
+    this.finalizeMesh();
+    app.vent.emit("rerender");
+  }
+
+  connectToStartPoint() {
+    const pointCount = this.vertexBuffer.getLength();
+    if (pointCount < 1) {
+      return;
+    }
+    const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
+    this.vertexBuffer.push(startPoint);
+    // Hide the connection line upon completing the contour.
+    this.connectingLine.visible = false;
     this.finalizeMesh();
     app.vent.emit("rerender");
   }
@@ -61,6 +107,46 @@ export class ContourGeometry {
     mesh.geometry.attributes.position.needsUpdate = true;
     mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
+    this.connectingLine.geometry.attributes.position.needsUpdate = true;
+    this.connectingLine.geometry.computeBoundingSphere();
+  }
+
+  getArea(scale: Vector3): number {
+    // This algorithm is based on the Trapezoid formula for calculating the polygon area.
+    // Source: https://www.mathopenref.com/coordpolygonarea2.html.
+    let accArea = 0;
+    const pointCount = this.vertexBuffer.getLength();
+    const points = this.vertexBuffer.getBuffer();
+    let previousPointIndex = pointCount - 1;
+    const dimIndices = Dimensions.getIndices(this.viewport);
+    const scaleVector = new THREE.Vector2(scale[dimIndices[0]], scale[dimIndices[1]]);
+    for (let i = 0; i < pointCount; i++) {
+      const start = new THREE.Vector2(
+        points[previousPointIndex * 3 + dimIndices[0]],
+        points[previousPointIndex * 3 + dimIndices[1]],
+      ).multiply(scaleVector);
+      const end = new THREE.Vector2(
+        points[i * 3 + dimIndices[0]],
+        points[i * 3 + dimIndices[1]],
+      ).multiply(scaleVector);
+      accArea += (start.x + end.x) * (start.y - end.y);
+      previousPointIndex = i;
+    }
+    return Math.abs(accArea / 2);
+  }
+  hide() {
+    this.line.visible = false;
+    this.connectingLine.visible = false;
+  }
+  resetAndHide() {
+    this.reset();
+    this.hide();
+  }
+  show() {
+    this.line.visible = true;
+    if (this.showConnectingLine) {
+      this.connectingLine.visible = true;
+    }
   }
 }
 
@@ -229,5 +315,124 @@ export class QuickSelectGeometry {
     // (important while drawing the rectangle).
     const rectangle = this.rectangle;
     rectangle.material.alphaMap = null;
+  }
+}
+
+// This class is used to display connected line segments and is used by the LineMeasurementTool.
+export class LineMeasurementGeometry {
+  color: THREE.Color;
+  line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  vertexBuffer: ResizableBuffer<Float32Array>;
+  viewport: OrthoView;
+  visible: boolean;
+  wasReset: boolean;
+
+  constructor() {
+    this.wasReset = false;
+    this.viewport = OrthoViews.PLANE_XY;
+    this.color = CONTOUR_COLOR_NORMAL;
+    this.visible = false;
+
+    const lineGeometry = new THREE.BufferGeometry();
+    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    lineGeometry.setAttribute("position", positionAttribute);
+    this.line = new THREE.Line(
+      lineGeometry,
+      new THREE.LineBasicMaterial({
+        linewidth: 2,
+      }),
+    );
+    this.line.visible = false;
+    this.line.material.color = this.color;
+    this.vertexBuffer = new ResizableBuffer(3, Float32Array);
+    this.finalizeMesh();
+  }
+
+  getMeshes() {
+    return [this.line];
+  }
+
+  reset() {
+    this.line.material.color = this.color;
+    this.vertexBuffer.clear();
+    this.finalizeMesh();
+    this.wasReset = true;
+  }
+
+  setStartPoint(pos: Vector3, initialOrthoView: OrthoView) {
+    this.vertexBuffer.clear();
+    this.wasReset = false;
+    this.visible = true;
+    this.viewport = initialOrthoView;
+    this.vertexBuffer.push(pos);
+    // Adding an additional point that will be modified by updateLatestPointPosition.
+    this.vertexBuffer.push(pos);
+    this.finalizeMesh();
+  }
+
+  // This method updates the latest point of the connected line segments.
+  // The main purpose of this method to let the latest point follow the mouse pointer.
+  updateLatestPointPosition(pos: Vector3) {
+    const pointCount = this.vertexBuffer.getLength();
+    this.vertexBuffer.set(pos, pointCount - 1);
+    this.finalizeMesh();
+  }
+
+  addPoint(pos: Vector3) {
+    this.updateLatestPointPosition(pos);
+    this.vertexBuffer.push(pos);
+    this.finalizeMesh();
+  }
+
+  hide() {
+    this.visible = false;
+  }
+
+  resetAndHide() {
+    this.reset();
+    this.hide();
+  }
+
+  finalizeMesh() {
+    const mesh = this.line;
+    if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
+      // Need to rebuild Geometry
+      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setUsage(THREE.DynamicDrawUsage);
+      mesh.geometry.dispose();
+      mesh.geometry.setAttribute("position", positionAttribute);
+    }
+
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.setDrawRange(0, this.vertexBuffer.getLength());
+    mesh.geometry.computeBoundingSphere();
+    app.vent.emit("rerender");
+  }
+
+  getDistance(scale: Vector3): number {
+    const scaleVector = new THREE.Vector3(...scale);
+    const points = this.vertexBuffer.getBuffer();
+    const pointCount = this.vertexBuffer.getLength();
+    if (pointCount < 2) {
+      return 0;
+    }
+    let accDistance = 0;
+    for (let i = 0; i < pointCount - 1; i++) {
+      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
+      const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
+        scaleVector,
+      );
+      accDistance += start.distanceTo(end);
+    }
+    return accDistance;
+  }
+
+  updateForCam(orthoView: OrthoView) {
+    if (orthoView === this.viewport && this.visible) {
+      this.line.visible = true;
+    } else {
+      this.line.visible = false;
+    }
   }
 }

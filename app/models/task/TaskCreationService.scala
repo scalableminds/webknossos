@@ -13,14 +13,14 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestr
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
+import telemetry.SlackNotificationService
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -39,8 +39,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     annotationDAO: AnnotationDAO,
                                     userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
-                                    dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+                                    datasetDAO: DatasetDAO,
+                                    datasetService: DatasetService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -74,10 +74,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
+      dataset <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
         duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
       else Fox.successful(None)
@@ -234,8 +234,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
-        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+        dataset <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)
     } else Fox.successful(volume)
 
@@ -247,12 +247,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       fileName: Box[String],
       description: Box[Option[String]])(implicit m: MessagesProvider): Box[TaskParameters] = {
     val paramBox: Box[(Option[BoundingBox], String, Vec3Int, Vec3Double)] = skeletonTracing match {
-      case Full(tracing) => Full((tracing.boundingBox, tracing.dataSetName, tracing.editPosition, tracing.editRotation))
+      case Full(tracing) => Full((tracing.boundingBox, tracing.datasetName, tracing.editPosition, tracing.editRotation))
       case f: Failure    => f
       case Empty =>
         volumeTracing match {
           case Full(tracing) =>
-            Full((Some(tracing.boundingBox), tracing.dataSetName, tracing.editPosition, tracing.editRotation))
+            Full((Some(tracing.boundingBox), tracing.datasetName, tracing.editPosition, tracing.editRotation))
           case f: Failure => f
           case Empty      => Failure(Messages("task.create.needsEitherSkeletonOrVolume"))
         }
@@ -312,7 +312,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           .unzip)
     } else
       Fox
-        .serialCombined((fullParams, skeletons, volumes).zipped.toList) {
+        .serialCombined(fullParams.lazyZip(skeletons).lazyZip(volumes).toList) {
           case (paramBox, skeleton, volume) =>
             paramBox match {
               case Full(params) =>
@@ -350,7 +350,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                 skeletonBases: List[Box[SkeletonTracing]],
                                 volumeBases: List[Box[(VolumeTracing, Option[File])]])
     : List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]] =
-    (fullParams, skeletonBases, volumeBases).zipped.map {
+    fullParams.lazyZip(skeletonBases).lazyZip(volumeBases).map {
       case (paramBox, skeletonBox, volumeBox) =>
         paramBox match {
           case Full(params) =>
@@ -387,13 +387,13 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
-          "dataSet.notFound",
+        dataset <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+          "dataset.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
                                                                     fullTasks.count(_._1.baseAnnotation.isDefined))
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
           SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple.map(_._2).openOr(None)))))
         skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks).map {
@@ -407,14 +407,20 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
         }
-        skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
+        skeletonTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(skeletonTracingIds).toList,
                                                     isSkeletonId = true)
-        volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,
+        volumeTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(volumeTracingIds).toList,
                                                   isSkeletonId = false)
-        requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList
+        requestedTasksWithTracingIds = requestedTasks
+          .lazyZip(skeletonTracingsIdsMerged)
+          .lazyZip(volumeTracingsIdsMerged)
+          .toList
         taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
           createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, requestingUser))
-        zipped = (requestedTasks, skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged), taskObjects).zipped.toList
+        zipped = requestedTasks
+          .lazyZip(skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged))
+          .lazyZip(taskObjects)
+          .toList
         createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
           tuple =>
             annotationService.createAnnotationBase(
@@ -422,10 +428,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               requestingUser._id,
               skeletonTracingIdBox = tuple._2._1,
               volumeTracingIdBox = tuple._2._2,
-              dataSet._id,
+              dataset._id,
               description = tuple._1.map(_._1.description).openOr(None)
           ))
-        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
+        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
         result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -445,16 +451,16 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     @scala.annotation.tailrec
     def allOnSameDatasetIter(
         requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
-        dataSetName: String): Boolean =
+        datasetName: String): Boolean =
       requestedTasksRest match {
         case List()       => true
-        case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
+        case head :: tail => head._1.dataSet == datasetName && allOnSameDatasetIter(tail, datasetName)
       }
 
     if (allOnSameDatasetIter(requestedTasks, firstDatasetName))
       Fox.successful(firstDatasetName)
     else
-      Fox.failure(Messages("task.notOnSameDataSet"))
+      Fox.failure(Messages("task.notOnSameDataset"))
   }
 
   private def mergeTracingIds(list: List[(Box[TaskParameters], Box[Option[String]])],
@@ -486,27 +492,27 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet, requestingUser: User)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
         projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
-      dataSetTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
-      noAccessTeamIds = projects.map(_._team).diff(dataSetTeamIds)
+      datasetTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
+      noAccessTeamIds = projects.map(_._team).diff(datasetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
-        filterOutTransitiveSubteam(id, dataSetTeamIds))
+        filterOutTransitiveSubteam(id, datasetTeamIds))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
-        s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
+        s"Project team “${team.name}” has no read permission to dataset “${dataset.name}”.")
     } yield warnings
   }
 
-  private def filterOutTransitiveSubteam(subteamId: ObjectId, dataSetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
-    if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
+  private def filterOutTransitiveSubteam(subteamId: ObjectId, datasetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
+    if (datasetTeams.isEmpty) Fox.successful(Some(subteamId))
     else {
       for {
-        memberDifference <- userDAO.findTeamMemberDifference(subteamId, dataSetTeams)
+        memberDifference <- userDAO.findTeamMemberDifference(subteamId, datasetTeams)
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 

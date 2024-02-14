@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -12,34 +12,33 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
-import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
 object RpcTokenHolder {
   /*
-   * This token is used to tell the datastore or tracing store “I am webKnossos”.
+   * This token is used to tell the datastore or tracing store “I am WEBKNOSSOS”.
    * The respective module asks the remote webKnossos to validate that.
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
-  lazy val webKnossosToken: String = RandomIDGenerator.generateBlocking()
+  lazy val webknossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
-@Api
-class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
-                                    dataSetService: DataSetService,
+class UserTokenController @Inject()(datasetDAO: DatasetDAO,
+                                    datasetService: DatasetService,
                                     annotationDAO: AnnotationDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
@@ -55,8 +54,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  @ApiOperation(
-    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default.")
+  // Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
@@ -68,7 +66,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     } yield Ok(Json.obj("token" -> token))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -76,7 +73,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
@@ -91,7 +87,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
-    if (token.contains(RpcTokenHolder.webKnossosToken)) {
+    if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
@@ -117,7 +113,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
+        dataSourceBox <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -126,9 +122,9 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
-        isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
+        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
 
     def tryAdministrate: Fox[UserAccessAnswer] =
@@ -147,7 +143,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
           GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
@@ -166,7 +162,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
-    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
+    // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
@@ -199,7 +195,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
     if (mode != AccessMode.read)
-      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access mode for job exports: $mode")))
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)

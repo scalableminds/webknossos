@@ -1,7 +1,7 @@
 import { Modal } from "antd";
 import React from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, TreeType } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getNodeAndTree,
@@ -34,14 +34,15 @@ type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
 type RequestDeleteBranchPointAction = ReturnType<typeof requestDeleteBranchPointAction>;
 type CreateTreeAction = ReturnType<typeof createTreeAction>;
+type SetEdgeVisibilityAction = ReturnType<typeof setTreeEdgeVisibilityAction>;
 type AddTreesAndGroupsAction = ReturnType<typeof addTreesAndGroupsAction>;
 type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
 type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
 type SetActiveTreeAction = ReturnType<typeof setActiveTreeAction>;
 type SetActiveTreeByNameAction = ReturnType<typeof setActiveTreeByNameAction>;
 type DeselectActiveTreeAction = ReturnType<typeof deselectActiveTreeAction>;
-type SetActiveGroupAction = ReturnType<typeof setActiveGroupAction>;
-type DeselectActiveGroupAction = ReturnType<typeof deselectActiveGroupAction>;
+type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
+type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
@@ -49,6 +50,7 @@ type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
 type SetTreeColorAction = ReturnType<typeof setTreeColorAction>;
 type ShuffleAllTreeColorsAction = ReturnType<typeof shuffleAllTreeColorsAction>;
+type SetTreeTypeAction = ReturnType<typeof setTreeTypeAction>;
 type CreateCommentAction = ReturnType<typeof createCommentAction>;
 type DeleteCommentAction = ReturnType<typeof deleteCommentAction>;
 type SetTracingAction = ReturnType<typeof setTracingAction>;
@@ -76,8 +78,8 @@ export type SkeletonTracingAction =
   | DeleteEdgeAction
   | SetActiveNodeAction
   | CenterActiveNodeAction
-  | SetActiveGroupAction
-  | DeselectActiveGroupAction
+  | SetActiveTreeGroupAction
+  | DeselectActiveTreeGroupAction
   | SetNodeRadiusAction
   | SetNodePositionAction
   | CreateBranchPointAction
@@ -85,6 +87,7 @@ export type SkeletonTracingAction =
   | DeleteBranchpointByIdAction
   | RequestDeleteBranchPointAction
   | CreateTreeAction
+  | SetEdgeVisibilityAction
   | AddTreesAndGroupsAction
   | DeleteTreeAction
   | ResetSkeletonTracingAction
@@ -95,6 +98,7 @@ export type SkeletonTracingAction =
   | SetTreeNameAction
   | SelectNextTreeAction
   | SetTreeColorAction
+  | SetTreeTypeAction
   | ShuffleTreeColorAction
   | ShuffleAllTreeColorsAction
   | SetTreeColorIndexAction
@@ -126,6 +130,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_BRANCHPOINT_BY_ID",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
+  "SET_EDGES_ARE_VISIBLE",
   "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
@@ -135,6 +140,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
   "SHUFFLE_ALL_TREE_COLORS",
+  "SET_TREE_TYPE",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",
@@ -275,6 +281,16 @@ export const createTreeAction = (timestamp: number = Date.now()) =>
     timestamp,
   } as const);
 
+export const setTreeEdgeVisibilityAction = (
+  treeId: number | null | undefined,
+  edgesAreVisible: boolean,
+) =>
+  ({
+    type: "SET_EDGES_ARE_VISIBLE",
+    treeId,
+    edgesAreVisible,
+  } as const);
+
 export const addTreesAndGroupsAction = (
   trees: MutableTreeMap,
   treeGroups: Array<TreeGroup> | null | undefined,
@@ -357,15 +373,15 @@ export const deselectActiveTreeAction = () =>
     type: "DESELECT_ACTIVE_TREE",
   } as const);
 
-export const setActiveGroupAction = (groupId: number) =>
+export const setActiveTreeGroupAction = (groupId: number) =>
   ({
-    type: "SET_ACTIVE_GROUP",
+    type: "SET_TREE_ACTIVE_GROUP",
     groupId,
   } as const);
 
-export const deselectActiveGroupAction = () =>
+export const deselectActiveTreeGroupAction = () =>
   ({
-    type: "DESELECT_ACTIVE_GROUP",
+    type: "DESELECT_ACTIVE_TREE_GROUP",
   } as const);
 
 export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
@@ -414,6 +430,13 @@ export const setTreeColorAction = (treeId: number, color: Vector3) =>
 export const shuffleAllTreeColorsAction = () =>
   ({
     type: "SHUFFLE_ALL_TREE_COLORS",
+  } as const);
+
+export const setTreeTypeAction = (treeId: number, treeType: TreeType) =>
+  ({
+    type: "SET_TREE_TYPE",
+    treeId,
+    treeType,
   } as const);
 
 export const createCommentAction = (commentText: string, nodeId?: number, treeId?: number) =>

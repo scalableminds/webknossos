@@ -34,19 +34,19 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
-export type UpdateIsosurfaceVisibilityAction = ReturnType<typeof updateIsosurfaceVisibilityAction>;
+export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
-export type TriggerIsosurfaceDownloadAction = ReturnType<typeof triggerIsosurfaceDownloadAction>;
-export type TriggerIsosurfacesDownloadAction = ReturnType<typeof triggerIsosurfacesDownloadAction>;
-export type RefreshIsosurfacesAction = ReturnType<typeof refreshIsosurfacesAction>;
-export type RefreshIsosurfaceAction = ReturnType<typeof refreshIsosurfaceAction>;
-export type StartedLoadingIsosurfaceAction = ReturnType<typeof startedLoadingIsosurfaceAction>;
-export type FinishedLoadingIsosurfaceAction = ReturnType<typeof finishedLoadingIsosurfaceAction>;
+export type TriggerMeshDownloadAction = ReturnType<typeof triggerMeshDownloadAction>;
+export type TriggerMeshesDownloadAction = ReturnType<typeof triggerMeshesDownloadAction>;
+export type RefreshMeshesAction = ReturnType<typeof refreshMeshesAction>;
+export type RefreshMeshAction = ReturnType<typeof refreshMeshAction>;
+export type StartedLoadingMeshAction = ReturnType<typeof startedLoadingMeshAction>;
+export type FinishedLoadingMeshAction = ReturnType<typeof finishedLoadingMeshAction>;
 export type UpdateMeshFileListAction = ReturnType<typeof updateMeshFileListAction>;
 export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFileAction>;
-export type RemoveIsosurfaceAction = ReturnType<typeof removeIsosurfaceAction>;
-export type AddAdHocIsosurfaceAction = ReturnType<typeof addAdHocIsosurfaceAction>;
-export type AddPrecomputedIsosurfaceAction = ReturnType<typeof addPrecomputedIsosurfaceAction>;
+export type RemoveMeshAction = ReturnType<typeof removeMeshAction>;
+export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
+export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
 export type SetOthersMayEditForAnnotationAction = ReturnType<
   typeof setOthersMayEditForAnnotationAction
 >;
@@ -66,17 +66,17 @@ export type AnnotationActionTypes =
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
   | MaybeFetchMeshFilesAction
-  | UpdateIsosurfaceVisibilityAction
-  | TriggerIsosurfaceDownloadAction
-  | RefreshIsosurfacesAction
-  | RefreshIsosurfaceAction
-  | StartedLoadingIsosurfaceAction
-  | FinishedLoadingIsosurfaceAction
+  | UpdateMeshVisibilityAction
+  | TriggerMeshDownloadAction
+  | RefreshMeshesAction
+  | RefreshMeshAction
+  | StartedLoadingMeshAction
+  | FinishedLoadingMeshAction
   | UpdateMeshFileListAction
   | UpdateCurrentMeshFileAction
-  | RemoveIsosurfaceAction
-  | AddAdHocIsosurfaceAction
-  | AddPrecomputedIsosurfaceAction
+  | RemoveMeshAction
+  | AddAdHocMeshAction
+  | AddPrecomputedMeshAction
   | SetOthersMayEditForAnnotationAction;
 
 export type UserBoundingBoxAction =
@@ -183,16 +183,18 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateIsosurfaceVisibilityAction = (
+export const updateMeshVisibilityAction = (
   layerName: string,
   id: number,
   visibility: boolean,
+  additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
 ) =>
   ({
-    type: "UPDATE_ISOSURFACE_VISIBILITY",
+    type: "UPDATE_MESH_VISIBILITY",
     layerName,
     id,
     visibility,
+    additionalCoordinates,
   } as const);
 
 export const maybeFetchMeshFilesAction = (
@@ -211,48 +213,48 @@ export const maybeFetchMeshFilesAction = (
     callback,
   } as const);
 
-export const triggerIsosurfaceDownloadAction = (
+export const triggerMeshDownloadAction = (
   segmentName: string,
   segmentId: number,
   layerName: string,
 ) =>
   ({
-    type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+    type: "TRIGGER_MESH_DOWNLOAD",
     segmentName,
     segmentId,
     layerName,
   } as const);
 
-export const triggerIsosurfacesDownloadAction = (
+export const triggerMeshesDownloadAction = (
   segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ) =>
   ({
-    type: "TRIGGER_ISOSURFACES_DOWNLOAD",
+    type: "TRIGGER_MESHES_DOWNLOAD",
     segmentsArray,
   } as const);
 
-export const refreshIsosurfacesAction = () =>
+export const refreshMeshesAction = () =>
   ({
-    type: "REFRESH_ISOSURFACES",
+    type: "REFRESH_MESHES",
   } as const);
 
-export const refreshIsosurfaceAction = (layerName: string, segmentId: number) =>
+export const refreshMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "REFRESH_ISOSURFACE",
+    type: "REFRESH_MESH",
     layerName,
     segmentId,
   } as const);
 
-export const startedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
+export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "STARTED_LOADING_ISOSURFACE",
+    type: "STARTED_LOADING_MESH",
     layerName,
     segmentId,
   } as const);
 
-export const finishedLoadingIsosurfaceAction = (layerName: string, segmentId: number) =>
+export const finishedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "FINISHED_LOADING_ISOSURFACE",
+    type: "FINISHED_LOADING_MESH",
     layerName,
     segmentId,
   } as const);
@@ -274,23 +276,23 @@ export const updateCurrentMeshFileAction = (
     meshFileName,
   } as const);
 
-export const removeIsosurfaceAction = (layerName: string, segmentId: number) =>
+export const removeMeshAction = (layerName: string, segmentId: number) =>
   ({
-    type: "REMOVE_ISOSURFACE",
+    type: "REMOVE_MESH",
     layerName,
     segmentId,
   } as const);
 
-export const addAdHocIsosurfaceAction = (
+export const addAdHocMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
 ) =>
   ({
-    type: "ADD_AD_HOC_ISOSURFACE",
+    type: "ADD_AD_HOC_MESH",
     layerName,
     segmentId,
     seedPosition,
@@ -299,15 +301,15 @@ export const addAdHocIsosurfaceAction = (
     mappingType,
   } as const);
 
-export const addPrecomputedIsosurfaceAction = (
+export const addPrecomputedMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
 ) =>
   ({
-    type: "ADD_PRECOMPUTED_ISOSURFACE",
+    type: "ADD_PRECOMPUTED_MESH",
     layerName,
     segmentId,
     seedPosition,

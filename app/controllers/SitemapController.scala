@@ -1,23 +1,25 @@
 package controllers
 
-import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.mohiva.play.silhouette.api.Silhouette
-import oxalis.security.WkEnv
-import play.api.libs.iteratee.streams.IterateeStreams
+import play.silhouette.api.Silhouette
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.SitemapWriter
 
-class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv]) extends Controller {
+import scala.concurrent.ExecutionContext
+
+class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller {
 
   // Only called explicitly via RequestHandler
-  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction {
-    val downloadStream = sitemapWriter.toSitemapStream(prefix)
-
-    Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
-      .as(xmlMimeType)
-      .withHeaders(CONTENT_DISPOSITION ->
-        """sitemap.xml""")
+  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      sitemap <- sitemapWriter.getSitemap(prefix)
+    } yield
+      Ok(sitemap)
+        .as(xmlMimeType)
+        .withHeaders(CONTENT_DISPOSITION ->
+          """sitemap.xml""")
   }
 
 }

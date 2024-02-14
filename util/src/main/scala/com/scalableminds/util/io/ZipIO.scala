@@ -3,21 +3,15 @@ package com.scalableminds.util.io
 import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-
-import akka.stream.Materializer
-import akka.stream.javadsl.StreamConverters
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
-import com.scalableminds.util.tools.TextUtils
+import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
 
-import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
 object ZipIO extends LazyLogging {
 
@@ -27,18 +21,6 @@ object ZipIO extends LazyLogging {
     * @param stream output stream to write to
     */
   case class OpenZip(stream: ZipOutputStream) {
-
-    def addFileFromSource(name: String, source: Source[ByteString, _])(implicit ec: ExecutionContext,
-                                                                       materializer: Materializer): Future[Unit] = {
-
-      stream.putNextEntry(new ZipEntry(name))
-
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
-
-      val result = Future.successful(IOUtils.copy(inputStream, stream))
-
-      result.map(_ => stream.closeEntry())
-    }
 
     def addFileFromBytes(name: String, data: Array[Byte]): Unit = {
       stream.putNextEntry(new ZipEntry(name))
@@ -58,14 +40,10 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
-    def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
-        implicit ec: ExecutionContext): Future[Unit] =
-      addFileFromNamedEnumerator(NamedEnumeratorStream(name, data))
-
-    def addFileFromNamedEnumerator(namedEnumerator: NamedEnumeratorStream)(
-        implicit ec: ExecutionContext): Future[Unit] = {
-      stream.putNextEntry(new ZipEntry(namedEnumerator.name))
-      namedEnumerator.writeTo(stream).map(_ => stream.closeEntry())
+    def addFileFromNamedStream(namedStream: NamedStream, suffix: String = "")(
+        implicit ec: ExecutionContext): Fox[Unit] = {
+      stream.putNextEntry(new ZipEntry(namedStream.name + suffix))
+      namedStream.writeTo(stream).map(_ => stream.closeEntry())
     }
 
     /**
@@ -74,7 +52,7 @@ object ZipIO extends LazyLogging {
       * @param f input
       * @return future, completes when file is added
       */
-    def withFile(name: String)(f: OutputStream => Future[_])(implicit ec: ExecutionContext): Future[Unit] = {
+    def withFile(name: String)(f: OutputStream => Fox[_]): Fox[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       f(stream).map(_ => stream.closeEntry())
     }
@@ -90,11 +68,8 @@ object ZipIO extends LazyLogging {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
-    zip(sources.toIterator, out)
-
   def zip(sources: Iterator[NamedStream], out: OutputStream, level: Int = -1)(
-      implicit ec: ExecutionContext): Future[Unit] = {
+      implicit ec: ExecutionContext): Fox[Unit] = {
     val zip = startZip(out)
     if (level != -1) {
       zip.stream.setLevel(level)
@@ -112,12 +87,12 @@ object ZipIO extends LazyLogging {
     }
   }
 
-  private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Future[Unit] =
+  private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Fox[Unit] =
     if (!sources.hasNext) {
-      Future.successful(())
+      Fox.successful(())
     } else {
       try {
-        val s = sources.next
+        val s = sources.next()
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
         case e: Exception =>
@@ -176,7 +151,15 @@ object ZipIO extends LazyLogging {
   private def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
   def forallZipEntries(zip: ZipFile, includeHiddenFiles: Boolean = false)(f: ZipEntry => Boolean): Boolean =
-    zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).forall(f(_))
+    entries(zip, includeHiddenFiles).forall(f(_))
+
+  def entries(zip: ZipFile, includeHiddenFiles: Boolean = false): Iterator[ZipEntry] =
+    zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e)))
+
+  def readAt(zip: ZipFile, entry: ZipEntry): Box[Array[Byte]] = tryo {
+    val is = zip.getInputStream(entry)
+    IOUtils.toByteArray(is)
+  }
 
   def withUnziped[A](file: File)(f: (Path, InputStream) => A): Box[List[A]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(withUnziped(_)((name, is) => Full(f(name, is))))

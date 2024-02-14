@@ -41,8 +41,8 @@ const COLOR_MAP: Array<string> = [
   "#575AFF",
   "#8086FF",
   "#2A0FC6",
-  "#37C6DC",
-  "#F61A76",
+  "#40bfd2",
+  "#b92779",
   "#FF7BA6",
   "#FF9364",
   "#750790",
@@ -140,8 +140,33 @@ const nmFactorToUnit = new Map([
   [1e9, "m"],
   [1e12, "km"],
 ]);
-export function formatNumberToLength(lengthInNm: number): string {
-  return formatNumberToUnit(lengthInNm, nmFactorToUnit);
+export function formatNumberToLength(lengthInNm: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
+}
+
+const nmFactorToUnit2D = new Map([
+  [1e-6, "pm²"],
+  [1, "nm²"],
+  [1e6, "µm²"],
+  [1e12, "mm²"],
+  [1e18, "m²"],
+  [1e24, "km²"],
+]);
+
+export function formatNumberToArea(lengthInNm2: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, decimalPrecision);
+}
+
+const nmFactorToUnit3D = new Map([
+  [1e-9, "pm³"],
+  [1, "nm³"],
+  [1e9, "µm³"],
+  [1e18, "mm³"],
+  [1e27, "m³"],
+  [1e36, "km³"],
+]);
+export function formatNumberToVolume(lengthInNm3: number, decimalPrecision: number = 1): string {
+  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, decimalPrecision);
 }
 
 const byteFactorToUnit = new Map([
@@ -186,6 +211,9 @@ export function findClosestToUnitFactor(
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
   return `${roundedLength} vx`;
+}
+export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
+  return `${formatLengthAsVx(areaInVx, roundTo)}²`;
 }
 export function formatExtentWithLength(
   extent: BoundingBoxObject,

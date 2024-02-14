@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import net.liftweb.common.Full
-import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
+import security.{SharingTokenContainer, UserSharingTokenContainer}
 import utils.ObjectId
 
 import javax.inject.Inject

@@ -1,13 +1,16 @@
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
+import type { OxalisState, UserBoundingBox, MeshInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
-import { updateKey, updateKey2, updateKey4 } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import _ from "lodash";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -45,6 +48,26 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
       ...maybeReadOnlyUpdater,
     },
   });
+};
+
+const maybeAddAdditionalCoordinatesToMeshState = (
+  state: OxalisState,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  layerName: string,
+) => {
+  if (getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName) == null) {
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    return update(state, {
+      localSegmentationData: {
+        [layerName]: {
+          meshes: {
+            [additionalCoordKey]: { $set: [] },
+          },
+        },
+      },
+    });
+  }
+  return state;
 };
 
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
@@ -205,99 +228,178 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_ISOSURFACE_VISIBILITY": {
-      const { layerName, id, visibility } = action;
-      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
-        isVisible: visibility,
-      };
-      return updateKey4(
-        state,
-        "localSegmentationData",
-        layerName,
-        "isosurfaces",
-        id,
-        isosurfaceInfo,
-      );
-    }
-
-    case "REMOVE_ISOSURFACE": {
-      const { layerName, segmentId } = action;
-      const { [segmentId]: _, ...remainingIsosurfaces } =
-        state.localSegmentationData[layerName].isosurfaces;
-      return updateKey2(state, "localSegmentationData", layerName, {
-        isosurfaces: remainingIsosurfaces,
+    case "UPDATE_MESH_VISIBILITY": {
+      const { layerName, id, visibility, additionalCoordinates } = action;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [id]: {
+                  isVisible: {
+                    $set: visibility,
+                  },
+                },
+              },
+            },
+          },
+        },
       });
     }
 
-    case "ADD_AD_HOC_ISOSURFACE": {
-      const { layerName, segmentId, seedPosition, mappingName, mappingType } = action;
-      const isosurfaceInfo: IsosurfaceInformation = {
+    case "REMOVE_MESH": {
+      const { layerName, segmentId } = action;
+      const newMeshes: Record<string, Record<number, MeshInformation>> = {};
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const maybeMeshes = getMeshesForAdditionalCoordinates(
+        state,
+        additionalCoordinates,
+        layerName,
+      );
+      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+        // No meshes exist for the segment id. No need to do anything.
+        return state;
+      }
+      const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
+      newMeshes[additionalCoordKey] = remainingMeshes;
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              $merge: newMeshes,
+            },
+          },
+        },
+      });
+    }
+
+    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh_saga.
+    case "ADD_AD_HOC_MESH": {
+      const {
+        layerName,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        mappingName,
+        mappingType,
+      } = action;
+      const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
+        seedAdditionalCoordinates,
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
         mappingName,
         mappingType,
       };
-      return updateKey4(
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+      const stateWithCurrentAddCoords = maybeAddAdditionalCoordinatesToMeshState(
         state,
-        "localSegmentationData",
+        additionalCoordinates,
         layerName,
-        "isosurfaces",
-        segmentId,
-        isosurfaceInfo,
       );
+
+      const updatedKey = update(stateWithCurrentAddCoords, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [segmentId]: {
+                  $set: meshInfo,
+                },
+              },
+            },
+          },
+        },
+      });
+      return updatedKey;
     }
 
-    case "ADD_PRECOMPUTED_ISOSURFACE": {
-      const { layerName, segmentId, seedPosition, meshFileName } = action;
-      const isosurfaceInfo: IsosurfaceInformation = {
+    case "ADD_PRECOMPUTED_MESH": {
+      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, meshFileName } =
+        action;
+      const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
+        seedAdditionalCoordinates,
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
       };
-      return updateKey4(
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+      const stateWithCurrentAddCoords = maybeAddAdditionalCoordinatesToMeshState(
         state,
-        "localSegmentationData",
+        additionalCoordinates,
         layerName,
-        "isosurfaces",
-        segmentId,
-        isosurfaceInfo,
       );
+      const updatedKey = update(stateWithCurrentAddCoords, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [segmentId]: {
+                  $set: meshInfo,
+                },
+              },
+            },
+          },
+        },
+      });
+      return updatedKey;
     }
 
-    case "STARTED_LOADING_ISOSURFACE": {
+    case "STARTED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
-        isLoading: true,
-      };
-      return updateKey4(
-        state,
-        "localSegmentationData",
-        layerName,
-        "isosurfaces",
-        segmentId,
-        isosurfaceInfo,
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
       );
+      const updatedKey = update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [segmentId]: {
+                  isLoading: {
+                    $set: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      return updatedKey;
     }
 
-    case "FINISHED_LOADING_ISOSURFACE": {
+    case "FINISHED_LOADING_MESH": {
       const { layerName, segmentId } = action;
-      const isosurfaceInfo: Partial<IsosurfaceInformation> = {
-        isLoading: false,
-      };
-      return updateKey4(
-        state,
-        "localSegmentationData",
-        layerName,
-        "isosurfaces",
-        segmentId,
-        isosurfaceInfo,
+      const additionalCoordKey = getAdditionalCoordinatesAsString(
+        state.flycam.additionalCoordinates,
       );
+      const updatedKey = update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [segmentId]: {
+                  isLoading: {
+                    $set: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      return updatedKey;
     }
 
     case "UPDATE_MESH_FILE_LIST": {
@@ -314,6 +416,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const meshFile = availableMeshFiles.find((el) => el.meshFileName === meshFileName);
       return updateKey2(state, "localSegmentationData", layerName, {
         currentMeshFile: meshFile,
+      });
+    }
+
+    case "SET_SELECTED_SEGMENTS_OR_GROUP": {
+      const { selectedSegments, selectedGroup, layerName } = action;
+      return updateKey2(state, "localSegmentationData", layerName, {
+        selectedIds: { segments: selectedSegments, group: selectedGroup },
       });
     }
 

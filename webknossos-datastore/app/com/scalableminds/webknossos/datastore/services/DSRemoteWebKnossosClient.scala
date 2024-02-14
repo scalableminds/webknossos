@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.cache.AlfuCache
@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -67,7 +68,7 @@ class DSRemoteWebKnossosClient @Inject()(
       .put(dataSource)
 
   def reportUpload(dataSourceId: DataSourceId,
-                   dataSetSizeBytes: Long,
+                   datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
@@ -77,7 +78,7 @@ class DSRemoteWebKnossosClient @Inject()(
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
-        .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
+        .addQueryString("dataSetSizeBytes" -> datasetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
         .post()
     } yield ()

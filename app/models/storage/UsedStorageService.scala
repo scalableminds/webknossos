@@ -1,6 +1,6 @@
 package models.storage
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
-import models.binary.{DataSet, DataSetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
+import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.organization.{Organization, OrganizationDAO}
 import net.liftweb.common.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 class UsedStorageService @Inject()(val system: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
-                                   dataSetService: DataSetService,
+                                   datasetService: DatasetService,
                                    dataStoreDAO: DataStoreDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
@@ -95,9 +95,9 @@ class UsedStorageService @Inject()(val system: ActorSystem,
     organizationDAO.upsertUsedStorage(organization._id, dataStore.name, storageReports)
   }
 
-  def refreshStorageReportForDataset(dataset: DataSet): Fox[Unit] =
+  def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
-      dataStore <- dataSetService.dataStoreFor(dataset)
+      dataStore <- datasetService.dataStoreFor(dataset)
       dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       organization <- organizationDAO.findOne(dataset._organization)
       report <- dataStoreClient.fetchStorageReport(organization.name, Some(dataset.name))

@@ -1,18 +1,21 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import models.dataset.DatasetService
+import models.organization.OrganizationDAO
+
 import javax.inject.Inject
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.user.User
-import oxalis.security.WkEnv
 import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -29,10 +32,22 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     userController: UserController,
                                     projectController: ProjectController,
                                     projectDAO: ProjectDAO,
+                                    organizationDAO: OrganizationDAO,
+                                    datasetService: DatasetService,
                                     taskDAO: TaskDAO,
                                     taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- datasetService.assertValidDatasetName(datasetName)
+        _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
+      } yield Ok
+    }
 
   /* to provide v4
    - replace new annotation layers by old tracing ids (changed in v5)
@@ -157,11 +172,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   }
 
   def annotationCreateExplorationalV4(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -336,11 +351,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     }
 
   def annotationCreateExplorationalV1(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult

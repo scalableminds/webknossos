@@ -41,13 +41,13 @@ object Project {
 
   // format: off
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[ObjectId] and
-      (__ \ 'priority).read[Int] and
-      (__ \ 'paused).readNullable[Boolean] and
-      (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[ObjectId] and
-      (__ \ 'isBlacklistedFromReport).read[Boolean]) (
+    ((__ \ "name").read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
+      (__ \ "team").read[ObjectId] and
+      (__ \ "priority").read[Int] and
+      (__ \ "paused").readNullable[Boolean] and
+      (__ \ "expectedTime").readNullable[Long] and
+      (__ \ "owner").read[ObjectId] and
+      (__ \ "isBlacklistedFromReport").read[Boolean]) (
       (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
         Project(ObjectId.generate, team, owner, name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
   // format: on
@@ -176,6 +176,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption
     } yield count
 
+  override def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(projectId)
 }
 
 class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(

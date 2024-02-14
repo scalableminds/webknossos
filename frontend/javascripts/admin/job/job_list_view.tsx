@@ -13,7 +13,6 @@ import {
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  ToolTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
@@ -51,11 +50,6 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   CANCELLED: {
     tooltip: "This job was cancelled.",
     icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
-  },
-  MANUAL: {
-    tooltip:
-      "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-    icon: <ToolTwoTone twoToneColor="#d89614" />,
   },
 };
 const refreshInterval = 5000;
@@ -144,6 +138,19 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === APIJobType.RENDER_ANIMATION &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Animation rendering for layer {job.layerName} of dataset{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>
+        </span>
+      );
+    } else if (
       job.type === APIJobType.COMPUTE_MESH_FILE &&
       job.organizationName &&
       job.datasetName
@@ -151,6 +158,19 @@ class JobListView extends React.PureComponent<Props, State> {
       return (
         <span>
           Mesh file computation for{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Segment index file computation for{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
@@ -235,17 +255,20 @@ class JobListView extends React.PureComponent<Props, State> {
               cancelJob(job.id).then(() => this.fetchData());
             }
           }}
-          icon={<CloseCircleOutlined key="cancel" />}
+          icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
         >
           Cancel
         </AsyncLink>
       );
-    } else if (job.type === APIJobType.CONVERT_TO_WKW) {
+    } else if (
+      job.type === APIJobType.CONVERT_TO_WKW ||
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE
+    ) {
       return (
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}
@@ -256,7 +279,18 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined />
+              <DownOutlined className="icon-margin-right" />
+              Download
+            </a>
+          )}
+        </span>
+      );
+    } else if (job.type === APIJobType.RENDER_ANIMATION) {
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Download">
+              <DownOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -274,7 +308,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Segmentation">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}
@@ -359,6 +393,7 @@ class JobListView extends React.PureComponent<Props, State> {
               key="createdAt"
               render={(job) => <FormattedDate timestamp={job.createdAt} />}
               sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+              defaultSortOrder="descend"
             />
             <Column
               title="State"

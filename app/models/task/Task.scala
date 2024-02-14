@@ -147,9 +147,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     val insertAnnotationQ = q"""
            with task as (${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
-           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           insert into webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
            select $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '',
-                  ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', '{}', 0, 'Task', $now, $now, false
+                  ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', 0, 'Task', $now, $now, false
            from task, dataset""".asUpdate
 
     for {
@@ -178,9 +178,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient, projectDAO: ProjectDAO)(implicit e
     val insertAnnotationQ = q"""
       with task as (${findNextTaskByIdQ(taskId)}),
       dataset as (select _id from webknossos.datasets_ limit 1)
-      insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+      insert into webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
       select $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '',
-             ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', '{}', 0, 'Task', $now, $now, false
+             ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', 0, 'Task', $now, $now, false
       from task, dataset""".asUpdate
 
     for {

@@ -1,12 +1,12 @@
 package models.user
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.RandomIDGenerator
+import mail.{DefaultMails, Send}
+import security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject

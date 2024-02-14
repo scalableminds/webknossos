@@ -25,27 +25,27 @@ class DSMeshController @Inject()(
 
   def listMeshFiles(token: Option[String],
                     organizationName: String,
-                    dataSetName: String,
+                    datasetName: String,
                     dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
+          meshFiles <- meshFileService.exploreMeshFiles(organizationName, datasetName, dataLayerName)
         } yield Ok(Json.toJson(meshFiles))
       }
     }
 
   def listMeshChunksForSegmentV0(token: Option[String],
                                  organizationName: String,
-                                 dataSetName: String,
+                                 datasetName: String,
                                  dataLayerName: String): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- meshFileService.listMeshChunksForSegmentV0(organizationName,
-                                                                  dataSetName,
+                                                                  datasetName,
                                                                   dataLayerName,
                                                                   request.body) ?~> Messages(
             "mesh.file.listChunks.failed",
@@ -57,7 +57,7 @@ class DSMeshController @Inject()(
 
   def listMeshChunksForSegmentForVersion(token: Option[String],
                                          organizationName: String,
-                                         dataSetName: String,
+                                         datasetName: String,
                                          dataLayerName: String,
                                          formatVersion: Int,
                                          /* If targetMappingName is set, assume that meshfile contains meshes for
@@ -68,21 +68,21 @@ class DSMeshController @Inject()(
                                          targetMappingName: Option[String],
                                          editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- formatVersion match {
             case 3 =>
               targetMappingName match {
                 case None =>
-                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                  meshFileService.listMeshChunksForSegmentV3(organizationName, datasetName, dataLayerName, request.body) ?~> Messages(
                     "mesh.file.listChunks.failed",
                     request.body.segmentId.toString,
                     request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
                 case Some(mapping) =>
                   for {
                     segmentIds: List[Long] <- segmentIdsForAgglomerateId(organizationName,
-                                                                         dataSetName,
+                                                                         datasetName,
                                                                          dataLayerName,
                                                                          mapping,
                                                                          editableMappingTracingId,
@@ -92,7 +92,7 @@ class DSMeshController @Inject()(
                       segmentId =>
                         meshFileService
                           .listMeshChunksForSegmentV3(organizationName,
-                                                      dataSetName,
+                                                      datasetName,
                                                       dataLayerName,
                                                       ListMeshChunksRequest(request.body.meshFile, segmentId))
                           .toOption)
@@ -108,7 +108,7 @@ class DSMeshController @Inject()(
     }
 
   private def segmentIdsForAgglomerateId(organizationName: String,
-                                         dataSetName: String,
+                                         datasetName: String,
                                          dataLayerName: String,
                                          mappingName: String,
                                          editableMappingTracingId: Option[String],
@@ -116,7 +116,7 @@ class DSMeshController @Inject()(
                                          token: Option[String]): Fox[List[Long]] = {
     val agglomerateFileKey = AgglomerateFileKey(
       organizationName,
-      dataSetName,
+      datasetName,
       dataLayerName,
       mappingName
     )
@@ -152,14 +152,14 @@ class DSMeshController @Inject()(
 
   def readMeshChunkV0(token: Option[String],
                       organizationName: String,
-                      dataSetName: String,
+                      datasetName: String,
                       dataLayerName: String): Action[MeshChunkDataRequestV0] =
     Action.async(validateJson[MeshChunkDataRequestV0]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           (data, encoding) <- meshFileService.readMeshChunkV0(organizationName,
-                                                              dataSetName,
+                                                              datasetName,
                                                               dataLayerName,
                                                               request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
@@ -172,16 +172,16 @@ class DSMeshController @Inject()(
 
   def readMeshChunkForVersion(token: Option[String],
                               organizationName: String,
-                              dataSetName: String,
+                              datasetName: String,
                               dataLayerName: String,
                               formatVersion: Int): Action[MeshChunkDataRequestV3List] =
     Action.async(validateJson[MeshChunkDataRequestV3List]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           (data, encoding) <- formatVersion match {
             case 3 =>
-              meshFileService.readMeshChunkV3(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+              meshFileService.readMeshChunkV3(organizationName, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield {

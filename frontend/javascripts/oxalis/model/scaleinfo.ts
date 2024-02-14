@@ -3,6 +3,13 @@ export function getBaseVoxel(dataSetScale: Vector3): number {
   // base voxel should be a cube with highest resolution
   return Math.min(...dataSetScale);
 }
+
+export function voxelToNm3(dataSetScale: Vector3, mag: Vector3, volumeInVx: number): number {
+  return (
+    mag[0] * mag[1] * mag[2] * dataSetScale[0] * dataSetScale[1] * dataSetScale[2] * volumeInVx
+  );
+}
+
 export function getBaseVoxelFactors(dataSetScale: Vector3): Vector3 {
   // base voxel should be a cube with highest resolution
   const baseVoxel = getBaseVoxel(dataSetScale);

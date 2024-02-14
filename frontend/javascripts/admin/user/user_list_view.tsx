@@ -83,7 +83,7 @@ class UserListView extends React.PureComponent<Props, State> {
     isExperienceModalOpen: false,
     isTeamRoleModalOpen: false,
     isInviteModalOpen: false,
-    activationFilter: ["activated", "verified", "unverified"],
+    activationFilter: ["activated"],
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
@@ -598,6 +598,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 const activation = isActive ? (
                   <Tooltip title="Account is activated">
                     <CheckCircleOutlined
+                      className="icon-margin-right"
                       style={{
                         fontSize: 20,
                       }}
@@ -606,6 +607,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 ) : (
                   <Tooltip title="Account is not activated">
                     <CloseCircleOutlined
+                      className="icon-margin-right"
                       style={{
                         fontSize: 20,
                         color: "#e84749",
@@ -617,6 +619,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 const mail = user.isEmailVerified ? (
                   <Tooltip title="Email is verified">
                     <MailOutlined
+                      className="icon-margin-right"
                       style={{
                         fontSize: 20,
                       }}
@@ -625,6 +628,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 ) : (
                   <Tooltip title="Email is not verified">
                     <MailOutlined
+                      className="icon-margin-right"
                       style={{
                         fontSize: 20,
                         color: "#e84749",

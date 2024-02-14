@@ -187,7 +187,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
     activeNodeId: undefined,
     userBoundingBoxes: [],
   };
-  const saveQueue = addVersionNumbers(
+  const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [
         [UpdateActions.updateSkeletonTracing(initialSkeleton, [1, 2, 3], null, [0, 1, 2], 1)],
@@ -226,7 +226,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
   ];
   const createTreesUpdateActions = Array.from(diffTrees({}, trees));
   const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups);
-  const saveQueue = addVersionNumbers(
+  const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
       123456789,

@@ -1,16 +1,16 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.storage.{
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
   S3AccessKeyCredential
 }
-import models.binary.credential.CredentialDAO
-import oxalis.security.WkEnv
+import models.dataset.credential.CredentialDAO
 import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.mvc.{Action, PlayBodyParsers}
+import security.WkEnv
 import utils.ObjectId
 
 import javax.inject.Inject

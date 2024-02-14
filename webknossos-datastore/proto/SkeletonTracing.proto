@@ -47,8 +47,9 @@ message Tree {
      required string name = 7;
      required int64 createdTimestamp = 8;
      optional int32 groupId = 9;
-     optional bool isVisible = 10; // in this case `None` means `true`
+     optional bool isVisible = 10; // `None` means `true`
      optional TreeTypeProto type = 11;
+     optional bool edgesAreVisible = 12; // `None` means `true`
 }
 
 message TreeGroup {
@@ -58,7 +59,7 @@ message TreeGroup {
 }
 
 message SkeletonTracing {
-    required string dataSetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+    required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     repeated Tree trees = 2;
     required int64 createdTimestamp = 3;
     optional BoundingBoxProto boundingBox = 4;

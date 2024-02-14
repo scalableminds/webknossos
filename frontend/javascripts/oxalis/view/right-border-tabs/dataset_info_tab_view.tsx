@@ -15,7 +15,10 @@ import {
   getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getCombinedStats,
+  type CombinedTracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -25,12 +28,10 @@ import type { OxalisState, Task, Tracing } from "oxalis/store";
 
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset } from "libs/utils";
+import { mayUserEditDataset, pluralize } from "libs/utils";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-import Title from "antd/lib/typography/Title";
 import { MarkdownModal } from "../components/markdown_modal";
-import { getVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 
 type StateProps = {
   annotation: Tracing;
@@ -200,6 +201,77 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
   );
 }
 
+export function AnnotationStats({
+  stats,
+  asInfoBlock,
+}: {
+  stats: CombinedTracingStats;
+  asInfoBlock: boolean;
+}) {
+  const formatLabel = (str: string) => (asInfoBlock ? str : "");
+
+  return (
+    <div className="info-tab-block">
+      {asInfoBlock && <p className="sidebar-label">Statistics</p>}
+      <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
+        <tbody>
+          {"treeCount" in stats ? (
+            <Tooltip
+              placement="left"
+              title={
+                <>
+                  <p>Trees: {stats.treeCount}</p>
+                  <p>Nodes: {stats.nodeCount}</p>
+                  <p>Edges: {stats.edgeCount}</p>
+                  <p>Branchpoints: {stats.branchPointCount}</p>
+                </>
+              }
+            >
+              <tr>
+                <td>
+                  <img
+                    className="info-tab-icon"
+                    src="/assets/images/icon-skeletons.svg"
+                    alt="Skeletons"
+                  />
+                </td>
+                <td>
+                  {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
+                </td>
+              </tr>
+            </Tooltip>
+          ) : null}
+          {"segmentCount" in stats ? (
+            <Tooltip
+              placement="left"
+              title={`${stats.segmentCount} ${pluralize(
+                "Segment",
+                stats.segmentCount,
+              )} – Only segments that were manually registered (either brushed or
+                                      interacted with) are counted in this statistic. Segmentation layers
+                                      created from automated workflows (also known as fallback layers) are not
+                                      considered currently.`}
+            >
+              <tr>
+                <td>
+                  <img
+                    className="info-tab-icon"
+                    src="/assets/images/icon-segments.svg"
+                    alt="Segments"
+                  />
+                </td>
+                <td>
+                  {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
+                </td>
+              </tr>
+            </Tooltip>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
@@ -229,76 +301,13 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    const statsMaybe = getStats(this.props.annotation);
-    const treeCount = statsMaybe.map((stats) => stats.treeCount).getOrElse(null);
-    const nodeCount = statsMaybe.map((stats) => stats.nodeCount).getOrElse(null);
-    const edgeCount = statsMaybe.map((stats) => stats.edgeCount).getOrElse(null);
-    const branchpointCount = statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null);
-
-    const volumeAnnotations = getVolumeTracings(this.props.annotation);
-    const segmentCount = volumeAnnotations.reduce(
-      (count, volumeAnnotation) => count + volumeAnnotation.segments.entryCount,
-      0,
-    );
-
-    return (
-      <div className="info-tab-block">
-        <p className="sidebar-label">Statistics</p>
-        <table className="annotation-stats-table">
-          <tbody>
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-skeletons.svg"
-                  alt="Skeletons"
-                />
-              </td>
-              <td>
-                <Tooltip
-                  placement="left"
-                  title={
-                    <>
-                      <p>Nodes: {nodeCount}</p>
-                      <p>Edges: {edgeCount}</p>
-                      <p>Branchpoints: {branchpointCount}</p>
-                    </>
-                  }
-                >
-                  {treeCount} Skeletons
-                </Tooltip>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <img
-                  className="info-tab-icon"
-                  src="/assets/images/icon-segments.svg"
-                  alt="Segments"
-                />
-              </td>
-              <td>
-                <Tooltip
-                  placement="left"
-                  title="For technical reasons, only segments that were manually annotated or
-                      interacted with are counted towards this statistic. Segmentation layers
-                      created from automated workflows (also known as fallback layers) are not currently
-                      considered."
-                >
-                  {segmentCount} Segments
-                </Tooltip>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
+    return <AnnotationStats stats={getCombinedStats(this.props.annotation)} asInfoBlock />;
   }
 
   getKeyboardShortcuts() {
     return this.props.isDatasetViewMode ? (
       <div className="info-tab-block">
-        <Title level={5}>Keyboard Shortcuts</Title>
+        <Typography.Title level={5}>Keyboard Shortcuts</Typography.Title>
         <p>
           Find the complete list of shortcuts in the{" "}
           <a
@@ -361,9 +370,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               wordWrap: "break-word",
             }}
           >
-            <Title level={5} style={{ display: "initial" }}>
+            <Typography.Title level={5} style={{ display: "initial" }}>
               {displayName || datasetName}
-            </Title>
+            </Typography.Title>
             {getEditSettingsIcon()}
           </div>
           {datasetDescription ? (

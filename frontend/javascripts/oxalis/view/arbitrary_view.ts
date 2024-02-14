@@ -16,6 +16,7 @@ import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type GeometryLike = {
   addToScene: (obj: THREE.Object3D) => void;
@@ -106,6 +107,13 @@ class ArbitraryView {
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);
+      this.unsubscribeFunctions.push(
+        listenToStoreProperty(
+          (storeState) => storeState.uiInformation.navbarHeight,
+          () => this.resizeThrottled(),
+          true,
+        ),
+      );
     }
   }
 

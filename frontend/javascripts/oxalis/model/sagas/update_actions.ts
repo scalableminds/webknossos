@@ -22,6 +22,7 @@ export type MergeTreeUpdateAction = ReturnType<typeof mergeTree>;
 export type CreateNodeUpdateAction = ReturnType<typeof createNode>;
 export type UpdateNodeUpdateAction = ReturnType<typeof updateNode>;
 export type UpdateTreeVisibilityUpdateAction = ReturnType<typeof updateTreeVisibility>;
+export type UpdateTreeEdgesVisibilityUpdateAction = ReturnType<typeof updateTreeEdgesVisibility>;
 export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTreeGroupVisibility>;
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
@@ -31,6 +32,7 @@ type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
+export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesUpdateAction = ReturnType<typeof updateUserBoundingBoxes>;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -62,8 +64,10 @@ export type UpdateAction =
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
+  | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateSegmentGroupsUpdateAction
@@ -84,6 +88,10 @@ type ImportVolumeTracingUpdateAction = {
   value: {
     largestSegmentId: number;
   };
+}; // This update action is only created by the backend
+type AddSegmentIndexUpdateAction = {
+  name: "addSegmentIndex";
+  value: {};
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
@@ -98,6 +106,7 @@ export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
   | ImportVolumeTracingUpdateAction
+  | AddSegmentIndexUpdateAction
   | CreateTracingUpdateAction
 >;
 
@@ -115,6 +124,7 @@ export function createTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -140,6 +150,7 @@ export function updateTree(tree: Tree) {
       groupId: tree.groupId,
       isVisible: tree.isVisible,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     },
   } as const;
 }
@@ -150,6 +161,16 @@ export function updateTreeVisibility(tree: Tree) {
     value: {
       treeId,
       isVisible,
+    },
+  } as const;
+}
+export function updateTreeEdgesVisibility(tree: Tree) {
+  const { treeId, edgesAreVisible } = tree;
+  return {
+    name: "updateTreeEdgesVisibility",
+    value: {
+      treeId,
+      edgesAreVisible,
     },
   } as const;
 }
@@ -300,7 +321,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -322,6 +343,14 @@ export function updateSegmentVolumeAction(
 export function deleteSegmentVolumeAction(id: number) {
   return {
     name: "deleteSegment",
+    value: {
+      id,
+    },
+  } as const;
+}
+export function deleteSegmentDataVolumeAction(id: number) {
+  return {
+    name: "deleteSegmentData",
     value: {
       id,
     },

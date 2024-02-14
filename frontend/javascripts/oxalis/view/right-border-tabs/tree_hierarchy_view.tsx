@@ -21,7 +21,7 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import { TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -42,7 +42,7 @@ import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
-  setActiveGroupAction,
+  setActiveTreeGroupAction,
   setTreeColorAction,
   toggleTreeAction,
   toggleTreeGroupAction,
@@ -53,11 +53,14 @@ import {
   deleteTreeAction,
   toggleInactiveTreesAction,
   shuffleAllTreeColorsAction,
+  setTreeEdgeVisibilityAction,
+  setTreeTypeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
+import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -79,7 +82,7 @@ type OwnProps = {
 type Props = OwnProps & {
   onShuffleTreeColor: (arg0: number) => void;
   onSetActiveTree: (arg0: number) => void;
-  onSetActiveGroup: (arg0: number) => void;
+  onSetActiveTreeGroup: (arg0: number) => void;
   onToggleTree: (arg0: number) => void;
   onDeleteTree: (arg0: number) => void;
   onToggleAllTrees: () => void;
@@ -89,6 +92,8 @@ type Props = OwnProps & {
   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
   onToggleHideInactiveTrees: () => void;
   onShuffleAllTreeColors: () => void;
+  onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
+  onSetTreeType: (treeId: number, type: TreeTypeEnum) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -207,7 +212,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   selectGroupById = (groupId: number) => {
     this.props.deselectAllTrees();
-    this.props.onSetActiveGroup(groupId);
+    this.props.onSetActiveTreeGroup(groupId);
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
@@ -474,7 +479,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "hideTree",
           onClick: () => {
-            this.props.onSetActiveGroup(id);
+            this.props.onSetActiveTreeGroup(id);
             this.props.onToggleHideInactiveTrees();
             this.handleGroupDropdownMenuVisibility(id, false);
           },
@@ -493,6 +498,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {
           key: "setTreeGroupColor",
           disabled: isEditingDisabled,
+          icon: <i className="fas fa-eye-dropper fa-sm " />,
           label: (
             <ChangeColorMenuItemContent
               title="Change Tree Group Color"
@@ -521,7 +527,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
           open={this.state.activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onOpenChange={(isVisible) => this.handleGroupDropdownMenuVisibility(id, isVisible)}
+          onOpenChange={(isVisible, info) => {
+            if (info.source === "trigger") this.handleGroupDropdownMenuVisibility(id, isVisible);
+          }}
           trigger={["contextMenu"]}
         >
           <span>
@@ -565,6 +573,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
       const isEditingDisabled = !this.props.allowUpdate;
+      const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
@@ -574,6 +583,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             {
               key: "changeTreeColor",
               disabled: isEditingDisabled,
+              icon: <i className="fas fa-eye-dropper fa-sm " />,
               label: (
                 <ChangeColorMenuItemContent
                   title="Change Tree Color"
@@ -607,9 +617,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.handleMeasureSkeletonLength(tree.treeId, tree.name);
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
-              title: "Measure Skeleton Length",
+              title: "Measure Tree Length",
               icon: <i className="fas fa-ruler" />,
-              label: "Measure Skeleton Length",
+              label: "Measure Tree Length",
             },
             {
               key: "hideTree",
@@ -618,10 +628,33 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 this.props.onToggleHideInactiveTrees();
                 this.handleTreeDropdownMenuVisibility(tree.treeId, false);
               },
-              title: "Hide/Show all other trees",
+              title: "Hide/Show All Other Trees",
               icon: <i className="fas fa-eye" />,
-              label: "Hide/Show all other trees",
+              label: "Hide/Show All Other Trees",
             },
+            {
+              key: "hideTreeEdges",
+              onClick: () => {
+                this.props.onSetActiveTree(tree.treeId);
+                this.props.onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
+                this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Hide/Show Edges of This Tree",
+              icon: <HideTreeEdgesIcon />,
+              label: "Hide/Show Edges of This Tree",
+            },
+            isAgglomerateSkeleton
+              ? {
+                  key: "convertToNormalSkeleton",
+                  onClick: () => {
+                    this.props.onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                    this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+                  },
+                  title: "Convert to Normal Tree",
+                  icon: <span className="fas fa-clipboard-check" />,
+                  label: "Convert to Normal Tree",
+                }
+              : null,
           ],
         };
       };
@@ -644,9 +677,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottom"
             open={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onOpenChange={(isVisible) =>
-              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-            }
+            onOpenChange={(isVisible, info) => {
+              if (info.source === "trigger")
+                this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+            }}
             trigger={["contextMenu"]}
           >
             <span>
@@ -778,8 +812,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setActiveTreeAction(treeId));
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onSetTreeColor(treeId: number, color: Vector3) {
@@ -796,6 +830,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onToggleTree(treeId: number) {
     dispatch(toggleTreeAction(treeId));
+  },
+
+  onSetTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
+    dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
   },
 
   onToggleTreeGroup(groupId: number) {
@@ -820,6 +858,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onShuffleAllTreeColors() {
     dispatch(shuffleAllTreeColorsAction());
+  },
+
+  onSetTreeType(treeId: number, type: TreeType) {
+    dispatch(setTreeTypeAction(treeId, type));
   },
 });
 

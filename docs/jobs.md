@@ -2,6 +2,8 @@
 
 webknossos.org includes several compute-intensive and automated workflows that are processed in the background. Depending on the operation and dataset size, these workflows may take some time (from minutes to hours) to finish. 
 
+WEBKNOSSOS will notify you via email upon completion or failure of any job.
+
 Example workflows:
 
 - [converting datasets on upload](./datasets.md#uploading-through-the-web-browser)
@@ -10,6 +12,7 @@ Example workflows:
 - [applying a merger mode annotation](./volume_annotation.md#proof_reading_and_merging_segments)
 - automatic inference of a segmentation layer's large segment ID
 - [dataset & annotation export as Tiff files](./export.md#data-export-through-the-ui)
+- [creating engaging animations of datasets](./animations.md)
 - downsampling volume annotations
 
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
@@ -27,4 +30,4 @@ Depending on the job workflow you may:
 
 ![Overview of the Jobs page](./images/jobs.jpeg)
 
-We constantly monitor job executions. In rare cases, jobs can fail and we aim to re-run them as quickly as possible. In case you run into any trouble please [contact us](mailto:hello@webknossos.org).
+We constantly monitor job executions. In rare cases, jobs can fail, and we aim to re-run them as quickly as possible. In case you run into any trouble please [contact us](mailto:hello@webknossos.org).

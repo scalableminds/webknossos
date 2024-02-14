@@ -273,14 +273,14 @@ function serializeParameters(
 
         ...(additionalAxes.length > 0
           ? serializeTagWithChildren(
-              "additionalCoordinates",
+              "additionalAxes",
               {},
               additionalAxes.map((coord) =>
-                serializeTag("additionalCoordinate", {
+                serializeTag("additionalAxis", {
                   name: coord.name,
                   index: coord.index,
-                  min: coord.bounds[0],
-                  max: coord.bounds[1],
+                  start: coord.bounds[0],
+                  end: coord.bounds[1],
                 }),
               ),
             )
@@ -340,16 +340,36 @@ function serializeNodes(nodes: NodeMap): Array<string> {
   });
 }
 
+function getAdditionalCoordinateLabel(useConciseStyle: boolean) {
+  return useConciseStyle ? "pos" : "additionalCoordinate";
+}
+
+export function additionalCoordinateToKeyValue(
+  coord: AdditionalCoordinate,
+  useConciseStyle: boolean = false,
+): [string, number] {
+  const label = getAdditionalCoordinateLabel(useConciseStyle);
+  return [
+    // Export additional coordinates like this:
+    // additionalCoordinate-t="10"
+    // Don't capitalize coord.name, because it it's not reversible for
+    // names that are already capitalized.
+    `${label}-${coord.name}`,
+    coord.value,
+  ];
+}
+
+export function parseAdditionalCoordinateKey(
+  key: string,
+  expectConciseStyle: boolean = false,
+): string {
+  const label = getAdditionalCoordinateLabel(expectConciseStyle);
+  return key.split(`${label}-`)[1];
+}
+
 function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {
   return Object.fromEntries(
-    additionalCoordinates.map((coord) => [
-      // Export additional coordinates like this:
-      // additionalCoordinate-t="10"
-      // Don't capitalize coord.name, because it it's not reversible for
-      // names that are already capitalized.
-      `additionalCoordinate-${coord.name}`,
-      coord.value,
-    ]),
+    additionalCoordinates.map((coord) => additionalCoordinateToKeyValue(coord)),
   );
 }
 
@@ -593,6 +613,7 @@ function splitTreeIntoComponents(
       isVisible: tree.isVisible,
       groupId: newGroupId,
       type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     };
     newTrees.push(newTree);
   }
@@ -721,6 +742,7 @@ export function parseNml(nmlString: string): Promise<{
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -740,7 +762,7 @@ export function parseNml(nmlString: string): Promise<{
               ] as Vector3,
               // Parse additional coordinates, like additionalCoordinate-t="10"
               additionalCoordinates: Object.keys(attr)
-                .map((key) => [key, key.split("additionalCoordinate-")[1]])
+                .map((key) => [key, parseAdditionalCoordinateKey(key)])
                 .filter(([_key, name]) => name != null)
                 .map(([key, name]) => ({
                   name,

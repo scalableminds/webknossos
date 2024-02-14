@@ -1,8 +1,8 @@
-import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
+import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps } from "antd";
+import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
 import { connect } from "react-redux";
-import React, { createContext, MouseEvent, useContext } from "react";
+import React, { createContext, MouseEvent, useContext, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -37,9 +37,9 @@ import {
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   maybeFetchMeshFilesAction,
-  removeIsosurfaceAction,
-  updateIsosurfaceVisibilityAction,
-  refreshIsosurfaceAction,
+  removeMeshAction,
+  updateMeshVisibilityAction,
+  refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -52,7 +52,7 @@ import {
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
@@ -69,6 +69,8 @@ import {
 import {
   getVisibleSegmentationLayer,
   getMappingInfo,
+  getResolutionInfo,
+  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -78,6 +80,7 @@ import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
+  clickSegmentAction,
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -101,7 +104,13 @@ import {
   MenuItemType,
   SubMenuType,
 } from "antd/lib/menu/hooks/useItems";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { useFetch } from "libs/react_helpers";
+import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -213,7 +222,8 @@ function positionToString(
 }
 
 function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
-  const lineColor = "var(--ant-text-secondary)";
+  const lineColor = "var(--ant-color-text-secondary)";
+  const mouseIconStyle = { margin: 0, marginLeft: -2, height: 18 };
 
   const mapNameToShortcutIcon = (name: string) => {
     switch (name) {
@@ -223,9 +233,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-left.svg"
             alt="Mouse Left Click"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -236,9 +244,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right Click"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -249,9 +255,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
-            style={{
-              margin: 0,
-            }}
+            style={mouseIconStyle}
           />
         );
       }
@@ -781,6 +785,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
   };
 
+  const maybeFocusSegment = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    const layerName = visibleSegmentationLayer.name;
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    // This action is dispatched because the behaviour is identical to a click on a segment.
+    // Note that the updated position is where the segment was clicked to open the context menu.
+    Store.dispatch(
+      clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+    );
+  };
+
   const computeMeshAdHoc = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
@@ -795,6 +817,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
     Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
   };
+
+  const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
+    Modal.info({
+      title: "Get More out of WEBKNOSSOS",
+      content: (
+        <>
+          {errorMessage} {entity} are created as part of our automated segmentation services.{" "}
+          <a
+            target="_blank"
+            href="https://webknossos.org/services/automated-segmentation"
+            rel="noreferrer noopener"
+          >
+            Learn more.
+          </a>
+        </>
+      ),
+      onOk() {},
+    });
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
@@ -823,15 +863,32 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           },
           {
             key: "load-agglomerate-skeleton",
-            disabled: !isAgglomerateMappingEnabled.value,
-            onClick: () => loadAgglomerateSkeletonAtPosition(globalPosition),
+            // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
+            onClick: () =>
+              isAgglomerateMappingEnabled.value
+                ? loadAgglomerateSkeletonAtPosition(globalPosition)
+                : showAutomatedSegmentationServicesModal(
+                    isAgglomerateMappingEnabled.reason,
+                    "Agglomerate files",
+                  ),
             label: (
               <Tooltip
                 title={
                   isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
                 }
+                onOpenChange={(open: boolean) => {
+                  if (open) {
+                    Store.dispatch(ensureLayerMappingsAreLoadedAction());
+                  }
+                }}
               >
-                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
+                <span>
+                  Import Agglomerate Skeleton{" "}
+                  {!isAgglomerateMappingEnabled.value ? (
+                    <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
+                  ) : null}{" "}
+                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                </span>
               </Tooltip>
             ),
           },
@@ -882,18 +939,29 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     const loadSynapsesItem: MenuItemType = {
       className: "node-context-menu-item",
       key: "load-synapses",
-      disabled: !isConnectomeMappingEnabled.value,
-      onClick: withMappingActivationConfirmation(
-        () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
-        connectomeFileMappingName,
-        "connectome file",
-        segmentationLayerName,
-        mappingInfo,
-      ),
+      // Do not disable menu entry, but show modal advertising automated segmentation services if no connectome file is activated
+      onClick: isConnectomeMappingEnabled.value
+        ? withMappingActivationConfirmation(
+            () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
+            connectomeFileMappingName,
+            "connectome file",
+            segmentationLayerName,
+            mappingInfo,
+          )
+        : () =>
+            showAutomatedSegmentationServicesModal(
+              isConnectomeMappingEnabled.reason,
+              "Connectome files",
+            ),
       label: isConnectomeMappingEnabled.value ? (
-        "Import Agglomerate and Synapses"
+        "Import Synapses"
       ) : (
-        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
+        <Tooltip title={isConnectomeMappingEnabled.reason}>
+          Import Synapses{" "}
+          {!isConnectomeMappingEnabled.value ? (
+            <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
+          ) : null}{" "}
+        </Tooltip>
       ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
@@ -901,6 +969,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   }
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+  const focusInSegmentListItem: MenuItemType = {
+    key: "focus-in-segment-list",
+    onClick: maybeFocusSegment,
+    label: "Focus in Segment List",
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -931,12 +1004,13 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 },
                 label: (
                   <>
-                    Select Segment ({segmentIdAtPosition}){" "}
+                    Activate Segment ({segmentIdAtPosition}){" "}
                     {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
                   </>
                 ),
               }
             : null,
+          focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
           allowUpdate
@@ -950,6 +1024,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
   if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
+    nonSkeletonActions.push(focusInSegmentListItem);
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
   }
@@ -1084,6 +1159,9 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner(propsWithInputRef: Props) {
+  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
+    new Date(),
+  );
   const inputRef = useContext(ContextMenuContext);
   const { ...props } = propsWithInputRef;
   const {
@@ -1096,11 +1174,72 @@ function ContextMenuInner(propsWithInputRef: Props) {
     datasetScale,
     globalPosition,
     maybeViewport,
+    visibleSegmentationLayer,
+    volumeTracing,
   } = props;
+
+  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
+  const hasNoFallbackLayer =
+    visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
+  const [segmentVolume, boundingBoxInfo] = useFetch(
+    async () => {
+      if (
+        contextMenuPosition == null ||
+        volumeTracing == null ||
+        !hasNoFallbackLayer ||
+        !volumeTracing.hasSegmentIndex
+      ) {
+        return [];
+      } else {
+        const state = Store.getState();
+        const tracingId = volumeTracing.tracingId;
+        const tracingStoreUrl = state.tracing.tracingStore.url;
+        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+        const layersFinestResolution = magInfo.getFinestResolution();
+        const dataSetScale = state.dataset.dataSource.scale;
+        const additionalCoordinates = state.flycam.additionalCoordinates;
+        const [segmentSize] = await getSegmentVolumes(
+          tracingStoreUrl,
+          tracingId,
+          layersFinestResolution,
+          [segmentIdAtPosition],
+          additionalCoordinates,
+        );
+        const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
+          tracingStoreUrl,
+          tracingId,
+          layersFinestResolution,
+          [segmentIdAtPosition],
+          additionalCoordinates,
+        );
+        const boundingBoxInMag1 = getBoundingBoxInMag1(
+          boundingBoxInRequestedMag,
+          layersFinestResolution,
+        );
+        const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
+        const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
+        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        return [
+          formatNumberToVolume(volumeInNm3),
+          `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+        ];
+      }
+    },
+    ["loading", "loading"],
+    // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
+    // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
+    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
+  );
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1138,7 +1277,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     nodeContextMenuNode != null
       ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
       : "";
-  const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
   const infoRows = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
@@ -1175,24 +1313,72 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (distanceToSelection != null) {
+  const handleRefreshSegmentVolume = async () => {
+    await api.tracing.save();
+    setLastTimeSegmentInfoShouldBeFetched(new Date());
+  };
+
+  const refreshButton = (
+    <Tooltip title="Update this statistic">
+      <AsyncIconButton
+        onClick={handleRefreshSegmentVolume}
+        type="primary"
+        icon={<ReloadOutlined />}
+        style={{ marginLeft: 4 }}
+      />
+    </Tooltip>
+  );
+
+  const areSegmentStatisticsAvailable =
+    hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh;
+
+  if (areSegmentStatisticsAvailable) {
     infoRows.push(
       getInfoMenuItem(
-        "distanceInfo",
+        "volumeInfo",
         <>
-          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
-          {maybeClickedNodeId != null ? "Node" : "Position"}
-          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+          <i className="fas fa-expand-alt segment-context-icon" />
+          Volume: {segmentVolume}
+          {copyIconWithTooltip(segmentVolume as string, "Copy volume")}
+          {refreshButton}
         </>,
       ),
     );
   }
 
-  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-  // Thus the segment id is always unambiguous / clearly defined.
-  if (segmentIdAtPosition > 0 || maybeClickedMeshId != null) {
+  if (areSegmentStatisticsAvailable) {
+    infoRows.push(
+      getInfoMenuItem(
+        "boundingBoxPositionInfo",
+        <>
+          <i className="fas fa-dice-d6 segment-context-icon" />
+          <>Bounding Box: </>
+          <div style={{ marginLeft: 22, marginTop: -5 }}>
+            {boundingBoxInfo}
+            {copyIconWithTooltip(boundingBoxInfo as string, "Copy BBox top left point and extent")}
+            {refreshButton}
+          </div>
+        </>,
+      ),
+    );
+  }
+
+  if (distanceToSelection != null) {
+    infoRows.push(
+      getInfoMenuItem(
+        "distanceInfo",
+        <Tooltip title="Distance to the active Node of the active Tree">
+          <>
+            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
+            this {maybeClickedNodeId != null ? "Node" : "Position"}
+            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+          </>
+        </Tooltip>,
+      ),
+    );
+  }
+
+  if (isHoveredSegmentOrMesh) {
     const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
     infoRows.push(
       getInfoMenuItem(
@@ -1361,16 +1547,23 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(performMinCutAction(treeId, boundingBoxId));
   },
   removeMesh(layerName: string, meshId: number) {
-    dispatch(removeIsosurfaceAction(layerName, meshId));
+    dispatch(removeMeshAction(layerName, meshId));
   },
   hideMesh(layerName: string, meshId: number) {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, meshId, false));
+    dispatch(
+      updateMeshVisibilityAction(
+        layerName,
+        meshId,
+        false,
+        Store.getState().flycam.additionalCoordinates,
+      ),
+    );
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
   },
   refreshMesh(layerName: string, segmentId: number) {
-    dispatch(refreshIsosurfaceAction(layerName, segmentId));
+    dispatch(refreshMeshAction(layerName, segmentId));
   },
 });
 

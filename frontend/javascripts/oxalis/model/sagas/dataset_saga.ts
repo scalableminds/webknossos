@@ -106,7 +106,7 @@ export function* watchZ1Downsampling(): Saga<void> {
         break;
       }
       const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
-      const bestExistingIndex = resolutionInfo.getLowestResolutionIndex();
+      const bestExistingIndex = resolutionInfo.getFinestResolutionIndex();
       const currentIndex = resolutionInfo.getIndexByResolution(currentRes);
       if (currentIndex <= bestExistingIndex) {
         // There's no better mag to render the current layer in.

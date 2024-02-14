@@ -5,7 +5,8 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -21,18 +22,19 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
 
   override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] = {
-    def processBytes(bytes: Array[Byte], expectedElementCount: Int): Array[Byte] = {
-      val output = header.compressorImpl.decompress(bytes)
-      val paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
-        header.fillValueNumber.byteValue()
-      }
-      paddedBlock
-    }
+
+    def processBytes(bytes: Array[Byte], expectedElementCount: Int): Box[Array[Byte]] =
+      for {
+        output <- tryo(header.compressorImpl.decompress(bytes))
+        paddedBlock = output ++ Array.fill(header.bytesPerElement * expectedElementCount - output.length) {
+          header.fillValueNumber.byteValue()
+        }
+      } yield paddedBlock
 
     for {
       bytes <- path.readBytes(range)
-      (blockHeader, data) <- tryo(dataExtractor.readBytesAndHeader(bytes)).toFox
-      paddedChunkBytes <- tryo(processBytes(data, blockHeader.blockSize.product)).toFox ?~> "chunk.decompress.failed"
+      (blockHeader, data) <- dataExtractor.readBytesAndHeader(bytes).toFox
+      paddedChunkBytes <- processBytes(data, blockHeader.blockSize.product).toFox ?~> "chunk.decompress.failed"
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))
   }
 }

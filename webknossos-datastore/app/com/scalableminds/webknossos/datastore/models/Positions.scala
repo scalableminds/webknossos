@@ -24,6 +24,8 @@ case class VoxelPosition(
   def move(dx: Int, dy: Int, dz: Int): VoxelPosition =
     VoxelPosition(mag1X + dx, mag1Y + dy, mag1Z + dz, mag)
 
+  def toMag1: VoxelPosition = this.copy(mag = Vec3Int.ones) // other properties are already in mag1 and do not change.
+
   override def toString = s"($mag1X, $mag1Y, $mag1Z) / $mag"
 
   override def equals(obj: scala.Any): Boolean =

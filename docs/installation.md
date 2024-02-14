@@ -73,7 +73,7 @@ For small datasets (max. 1GB), you can use the upload functionality provided in 
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
-If you do not have a compatible dataset available, you can convert your own data using [the WEBKNOSSOS cuber tool](./tooling.md#webknossos-cuber) or use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
+If you do not have a compatible dataset available, you can convert your own data using [the WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) or use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
 
 By default, datasets are visible to all users in your organization.
 However, WEBKNOSSOS includes fine-grained permissions to assign datasets to groups of users.

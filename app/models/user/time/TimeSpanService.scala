@@ -4,16 +4,16 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.annotation._
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.thirdparty.BrainTracing
+import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
@@ -25,6 +25,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 taskDAO: TaskDAO,
                                 brainTracing: BrainTracing,
                                 annotationService: AnnotationService,
+                                organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
@@ -50,7 +51,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -65,7 +66,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -80,7 +81,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
         case _ =>
           Map.empty[T, Duration]
       }
@@ -174,10 +175,13 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
+      projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
+      mailRecipient <- organizationService.overTimeMailRecipient(organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        brainTracing.Mailer ! Send(
-          defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, organization))
+        brainTracing.Mailer ! Send(defaultMails
+          .overLimitMail(user, project.name, task._id.toString, annotation.id, List(mailRecipient, projectOwnerEmail)))
       }
     }
 

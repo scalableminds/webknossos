@@ -7,7 +7,7 @@ import {
   getActiveNode,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState, MappingType, IsosurfaceInformation } from "oxalis/store";
+import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import type { ViewMode, Vector3 } from "oxalis/constants";
@@ -20,8 +20,14 @@ import { validateUrlStateJSON } from "types/validation";
 import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import {
+  additionalCoordinateToKeyValue,
+  parseAdditionalCoordinateKey,
+} from "oxalis/model/helpers/nml_helpers";
+import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MAX_UPDATE_INTERVAL = 1000;
+const MINIMUM_VALID_CSV_LENGTH = 5;
 
 type BaseMeshUrlDescriptor = {
   readonly segmentId: number;
@@ -58,20 +64,18 @@ export type UrlStateByLayer = Record<
   }
 >;
 
-function mapIsosurfaceInfoToUrlMeshDescriptor(
-  isosurfaceInfo: IsosurfaceInformation,
-): MeshUrlDescriptor {
-  const { segmentId, seedPosition } = isosurfaceInfo;
+function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescriptor {
+  const { segmentId, seedPosition } = meshInfo;
   const baseUrlDescriptor: BaseMeshUrlDescriptor = {
     segmentId,
     seedPosition: V3.floor(seedPosition),
   };
 
-  if (isosurfaceInfo.isPrecomputed) {
-    const { meshFileName } = isosurfaceInfo;
+  if (meshInfo.isPrecomputed) {
+    const { meshFileName } = meshInfo;
     return { ...baseUrlDescriptor, isPrecomputed: true, meshFileName };
   } else {
-    const { mappingName, mappingType } = isosurfaceInfo;
+    const { mappingName, mappingType } = meshInfo;
     return { ...baseUrlDescriptor, isPrecomputed: false, mappingName, mappingType };
   }
 }
@@ -91,10 +95,8 @@ export type UrlManagerState = {
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
 class UrlManager {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'baseUrl' has no initializer and is not d... Remove this comment to see the full error message
-  baseUrl: string;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'initialState' has no initializer and is ... Remove this comment to see the full error message
-  initialState: PartialUrlManagerState;
+  baseUrl: string = "";
+  initialState: PartialUrlManagerState = {};
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
@@ -133,11 +135,13 @@ class UrlManager {
     if (urlHash.includes("{")) {
       // The hash is in json format
       return this.parseUrlHashJson(urlHash);
-    } else if (urlHash.includes("=")) {
+    } else if (urlHash.split(",")[0].includes("=")) {
       // The hash was changed by a comment link
       return this.parseUrlHashCommentLink(urlHash);
     } else {
-      // The hash is in csv format
+      // The hash is in csv format (it can also contain
+      // key=value pairs, but only after the first mandatory
+      // CSV values).
       return this.parseUrlHashCsv(urlHash);
     }
   }
@@ -167,38 +171,61 @@ class UrlManager {
 
   parseUrlHashCsv(urlHash: string): PartialUrlManagerState {
     // State string format:
-    // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
+    // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode][,key=value]*
     const state: PartialUrlManagerState = {};
 
-    if (urlHash) {
-      const stateArray = urlHash.split(",").map(Number);
-      const validStateArray = stateArray.map((value) => (!isNaN(value) ? value : 0));
+    if (!urlHash) {
+      return state;
+    }
 
-      if (validStateArray.length >= 5) {
-        const positionValues = validStateArray.slice(0, 3);
-        state.position = Utils.numberArrayToVector3(positionValues);
-        const modeString = ViewModeValues[validStateArray[3]];
+    const commaSeparatedValues = urlHash.split(",");
+    const [baseValues, keyValuePairStrings] = _.partition(
+      commaSeparatedValues,
+      (value) => !value.includes("="),
+    );
+    const stateArray = baseValues.map(Number);
+    const validStateArray = stateArray.map((value) => (!isNaN(value) ? value : 0));
 
-        if (modeString) {
-          state.mode = modeString;
-        } else {
-          // Let's default to MODE_PLANE_TRACING
-          state.mode = constants.MODE_PLANE_TRACING;
-        }
+    if (validStateArray.length >= MINIMUM_VALID_CSV_LENGTH) {
+      const positionValues = validStateArray.slice(0, 3);
+      state.position = Utils.numberArrayToVector3(positionValues);
+      const modeString = ViewModeValues[validStateArray[3]];
 
-        // default to zoom step 1
-        state.zoomStep = validStateArray[4] !== 0 ? validStateArray[4] : 1;
-
-        if (validStateArray.length >= 8) {
-          state.rotation = Utils.numberArrayToVector3(validStateArray.slice(5, 8));
-
-          if (validStateArray[8] != null) {
-            state.activeNode = validStateArray[8];
-          }
-        } else if (validStateArray[5] != null) {
-          state.activeNode = validStateArray[5];
-        }
+      if (modeString) {
+        state.mode = modeString;
+      } else {
+        // Let's default to MODE_PLANE_TRACING
+        state.mode = constants.MODE_PLANE_TRACING;
       }
+
+      // default to zoom step 1
+      state.zoomStep = validStateArray[4] !== 0 ? validStateArray[4] : 1;
+
+      if (validStateArray.length >= 8) {
+        state.rotation = Utils.numberArrayToVector3(validStateArray.slice(5, 8));
+
+        if (validStateArray[8] != null) {
+          state.activeNode = validStateArray[8];
+        }
+      } else if (validStateArray[5] != null) {
+        state.activeNode = validStateArray[5];
+      }
+    }
+
+    const additionalCoordinates = [];
+    const keyValuePairs = keyValuePairStrings.map((keyValueStr) => keyValueStr.split("=", 2));
+    for (const [key, value] of keyValuePairs) {
+      const coordinateName = parseAdditionalCoordinateKey(key, true);
+      if (coordinateName != null) {
+        additionalCoordinates.push({
+          name: coordinateName,
+          value: parseFloat(value),
+        });
+      }
+    }
+
+    if (additionalCoordinates.length > 0) {
+      state.additionalCoordinates = additionalCoordinates;
     }
 
     return state;
@@ -210,7 +237,7 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  getUrlState(state: OxalisState): UrlManagerState {
+  getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
@@ -246,11 +273,15 @@ class UrlManager {
     }
 
     for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { isosurfaces, currentMeshFile } = state.localSegmentationData[layerName];
+      const { currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
-      const meshes = Utils.values(isosurfaces)
-        .filter(({ isVisible }) => isVisible)
-        .map(mapIsosurfaceInfoToUrlMeshDescriptor);
+      const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
+      const meshes =
+        localMeshes != null
+          ? Utils.values(localMeshes)
+              .filter(({ isVisible }) => isVisible)
+              .map(mapMeshInfoToUrlMeshDescriptor)
+          : [];
 
       if (currentMeshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = {
@@ -305,10 +336,20 @@ class UrlManager {
 
   buildUrlHashCsv(state: OxalisState): string {
     const { position = [], mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
-    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");
+    const keyValuePairs = (state.flycam.additionalCoordinates || []).map((coord) =>
+      additionalCoordinateToKeyValue(coord, true),
+    );
+
+    return [
+      ...position,
+      viewModeIndex,
+      zoomStep,
+      ...rotation,
+      ...activeNodeArray,
+      ...keyValuePairs.map(([key, value]) => `${key}=${value}`),
+    ].join(",");
   }
 
   buildUrlHashJson(state: OxalisState): string {
@@ -366,15 +407,14 @@ export function updateTypeAndId(
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
 const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   obj[encodeURIComponent(decodedValue)] = decodedValue;
   return obj;
-}, {});
+}, {} as Record<string, string>);
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'matched' implicitly has an 'any' type.
-const decodeWhitelistedCharacters = (matched) => encodedCharacterToDecodedCharacter[matched];
+const decodeWhitelistedCharacters = (matched: string) =>
+  encodedCharacterToDecodedCharacter[matched];
 
 export function encodeUrlHash(unencodedHash: string): string {
   const urlEncodedHash = encodeURIComponent(unencodedHash);

@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -17,9 +16,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
-  private def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+  protected def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
 
-  def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
+  protected def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
 }
 
 trait VolumeBucketCompression extends LazyLogging {
@@ -49,7 +48,7 @@ trait VolumeBucketCompression extends LazyLogging {
       } catch {
         case e: Exception =>
           logger.error(
-            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize)")
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize): $e")
           throw e
       }
     }
@@ -64,24 +63,34 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+trait AdditionalCoordinateKey {
+  protected def additionalCoordinatesKeyPart(additionalCoordinates: Seq[AdditionalCoordinate],
+                                             additionalAxes: Seq[AdditionalAxis],
+                                             prefix: String = ""): String = {
+    // Bucket key additional coordinates need to be ordered to be found later.
+    val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
+    val sortedValues = additionalAxes.sortBy(_.index).map(a => valueMap(a.name))
+    if (sortedValues.nonEmpty) {
+      f"$prefix${sortedValues.map(_.toString).mkString(",")}"
+    } else {
+      ""
+    }
+  }
+}
+
+trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging with AdditionalCoordinateKey {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        // Bucket key additional coordinates need to be ordered to be found later.
-        val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
-        val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))
-
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${sortedValues
-          .map(_.toString)
-          .mkString(",")}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${additionalCoordinatesKeyPart(
+          additionalCoordinates,
+          axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
         s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
-
   }
 
   protected def buildKeyPrefix(dataLayerName: String): String =
@@ -90,8 +99,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
   protected def parseBucketKey(key: String,
                                additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
     additionalAxes match {
-      case Some(value) => parseBucketKeyWithAdditionalAxes(key, value)
-      case None        => parseBucketKeyXYZ(key)
+      case Some(value) if value.nonEmpty => parseBucketKeyWithAdditionalAxes(key, value)
+      case _                             => parseBucketKeyXYZ(key)
     }
 
   private def parseBucketKeyXYZ(key: String) = {
@@ -281,7 +290,7 @@ trait VolumeTracingBucketHelper
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey, dataLayer.additionalAxes).map(tuple => (tuple._2, data))
-    }.toIterator
+    }.iterator
   }
 }
 
@@ -303,7 +312,7 @@ class VersionedBucketIterator(prefix: String,
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).toIterator
+    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -313,7 +322,7 @@ class VersionedBucketIterator(prefix: String,
   @tailrec
   private def getNextNonRevertedBucket: Option[VersionedKeyValuePair[Array[Byte]]] =
     if (currentBatchIterator.hasNext) {
-      val bucket = currentBatchIterator.next
+      val bucket = currentBatchIterator.next()
       currentStartAfterKey = Some(bucket.key)
       if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalAxes).isEmpty) {
         getNextNonRevertedBucket
@@ -332,7 +341,7 @@ class VersionedBucketIterator(prefix: String,
       nextBucket.isDefined
     }
 
-  override def next: (BucketPosition, Array[Byte], Long) = {
+  override def next(): (BucketPosition, Array[Byte], Long) = {
     val nextRes = nextBucket match {
       case Some(bucket) => bucket
       case None         => getNextNonRevertedBucket.get
@@ -357,8 +366,8 @@ class BucketIterator(prefix: String,
   private val versionedBucketIterator =
     new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
 
-  override def next: (BucketPosition, Array[Byte]) = {
-    val tuple = versionedBucketIterator.next
+  override def next(): (BucketPosition, Array[Byte]) = {
+    val tuple = versionedBucketIterator.next()
     (tuple._1, tuple._2)
   }
 

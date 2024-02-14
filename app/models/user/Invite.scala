@@ -1,16 +1,16 @@
 package models.user
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.RandomIDGenerator
+import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.sql.{SqlClient, SQLDAO}

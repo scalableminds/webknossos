@@ -2,7 +2,7 @@ import type { Vector3 } from "oxalis/constants";
 import type { MappingType } from "oxalis/store";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
-export type AdHocIsosurfaceInfo = {
+export type AdHocMeshInfo = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   useDataStore?: boolean | null | undefined;
@@ -16,8 +16,8 @@ export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction
 export const loadAdHocMeshAction = (
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
-  extraInfo?: AdHocIsosurfaceInfo,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  extraInfo?: AdHocMeshInfo,
   layerName?: string,
 ) =>
   ({
@@ -32,7 +32,7 @@ export const loadAdHocMeshAction = (
 export const loadPrecomputedMeshAction = (
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   layerName?: string,
 ) =>

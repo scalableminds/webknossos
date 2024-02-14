@@ -5,9 +5,7 @@ import java.util
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -23,14 +21,14 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
 
 case class AgglomerateFileKey(
     organizationName: String,
-    dataSetName: String,
+    datasetName: String,
     layerName: String,
     mappingName: String
 ) {
   def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
     dataBaseDir
       .resolve(organizationName)
-      .resolve(dataSetName)
+      .resolve(datasetName)
       .resolve(layerName)
       .resolve(agglomerateDir)
       .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -72,14 +70,14 @@ class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[Agglo
 class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extends LRUConcurrentCache[Long, Long] {
   // On cache miss, reads whole blocks of IDs (number of elements is standardBlockSize)
 
-  def withCache(segmentId: Long, reader: IHDF5Reader, dataSet: HDF5DataSet)(
+  def withCache(segmentId: Long, reader: IHDF5Reader, hdf5DataSet: HDF5DataSet)(
       readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
 
     def handleUncachedAgglomerate(): Long = {
       val minId =
         if (segmentId < standardBlockSize / 2) 0L else segmentId - standardBlockSize / 2
 
-      val agglomerateIds = readFromFile(reader, dataSet, minId, standardBlockSize)
+      val agglomerateIds = readFromFile(reader, hdf5DataSet, minId, standardBlockSize)
 
       agglomerateIds.zipWithIndex.foreach {
         case (id, index) => put(index + minId, id)
@@ -117,44 +115,35 @@ class BoundingBoxCache(
     val boundingBoxFinder: BoundingBoxFinder, // saves the bb top left positions
     val maxReaderRange: Long) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
-  private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
-    val res = cuboid.mag
-    val tl = cuboid.topLeft
-    Cuboid(
-      VoxelPosition(tl.voxelXInMag * res.x, tl.voxelYInMag * res.y, tl.voxelZInMag * res.z, Vec3Int(1, 1, 1)),
-      cuboid.width * res.x,
-      cuboid.height * res.y,
-      cuboid.depth * res.z
-    )
-  }
 
-  // get the segment ID range for one cuboid
+  // get the segment id range for one cuboid
   private def getReaderRange(request: DataServiceDataRequest): (Long, Long) = {
-    // convert cuboid to global coordinates (in res 1)
-    val globalCuboid = getGlobalCuboid(request.cuboid)
+    val requestedCuboidMag1 = request.cuboid.toMag1
 
     // get min bounds
-    val initialBoundingBox = boundingBoxFinder.findInitialBoundingBox(globalCuboid)
+    val initialBoundingBoxTopleft: (Long, Long, Long) = boundingBoxFinder.findInitialBoundingBox(requestedCuboidMag1)
 
     // get max bounds
-    val requestedCuboid = globalCuboid.bottomRight
-    val dataLayerBox = request.dataLayer.boundingBox.bottomRight
+    val requestedCuboidBottomRight = requestedCuboidMag1.bottomRight
+    val dataLayerBoxBottomRight = request.dataLayer.boundingBox.bottomRight
 
     // use the values of first bb to initialize the range and dimensions
-    val initialValues = cache(initialBoundingBox)
+    val initialValues = cache(initialBoundingBoxTopleft)
     var range = initialValues.idRange
     var currDimensions = initialValues.dimensions
 
-    var x = initialBoundingBox._1
-    var y = initialBoundingBox._2
-    var z = initialBoundingBox._3
+    var x = initialBoundingBoxTopleft._1
+    var y = initialBoundingBoxTopleft._2
+    var z = initialBoundingBoxTopleft._3
 
     // step through each bb, but save starting coordinates to reset iteration once the outer bound is reached
-    while (x < requestedCuboid.voxelXInMag && x < dataLayerBox.x) {
+    while (x < requestedCuboidBottomRight.voxelXInMag && x < dataLayerBoxBottomRight.x) {
       val nextBBinX = (x + currDimensions._1, y, z)
-      while (y < requestedCuboid.voxelYInMag && y < dataLayerBox.y) {
+      currDimensions = (currDimensions._1, initialValues.dimensions._2, currDimensions._3) // reset currDimensions y to start next loop at beginning
+      while (y < requestedCuboidBottomRight.voxelYInMag && y < dataLayerBoxBottomRight.y) {
         val nextBBinY = (x, y + currDimensions._2, z)
-        while (z < requestedCuboid.voxelZInMag && z < dataLayerBox.z) {
+        currDimensions = (currDimensions._1, currDimensions._2, initialValues.dimensions._3) // reset currDimensions z to start next loop at beginning
+        while (z < requestedCuboidBottomRight.voxelZInMag && z < dataLayerBoxBottomRight.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
             range = (Math.min(range._1, value.idRange._1), Math.max(range._2, value.idRange._2))
@@ -162,7 +151,6 @@ class BoundingBoxCache(
           }
           z = z + currDimensions._3
         }
-        x = nextBBinY._1
         y = nextBBinY._2
         z = nextBBinY._3
       }
@@ -177,7 +165,7 @@ class BoundingBoxCache(
       readHDF: (IHDF5Reader, Long, Long) => Array[Long]): Array[Long] = {
     val readerRange = getReaderRange(request)
     if (readerRange._2 - readerRange._1 < maxReaderRange) {
-      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong + 1)
+      val agglomerateIds = readHDF(reader, readerRange._1, (readerRange._2 - readerRange._1) + 1)
       input.map(i => if (i == 0L) 0L else agglomerateIds((i - readerRange._1).toInt))
     } else {
       // if reader range does not fit in main memory, read agglomerate ids in chunks
@@ -186,7 +174,7 @@ class BoundingBoxCache(
       val isTransformed = Array.fill(input.length)(false)
       while (offset <= readerRange._2) {
         val agglomerateIds: Array[Long] =
-          readHDF(reader, offset.toLong, spire.math.min(maxReaderRange, readerRange._2 - offset).toLong + 1)
+          readHDF(reader, offset, spire.math.min(maxReaderRange, readerRange._2 - offset) + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
           if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {

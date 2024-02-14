@@ -20,15 +20,21 @@ The toolbar contains frequently used commands, such as saving and sharing, your 
 
 The most common buttons are:
 
-- `Settings`: Toggles the visibility of the left-hand side panel with all data and segmentation layers and their respective settings.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality described later in this list.
 - `Save`: Saves your annotation work. WEBKNOSSOS automatically saves every 30 seconds.
-- `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
-- `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
-- `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).
-- `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
-- `Add Script`: Using the [WEBKNOSSOS frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can script and automate WEBKNOSSOS interactions. Enter and execute your user scripts (Javascript) from here. Admins can curate a collection of frequently used scripts for your organization and make them available for quick selection to all users.
-- `Restore Older Version`: Opens a window that shows all previous versions of an annotation. WEBKNOSSOS keeps a complete version history of all your changes to an annotation (separate for skeleton/volume). From this window, any older version can be selected, previewed, and restored.
+- `Menu`: 
+  - `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
+  - `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
+  - `Share`: Create a customizable, shareable link to your dataset containing the current position, rotation, zoom level etc. with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](./sharing.md).
+  - `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
+  - `Screenshot`: Takes a screenshot of current datasets/annotation from each of the three viewports and downloads them as PNG files.
+  - `Create Animation`: Creates an eye-catching animation of the dataset as a video clip. [Read more about animations](./animations.md).
+  - `Merge Annotations`: Combines the skeletons and segments from one or more individual annotations into a new annotation.
+  - `Add Script`: Using the [WEBKNOSSOS frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can script and automate WEBKNOSSOS interactions. Enter and execute your user scripts (Javascript) from here. Admins can curate a collection of frequently used scripts for your organization and make them available for quick selection to all users.
+  - `Restore Older Version`: Opens a window that shows all previous versions of an annotation. WEBKNOSSOS keeps a complete version history of all your changes to an annotation (separate for skeleton/volume). From this window, any older version can be selected, previewed, and restored.
+  - `Layout`: The WK annotation user interface can be resized, reordered, and customized to suite your workflows. Use the mouse to drag, move and resize any viewport. You can safe these layout arrangments or restore the default viewport state.
+- `Quick Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about [data sharing](./sharing.md).
+- `AI Analysis`: Starts an AI segmentation of the datasets. Choose between several automated analysis workflows. Read more about [AI analysis](./automated_analysis.md).
 
 A user can directly jump to any position within their datasets by entering them in the position input field.
 The same is true for the camera rotation in flight/oblique modes.
@@ -45,7 +51,8 @@ The toolbar further features all available navigation and annotation tools for q
 - `Erase (Trace/Brush)`: Removes voxels from a volume annotation by drawing over the voxels you would like to erase.
 - `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). Used to fill holes in a volume annotation or to relabel a segment with a different id.
 - `Segment Picker`: Select the volume annotation ID of a segment to make it the active cell id to continue labeling with that ID/color.
-- `Bounding Box`: Creates and resizes any bounding box. See also the BoundingBox panel below.
+- `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](./tracing_ui.md#right-hand-side-panel) below.
+- `Measurement Tool`: Measure distances between structures or the surface areas of segments by placing waypoints with the mouse.
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
 
@@ -63,16 +70,16 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 #### Histogram & General Layer Properties
 
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
-  Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
+  Above the histogram, there is a three-dots context menu with more options to further adjust the histogram or otherwise interact with the layer:
 
-      - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits.
-      - `vertical line`: Automatically adjust the histogram for best contrast and brightness. Contrast estimation is based on the data currently available in your viewport. This is especially useful for light microscopy datasets saved as `float` values.
-      - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
-      - `scanner`: Navigates the WEBKNOSSOS camera to a position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
+      - `Edit histogram range`: Manipulate the min/max value of the histogram range. Clips values above/below these limits.
+      - `Clip histogram`: Automatically adjust the histogram for best contrast and brightness. Contrast estimation is based on the data currently available in your viewport. This is especially useful for light microscopy datasets saved as `float` values.
+      - `Reload from server`: Reload the layer data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
+      - `Jump to data`: Navigates the WEBKNOSSOS camera to the center position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
-- `Gamma Correction`: Increase / Decrease the lumincance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
-- `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
+- `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
+- `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
   Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
 ![The Histogram overview](images/histogram.jpeg)
@@ -121,6 +128,7 @@ Note, not all control/viewport settings are available in every annotation mode.
 - `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility.
 - `Crosshair Size`: Controls the size of the crosshair in flight mode.
 - `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A high value will cause less curvature showing the detail with more detail and less distortion. A low value will show more data along the edges of the viewport.
+- `Logo in Screenshots`: Enable or disabled the WEBKNOSSOS watermark when [taking screenshots](./tracing_ui.md#the-toolbar).
 
 #### Data Rendering
 
@@ -140,11 +148,11 @@ Note, not all control/viewport settings are available in every annotation mode.
 
 The right-hand side panel includes a number of tabs with specific information, additional interactions, listings about your current skeleton and/or volume annotation. When working with any of the WEBKNOSSOS annotation tools (see above), any interactions with the dataset will lead to entries in the listing provided here.
 
-- `Info`: Contains mostly metainformation about the dataset and annotation. Can be used to name an annotation and provide an additional description, e.g., when sharing with collaborators. Includes a button to start [automated analysis](./automated_analysis.md) on your dataset (beta feature).
+- `Info`: Contains mostly metainformation about the dataset and annotation. Can be used to name an annotation and provide an additional description, e.g., when sharing with collaborators. 
 - `Skeleton`: Lists all available skeleton annotations and offers further interactions with them. [Read more about skeleton annotations.](./skeleton_annotation.md)
 - `Comments`: Lists all comments assigned to individual nodes of a skeleton. [Read more about comments and skeleton annotations.](./skeleton_annotation.md#nodes_and_trees)
 - `Segments`: List all segments created during a volume annotation. It also provides access to mesh generation for indivual segments or the whole dataset, mesh visualization, mesh downloads, and more. [Read more about 3D meshes.](./mesh_visualization.md)
-- `BBoxes`: List all bounding boxes present in the dataset. Create new bounding boxes or adjust existing ones. This provides an alternativ interface for the `BoundingBox` tool.
+- `BBoxes`: List all bounding boxes present in the dataset. Create new bounding boxes or adjust existing ones. This provides an alternative interface for the `Bounding Box` tool.
 - `AbsTree`: Renders and abstract 2D tree representation of a skeleton annotation when enabled. Might be quite resource intense when working with large skeletons.
 
 ## Status Bar

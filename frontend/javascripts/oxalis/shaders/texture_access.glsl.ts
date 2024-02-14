@@ -30,16 +30,17 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
 export const getRgbaAtIndex: ShaderModule = {
   code: `
     vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
-      float finalPosX = mod(idx, textureWidth);
-      float finalPosY = div(idx, textureWidth);
+      int finalPosX = int(mod(idx, textureWidth));
+      int finalPosY = int(div(idx, textureWidth));
 
-      return texture2D(
+      return texelFetch(
           dtexture,
-          vec2(
-            (floor(finalPosX) + 0.5) / textureWidth,
-            (floor(finalPosY) + 0.5) / textureWidth
-          )
-        ).rgba;
+          ivec2(
+            finalPosX,
+            finalPosY
+          ),
+          0
+      ).rgba;
     }
   `,
 };

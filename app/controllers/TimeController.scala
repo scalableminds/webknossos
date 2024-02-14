@@ -2,16 +2,16 @@ package controllers
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.user._
 import models.user.time.TimeSpanDAO
-import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext

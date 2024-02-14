@@ -27,6 +27,7 @@ import type {
   AdditionalCoordinate,
   AdditionalAxis,
 } from "types/api_flow_types";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
   BoundingBoxType,
@@ -48,7 +49,6 @@ import type {
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
@@ -70,6 +70,7 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
 export type MutableCommentType = {
   content: string;
@@ -141,6 +142,7 @@ export type MutableTree = {
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
+  edgesAreVisible: boolean;
 };
 export type Tree = {
   readonly treeId: number;
@@ -154,6 +156,7 @@ export type Tree = {
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
+  readonly edgesAreVisible: boolean;
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
@@ -223,7 +226,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -251,6 +254,7 @@ export type VolumeTracing = TracingBase & {
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly mappingIsEditable?: boolean;
+  readonly hasSegmentIndex: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -316,11 +320,10 @@ export type DatasetConfiguration = {
   // they still correlated with each other.
   readonly nativelyRenderedLayerName: string | null;
 };
-export type PartialDatasetConfiguration = Partial<
-  DatasetConfiguration & {
-    readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
-  }
->;
+
+export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {
+  readonly layers?: Record<string, Partial<DatasetLayerConfiguration>>;
+};
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
@@ -425,7 +428,7 @@ export type SaveQueueEntry = {
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;
-  stats: SkeletonTracingStats | null | undefined;
+  stats: TracingStats | null | undefined;
   info: string;
 };
 export type ProgressInfo = {
@@ -509,8 +512,8 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
-  readonly showAINucleiSegmentationModal: boolean;
-  readonly showAINeuronSegmentationModal: boolean;
+  readonly aIJobModalState: StartAIJobModalState;
+  readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
@@ -524,24 +527,26 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
+  readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly navbarHeight: number;
 };
-type BaseIsosurfaceInformation = {
+type BaseMeshInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
-  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };
-export type AdHocIsosurfaceInformation = BaseIsosurfaceInformation & {
+export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;
   readonly mappingName: string | null | undefined;
   readonly mappingType: MappingType | null | undefined;
 };
-export type PrecomputedIsosurfaceInformation = BaseIsosurfaceInformation & {
+export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: true;
   readonly meshFileName: string;
 };
-export type IsosurfaceInformation = AdHocIsosurfaceInformation | PrecomputedIsosurfaceInformation;
+export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
 export type ConnectomeData = {
   readonly availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
   readonly currentConnectomeFile: APIConnectomeFile | null | undefined;
@@ -563,9 +568,11 @@ export type OxalisState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
-    string,
+    string, //layerName
     {
-      readonly isosurfaces: Record<number, IsosurfaceInformation>;
+      // For meshes, the string represents additional coordinates, number is the segment ID.
+      // The undefined types were added to enforce null checks when using this structure.
+      readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored
@@ -574,6 +581,9 @@ export type OxalisState = {
       // The `segments` here should only be used for non-annotation volume
       // layers.
       readonly segments: SegmentMap;
+      // Note that segments that are not in the segment tab could be stored as selected.
+      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+      readonly selectedIds: { segments: number[]; group: number | null };
       readonly connectomeData: ConnectomeData;
     }
   >;

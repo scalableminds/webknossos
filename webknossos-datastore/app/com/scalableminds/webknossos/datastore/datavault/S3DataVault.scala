@@ -8,13 +8,20 @@ import com.amazonaws.auth.{
   BasicAWSCredentials,
   EnvironmentVariableCredentialsProvider
 }
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
+import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{RemoteSourceDescriptor, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  LegacyDataVaultCredential,
+  RemoteSourceDescriptor,
+  S3AccessKeyCredential
+}
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.net.URI
 import scala.collection.immutable.NumericRange
@@ -26,8 +33,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
   }
 
-  val client: AmazonS3 =
-    S3DataVault.getAmazonS3Client(s3AccessKeyCredential)
+  private lazy val client: AmazonS3 =
+    S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri)
 
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
     new GetObjectRequest(bucketName, key).withRange(range.start, range.end)
@@ -78,11 +85,26 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       (bytes, encodingString) <- performRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString)
     } yield (bytes, encoding)
+
+  private def getUri = uri
+  private def getCredential = s3AccessKeyCredential
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: S3DataVault => other.getUri == uri && other.getCredential == s3AccessKeyCredential
+    case _                  => false
+  }
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
 }
 
 object S3DataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor): S3DataVault = {
-    val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[S3AccessKeyCredential])
+    val credential = remoteSourceDescriptor.credential.flatMap {
+      case f: S3AccessKeyCredential     => Some(f)
+      case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
+      case _                            => None
+    }
     new S3DataVault(credential, remoteSourceDescriptor.uri)
   }
 
@@ -105,7 +127,8 @@ object S3DataVault {
 
   // https://s3.region-code.amazonaws.com/bucket-name/key-name
   private def isPathStyle(uri: URI): Boolean =
-    uri.getHost.matches("s3(.[\\w\\-_]+)?.amazonaws.com")
+    uri.getHost.matches("s3(.[\\w\\-_]+)?.amazonaws.com") ||
+      (!uri.getHost.contains("amazonaws.com") && uri.getHost.contains("."))
 
   // S3://bucket-name/key-name
   private def isShortStyle(uri: URI): Boolean =
@@ -131,12 +154,26 @@ object S3DataVault {
         new AnonymousAWSCredentialsProvider
     }
 
-  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential]): AmazonS3 =
-    AmazonS3ClientBuilder.standard
+  private def isNonAmazonHost(uri: URI): Boolean =
+    isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")
+
+  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): AmazonS3 = {
+    val basic = AmazonS3ClientBuilder.standard
       .withCredentials(getCredentialsProvider(credentialOpt))
-      .withRegion(Regions.DEFAULT_REGION)
       .withForceGlobalBucketAccessEnabled(true)
-      .build
+    if (isNonAmazonHost(uri))
+      basic
+        .withPathStyleAccessEnabled(true)
+        .withEndpointConfiguration(
+          new EndpointConfiguration(
+            s"http://${uri.getAuthority}",
+            AwsHostNameUtils.parseRegion(uri.getAuthority, "s3")
+          )
+        )
+        .build()
+    else basic.withRegion(Regions.DEFAULT_REGION).build()
+  }
+
 }
 
 class AnonymousAWSCredentialsProvider extends AWSCredentialsProvider {

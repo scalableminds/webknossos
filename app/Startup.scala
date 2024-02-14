@@ -1,17 +1,17 @@
-import akka.actor.{ActorSystem, Props}
+import org.apache.pekko.actor.{ActorSystem, Props}
+import cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
+import files.TempFileService
+import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
-import models.binary.ThumbnailCachingService
+import models.dataset.ThumbnailCachingService
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
-import oxalis.cleanup.CleanUpService
-import oxalis.files.TempFileService
-import oxalis.mail.{Mailer, MailerConfig}
-import oxalis.security.WkSilhouetteEnvironment
-import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
+import security.WkSilhouetteEnvironment
+import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.SqlClient
 
@@ -89,10 +89,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   initialDataService.insert.futureBox.map {
-    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
     case Failure(msg, _, _) =>
       logger.info("No initial data inserted: " + msg)
-      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
     case _ => ()
   }
 

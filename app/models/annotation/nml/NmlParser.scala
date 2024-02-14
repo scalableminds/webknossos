@@ -40,7 +40,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   def parse(name: String,
             nmlInputStream: InputStream,
-            overwritingDataSetName: Option[String],
+            overwritingDatasetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
       implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
@@ -60,11 +60,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
       } yield {
-        val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
+        val datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")
         val organizationName =
-          if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
+          if (overwritingDatasetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val (editPosition, editPositionAdditionalCoordinates) =
           parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
@@ -87,7 +87,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
                 timestamp,
-                dataSetName,
+                datasetName,
                 editPosition,
                 editRotation,
                 ElementClass.uint32,
@@ -100,7 +100,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 organizationName,
                 segments = v.segments,
                 segmentGroups = v.segmentGroups,
-                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndex(v.fallbackLayerName),
+                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndexOpt(v.fallbackLayerName),
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               ),
@@ -114,7 +114,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           else
             Some(
               SkeletonTracing(
-                dataSetName,
+                datasetName,
                 treesSplit,
                 timestamp,
                 taskBoundingBox,
@@ -262,26 +262,26 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider) = {
-    val additionalAxes = nodes.headOption.map(
+  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider): Box[Seq[AdditionalAxisProto]] = {
+    val additionalAxes: Option[collection.Seq[AdditionalAxisProto]] = nodes.headOption.map(
       _.child.flatMap(
         additionalAxisNode => {
           for {
             name <- getSingleAttributeOpt(additionalAxisNode, "name")
             indexStr <- getSingleAttributeOpt(additionalAxisNode, "index")
             index <- indexStr.toIntOpt
-            minStr <- getSingleAttributeOpt(additionalAxisNode, "min")
-            min <- minStr.toIntOpt
-            maxStr <- getSingleAttributeOpt(additionalAxisNode, "max")
-            max <- maxStr.toIntOpt
-          } yield new AdditionalAxisProto(name, index, Vec2IntProto(min, max))
+            startStr <- getSingleAttributeOpt(additionalAxisNode, "start")
+            start <- startStr.toIntOpt
+            endStr <- getSingleAttributeOpt(additionalAxisNode, "end")
+            end <- endStr.toIntOpt
+          } yield new AdditionalAxisProto(name, index, Vec2IntProto(start, end))
         }
       )
     )
     additionalAxes match {
       case Some(axes) =>
         if (axes.map(_.name).distinct.size == axes.size) {
-          Full(axes)
+          Full(axes.toSeq)
         } else {
           Failure(Messages("nml.additionalCoordinates.notUnique"))
         }
@@ -289,7 +289,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     }
   }
 
-  private def parseDataSetName(nodes: NodeSeq): String =
+  private def parseDatasetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
 
   private def parseDescription(nodes: NodeSeq): String =
@@ -519,17 +519,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   }
 
   private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
-    val regex = "additionalCoordinate-(\\w)".r("name")
+    val regex = "^additionalCoordinate-(\\w)".r
     node.attributes.flatMap {
-      case attribute: Attribute => {
-        if (attribute.key.startsWith("additionalCoordinate")) {
-          Some(
-            new AdditionalCoordinateProto(regex.findAllIn(attribute.key).group("name"),
-                                          attribute.value.toString().toInt))
-        } else {
-          None
+      case attribute: Attribute =>
+        attribute.key match {
+          case regex(axisName) =>
+            Some(new AdditionalCoordinateProto(axisName, attribute.value.toString().toInt))
+          case _ => None
         }
-      }
       case _ => None
     }.toSeq
   }

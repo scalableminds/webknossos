@@ -8,6 +8,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def scale(s: Int): Vec3Int =
     Vec3Int(x * s, y * s, z * s)
 
+  def +(that: Vec3Int): Vec3Int =
+    Vec3Int(x + that.x, y + that.y, z + that.z)
+
   def *(that: Vec3Int): Vec3Int =
     Vec3Int(x * that.x, y * that.y, z * that.z)
 

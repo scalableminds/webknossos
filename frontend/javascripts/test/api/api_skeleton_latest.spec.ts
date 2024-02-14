@@ -24,14 +24,14 @@ test("getActiveTree should get the active tree id", (t) => {
   api.tracing.setActiveNode(3);
   t.is(api.tracing.getActiveTreeId(), 2);
 });
-test("getActiveGroupId should get the active group id", (t) => {
+test("getActiveTreeGroupId should get the active group id", (t) => {
   const { api } = t.context;
-  t.is(api.tracing.getActiveGroupId(), null);
+  t.is(api.tracing.getActiveTreeGroupId(), null);
 });
-test("setActiveGroupId should set the active group id", (t) => {
+test("setActiveTreeGroupId should set the active group id", (t) => {
   const { api } = t.context;
-  api.tracing.setActiveGroup(3);
-  t.is(api.tracing.getActiveGroupId(), 3);
+  api.tracing.setActiveTreeGroup(3);
+  t.is(api.tracing.getActiveTreeGroupId(), 3);
 });
 test("getAllNodes should get a list of all nodes", (t) => {
   const { api } = t.context;

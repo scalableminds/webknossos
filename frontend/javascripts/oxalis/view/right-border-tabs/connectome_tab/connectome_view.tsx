@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip, TreeProps } from "antd";
+import { Alert, Empty, Space, Tooltip, TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -154,6 +154,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   isVisible: true,
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
+  edgesAreVisible: true,
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
@@ -744,8 +745,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Input.Group
-          compact
+        <Space.Compact
           className="compact-icons"
           style={{
             marginBottom: 10,
@@ -772,7 +772,7 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Input.Group>
+        </Space.Compact>
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

@@ -2,12 +2,12 @@ package com.scalableminds.util.io
 
 import java.io.File
 import java.nio.file.{Path, _}
-
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.io.Directory
 import scala.util.Random
 
@@ -15,10 +15,10 @@ object PathUtils extends PathUtils
 
 trait PathUtils extends LazyLogging {
 
-  def directoryFilter(path: Path): Boolean =
+  private def directoryFilter(path: Path): Boolean =
     Files.isDirectory(path) && !Files.isHidden(path)
 
-  def fileFilter(path: Path): Boolean =
+  private def fileFilter(path: Path): Boolean =
     !Files.isDirectory(path)
 
   def fileExtensionFilter(ext: String)(path: Path): Boolean =
@@ -50,11 +50,11 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path,
-                              maxDepth: Int,
-                              dropCount: Int,
-                              silent: Boolean,
-                              filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](directory: Path,
+                                      maxDepth: Int,
+                                      dropCount: Int,
+                                      silent: Boolean,
+                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -81,6 +81,9 @@ trait PathUtils extends LazyLogging {
         }
         Failure(errorMsg)
     }
+
+  def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
 
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
@@ -186,7 +189,7 @@ trait PathUtils extends LazyLogging {
   }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
-  def moveDirectoryViaTemp(source: Path, dst: Path): Unit = {
+  def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {
     val tmpId = Random.alphanumeric.take(10).mkString("")
     val tmpPath = source.getParent.resolve(s".${tmpId}")
     FileUtils.moveDirectory(source.toFile, tmpPath.toFile)

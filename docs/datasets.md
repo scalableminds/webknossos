@@ -2,7 +2,7 @@
 
 Working with 3D (and 2D) image datasets is at the heart of WEBKNOSSOS. 
 
-- [Import datasets](#importing-datasets) by uploading them directly via the web UI or by using the file system (self-hosted instances only).
+- [Import datasets](#importing-datasets) by uploading them directly via the web UI, streaming them from a remote server/the cloud, or by using the file system.
 - [Configure the dataset](#configuring-datasets) defaults and permissions to your specification.
 - [Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
 
@@ -23,26 +23,30 @@ The easiest way to get started with working on your datasets is through the WEBK
 4. Click the *Upload* button
 
 
-WEBKNOSSOS uses the [WKW-format](./data_formats.md#wkw-datasets) internally to display your data.
+Internally, WEBKNOSSOS uses the [WKW-format](./wkw.md) by default to display your data.
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
 If your data is not in WKW, you can either:
 
-- upload the data in a supported file format and WEBKNOSSOS will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "Datasets" tab in the dashboard (both will update automatically).
+- upload the data in a supported file format and WEBKNOSSOS will automatically import or convert it ([webknossos.org](https://webknossos.org) only). 
+Depending on the size of the dataset, the conversion will take some time. 
+You can check the progress at the [`Jobs`](./jobs.md) page or the "Datasets" tab in the dashboard.
+WEBKNOSSOS will also send you an email notification.
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
 
-- [WKW dataset](#WKW-Datasets)
-- [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (tif, jpg, png, dm3, dm4)
-  - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
-- Single-file images (tif, czi, nifti, raw)
-- KNOSSOS file hierarchy 
-- [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
+- [WKW dataset](./wkw.md)
+- [OME-Zarr datasets](./zarr.md)
+- [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
+- [Multi Layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
+- [Single-file images](#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
+- [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
+- [N5 datasets](./n5.md)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.
 
-### Working with Zarr, Neuroglancer Precomputed and N5 datasets
+### Streaming from remote servers and the cloud
 WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev), [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
 WEBKNOSSOS supports loading Zarr datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
@@ -56,9 +60,12 @@ With other converters, you may need to add the layers separately.
     - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
     - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
-5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
+5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc.) as possible and preview a [WEBKNOSSOS `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
   Consider setting the dataset `name` property and double-check all other properties for correctness.
 6. Click `Import` to finish
+
+WEBKNOSSOS can also import URIs from [Neuroglancer](https://github.com/google/neuroglancer). When viewing a dataset on a Neuroglancer instance in the browser,
+copy the URI from the address bar and paste it into the *Add Remote Dataset* tab to view the dataset in WEBKNOSSOS.
 
 WEBKNOSSOS will NOT download or copy datasets in full from these third-party data providers. 
 Rather, any data viewed in WEBKNOSSOS will be streamed read-only from the remote source. 
@@ -67,22 +74,20 @@ Any other WEBKNOSSOS feature, e.g., annotations, and access rights, will be stor
 
 Note that data streaming may incur costs and count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. 
-Then WEBKNOSSOS can easily stream the data.
 
 ### Uploading through the Python API
-For those wishing to automate dataset upload or to do it programmatically, check out the WEBKNOSSOS [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 
+For those wishing to automate dataset upload or to do it programmatically, check out the WEBKNOSSOS [Python library](https://docs.webknossos.org/webknossos-py). You can create, manage and upload datasets with the Python lib. 
 
 ### Uploading through the File System
 -- (Self-Hosted Instances Only)-- 
 
-On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system (WKW-format only):
+On self-hosted instances, large datasets can be efficiently imported by placing them directly on the file system (WKW-format or Zarr only):
 
 * Place the dataset at `<WEBKNOSSOS directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)
-* Use the refresh button on the dashboard or wait for WEBKNOSSOS to detect the dataset (up to 10min)
+* Use the `Scan disk for new dataset` from the dropdown menu next to the `Refresh` button on the dashboard or wait for WEBKNOSSOS to detect the dataset (up to 10min)
 
-Typically WEBKNOSSOS can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
+Typically, WEBKNOSSOS can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
 
 * On the dashboard, click *Import* for your new dataset
 * Provide the requested properties, such as *scale*. It is also recommended to set the *largestSegmentId*. See the section on [configuring datasets](#configuring-datasets) below for more detailed explanations of these parameters.
@@ -118,10 +123,20 @@ Any dataset uploaded through the web interface at [webknossos.org](https://webkn
 
 For manual conversion, we provide the following software tools and libraries:
 
-- The [WEBKNOSSOS Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
+- The [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-See the page on [software tooling](./tooling.md) for more.
+### Composing Datasets
+New datasets can also be composed from existing ones.
+This feature allows to combine layers from previously added datasets to create a new dataset.
+During compositions, transforms can optionally be defined in case the datasets are not in the same coordinate system.
+There are three different ways to compose a new dataset:
+
+1) Combine datasets by selecting from existing datasets. No transforms between these datasets will be added.
+2) Create landmark annotations (using the skeleton tool) for each dataset. Then, these datasets can be combined while transforming one dataset to match the other.
+3) Similar to (2), two datasets can be combined while respecting landmarks that were generated with BigWarp.
+
+See the "Compose from existing datasets" tab in the "Add Dataset" screen for more details.
 
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 
@@ -225,27 +240,7 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 ![youtube-video](https://www.youtube.com/embed/yYauIHZcI_4)
 
-## Sample Datasets
+## Example Datasets
 
 For convenience and testing, we provide a list of sample datasets for WEBKNOSSOS:
 
-- **Sample_e2006_wkw**  
-  Raw SBEM data and segmentation (sample cutout, 120MB).  
-  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
-  Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
-  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
-  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
-
-- **Sample_FD0144_wkw**  
-  Raw SBEM data and segmentation (sample cutout, 316 MB).  
-  [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
-  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  
-  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  
-  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
-
-* **Sample_MPRAGE_250um**  
-  MRI data (250 MB).  
-  [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
-  T1-weighted in vivo human whole brain MRI dataset with an ultra-fine isotropic resolution of 250 μm.
-  F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
-  Scientific Data. 14 March 2017. [https://doi.org/10.1038/sdata.2017.32](https://doi.org/10.1038/sdata.2017.32)

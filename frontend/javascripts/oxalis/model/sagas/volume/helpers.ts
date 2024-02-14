@@ -23,7 +23,7 @@ import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { Model } from "oxalis/singletons";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { VolumeTracing } from "oxalis/store";
+import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
@@ -33,6 +33,10 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
     yield [arr[i], arr[i + 1]];
   }
 }
+
+export type BooleanBox = {
+  value: boolean;
+};
 
 export function* getBoundingBoxForViewport(
   position: Vector3,
@@ -56,6 +60,19 @@ export function* getBoundingBoxForViewport(
 
   const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
   return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
+}
+
+export function getBoundingBoxInMag1(boudingBox: BoundingBoxObject, magOfBB: Vector3) {
+  return {
+    topLeft: [
+      boudingBox.topLeft[0] * magOfBB[0],
+      boudingBox.topLeft[1] * magOfBB[1],
+      boudingBox.topLeft[2] * magOfBB[2],
+    ] as Vector3,
+    width: boudingBox.width * magOfBB[0],
+    height: boudingBox.height * magOfBB[1],
+    depth: boudingBox.depth * magOfBB[2],
+  };
 }
 
 export function applyLabeledVoxelMapToAllMissingResolutions(
@@ -153,6 +170,7 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
+  wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -183,9 +201,7 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
+  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
       min,
@@ -232,7 +248,7 @@ export function* labelWithVoxelBuffer2D(
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
+  const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
@@ -242,20 +258,27 @@ export function* labelWithVoxelBuffer2D(
     shouldOverwrite,
     overwritableValue,
   );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
+
+  if (wroteVoxels) {
+    // thirdDimensionOfSlice needs to be provided in global coordinates
+    const thirdDimensionOfSlice =
+      topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingResolutions(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      newCellIdValue,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  if (wroteVoxelsBox != null) {
+    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+  }
 }
 
 export function* createVolumeLayer(

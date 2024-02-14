@@ -8,13 +8,14 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
@@ -24,6 +25,7 @@ object PrecomputedArray extends LazyLogging {
       layerName: String,
       axisOrderOpt: Option[AxisOrder],
       channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
@@ -32,17 +34,18 @@ object PrecomputedArray extends LazyLogging {
       scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
       _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
-    } yield
-      new PrecomputedArray(
-        magPath,
-        dataSourceId,
-        layerName,
-        scaleHeader,
-        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-        channelIndex,
-        None,
-        sharedChunkContentsCache
-      )
+      array <- tryo(
+        new PrecomputedArray(
+          magPath,
+          dataSourceId,
+          layerName,
+          scaleHeader,
+          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+          channelIndex,
+          additionalAxes,
+          sharedChunkContentsCache
+        )) ?~> "Could not open neuroglancerPrecomputed array"
+    } yield array
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
@@ -82,7 +85,7 @@ class PrecomputedArray(vaultPath: VaultPath,
   private val shardIndexCache: AlfuCache[VaultPath, Array[Byte]] =
     AlfuCache()
 
-  private val minishardIndexCache: AlfuCache[(VaultPath, Int), Seq[(Long, Long, Long)]] =
+  private val minishardIndexCache: AlfuCache[(VaultPath, Int), Array[(Long, Long, Long)]] =
     AlfuCache()
 
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
@@ -177,7 +180,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
   }
 
-  private def parseMinishardIndex(input: Array[Byte]): Seq[(Long, Long, Long)] = {
+  private def parseMinishardIndex(input: Array[Byte]): Box[Array[(Long, Long, Long)]] = tryo {
     val bytes = decodeMinishardIndex(input)
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
@@ -219,26 +222,27 @@ class PrecomputedArray(vaultPath: VaultPath,
       val startOffsetIndex = i + n
       chunkStartOffsets(i) = chunkStartOffsets(i - 1) + longArray(startOffsetIndex) + chunkSizes(i - 1)
     }
-    (chunkIds, chunkStartOffsets, chunkSizes).zipped.map((a, b, c) => (a, b, c))
+
+    chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
   private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(
-      implicit ec: ExecutionContext): Fox[Seq[(Long, Long, Long)]] =
+      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
   private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      implicit ec: ExecutionContext): Fox[Seq[(Long, Long, Long)]] = {
+      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
       index <- getShardIndex(vaultPath)
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-      minishardIndex <- tryo(parseMinishardIndex(indexRaw))
+      minishardIndex <- parseMinishardIndex(indexRaw)
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long, minishardIndex: Seq[(Long, Long, Long)])(
+  private def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
       implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
       chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"

@@ -51,7 +51,12 @@ import {
 } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
-import { setQuickSelectStateAction } from "oxalis/model/actions/ui_actions";
+import {
+  hideMeasurementTooltipAction,
+  setQuickSelectStateAction,
+  setLastMeasuredPositionAction,
+  setIsMeasuringAction,
+} from "oxalis/model/actions/ui_actions";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -780,6 +785,213 @@ export class QuickSelectTool {
   static onToolDeselected() {}
 }
 
+function getDoubleClickGuard() {
+  const DOUBLE_CLICK_TIME_THRESHOLD = 600;
+  const MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK = 6;
+  let lastLeftClickTime = 0;
+  let lastClickPosition: Point2 = { x: -100, y: -100 };
+  const doubleClickGuard = (pos: Point2, onDoubleClick: () => void) => {
+    const currentTime = Date.now();
+    if (
+      currentTime - lastLeftClickTime <= DOUBLE_CLICK_TIME_THRESHOLD &&
+      Math.abs(pos.x - lastClickPosition.x) + Math.abs(pos.y - lastClickPosition.y) <
+        MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK
+    ) {
+      // A double click should also terminate measuring.
+      onDoubleClick();
+      return true;
+    }
+    lastLeftClickTime = currentTime;
+    lastClickPosition = pos;
+    return false;
+  };
+  return doubleClickGuard;
+}
+
+export class LineMeasurementTool {
+  static initialPlane: OrthoView = OrthoViews.PLANE_XY;
+  static isMeasuring = false;
+  static getPlaneMouseControls(): any {
+    const doubleClickGuard = getDoubleClickGuard();
+    const SceneController = getSceneController();
+    const { lineMeasurementGeometry } = SceneController;
+    const mouseMove = (
+      _delta: Point2,
+      pos: Point2,
+      plane: OrthoView | null | undefined,
+      evt: MouseEvent,
+    ) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+      }
+      const isAltPressed = evt.altKey;
+      if (isAltPressed || plane !== this.initialPlane || !this.isMeasuring) {
+        MoveHandlers.moveWhenAltIsPressed(_delta, pos, plane, evt);
+        return;
+      }
+      const state = Store.getState();
+      const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+      lineMeasurementGeometry.updateLatestPointPosition(newPos);
+      Store.dispatch(setLastMeasuredPositionAction(newPos));
+    };
+    const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+        return;
+      }
+      if (plane !== this.initialPlane) {
+        return;
+      }
+      if (this.isMeasuring) {
+        // Set the last point of the measurement and stop measuring.
+        mouseMove({ x: 0, y: 0 }, pos, plane, event);
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+      } else {
+        // If the tool already stopped measuring, reset the tool.
+        lineMeasurementGeometry.resetAndHide();
+        Store.dispatch(hideMeasurementTooltipAction());
+      }
+    };
+    const leftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+        return;
+      }
+      if (
+        doubleClickGuard(pos, () => {
+          rightClick(pos, plane, event);
+        }) ||
+        (this.isMeasuring && plane !== this.initialPlane)
+      ) {
+        return;
+      }
+      // Set a new measurement point.
+      const state = Store.getState();
+      const position = V3.floor(calculateGlobalPos(state, pos, plane));
+      if (!this.isMeasuring) {
+        this.initialPlane = plane;
+        lineMeasurementGeometry.setStartPoint(position, plane);
+        this.isMeasuring = true;
+        Store.dispatch(setIsMeasuringAction(true));
+      } else {
+        lineMeasurementGeometry.addPoint(position);
+      }
+      Store.dispatch(setLastMeasuredPositionAction(position));
+    };
+    return {
+      mouseMove,
+      rightClick,
+      leftClick,
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftClick: "Left Click to measure distance",
+      rightClick: "Finish Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { lineMeasurementGeometry } = getSceneController();
+    lineMeasurementGeometry.reset();
+    lineMeasurementGeometry.hide();
+    Store.dispatch(hideMeasurementTooltipAction());
+    this.isMeasuring = false;
+    this.initialPlane = OrthoViews.PLANE_XY;
+  }
+}
+
+export class AreaMeasurementTool {
+  static initialPlane: OrthoView = OrthoViews.PLANE_XY;
+  static isMeasuring = false;
+  static getPlaneMouseControls(): any {
+    const SceneController = getSceneController();
+    const { areaMeasurementGeometry } = SceneController;
+    const doubleClickGuard = getDoubleClickGuard();
+    const onRightClick = () => {
+      areaMeasurementGeometry.reset();
+      Store.dispatch(hideMeasurementTooltipAction());
+    };
+    return {
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        id: string | null | undefined,
+        evt: MouseEvent,
+      ) => {
+        if (evt.altKey) {
+          MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
+          return;
+        }
+        if (id == null) {
+          return;
+        }
+        if (!this.isMeasuring) {
+          this.initialPlane = id as OrthoView;
+          this.isMeasuring = true;
+          areaMeasurementGeometry.reset();
+          areaMeasurementGeometry.show();
+          areaMeasurementGeometry.setViewport(id as OrthoView);
+        }
+        if (id !== this.initialPlane) {
+          return;
+        }
+        const state = Store.getState();
+        const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+        areaMeasurementGeometry.addEdgePoint(position);
+        Store.dispatch(setLastMeasuredPositionAction(position));
+      },
+      leftMouseUp: () => {
+        if (!this.isMeasuring) {
+          return;
+        }
+        // Stop drawing area and close the drawn area if still measuring.
+        this.isMeasuring = false;
+        areaMeasurementGeometry.connectToStartPoint();
+      },
+      rightClick: onRightClick,
+      leftClick: (pos: Point2) => {
+        doubleClickGuard(pos, onRightClick);
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Drag to measure area",
+      rightClick: "Reset Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { areaMeasurementGeometry } = getSceneController();
+    areaMeasurementGeometry.resetAndHide();
+    Store.dispatch(hideMeasurementTooltipAction());
+    this.isMeasuring = false;
+    this.initialPlane = OrthoViews.PLANE_XY;
+  }
+}
+
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
@@ -852,6 +1064,8 @@ const toolToToolClass = {
   [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
   [AnnotationToolEnum.FILL_CELL]: FillCellTool,
   [AnnotationToolEnum.PICK_CELL]: PickCellTool,
+  [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
+  [AnnotationToolEnum.AREA_MEASUREMENT]: AreaMeasurementTool,
 };
 export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolClass[activeTool];

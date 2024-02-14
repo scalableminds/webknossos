@@ -144,6 +144,57 @@ function _calculateMaybeGlobalPos(
   return position;
 }
 
+function _calculateMaybePlaneScreenPos(
+  state: OxalisState,
+  globalPosition: Vector3,
+  planeId?: OrthoView | null | undefined,
+): Point2 | null | undefined {
+  // This method does the reverse of _calculateMaybeGlobalPos. It takes a global position
+  // and calculates the corresponding screen position in the given plane.
+  // This is achieved by reversing the calculations in _calculateMaybeGlobalPos.
+  let point: Point2;
+  planeId = planeId || state.viewModeData.plane.activeViewport;
+  const navbarHeight = state.uiInformation.navbarHeight;
+  const curGlobalPos = getPosition(state.flycam);
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
+  const { width, height, top, left } = getInputCatcherRect(state, planeId);
+  const positionDiff = V3.sub(globalPosition, curGlobalPos);
+  switch (planeId) {
+    case OrthoViews.PLANE_XY: {
+      point = {
+        x: positionDiff[0] / state.flycam.zoomStep / planeRatio[0],
+        y: positionDiff[1] / state.flycam.zoomStep / planeRatio[1],
+      };
+      break;
+    }
+
+    case OrthoViews.PLANE_YZ: {
+      point = {
+        x: positionDiff[2] / state.flycam.zoomStep / planeRatio[2],
+        y: positionDiff[1] / state.flycam.zoomStep / planeRatio[1],
+      };
+      break;
+    }
+
+    case OrthoViews.PLANE_XZ: {
+      point = {
+        x: positionDiff[0] / state.flycam.zoomStep / planeRatio[0],
+        y: positionDiff[2] / state.flycam.zoomStep / planeRatio[2],
+      };
+      break;
+    }
+
+    default:
+      return null;
+  }
+  point.x += width / 2 + left;
+  point.y += height / 2 + top + navbarHeight;
+  point.x = Math.round(point.x);
+  point.y = Math.round(point.y);
+
+  return point;
+}
+
 function _calculateGlobalPos(
   state: OxalisState,
   clickPos: Point2,
@@ -191,6 +242,7 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
 }
 export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGlobalPos);
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
+export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
 export function getViewMode(state: OxalisState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

@@ -1,13 +1,13 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.WkEnv
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 

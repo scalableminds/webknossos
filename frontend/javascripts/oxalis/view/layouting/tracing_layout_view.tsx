@@ -15,7 +15,7 @@ import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
 import {
@@ -41,6 +41,7 @@ import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
+import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -52,6 +53,7 @@ const { Sider } = Layout;
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
+  UITheme: Theme;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
@@ -209,7 +211,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     boundingBoxId: number | null | undefined,
     globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
-    isosurfaceId?: number | null | undefined,
+    meshId?: number | null | undefined,
     meshIntersectionPosition?: Vector3 | null | undefined,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
@@ -224,7 +226,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           clickedBoundingBoxId: boundingBoxId,
           contextMenuGlobalPosition: globalPosition,
           contextMenuViewport: viewport,
-          contextMenuMeshId: isosurfaceId,
+          contextMenuMeshId: meshId,
           contextMenuMeshIntersectionPosition: meshIntersectionPosition,
         }),
       0,
@@ -312,7 +314,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
+      this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -345,6 +348,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             maybeClickedMeshId={this.state.contextMenuMeshId}
             maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
           />
+        )}
+
+        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
+          <DistanceMeasurementTooltip />
         )}
 
         <NmlUploadZoneContainer
@@ -393,7 +400,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         style={{
                           height: 30,
                           paddingTop: 4,
-                          backgroundColor: "var(--ant-warning)",
+                          backgroundColor: "var(--ant-color-warning)",
                           border: "none",
                           color: "white",
                         }}
@@ -440,7 +447,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (
-                <Sider id="version-restore-sider" width={400}>
+                <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView allowUpdate={isUpdateTracingAllowed} />
                 </Sider>
               ) : null}
@@ -470,7 +477,10 @@ function mapStateToProps(state: OxalisState) {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
+    distanceMeasurementTooltipPosition:
+      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
+    UITheme: state.uiInformation.theme,
   };
 }
 

@@ -8,9 +8,9 @@ import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
-import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
+import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
 import { watchMaximumRenderableLayers, watchZ1Downsampling } from "oxalis/model/sagas/dataset_saga";
-import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
+import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
@@ -53,11 +53,12 @@ function* restartableSaga(): Saga<void> {
       call(listenToClipHistogramSaga),
       call(loadHistogramDataSaga),
       call(watchDataRelevantChanges),
-      call(isosurfaceSaga),
+      call(meshSaga),
       call(watchTasksAsync),
       call(watchMaximumRenderableLayers),
       call(MappingSaga),
       call(watchToolDeselection),
+      call(watchToolReset),
       call(ProofreadSaga),
       ...AnnotationSagas.map((saga) => call(saga)),
       ...SaveSagas.map((saga) => call(saga)),
@@ -66,6 +67,7 @@ function* restartableSaga(): Saga<void> {
       call(watchZ1Downsampling),
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
+      call(handleAdditionalCoordinateUpdate),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

@@ -22,7 +22,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
         ...state,
         dataset,
         localSegmentationData: createDictWithKeysAndValue(segmentationLayerNames, () => ({
-          isosurfaces: {},
+          meshes: {},
           availableMeshFiles: null,
           currentMeshFile: null,
           segments: new DiffableMap(),
@@ -32,6 +32,10 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             pendingConnectomeFileName: null,
             activeAgglomerateIds: [],
             skeleton: null,
+          },
+          selectedIds: {
+            segments: [],
+            group: null,
           },
         })),
         temporaryConfiguration: {

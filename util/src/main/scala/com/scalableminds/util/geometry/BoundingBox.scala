@@ -66,7 +66,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def volume: Long =
     width.toLong * height.toLong * depth.toLong
 
-  def dimensions: Vec3Int =
+  def size: Vec3Int =
     Vec3Int(width, height, depth)
 
   def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"
@@ -80,7 +80,7 @@ object BoundingBox {
     "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
-    BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
+    BoundingBox(Vec3Int.zeros, 0, 0, 0)
 
   def fromLiteral(s: String): Option[BoundingBox] =
     s match {
@@ -111,7 +111,7 @@ object BoundingBox {
       case head :: tail =>
         tail.foldLeft(head)(_ union _)
       case _ =>
-        BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
+        BoundingBox.empty
     }
 
   def intersection(bbs: List[BoundingBox]): Option[BoundingBox] =

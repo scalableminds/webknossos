@@ -5,21 +5,28 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ElementClassProto}
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
+import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray
+}
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
 object VolumeSegmentIndexService {
   // Currently, segment index is not supported for volume tracings with fallback layer
-  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+  def canHaveSegmentIndexOpt(fallbackLayerName: Option[String]): Option[Boolean] = Some(fallbackLayerName.isEmpty)
+
+  def canHaveSegmentIndex(fallbackLayerName: Option[String]): Boolean = fallbackLayerName.isEmpty
 }
 
 // Segment-to-Bucket index for volume tracings in FossilDB
@@ -69,21 +76,26 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                            segmentId: Long,
                                            bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer,
-                                                                                         segmentId,
-                                                                                         bucketPosition.mag)
+      previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(
+        segmentIndexBuffer,
+        segmentId,
+        bucketPosition.mag,
+        bucketPosition.additionalCoordinates)
       bucketPositionProto = bucketPosition.toVec3IntProto
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
-      _ = segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
+      _ = segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
     } yield ()
 
   private def addBucketToSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                       segmentId: Long,
                                       bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer, segmentId, bucketPosition.mag)
+      previousBucketList <- getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer,
+                                                                     segmentId,
+                                                                     bucketPosition.mag,
+                                                                     bucketPosition.additionalCoordinates)
       newBucketList = ListOfVec3IntProto((bucketPosition.toVec3IntProto +: previousBucketList.values).distinct)
-      _ <- segmentIndexBuffer.put(segmentId, bucketPosition.mag, newBucketList)
+      _ <- segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
     } yield ()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(
@@ -95,12 +107,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         u.toPositiveLong
       }
 
-  private def getSegmentToBucketIndexWithEmptyFallback(
-      segmentIndexBuffer: VolumeSegmentIndexBuffer,
-      segmentId: Long,
-      mag: Vec3Int)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+  private def getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer: VolumeSegmentIndexBuffer,
+                                                       segmentId: Long,
+                                                       mag: Vec3Int,
+                                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      bucketListBox <- segmentIndexBuffer.getWithFallback(segmentId, mag).futureBox
+      bucketListBox <- segmentIndexBuffer.getWithFallback(segmentId, mag, additionalCoordinates).futureBox
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
@@ -108,9 +121,16 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      additionalAxes: Option[Seq[AdditionalAxis]],
       version: Option[Long] = None)(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      bucketListBox <- getSegmentToBucketIndex(tracingId, segmentId, mag, version).futureBox
+      bucketListBox <- getSegmentToBucketIndex(tracingId,
+                                               segmentId,
+                                               mag,
+                                               additionalCoordinates,
+                                               additionalAxes,
+                                               version).futureBox
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
@@ -125,8 +145,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   private def getSegmentToBucketIndex(tracingId: String,
                                       segmentId: Long,
                                       mag: Vec3Int,
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                      additionalAxes: Option[Seq[AdditionalAxis]],
                                       version: Option[Long]): Fox[ListOfVec3IntProto] = {
-    val key = segmentIndexKey(tracingId, segmentId, mag)
+    val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     volumeSegmentIndexClient.get(key, version, mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto]).map(_.value)
   }
 

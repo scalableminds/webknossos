@@ -20,7 +20,7 @@ class SqlInterpolator(val s: StringContext) extends AnyVal {
     val parts = s.parts.toList
     val tokens = param.toList
 
-    val outputSql = mutable.StringBuilder.newBuilder
+    val outputSql = new mutable.StringBuilder()
     val outputValues = ListBuffer[SqlValue]()
 
     assert(parts.length == tokens.length + 1)
@@ -89,7 +89,7 @@ object SqlToken {
 
   def empty: SqlToken = raw("")
 
-  def identifier(id: String): SqlToken = raw(id.split('.').map(i => '"' + i + '"').mkString("."))
+  def identifier(id: String): SqlToken = raw(id.split('.').map(i => f""""$i"""").mkString("."))
 }
 
 trait SqlValue {

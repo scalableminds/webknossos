@@ -17,6 +17,7 @@ import {
   setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type {
+  CutAgglomerateFromNeighborsAction,
   MinCutAgglomerateAction,
   MinCutAgglomerateWithPositionAction,
   ProofreadAtPositionAction,
@@ -48,7 +49,11 @@ import {
   getMappingInfo,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
+import {
+  getEdgesForAgglomerateMinCut,
+  getNeighborsForAgglomerateNode,
+  makeMappingEditable,
+} from "admin/admin_rest_api";
 import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -69,13 +74,13 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEvery(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE"],
-    splitOrMergeOrMinCutAgglomerate,
+    handleSkeletonProofreadingAction,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEvery(
-    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
-    handleProofreadMergeOrMinCut,
+    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION", "CUT_AGGLOMERATE_FROM_NEIGHBORS"],
+    handleProofreadMergeOrMinCutOrCutNeighbors,
   );
   yield* takeEvery(
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
@@ -222,9 +227,11 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
 
 let currentlyPerformingMinCut = false;
 
-function* splitOrMergeOrMinCutAgglomerate(
+function* handleSkeletonProofreadingAction(
   action: MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
 ) {
+  // Handles split, merge and min-cut actions on agglomerates.
+
   // Prevent this method from running recursively into itself during Min-Cut.
   if (currentlyPerformingMinCut) {
     return;
@@ -339,7 +346,7 @@ function* splitOrMergeOrMinCutAgglomerate(
       ),
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
-    const shouldReturn = yield* call(
+    const hasErrored = yield* call(
       performMinCut,
       sourceAgglomerateId,
       targetAgglomerateId,
@@ -351,7 +358,7 @@ function* splitOrMergeOrMinCutAgglomerate(
       sourceTree,
       items,
     );
-    if (shouldReturn) {
+    if (hasErrored) {
       return;
     }
   }
@@ -483,6 +490,74 @@ function* performMinCut(
   return false;
 }
 
+function* performCutFromNeighbors(
+  agglomerateId: number,
+  segmentPosition: Vector3,
+  agglomerateFileMag: Vector3,
+  editableMappingId: string,
+  volumeTracingId: string,
+  sourceTree: Tree | null,
+  items: UpdateAction[],
+): Saga<boolean> {
+  // todop: do we need this?
+  // currentlyPerformingMinCut = true;
+  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const segmentsInfo = {
+    segmentPosition,
+    mag: agglomerateFileMag,
+    agglomerateId,
+    editableMappingId,
+  };
+
+  const neighborInfo = yield* call(
+    getNeighborsForAgglomerateNode,
+    tracingStoreUrl,
+    volumeTracingId,
+    segmentsInfo,
+  );
+
+  const edgesToRemove = neighborInfo.neighbors.map((neighbor) => ({
+    position1: segmentPosition,
+    position2: neighbor.position,
+    segmentId1: agglomerateId,
+    segmentId2: neighbor.segmentId,
+  }));
+
+  for (const edge of edgesToRemove) {
+    if (sourceTree) {
+      let firstNodeId;
+      let secondNodeId;
+      for (const node of sourceTree.nodes.values()) {
+        if (_.isEqual(node.position, edge.position1)) {
+          firstNodeId = node.id;
+        } else if (_.isEqual(node.position, edge.position2)) {
+          secondNodeId = node.id;
+        }
+        if (firstNodeId && secondNodeId) {
+          break;
+        }
+      }
+
+      if (!firstNodeId || !secondNodeId) {
+        Toast.warning(
+          `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
+            !secondNodeId ? [", ", edge.position2] : null
+          } in ${sourceTree.name}.`,
+        );
+        yield* put(setBusyBlockingInfoAction(false));
+        // currentlyPerformingMinCut = false;
+        return true;
+      }
+      yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
+    }
+
+    items.push(splitAgglomerate(agglomerateId, edge.position1, edge.position2, agglomerateFileMag));
+  }
+  // currentlyPerformingMinCut = false;
+
+  return false;
+}
+
 function* clearProofreadingByproducts() {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
@@ -494,8 +569,11 @@ function* clearProofreadingByproducts() {
   coarselyLoadedSegmentIds = [];
 }
 
-function* handleProofreadMergeOrMinCut(
-  action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
+function* handleProofreadMergeOrMinCutOrCutNeighbors(
+  action:
+    | ProofreadMergeAction
+    | MinCutAgglomerateWithPositionAction
+    | CutAgglomerateFromNeighborsAction,
 ) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -567,7 +645,7 @@ function* handleProofreadMergeOrMinCut(
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
-    const shouldReturn = yield* call(
+    const hasErrored = yield* call(
       performMinCut,
       sourceAgglomerateId,
       targetAgglomerateId,
@@ -579,7 +657,23 @@ function* handleProofreadMergeOrMinCut(
       null,
       items,
     );
-    if (shouldReturn) {
+    if (hasErrored) {
+      return;
+    }
+  } else if (action.type === "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
+    const hasErrored = yield* call(
+      performCutFromNeighbors,
+      // We ignore the active (source) agglomerate, because the action
+      // only depends on the clicked agglomerate.
+      targetAgglomerateId,
+      targetPosition,
+      agglomerateFileMag,
+      editableMappingId,
+      volumeTracingId,
+      null,
+      items,
+    );
+    if (hasErrored) {
       return;
     }
   }

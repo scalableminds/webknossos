@@ -95,6 +95,7 @@ import Store from "oxalis/store";
 import {
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
+  cutAgglomerateFromNeighborsAction,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -924,6 +925,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     }
                   >
                     <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                  </Tooltip>
+                ),
+              }
+            : null,
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
                   </Tooltip>
                 ),
               }

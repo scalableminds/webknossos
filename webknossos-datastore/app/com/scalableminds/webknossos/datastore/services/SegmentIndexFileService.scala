@@ -63,26 +63,34 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
 
-      segmentExists = bucketEnd - bucketStart != 0
-      topLefts <- Fox.runIf(segmentExists)(for {
+      hashBucketExists = bucketEnd - bucketStart != 0
+      topLeftsOpt <- Fox.runIf(hashBucketExists)(readTopLefts(segmentIndex, bucketStart, bucketEnd, segmentId))
+      topLefts = topLeftsOpt.flatten
+    } yield
+      topLefts match {
+        case Some(topLefts) => (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
+        case None           => (Array.empty, mag)
+      }
+
+  private def readTopLefts(segmentIndex: CachedHdf5File,
+                           bucketStart: Long,
+                           bucketEnd: Long,
+                           segmentId: Long): Fox[Option[Array[Array[Short]]]] =
+    for {
+      _ <- Fox.successful(())
+      buckets = segmentIndex.reader
+        .uint64()
+        .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
+      bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+      topLeftOpts <- Fox.runIf(bucketLocalOffset >= 0)(for {
         _ <- Fox.successful(())
-        buckets = segmentIndex.reader
-          .uint64()
-          .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
-        bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
-        _ <- bool2Fox(bucketLocalOffset >= 0)
         topLeftStart = buckets(bucketLocalOffset)(1)
         topLeftEnd = buckets(bucketLocalOffset)(2)
         topLefts = segmentIndex.reader
           .uint16() // Read datatype from attributes?
           .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
       } yield topLefts)
-
-    } yield
-      topLefts match {
-        case Some(topLefts) => (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
-        case None           => (Array.empty, mag)
-      }
+    } yield topLeftOpts
 
   def topLeftsToBucketPositions(topLefts: Array[Vec3Int], targetMag: Vec3Int, fileMag: Vec3Int): Array[Vec3Int] =
     topLefts

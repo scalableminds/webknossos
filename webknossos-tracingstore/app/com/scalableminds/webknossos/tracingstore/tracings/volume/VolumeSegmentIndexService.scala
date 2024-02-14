@@ -67,7 +67,11 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
           removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-      _ <- addBucketToSegmentIndex(segmentIndexBuffer, additions.toList, bucketPosition, mappingName) ?~> "volumeSegmentIndex.update.addBucket.failed"
+      _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
+        segmentIndexBuffer,
+        additions.toList,
+        bucketPosition,
+        mappingName)) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(

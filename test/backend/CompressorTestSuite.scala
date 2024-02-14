@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ZlibCompressor,
   ZstdCompressor
 }
-import com.scalableminds.webknossos.datastore.datareaders.{Lz4Compressor, ZstdCompressor}
+import com.scalableminds.webknossos.datastore.datareaders.Lz4Compressor
 import org.scalatestplus.play.PlaySpec
 
 import java.security.SecureRandom

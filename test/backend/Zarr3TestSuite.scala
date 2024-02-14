@@ -2,14 +2,12 @@ package backend
 
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   BloscCodecConfiguration,
-  BytesCodec,
   BytesCodecConfiguration,
-  Zarr3Array,
-  Zarr3ArrayHeader
+  Zarr3Array
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.Zarr3ArrayHeaderFormat
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.Json
 
 class Zarr3TestSuite extends PlaySpec {
 

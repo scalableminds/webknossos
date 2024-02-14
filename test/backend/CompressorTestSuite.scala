@@ -59,14 +59,9 @@ class CompressorTestSuite extends PlaySpec {
 
   "lz4 compressor" when {
     "compressing and decompressing" should {
-
       val compressor = new Lz4Compressor
       "return original data" in {
-        val bytes = new Array[Byte](20)
-        SecureRandom.getInstanceStrong.nextBytes(bytes)
-        val decompressed = compressor.decompress(compressor.compress(bytes))
-        assert(bytes.sameElements(decompressed))
-
+        testCompressor(compressor)
       }
     }
   }

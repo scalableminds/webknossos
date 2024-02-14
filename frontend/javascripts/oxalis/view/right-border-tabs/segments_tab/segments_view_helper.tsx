@@ -45,21 +45,12 @@ export function getVolumeRequestUrl(
   tracingId: string | undefined,
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
-  const datasetName = dataset.name;
-  const organization = dataset.owningOrganization;
-  const dataStoreHost = dataset.dataStore.url;
-
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${visibleSegmentationLayer.name}`;
-  if (tracing == null) return dataStoreUrl;
-  const tracingStoreHost = tracing?.tracingStore.url;
-
-  const maybeVolumeTracing =
-    "tracingId" in visibleSegmentationLayer && visibleSegmentationLayer.tracingId != null
-      ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
-      : null;
-  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = maybeVolumeTracing == null;
-  return shouldUseDataStore ? dataStoreUrl : `${tracingStoreHost}/tracings/volume/${tracingId}`;
+  if (tracing == null || tracingId == null) {
+    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${visibleSegmentationLayer.name}`;
+  } else {
+    const tracingStoreHost = tracing?.tracingStore.url;
+    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
+  }
 }
 
 export async function hasSegmentIndex(

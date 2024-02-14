@@ -55,8 +55,7 @@ export const setLayerHasSegmentIndexAction = (layerName: string, hasSegmentIndex
     hasSegmentIndex,
   } as const);
 
-export const ensureSegmentIndexIsLoadedAction = (layerName?: string) =>
+export const ensureSegmentIndexIsLoadedAction = () =>
   ({
     type: "ENSURE_SEGMENT_INDEX_IS_LOADED",
-    layerName,
   } as const);

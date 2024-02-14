@@ -2,7 +2,6 @@ import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-
 import { sleep } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -178,3 +177,5 @@ export function* ensureSegmentIndexIsLoaded(): Saga<void> {
   }
   yield* takeEvery("ENSURE_SEGMENT_INDEX_IS_LOADED", maybeFetchHasSegmentIndex);
 }
+
+export default [watchMaximumRenderableLayers, watchZ1Downsampling, ensureSegmentIndexIsLoaded];

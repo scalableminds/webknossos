@@ -44,7 +44,7 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
-  getMaybeSegmentIndexAvailability as getMaybeSegmentIndexAvailability,
+  getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -418,7 +418,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.pollJobData();
     }
 
-    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
+    Store.dispatch(ensureSegmentIndexIsLoadedAction());
   }
 
   componentDidUpdate(prevProps: Props) {

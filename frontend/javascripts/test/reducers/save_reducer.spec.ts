@@ -23,8 +23,8 @@ const initialState: { save: SaveState; activeUser: APIUser; tracing: {} } = {
   save: {
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     queue: {
       skeleton: [],

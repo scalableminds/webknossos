@@ -9,7 +9,7 @@ export type PushSaveQueueTransaction = ReturnType<typeof pushSaveQueueTransactio
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
-type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
+export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
@@ -64,11 +64,16 @@ export const discardSaveQueuesAction = () =>
     type: "DISCARD_SAVE_QUEUES",
   } as const);
 
-export const setSaveBusyAction = (isBusy: boolean, saveQueueType: SaveQueueType) =>
+export const setSaveBusyAction = (
+  isBusy: boolean,
+  saveQueueType: SaveQueueType,
+  tracingId: string,
+) =>
   ({
     type: "SET_SAVE_BUSY",
     isBusy,
     saveQueueType,
+    tracingId,
   } as const);
 
 export const setLastSaveTimestampAction = (saveQueueType: SaveQueueType, tracingId: string) =>

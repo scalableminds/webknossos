@@ -435,7 +435,11 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = Record<SaveQueueType, boolean>;
+export type IsBusyInfo = {
+  readonly skeleton: boolean;
+  readonly volumes: Record<string, boolean>;
+  readonly mappings: Record<string, boolean>;
+};
 export type SaveState = {
   readonly isBusyInfo: IsBusyInfo;
   readonly queue: {

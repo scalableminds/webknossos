@@ -1,12 +1,14 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
+import type { OxalisState, SaveState, SaveQueueEntry, IsBusyInfo } from "oxalis/store";
 import type {
   PushSaveQueueTransaction,
   SetVersionNumberAction,
   ShiftSaveQueueAction,
   SetLastSaveTimestampAction,
+  SetSaveBusyAction,
+  SaveQueueType,
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/annotation_accessor";
@@ -20,20 +22,32 @@ import {
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
-function updateQueueObj(
-  action: PushSaveQueueTransaction | ShiftSaveQueueAction,
-  oldQueueObj: SaveState["queue"],
-  newQueue: any,
-): SaveState["queue"] {
+type TracingDict<V> = {
+  skeleton: V;
+  volumes: Record<string, V>;
+  mappings: Record<string, V>;
+};
+
+function updateTracingDict<V>(
+  action: { saveQueueType: SaveQueueType; tracingId: string },
+  oldDict: TracingDict<V>,
+  newValue: V,
+): TracingDict<V> {
   if (action.saveQueueType === "skeleton") {
-    return { ...oldQueueObj, skeleton: newQueue };
+    return { ...oldDict, skeleton: newValue };
   } else if (action.saveQueueType === "volume") {
-    return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
+    return {
+      ...oldDict,
+      volumes: { ...oldDict.volumes, [action.tracingId]: newValue },
+    };
   } else if (action.saveQueueType === "mapping") {
-    return { ...oldQueueObj, mappings: { ...oldQueueObj.mappings, [action.tracingId]: newQueue } };
+    return {
+      ...oldDict,
+      mappings: { ...oldDict.mappings, [action.tracingId]: newValue },
+    };
   }
 
-  return oldQueueObj;
+  return oldDict;
 }
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
@@ -146,7 +160,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             info: actionLogInfo,
           })),
         );
-        const newQueueObj = updateQueueObj(action, state.save.queue, newQueue);
+        const newQueueObj = updateTracingDict(action, state.save.queue, newQueue);
         return update(state, {
           save: {
             queue: {
@@ -176,7 +190,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         );
 
         const remainingQueue = queue.slice(count);
-        const newQueueObj = updateQueueObj(action, state.save.queue, remainingQueue);
+        const newQueueObj = updateTracingDict(action, state.save.queue, remainingQueue);
         const remainingQueueLength = getTotalSaveQueueLength(newQueueObj);
         const resetCounter = remainingQueueLength === 0;
         return update(state, {
@@ -224,12 +238,11 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_SAVE_BUSY": {
+      const newIsBusyInfo = updateTracingDict(action, state.save.isBusyInfo, action.isBusy);
       return update(state, {
         save: {
           isBusyInfo: {
-            [action.saveQueueType]: {
-              $set: action.isBusy,
-            },
+            $set: newIsBusyInfo,
           },
         },
       });

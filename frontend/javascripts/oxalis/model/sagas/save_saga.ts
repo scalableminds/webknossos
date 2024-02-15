@@ -86,7 +86,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield* put(setSaveBusyAction(true, saveQueueType));
+    yield* put(setSaveBusyAction(true, saveQueueType, tracingId));
 
     // Send (parts) of the save queue to the server.
     // There are two main cases:
@@ -120,7 +120,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       }
     }
 
-    yield* put(setSaveBusyAction(false, saveQueueType));
+    yield* put(setSaveBusyAction(false, saveQueueType, tracingId));
   }
 }
 export function sendRequestWithToken(

@@ -71,10 +71,10 @@ object EdgeWithPositions {
 }
 
 class EditableMappingService @Inject()(
-                                        val tracingDataStore: TracingDataStore,
-                                        val adHocMeshServiceHolder: AdHocMeshServiceHolder,
-                                        val remoteDatastoreClient: TSRemoteDatastoreClient,
-                                        val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val tracingDataStore: TracingDataStore,
+    val adHocMeshServiceHolder: AdHocMeshServiceHolder,
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper

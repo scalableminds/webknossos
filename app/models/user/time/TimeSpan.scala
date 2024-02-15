@@ -184,6 +184,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           "id" -> tuple._1,
           "firstName" -> tuple._2,
           "lastName" -> tuple._3,
+          "email" -> tuple._4
         ),
         "timeMillis" -> tuple._5
       )

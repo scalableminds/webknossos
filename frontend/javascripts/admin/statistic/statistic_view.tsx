@@ -1,5 +1,5 @@
 import { Chart } from "react-google-charts";
-import { Row, Col, Spin, Table, Card } from "antd";
+import { Row, Col, Spin, Card } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
@@ -7,8 +7,6 @@ import Request from "libs/request";
 import * as Utils from "libs/utils";
 import { APIProject, APITeam, APIUser } from "types/api_flow_types";
 import { getProjects, getTeams } from "admin/admin_rest_api";
-
-const { Column } = Table;
 
 type TimeEntry = {
   start: string;

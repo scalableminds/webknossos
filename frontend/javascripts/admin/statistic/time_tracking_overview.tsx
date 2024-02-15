@@ -1,20 +1,25 @@
 import { getProjects, getTeams } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, DatePicker } from "antd";
+import { Card, Select, Spin, Table, DatePicker, Button } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import React, { useState } from "react";
-import * as Utils from "libs/utils";
 import dayjs from "dayjs";
+import { DownloadOutlined } from "@ant-design/icons";
+import saveAs from "file-saver";
+import { formatMilliseconds } from "libs/format_utils";
 
 const { Column } = Table;
 const { RangePicker } = DatePicker;
+
+const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTracked"];
 
 type TimeEntry = {
   user: {
     id: string;
     firstName: string;
     lastName: string;
+    email: string;
   };
   timeMillis: number;
 };
@@ -31,9 +36,7 @@ function TimeTrackingOverview() {
     )}&projectIds=${projectIds.join(",")}`;
   };
 
-  // TODO fix dates
   const currentTime = dayjs();
-  //const [filteredTimeRange, setFilteredTimeRange] = useState();
   const [startDate, setStartDate] = useState(currentTime.subtract(7, "d"));
   const [endDate, setEndeDate] = useState(currentTime);
   // TODO make sure this is resolved
@@ -58,22 +61,48 @@ function TimeTrackingOverview() {
 
   const filteredTimeEntries = useFetch(
     async () => {
-      if (selectedTeams.length > 0 && selectedProjects.length > 0) {
-        const timeEntriesURL = getTimeEntryUrl(
-          startDate.valueOf(),
-          endDate.valueOf(),
-          selectedTeams,
-          selectedProjects,
-        );
-        const filteredEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
-        return filteredEntries;
-      }
+      const filteredTeams =
+        selectedTeams.length > 0 ? selectedTeams : allTeams.map((team) => team.id);
+      const filteredProjects =
+        selectedProjects.length > 0 ? selectedProjects : allProjects.map((project) => project.id);
+      if (filteredTeams.length < 1 || filteredProjects.length < 1) return [];
+      const timeEntriesURL = getTimeEntryUrl(
+        startDate.valueOf(),
+        endDate.valueOf(),
+        filteredTeams,
+        filteredProjects,
+      );
+      const filteredEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
+      return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, selectedProjects, startDate, endDate],
-  ); // TODO dependencies are multi selection
+    [selectedTeams, selectedProjects, startDate, endDate, allTimeEntries],
+  );
   const filterStyle = { marginInline: 10 };
   const selectWidth = 200;
+
+  const exportToCSV = () => {
+    if (filteredTimeEntries.length === 0) {
+      return;
+    }
+    const timeEntriesAsString = filteredTimeEntries
+      .map(
+        (row) =>
+          [row.user.id, row.user.firstName, row.user.lastName, formatMilliseconds(row.timeMillis)]
+            .map(String) // convert every value to String
+            .map((v) => v.replaceAll('"', '""')) // escape double quotes
+            .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+            .join(","), // comma-separated
+      )
+      .join("\n"); // rows starting on new lines
+    const csv = [TIMETRACKING_CSV_HEADER, timeEntriesAsString].join("\n");
+    const filename = "timetracking-export.csv";
+    const blob = new Blob([csv], {
+      type: "text/plain;charset=utf-8",
+    });
+    saveAs(blob, filename);
+  };
+
   return (
     <Card
       title={"Annotation Time per User"}
@@ -126,7 +155,9 @@ function TimeTrackingOverview() {
           setEndeDate(dates[1]);
         }}
       />
-      <Spin spinning={false} size="large">
+      <Spin spinning={allTimeEntries.length < 1} size="large">
+        {" "}
+        {/* fix me */}
         <Table
           dataSource={filteredTimeEntries}
           rowKey={(entry) => entry.user.id}
@@ -141,22 +172,27 @@ function TimeTrackingOverview() {
             dataIndex="user"
             key="user"
             render={(user) => `${user.lastName}, ${user.firstName} (${user.email})`}
+            sorter={true}
           />
           <Column
             title="Time"
             dataIndex="timeMillis"
             key="tracingTimes"
-            render={(tracingTimeInMs) => {
-              const minutes = tracingTimeInMs / 1000 / 60;
-              const hours = Utils.zeroPad(Math.floor(minutes / 60));
-              const remainingMinutes = Utils.zeroPad(Math.floor(minutes % 60));
-              return `${hours}h ${remainingMinutes}m`;
-            }}
+            render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}
+            sorter={true}
           />
           <Column title="Details" key="details" />{" "}
         </Table>
         {/* render word "details" and link to https://webknossos.org/reports/timetracking (vorausgefüllt)*/}
       </Spin>
+      <Button
+        type="primary"
+        icon={<DownloadOutlined />}
+        style={{ float: "right" }}
+        onClick={() => exportToCSV()}
+      >
+        Export to CSV
+      </Button>
     </Card>
   );
 }

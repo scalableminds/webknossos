@@ -57,7 +57,7 @@ class DSMeshController @Inject()(
       adHocMeshRequest = AdHocMeshRequest(
         Some(dataSource),
         segmentationLayer,
-        Cuboid(VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)), 33, 33, 129),
+        Cuboid(VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)), 100, 100, 129),
         segmentId,
         Vec3Int.ones,
         dataSource.scale,
@@ -69,31 +69,32 @@ class DSMeshController @Inject()(
       // consecutive 3D points (i.e., nine floats) form a triangle.
       // There are no shared vertices between triangles.
       (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      numFaces = vertices.length / (3 * 3) // a face has three vertices, a vertex has three floats.
-      _ = logger.info(s"returned ${vertices.length} floats describing the vertices of $numFaces faces.")
-      constantStlHeader = Array.fill[Byte](80)(0)
-      outputNumBytes = 80 + 4 + numFaces * 50
-      output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
-      unused = Array.fill[Byte](2)(0)
-      _ = output.put(constantStlHeader)
-      _ = output.putInt(numFaces)
-      _ = for (faceIndex <- 0 until numFaces) {
-        val v1 = Vec3Float(vertices(faceIndex), vertices(faceIndex + 1), vertices(faceIndex + 2))
-        val v2 = Vec3Float(vertices(faceIndex + 3), vertices(faceIndex + 4), vertices(faceIndex + 5))
-        val v3 = Vec3Float(vertices(faceIndex + 6), vertices(faceIndex + 7), vertices(faceIndex + 8))
-        val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
-        output.putFloat(norm.x)
-        output.putFloat(norm.y)
-        output.putFloat(norm.z)
-        for (vertexIndex <- 0 until 3) {
-          for (dimIndex <- 0 until 3) {
-            output.putFloat(vertices(9 * faceIndex + 3 * vertexIndex + dimIndex))
-          }
-        }
-        output.put(unused)
-      }
-      array = byteBufferToArray(output, outputNumBytes)
+      encoded = adHocMeshToStl(vertices)
+      array = combineEncodedChunksToStl(Seq(encoded))
     } yield Ok(array)
+  }
+
+  private def adHocMeshToStl(vertexBuffer: Array[Float]): Array[Byte] = {
+    val numFaces = vertexBuffer.length / (3 * 3) // a face has three vertices, a vertex has three floats.
+    val outputNumBytes = numFaces * 50
+    val output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
+    val unused = Array.fill[Byte](2)(0)
+    for (faceIndex <- 0 until numFaces) {
+      val v1 = Vec3Float(vertexBuffer(faceIndex), vertexBuffer(faceIndex + 1), vertexBuffer(faceIndex + 2))
+      val v2 = Vec3Float(vertexBuffer(faceIndex + 3), vertexBuffer(faceIndex + 4), vertexBuffer(faceIndex + 5))
+      val v3 = Vec3Float(vertexBuffer(faceIndex + 6), vertexBuffer(faceIndex + 7), vertexBuffer(faceIndex + 8))
+      val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
+      output.putFloat(norm.x)
+      output.putFloat(norm.y)
+      output.putFloat(norm.z)
+      for (vertexIndex <- 0 until 3) {
+        for (dimIndex <- 0 until 3) {
+          output.putFloat(vertexBuffer(9 * faceIndex + 3 * vertexIndex + dimIndex))
+        }
+      }
+      output.put(unused)
+    }
+    byteBufferToArray(output, outputNumBytes)
   }
 
   def testStl: Action[AnyContent] = Action.async { implicit request =>

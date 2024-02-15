@@ -69,8 +69,8 @@ class DSMeshController @Inject()(
       // consecutive 3D points (i.e., nine floats) form a triangle.
       // There are no shared vertices between triangles.
       (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      _ = logger.info(s"returned ${vertices.length} vertices.")
-      numFaces = vertices.length / (3 * 3 * 4) // a face has three vertices, a vertex has three four-byte floats.
+      numFaces = vertices.length / (3 * 3) // a face has three vertices, a vertex has three floats.
+      _ = logger.info(s"returned ${vertices.length} floats describing the vertices of $numFaces faces.")
       constantStlHeader = Array.fill[Byte](80)(0)
       outputNumBytes = 80 + 4 + numFaces * 50
       output = ByteBuffer.allocate(outputNumBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -87,7 +87,7 @@ class DSMeshController @Inject()(
         output.putFloat(norm.z)
         for (vertexIndex <- 0 until 3) {
           for (dimIndex <- 0 until 3) {
-            output.putFloat(vertices(faceIndex + vertexIndex + dimIndex))
+            output.putFloat(vertices(9 * faceIndex + 3 * vertexIndex + dimIndex))
           }
         }
         output.put(unused)

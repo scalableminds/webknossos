@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed a bug where the annotation list in the dashboard would attempt to display deleted annotations, and then fail. [#7628](https://github.com/scalableminds/webknossos/pull/7628)
 
 ### Removed
 

@@ -74,8 +74,6 @@ Any other WEBKNOSSOS feature, e.g., annotations, and access rights, will be stor
 
 Note that data streaming may incur costs and count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. 
-Then WEBKNOSSOS can easily stream the data.
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the WEBKNOSSOS [Python library](https://docs.webknossos.org/webknossos-py). You can create, manage and upload datasets with the Python lib. 

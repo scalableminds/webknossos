@@ -360,7 +360,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                LEFT JOIN webknossos.annotation_layers as al
                          ON al._annotation = a._id
       WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
-      GROUP BY a._id, u.firstname, u.lastname, d.name, o.name
+      GROUP BY
+        a._id, a.name, a.description, a._user, a.othersmayedit, a.modified, a.tags, a.state, a.typ, a.visibility, a.tracingtime,
+        u.firstname, u.lastname,
+        d.name,
+        o.name
         ORDER BY a._id DESC LIMIT $limit OFFSET ${pageNumber * limit}
          """
       rows <- run(

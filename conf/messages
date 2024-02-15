@@ -236,6 +236,7 @@ annotation.volumeBucketsNotEmpty=Cannot make mapping editable in an annotation w
 annotation.deleteLayer.explorationalsOnly=Could not delete a layer because it is only allowed for explorational annotations.
 annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only layer in this annotation.
 annotation.layer.notFound=Layer could not be found.
+annotation.getNewestVersion.failed=Could not get the newest version information for this annotation layer
 
 mesh.notFound=Mesh could not be found
 mesh.write.failed=Failed to convert mesh info to json
@@ -291,11 +292,12 @@ script.name.invalid.characters=Script name is invalid. Please use only letters, 
 serialization.failed=Failed to serialize data.
 
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
-initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
+organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
+job.couldNotRunComputeSegmentIndexFile = Failed to start segment index computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.couldNotRunNeuronInferral = Failed to start neuron inferral job.
 job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
@@ -310,6 +312,7 @@ job.edgeLengthExceeded = An edge length of the selected bounding box is too larg
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
+job.segmentIndexFile.notAllowed.organization = Calculating segment index files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume annotations is only allowed for datasets of your own organization.
 job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
@@ -345,3 +348,5 @@ segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOS
 segmentAnything.noUri=No Uri for SAM server configured.
 segmentAnything.getData.failed=Failed to get image data to send to SAM server.
 segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.
+
+shortLink.notFound=No shortlink with this key could be found

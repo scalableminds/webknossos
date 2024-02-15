@@ -25,7 +25,7 @@ The most common buttons are:
 - `Menu`: 
   - `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
   - `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
-  - `Share`: Create a custumizable, shareable link to your dataset containing the current position, rotation, zoom level etc with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](./sharing.md).
+  - `Share`: Create a customizable, shareable link to your dataset containing the current position, rotation, zoom level etc. with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](./sharing.md).
   - `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
   - `Screenshot`: Takes a screenshot of current datasets/annotation from each of the three viewports and downloads them as PNG files.
   - `Create Animation`: Creates an eye-catching animation of the dataset as a video clip. [Read more about animations](./animations.md).
@@ -51,7 +51,7 @@ The toolbar further features all available navigation and annotation tools for q
 - `Erase (Trace/Brush)`: Removes voxels from a volume annotation by drawing over the voxels you would like to erase.
 - `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). Used to fill holes in a volume annotation or to relabel a segment with a different id.
 - `Segment Picker`: Select the volume annotation ID of a segment to make it the active cell id to continue labeling with that ID/color.
-- `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](./tracing_ui#Right-Hand Side Panel) below.
+- `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](./tracing_ui.md#right-hand-side-panel) below.
 - `Measurement Tool`: Measure distances between structures or the surface areas of segments by placing waypoints with the mouse.
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
@@ -70,7 +70,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 #### Histogram & General Layer Properties
 
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
-  Above the the histogram, there is a three-dots context menu with more options to further adjust the histogram or otherwise interact with the layer:
+  Above the histogram, there is a three-dots context menu with more options to further adjust the histogram or otherwise interact with the layer:
 
       - `Edit histogram range`: Manipulate the min/max value of the histogram range. Clips values above/below these limits.
       - `Clip histogram`: Automatically adjust the histogram for best contrast and brightness. Contrast estimation is based on the data currently available in your viewport. This is especially useful for light microscopy datasets saved as `float` values.
@@ -78,8 +78,8 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
       - `Jump to data`: Navigates the WEBKNOSSOS camera to the center position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually.
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
-- `Gamma Correction`: Increase / Decrease the lumincance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
-- `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
+- `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
+- `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
   Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
 ![The Histogram overview](images/histogram.jpeg)

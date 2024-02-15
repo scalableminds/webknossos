@@ -21,7 +21,7 @@ case class DataServiceDataRequest(
     dataLayerMapping: Option[String],
     cuboid: Cuboid,
     settings: DataServiceRequestSettings,
-    subsamplingStrides: Vec3Int = Vec3Int(1, 1, 1) // if > 1, skip voxels when loading (used for adhoc mesh generation)
+    subsamplingStrides: Vec3Int = Vec3Int.ones // if > 1, skip voxels when loading (used for adhoc mesh generation)
 )
 
 case class DataReadInstruction(

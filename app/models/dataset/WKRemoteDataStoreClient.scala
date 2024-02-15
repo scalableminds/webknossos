@@ -25,7 +25,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Thumbnail called for: $organizationName/${dataset.name}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
       .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
@@ -50,22 +50,22 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/readData")
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
-  def findPositionWithData(organizationName: String, dataSet: Dataset, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(organizationName: String, dataset: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/findData")
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
   def fetchStorageReport(organizationName: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationName)}")
-      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryStringOptional("dataSetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]

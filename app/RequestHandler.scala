@@ -1,4 +1,4 @@
-import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.mvc.{CspHeaders, ExtendedController}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.{Assets, SitemapController, WkorgProxyController}
 
@@ -8,7 +8,10 @@ import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHan
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
-import utils.WkConf
+import play.filters.csp.CSPConfig
+import utils.{ApiVersioning, WkConf}
+
+import scala.concurrent.ExecutionContext
 
 class RequestHandler @Inject()(webCommands: WebCommands,
                                optionalDevContext: OptionalDevContext,
@@ -17,32 +20,35 @@ class RequestHandler @Inject()(webCommands: WebCommands,
                                httpConfiguration: HttpConfiguration,
                                wkorgProxyController: WkorgProxyController,
                                filters: HttpFilters,
+                               val cspConfig: CSPConfig,
                                conf: WkConf,
                                assets: Assets,
-                               sitemapController: SitemapController)
+                               sitemapController: SitemapController)(implicit ec: ExecutionContext)
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
-      router,
+      () => router,
       errorHandler,
       httpConfiguration,
       filters
     )
     with InjectedController
     with ExtendedController
+    with CspHeaders
+    with ApiVersioning
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
-    if (apiVersionIsTooNew(request)) {
+    if (isInvalidApiVersion(request)) {
       Some(Action {
-        JsonNotFound(
-          f"This WEBKNOSSOS instance does not yet support this API version. The requested API version is higher than the current API version $CURRENT_API_VERSION.")
+        JsonNotFound(invalidApiVersionMessage(request))
       })
-    } else if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger|/\\.well-known/).*$")) {
+    } else if (request.uri.matches("^(/api/|/data/|/tracings/|/\\.well-known/).*$")) {
       super.routeRequest(request)
+    } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
+      Some(assetWithCsp(request))
     } else if (request.uri.matches("^(/assets/).*$")) {
-      val path = request.path.replaceFirst("^(/assets/)", "")
-      Some(assets.at(path = "/public", file = path))
+      Some(asset(request))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
@@ -51,13 +57,13 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       Some(Action { NotFound })
     } else Some(wkorgProxyController.proxyPageOrMainView)
 
-  private def CURRENT_API_VERSION = 5
+  private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>
+    addCspHeader(asset(requestHeader))
+  }
 
-  private def apiVersionIsTooNew(request: RequestHeader): Boolean =
-    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
-      case Some(m) =>
-        val version = m.group(1)
-        version.toInt > CURRENT_API_VERSION
-      case None => false
-    }
+  private def asset(requestHeader: RequestHeader) = {
+    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
+    assets.at(path = "/public", file = path)
+  }
+
 }

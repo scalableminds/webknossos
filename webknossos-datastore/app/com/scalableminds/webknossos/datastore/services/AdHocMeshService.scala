@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.routing.RoundRobinPool
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.routing.RoundRobinPool
+import org.apache.pekko.util.Timeout
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
@@ -31,6 +32,7 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             scale: Vec3Double,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
+                            additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                             findNeighbors: Boolean = true)
 
 case class DataTypeFunctors[T, B](
@@ -172,12 +174,14 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     val subsamplingStrides =
       Vec3Double(request.subsamplingStrides.x, request.subsamplingStrides.y, request.subsamplingStrides.z)
 
-    val dataRequest = DataServiceDataRequest(request.dataSource.orNull,
-                                             request.dataLayer,
-                                             request.mapping,
-                                             cuboid,
-                                             DataServiceRequestSettings.default,
-                                             request.subsamplingStrides)
+    val dataRequest = DataServiceDataRequest(
+      request.dataSource.orNull,
+      request.dataLayer,
+      request.mapping,
+      cuboid,
+      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates),
+      request.subsamplingStrides
+    )
 
     val dataDimensions = Vec3Int(
       math.ceil(cuboid.width / subsamplingStrides.x).toInt,

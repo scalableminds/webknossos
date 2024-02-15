@@ -1,4 +1,4 @@
-import { Input, Tooltip, Popover } from "antd";
+import { Input, Tooltip, Popover, Space } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
@@ -6,7 +6,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Shortcut from "libs/shortcut_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import { mod } from "libs/utils";
-const InputGroup = Input.Group;
+
 type Props<S> = {
   data: Array<S>;
   searchKey: keyof S | ((item: S) => string);
@@ -139,8 +139,7 @@ export default class AdvancedSearchPopover<
             isVisible && (
               <React.Fragment>
                 <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
-                <InputGroup
-                  compact
+                <Space.Compact
                   style={{
                     width: 450,
                   }}
@@ -191,7 +190,7 @@ export default class AdvancedSearchPopover<
                       <DownOutlined />
                     </ButtonComponent>
                   </Tooltip>
-                </InputGroup>
+                </Space.Compact>
               </React.Fragment>
             )
           }

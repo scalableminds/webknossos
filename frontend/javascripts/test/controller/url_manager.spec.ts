@@ -111,7 +111,7 @@ test("UrlManager should build csv url hash and parse it again", (t) => {
   t.deepEqual(UrlManager.parseUrlHash(), urlState);
 });
 
-test.only("UrlManager should build csv url hash with additional coordinates and parse it again", (t) => {
+test("UrlManager should build csv url hash with additional coordinates and parse it again", (t) => {
   const mode = Constants.MODE_ARBITRARY;
   const urlState = {
     position: [0, 0, 0] as Vector3,

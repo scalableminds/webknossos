@@ -51,6 +51,7 @@ import {
   convertToHybridTracing,
   deleteAnnotationLayer,
   updateDatasetDefaultConfiguration,
+  startComputeSegmentIndexFileJob,
 } from "admin/admin_rest_api";
 import {
   getDefaultValueRangeOfLayer,
@@ -145,6 +146,7 @@ type DatasetSettingsProps = {
   controlMode: ControlMode;
   isArbitraryMode: boolean;
   isAdminOrDatasetManager: boolean;
+  isSuperUser: boolean;
 };
 
 type State = {
@@ -331,7 +333,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         >
-          <ScanOutlined />
+          <ScanOutlined className="icon-margin-right" />
           Jump to data
         </div>
       </Tooltip>
@@ -343,7 +345,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <div onClick={() => this.reloadLayerData(layerName)}>
-          <ReloadOutlined />
+          <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
       </Tooltip>
@@ -360,8 +362,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <EditOutlined
             style={{
               cursor: "pointer",
-              color: isInEditMode ? "var(--ant-primary)" : undefined,
+              color: isInEditMode ? "var(--ant-color-primary)" : undefined,
             }}
+            className="icon-margin-right"
           />
           {isInEditMode ? "Stop editing" : "Edit"} histogram range
         </div>
@@ -371,7 +374,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
     <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
-      <i className="fas fa-object-ungroup" />
+      <i className="fas fa-object-ungroup icon-margin-right" />
       Merge this volume annotation with its fallback layer
     </div>
   );
@@ -380,14 +383,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     <Tooltip title="Delete this annotation layer.">
       <i
         onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash"
+        className="fas fa-trash icon-margin-right"
       />
     </Tooltip>
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
     <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
-      <i className="fas fa-trash" />
+      <i className="fas fa-trash icon-margin-right" />
       Delete this annotation layer
     </div>
   );
@@ -438,10 +441,41 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               cursor: "pointer",
               transform: "rotate(90deg)",
             }}
+            className="icon-margin-right"
           />
           Clip histogram
         </div>
       </Tooltip>
+    );
+  };
+
+  getComputeSegmentIndexFileButton = (layerName: string, isSegmentation: boolean) => {
+    if (!(this.props.isSuperUser && isSegmentation)) return <></>;
+
+    const triggerComputeSegmentIndexFileJob = async () => {
+      await startComputeSegmentIndexFileJob(
+        this.props.dataset.owningOrganization,
+        this.props.dataset.name,
+        layerName,
+      );
+      Toast.info(
+        <React.Fragment>
+          Started a job for computating a segment index file.
+          <br />
+          See{" "}
+          <a target="_blank" href="/jobs" rel="noopener noreferrer">
+            Processing Jobs
+          </a>{" "}
+          for an overview of running jobs.
+        </React.Fragment>,
+      );
+    };
+
+    return (
+      <div onClick={triggerComputeSegmentIndexFileJob}>
+        <i className="fas fa-database icon-margin-right" />
+        Compute a Segment Index file
+      </div>
     );
   };
 
@@ -592,6 +626,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
+      {
+        label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
+        key: "computeSegmentIndexFileButton",
+      },
     ];
     const items = possibleItems.filter((el) => el);
     return (
@@ -702,7 +740,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
               placement="left"
             >
-              <InfoCircleOutlined />
+              <InfoCircleOutlined className="icon-margin-right" />
             </Tooltip>
             {canBeMadeEditable ? (
               <Tooltip
@@ -735,7 +773,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <i
-                  className="fas fa-paint-brush"
+                  className="fas fa-paint-brush icon-margin-right"
                   style={{
                     opacity: 0.7,
                   }}
@@ -751,7 +789,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               >
                 <WarningOutlined
                   style={{
-                    color: "var(--ant-warning)",
+                    color: "var(--ant-color-warning)",
                   }}
                 />
               </Tooltip>
@@ -835,8 +873,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   margin: 0,
                   transition: "transform 0.5s ease 0s",
                   color: layerConfiguration.isInverted
-                    ? "var(--ant-primary)"
-                    : "var(--ant-text-secondary)",
+                    ? "var(--ant-color-primary)"
+                    : "var(--ant-color-text-secondary)",
                 }}
               />
             </div>
@@ -978,7 +1016,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.props.onSetPosition(foundPosition);
     const zoomValue = this.props.onZoomToResolution(layerName, foundResolution);
     Toast.success(
-      `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
+      `Jumping to position ${foundPosition
+        .map((el) => Math.floor(el))
+        .join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
   };
 
@@ -1439,6 +1479,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
+  isSuperUser: state.activeUser?.isSuperUser || false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -68,7 +68,7 @@ The underlying data type limits the maximum number of IDs:
 
 
 ### Dataset Metadata
-For each datasets, we stored metadata in a `datasource-properties.json` file.
+For each dataset, we stored metadata in a `datasource-properties.json` file.
 See below for the [full specification](#dataset-metadata-specification).
 This is an example:
 
@@ -152,7 +152,7 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
 
-#### NML Files
+### NML Files
 When working with skeleton annotation data, WEBKNOSSOS uses the NML format.
 It can be [downloaded](./export.md#data-export-and-interoperability) from and uploaded to WEBKNOSSOS, and used for processing in your scripts.
 NML is an XML-based, human-readable file format.

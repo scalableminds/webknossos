@@ -38,6 +38,7 @@ import {
   finishedLoadingMeshAction,
   startedLoadingMeshAction,
   TriggerMeshesDownloadAction,
+  updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -62,6 +63,7 @@ import window from "libs/window";
 import {
   getActiveSegmentationTracing,
   getEditableMappingForVolumeTracingId,
+  getMeshInfoForSegment,
   getTracingForSegmentationLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
@@ -70,10 +72,16 @@ import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { RemoveSegmentAction, UpdateSegmentAction } from "../actions/volumetracing_actions";
+import {
+  BatchUpdateGroupsAndSegmentsAction,
+  RemoveSegmentAction,
+  UpdateSegmentAction,
+} from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
+import { FlycamAction } from "../actions/flycam_actions";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -94,9 +102,9 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
  * Ad Hoc Meshes
  *
  */
-// Maps from layerName and segmentId to a ThreeDMap that stores for each chunk
+// Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
-const adhocMeshesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
+const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
 function marchingCubeSizeInMag1(): Vector3 {
   return (window as any).__marchingCubeSizeInMag1 != null
     ? (window as any).__marchingCubeSizeInMag1
@@ -111,9 +119,17 @@ export function isMeshSTL(buffer: ArrayBuffer): boolean {
   return isMesh;
 }
 
-function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
-  adhocMeshesMapByLayer[layerName] = adhocMeshesMapByLayer[layerName] || new Map();
-  const meshesMap = adhocMeshesMapByLayer[layerName];
+function getOrAddMapForSegment(
+  layerName: string,
+  segmentId: number,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
+): ThreeDMap<boolean> {
+  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+  const keys = [additionalCoordKey, layerName];
+  // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
+  _.set(adhocMeshesMapByLayer, keys, _.get(adhocMeshesMapByLayer, keys, new Map()));
+  const meshesMap = adhocMeshesMapByLayer[additionalCoordKey][layerName];
   const maybeMap = meshesMap.get(segmentId);
 
   if (maybeMap == null) {
@@ -125,12 +141,19 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
   return maybeMap;
 }
 
-function removeMapForSegment(layerName: string, segmentId: number): void {
-  if (adhocMeshesMapByLayer[layerName] == null) {
+function removeMapForSegment(
+  layerName: string,
+  segmentId: number,
+  additionalCoordinateKey: string,
+): void {
+  if (
+    adhocMeshesMapByLayer[additionalCoordinateKey] == null ||
+    adhocMeshesMapByLayer[additionalCoordinateKey][layerName] == null
+  ) {
     return;
   }
 
-  adhocMeshesMapByLayer[layerName].delete(segmentId);
+  adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -223,7 +246,7 @@ function* getInfoForMeshLoading(
 
 function* loadAdHocMesh(
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   segmentId: number,
   removeExistingMesh: boolean = false,
   layerName?: string | null | undefined,
@@ -234,13 +257,6 @@ function* loadAdHocMesh(
 
   if (segmentId === 0 || layer == null) {
     return;
-  }
-
-  if (_.size(layer.cube.additionalAxes) > 0) {
-    // Also see https://github.com/scalableminds/webknossos/issues/7229
-    Toast.warning(
-      "The current segmentation layer has more than 3 dimensions. Meshes are not properly supported in this case.",
-    );
   }
 
   yield* call([Model, Model.ensureSavedState]);
@@ -273,13 +289,27 @@ function* loadAdHocMesh(
         action.layerName === layer.name,
     ),
   });
+  removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
+}
+
+function removeMeshWithoutVoxels(
+  segmentId: number,
+  layerName: string,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+) {
+  // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
+  // remove it from the store's state aswell.
+  const { segmentMeshController } = getSceneController();
+  if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
+    Store.dispatch(removeMeshAction(layerName, segmentId));
+  }
 }
 
 function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
   resolutionInfo: ResolutionInfo,
@@ -330,9 +360,15 @@ function* loadFullAdHocMesh(
         cubeSize,
         mag,
         clippedPosition,
+        additionalCoordinates,
       )
     : [clippedPosition];
 
+  if (positionsToRequest.length === 0) {
+    //if no positions are requested, remove the mesh,
+    //so that the old one isn't displayed anymore
+    yield* put(removeMeshAction(layer.name, segmentId));
+  }
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
     if (currentPosition == null) {
@@ -371,6 +407,7 @@ function* getChunkPositionsFromSegmentStats(
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ) {
   const unscaledPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -379,6 +416,7 @@ function* getChunkPositionsFromSegmentStats(
     segmentId,
     cubeSize,
     mag,
+    additionalCoordinates,
   );
   const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(positions, clippedPosition) as Vector3[];
@@ -400,7 +438,8 @@ function* maybeLoadMeshChunk(
   useDataStore: boolean,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
-  const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
 
   if (threeDMap.get(clippedPosition)) {
     return [];
@@ -451,6 +490,7 @@ function* maybeLoadMeshChunk(
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
           subsamplingStrides,
@@ -466,12 +506,17 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
-      segmentMeshController.addMeshFromVertices(vertices, segmentId, layer.name);
+      segmentMeshController.addMeshFromVertices(
+        vertices,
+        segmentId,
+        layer.name,
+        additionalCoordinates,
+      );
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
       ErrorHandling.notify(exception as Error);
-      console.warn("Retrying mesh generation...");
+      console.warn("Retrying mesh generation due to", exception);
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
   }
@@ -494,31 +539,49 @@ function* refreshMeshes(): Saga<void> {
   // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
+
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
   if (!segmentationLayer) {
     return;
   }
 
-  adhocMeshesMapByLayer[segmentationLayer.name] =
-    adhocMeshesMapByLayer[segmentationLayer.name] || new Map();
-  const meshesMapForLayer = adhocMeshesMapByLayer[segmentationLayer.name];
+  adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name] =
+    adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name] || new Map();
+  const meshesMapForLayer = adhocMeshesMapByLayer[additionalCoordKey][segmentationLayer.name];
 
   for (const [segmentId, threeDMap] of Array.from(meshesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(segmentId)) {
       continue;
     }
 
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, segmentationLayer.name);
+    yield* call(
+      _refreshMeshWithMap,
+      segmentId,
+      threeDMap,
+      segmentationLayer.name,
+      additionalCoordinates,
+    );
   }
 }
 
 function* refreshMesh(action: RefreshMeshAction): Saga<void> {
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+
   const { segmentId, layerName } = action;
 
-  const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[segmentId],
+  const meshInfo = yield* select((state) =>
+    getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
   );
+
+  if (meshInfo == null) {
+    throw new Error(
+      `Mesh refreshing failed due to lack of mesh info for segment ${segmentId} in store.`,
+    );
+  }
 
   if (meshInfo.isPrecomputed) {
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
@@ -532,9 +595,12 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       ),
     );
   } else {
-    const threeDMap = adhocMeshesMapByLayer[action.layerName].get(segmentId);
-    if (threeDMap == null) return;
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName);
+    if (adhocMeshesMapByLayer[additionalCoordKey] == null) return;
+    const threeDMap = adhocMeshesMapByLayer[additionalCoordKey][action.layerName].get(segmentId);
+    if (threeDMap == null) {
+      return;
+    }
+    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
   }
 }
 
@@ -542,10 +608,16 @@ function* _refreshMeshWithMap(
   segmentId: number,
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ): Saga<void> {
-  const meshInfo = yield* select(
-    (state) => state.localSegmentationData[layerName].meshes[segmentId],
+  const meshInfo = yield* select((state) =>
+    getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
   );
+  if (meshInfo == null) {
+    throw new Error(
+      `Mesh refreshing failed due to lack of mesh info for segment ${segmentId} in store.`,
+    );
+  }
   yield* call(
     [ErrorHandling, ErrorHandling.assert],
     !meshInfo.isPrecomputed,
@@ -559,22 +631,18 @@ function* _refreshMeshWithMap(
     return;
   }
 
-  yield* put(startedLoadingMeshAction(layerName, segmentId));
   // Remove mesh from cache.
   yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
   // The mesh should only be removed once after re-fetching the mesh first position.
   let shouldBeRemoved = true;
 
-  // Meshing for N-D segmentations is not yet supported.
-  // See https://github.com/scalableminds/webknossos/issues/7229
-  const seedAdditionalCoordinates = undefined;
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the mesh is reloaded.
     yield* call(
       loadAdHocMesh,
       position,
-      seedAdditionalCoordinates,
+      additionalCoordinates,
       segmentId,
       shouldBeRemoved,
       layerName,
@@ -585,8 +653,6 @@ function* _refreshMeshWithMap(
     );
     shouldBeRemoved = false;
   }
-
-  yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
 
 /*
@@ -683,7 +749,7 @@ type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefine
 function* loadPrecomputedMeshForSegmentId(
   id: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
@@ -693,6 +759,7 @@ function* loadPrecomputedMeshForSegmentId(
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
   const availableMeshFiles = yield* call(
     dispatchMaybeFetchMeshFilesAsync,
@@ -741,6 +808,7 @@ function* loadPrecomputedMeshForSegmentId(
     availableChunksMap,
     loadingOrder,
     scale,
+    additionalCoordinates,
   );
 
   try {
@@ -848,6 +916,7 @@ function _getLoadChunksTasks(
   availableChunksMap: ChunksMap,
   loadingOrder: number[],
   scale: Vector3 | null,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
@@ -932,6 +1001,7 @@ function _getLoadChunksTasks(
                     scale,
                     lod,
                     layerName,
+                    additionalCoordinates,
                   );
                 }
 
@@ -977,6 +1047,7 @@ function _getLoadChunksTasks(
                   null,
                   lod,
                   layerName,
+                  additionalCoordinates,
                 );
               },
           );
@@ -1004,7 +1075,12 @@ function sortByDistanceTo(
  */
 function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const geometry = segmentMeshController.getMeshGeometryInBestLOD(segmentId, layerName);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const geometry = segmentMeshController.getMeshGeometryInBestLOD(
+    segmentId,
+    layerName,
+    additionalCoordinates,
+  );
 
   if (geometry == null) {
     const errorMessage = messages["tracing.not_mesh_available_to_download"];
@@ -1029,11 +1105,13 @@ function* downloadMeshCellsAsZIP(
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
   const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
       const geometry = segmentMeshController.getMeshGeometryInBestLOD(
         element.segmentId,
         element.layerName,
+        additionalCoordinates,
       );
 
       if (geometry == null) {
@@ -1076,37 +1154,111 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  // The dispatched action will make sure that the mesh entry is removed from the
-  // store **and** from the scene. Otherwise, the store will still contain a reference
-  // to the mesh even though it's not in the scene, anymore.
-  yield* put(removeMeshAction(action.layerName, action.segmentId));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const { layerName, segmentId } = action;
+  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
+    // The dispatched action will make sure that the mesh entry is removed from the
+    // store **and** from the scene. Otherwise, the store will still contain a reference
+    // to the mesh even though it's not in the scene, anymore.
+    yield* put(removeMeshAction(action.layerName, action.segmentId));
+  }
 }
 
-function removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): void {
+function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const { layerName } = action;
   const segmentId = action.segmentId;
 
   if (removeFromScene) {
     getSceneController().segmentMeshController.removeMeshById(segmentId, layerName);
   }
-
-  removeMapForSegment(layerName, segmentId);
+  removeMapForSegment(layerName, segmentId, additionalCoordKey);
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
-  const { id, visibility, layerName } = action;
+  const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
-  segmentMeshController.setMeshVisibility(id, visibility, layerName);
+  segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
+}
+
+export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+  // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
+  // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
+  // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
+  yield* take("WK_READY");
+
+  let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const { segmentMeshController } = yield* call(getSceneController);
+
+  while (true) {
+    const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
+    //satisfy TS
+    if (action.type !== "SET_ADDITIONAL_COORDINATES") {
+      throw new Error("Unexpected action type");
+    }
+    const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+
+    if (action.values == null || action.values.length === 0) break;
+    const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);
+
+    for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
+      const currentAdditionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const shouldBeVisible = currentAdditionalCoordKey === newAdditionalCoordKey;
+      const recordsOfLayers = meshRecords[currentAdditionalCoordKey] || {};
+      for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
+        const segmentIds = Object.keys(recordsForOneLayer);
+        for (const segmentIdAsString of segmentIds) {
+          const segmentId = parseInt(segmentIdAsString);
+          yield* put(
+            updateMeshVisibilityAction(
+              layerName,
+              segmentId,
+              shouldBeVisible,
+              additionalCoordinates,
+            ),
+          );
+          yield* call(
+            {
+              context: segmentMeshController,
+              fn: segmentMeshController.setMeshVisibility,
+            },
+            segmentId,
+            shouldBeVisible,
+            layerName,
+            additionalCoordinates,
+          );
+        }
+      }
+    }
+    previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  }
 }
 
 function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (
     "color" in action.segment &&
-    segmentMeshController.hasMesh(action.segmentId, action.layerName)
+    segmentMeshController.hasMesh(action.segmentId, action.layerName, additionalCoordinates)
   ) {
     segmentMeshController.setMeshColor(action.segmentId, action.layerName);
   }
+}
+
+function* handleBatchSegmentColorChange(
+  batchAction: BatchUpdateGroupsAndSegmentsAction,
+): Saga<void> {
+  // Manually unpack batched actions and handle these.
+  // In theory, this could happen automatically. See this issue in the corresponding (rather unmaintained) package: https://github.com/tshelburne/redux-batched-actions/pull/18
+  // However, there seem to be some problems with that approach (e.g., too many updates, infinite recursion) and the discussion there didn't really reach a consensus
+  // about the correct solution.
+  // This is why we stick to the manual unpacking for now.
+  const updateSegmentActions = batchAction.payload
+    .filter((action) => action.type === "UPDATE_SEGMENT")
+    .map((action) => call(handleSegmentColorChange, action as UpdateSegmentAction));
+  yield* all(updateSegmentActions);
 }
 
 export default function* meshSaga(): Saga<void> {
@@ -1129,4 +1281,5 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
+  yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
 }

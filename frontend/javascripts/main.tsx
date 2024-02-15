@@ -10,7 +10,7 @@ import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admi
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
+import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
 import ErrorHandling from "libs/error_handling";
 import Router from "router";
 import Store from "oxalis/throttled_store";
@@ -27,6 +27,9 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+
+import "../stylesheets/main.less";
+import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -48,7 +51,7 @@ const localStoragePersister = createSyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v2",
+  key: "query-cache-v3",
 });
 
 async function loadActiveUser() {
@@ -58,6 +61,7 @@ async function loadActiveUser() {
       showErrorToast: false,
     });
     Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
     persistQueryClient({
       queryClient: reactQueryClient,
@@ -110,7 +114,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         The fix is inspired by:
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
-              <Router />
+              <GlobalThemeProvider>
+                <Router />
+              </GlobalThemeProvider>
             </DndProvider>
           </QueryClientProvider>
         </Provider>

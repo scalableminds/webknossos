@@ -34,12 +34,12 @@ import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Zip from "libs/zipjs_wrapper";
 import {
+  AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
@@ -59,7 +59,7 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean, arg3: boolean) => Promise<void> | void;
+  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -155,7 +155,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
-  formRef = React.createRef<FormInstance>();
+  formRef: React.RefObject<FormInstance<any>> = React.createRef<FormInstance>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -291,8 +291,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         finishDatasetUpload(datastoreUrl, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-
             Toast.success(messages["dataset.upload_success"]);
             let maybeError;
 
@@ -345,7 +343,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               this.props.onUploaded(
                 activeUser.organization,
                 formValues.name,
-                false,
                 this.state.needsConversion,
               );
             }
@@ -450,23 +447,24 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <FolderOutlined
-            style={{
-              fontSize: 50,
-            }}
-          />
-          <br />
-          {isRetrying
-            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-            : `Uploading Dataset ${form.getFieldValue("name")}.`}
-          <br />
-          {isRetrying ? "Retrying to continue the upload …" : null}
-          <br />
-          <Progress // Round to 1 digit after the comma.
-            percent={Math.round(uploadProgress * 1000) / 10}
-            status="active"
-          />
-          {isFinishing ? <Spin style={{ marginTop: 4 }} tip="Processing uploaded files …" /> : null}
+          <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
+            <FolderOutlined
+              style={{
+                fontSize: 50,
+              }}
+            />
+            <br />
+            {isRetrying
+              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+              : `Uploading Dataset ${form.getFieldValue("name")}.`}
+            <br />
+            {isRetrying ? "Retrying to continue the upload …" : null}
+            <br />
+            <Progress // Round to 1 digit after the comma.
+              percent={Math.round(uploadProgress * 1000) / 10}
+              status="active"
+            />
+          </Spin>
         </div>
       </Modal>
     );
@@ -674,54 +672,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItemWithInfo
-                  name="initialTeams"
-                  label="Teams allowed to access this dataset"
-                  info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
-                  hasFeedback
-                >
-                  <TeamSelectionComponent
-                    mode="multiple"
-                    value={this.state.selectedTeams}
-                    allowNonEditableTeams={isDatasetManagerOrAdmin}
-                    onChange={(selectedTeams) => {
-                      if (this.formRef.current == null) return;
-
-                      if (!Array.isArray(selectedTeams)) {
-                        // Making sure that we always have an array even when only one team is selected.
-                        selectedTeams = [selectedTeams];
-                      }
-
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: selectedTeams,
-                      });
-                      this.setState({
-                        selectedTeams,
-                      });
-                    }}
-                    afterFetchedTeams={(fetchedTeams) => {
-                      if (!features().isWkorgInstance) {
-                        return;
-                      }
-
-                      const teamOfOrganization = fetchedTeams.find(
-                        (team) => team.name === team.organization,
-                      );
-
-                      if (teamOfOrganization == null) {
-                        return;
-                      }
-
-                      if (this.formRef.current == null) return;
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: [teamOfOrganization],
-                      });
-                      this.setState({
-                        selectedTeams: [teamOfOrganization],
-                      });
-                    }}
-                  />
-                </FormItemWithInfo>
+                <AllowedTeamsFormItem
+                  isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
+                  selectedTeams={this.state.selectedTeams}
+                  setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
+                  formRef={this.formRef}
+                />
               </Col>
             </Row>
 
@@ -962,6 +918,7 @@ function FileUploadArea({
       )}
     />
   );
+
   return (
     <div>
       <div
@@ -977,7 +934,7 @@ function FileUploadArea({
         <InboxOutlined
           style={{
             fontSize: 48,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
         <p
@@ -1033,13 +990,78 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
-
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      OME-Zarr 0.4+ (NGFF) datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      Neuroglancer Precomputed datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      N5 datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
                   <li>Single-file images (tif, czi, nifti, raw)</li>
 
                   <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html#conversion-with-webknossos-org">
+                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
                   our documentation
                 </a>{" "}
                 to learn more.

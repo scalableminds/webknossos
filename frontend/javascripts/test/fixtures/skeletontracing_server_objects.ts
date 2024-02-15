@@ -164,7 +164,6 @@ export const annotation: APIAnnotation = {
   teams: [],
   typ: "Explorational",
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -172,12 +171,12 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
     allowSave: true,
   },
-  formattedHash: "f043e7",
   annotationLayers: [
     {
       name: "Skeleton",
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",

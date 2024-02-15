@@ -183,12 +183,18 @@ export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
     userBoundingBoxes,
   } as const);
 
-export const updateMeshVisibilityAction = (layerName: string, id: number, visibility: boolean) =>
+export const updateMeshVisibilityAction = (
+  layerName: string,
+  id: number,
+  visibility: boolean,
+  additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
+) =>
   ({
     type: "UPDATE_MESH_VISIBILITY",
     layerName,
     id,
     visibility,
+    additionalCoordinates,
   } as const);
 
 export const maybeFetchMeshFilesAction = (
@@ -281,7 +287,7 @@ export const addAdHocMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
 ) =>
@@ -299,7 +305,7 @@ export const addPrecomputedMeshAction = (
   layerName: string,
   segmentId: number,
   seedPosition: Vector3,
-  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
 ) =>
   ({

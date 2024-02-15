@@ -596,6 +596,10 @@ export function isLayerVisible(
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
 
+export function hasFallbackLayer(layer: APIDataLayer) {
+  return "fallbackLayer" in layer && layer.fallbackLayer != null;
+}
+
 function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
   const nameToIsDisabled: { [name: string]: boolean } = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {

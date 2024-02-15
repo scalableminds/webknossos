@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream
@@ -26,19 +26,19 @@ abstract class ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray]
 
   def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType, chunkShape, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType, chunkShapeOrdered(chunkShape), header.fillValueNumber)
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.
-  def chunkSizeOrdered(chunkSize: Array[Int]): Array[Int] =
-    if (header.order == ArrayOrder.F) chunkSize.reverse else chunkSize
+  def chunkShapeOrdered(chunkShape: Array[Int]): Array[Int] =
+    if (header.order == ArrayOrder.F) chunkShape.reverse else chunkShape
 }
 
 class ByteChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   val ma2DataType: MADataType = MADataType.BYTE
 
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
-    tryo(MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), bytes))
+    tryo(MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), bytes))
 }
 
 class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
@@ -52,7 +52,7 @@ class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -67,7 +67,7 @@ class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -82,7 +82,7 @@ class IntChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 
@@ -97,7 +97,7 @@ class LongChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 
 }
@@ -113,7 +113,7 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       val iis = use(new MemoryCacheImageInputStream(bais))
       iis.setByteOrder(header.byteOrder)
       iis.readFully(typedStorage, 0, typedStorage.length)
-      MultiArray.factory(ma2DataType, chunkSizeOrdered(chunkShape), typedStorage)
+      MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
 

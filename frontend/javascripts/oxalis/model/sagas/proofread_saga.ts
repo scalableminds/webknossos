@@ -159,7 +159,8 @@ function* checkForAgglomerateSkeletonModification(
 
   getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
     Toast.warning(
-      "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges.",
+      "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the skeleton to a normal tree via right-click in the Skeleton tab.",
+      { timeout: 10000 },
     );
   });
 }

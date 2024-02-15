@@ -5,7 +5,7 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 
 case class DirectoryStorageReport(
     organizationName: String,
-    dataSetName: String,
+    datasetName: String,
     layerName: String,
     magOrDirectoryName: String,
     usedStorageBytes: Long
@@ -33,45 +33,46 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
 
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 
-  def measureStorage(organizationName: String, dataSetName: Option[String])(
+  def measureStorage(organizationName: String, datasetName: Option[String])(
       implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
     val organizationDirectory = baseDir.resolve(organizationName)
     if (Files.exists(organizationDirectory)) {
-      measureStorage(organizationName, dataSetName, organizationDirectory)
+      measureStorage(organizationName, datasetName, organizationDirectory)
     } else Fox.successful(List())
   }
 
-  def measureStorage(organizationName: String, dataSetName: Option[String], organizationDirectory: Path)(
+  def measureStorage(organizationName: String, datasetName: Option[String], organizationDirectory: Path)(
       implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
-    def selectedDatasetFilter(p: Path) = dataSetName.forall(name => p.getFileName.toString == name)
+    def selectedDatasetFilter(p: Path) = datasetName.forall(name => p.getFileName.toString == name)
 
     for {
       datasetDirectories <- PathUtils.listDirectories(organizationDirectory,
                                                       silent = true,
                                                       noSymlinksFilter,
                                                       selectedDatasetFilter) ?~> "listdir.failed"
-      storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataSet(organizationName, d))
+      storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataset(organizationName, d))
     } yield storageReportsNested.flatten
   }
 
-  def measureStorageForDataSet(organizationName: String, dataSetDirectory: Path): Fox[List[DirectoryStorageReport]] =
+  private def measureStorageForDataset(organizationName: String,
+                                       datasetDirectory: Path): Fox[List[DirectoryStorageReport]] =
     for {
-      layerDirectory <- PathUtils.listDirectories(dataSetDirectory, silent = true, noSymlinksFilter) ?~> "listdir.failed"
+      layerDirectory <- PathUtils.listDirectories(datasetDirectory, silent = true, noSymlinksFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(layerDirectory)(l =>
-        measureStorageForLayerDirectory(organizationName, dataSetDirectory, l))
+        measureStorageForLayerDirectory(organizationName, datasetDirectory, l))
     } yield storageReportsNested.flatten
 
   def measureStorageForLayerDirectory(organizationName: String,
-                                      dataSetDirectory: Path,
+                                      datasetDirectory: Path,
                                       layerDirectory: Path): Fox[List[DirectoryStorageReport]] =
     for {
       magOrOtherDirectory <- PathUtils.listDirectories(layerDirectory, silent = true, noSymlinksFilter) ?~> "listdir.failed"
       storageReportsNested <- Fox.serialCombined(magOrOtherDirectory)(m =>
-        measureStorageForMagOrOtherDirectory(organizationName, dataSetDirectory, layerDirectory, m))
+        measureStorageForMagOrOtherDirectory(organizationName, datasetDirectory, layerDirectory, m))
     } yield storageReportsNested
 
   def measureStorageForMagOrOtherDirectory(organizationName: String,
-                                           dataSetDirectory: Path,
+                                           datasetDirectory: Path,
                                            layerDirectory: Path,
                                            magOrOtherDirectory: Path): Fox[DirectoryStorageReport] =
     for {
@@ -79,7 +80,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     } yield
       DirectoryStorageReport(
         organizationName,
-        dataSetDirectory.getFileName.toString,
+        datasetDirectory.getFileName.toString,
         layerDirectory.getFileName.toString,
         normalizeMagName(magOrOtherDirectory.getFileName.toString),
         usedStorageBytes

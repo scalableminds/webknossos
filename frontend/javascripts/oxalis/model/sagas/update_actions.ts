@@ -32,6 +32,7 @@ type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
+export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesUpdateAction = ReturnType<typeof updateUserBoundingBoxes>;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -63,6 +64,7 @@ export type UpdateAction =
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
+  | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
@@ -319,7 +321,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -341,6 +343,14 @@ export function updateSegmentVolumeAction(
 export function deleteSegmentVolumeAction(id: number) {
   return {
     name: "deleteSegment",
+    value: {
+      id,
+    },
+  } as const;
+}
+export function deleteSegmentDataVolumeAction(id: number) {
+  return {
+    name: "deleteSegmentData",
     value: {
       id,
     },

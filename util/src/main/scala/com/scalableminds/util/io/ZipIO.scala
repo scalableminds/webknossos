@@ -6,7 +6,7 @@ import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
 

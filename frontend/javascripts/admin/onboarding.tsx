@@ -161,23 +161,24 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
     >
       <Card
         bordered={false}
-        bodyStyle={{
-          textAlign: "center",
-          height,
-          width: 350,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-around",
-          boxShadow: "var(--ant-box-shadow-base)",
-          borderRadius: 3,
-          border: 0,
+        styles={{
+          body: {
+            textAlign: "center",
+            height,
+            width: 350,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-around",
+            boxShadow: "var(--ant-box-shadow)",
+            borderRadius: 3,
+            border: 0,
+          },
         }}
       >
         <div
-          className="without-icon-margin"
           style={{
             fontSize: 32,
-            background: "var(--ant-primary)",
+            background: "var(--ant-color-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",
@@ -202,7 +203,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 14,
             lineHeight: "18px",
-            color: "var(--ant-text-secondary)",
+            color: "var(--ant-color-text-secondary)",
             margin: 0,
           }}
         >

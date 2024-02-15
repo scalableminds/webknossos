@@ -73,7 +73,7 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
-      activeUser?.isSuperUser ? renderAnimationMenuItem : null,
+      renderAnimationMenuItem,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),

@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
-import io.swagger.annotations._
 
 import javax.inject.Inject
 import models.annotation._
@@ -30,15 +29,14 @@ import scala.concurrent.ExecutionContext
 
 object RpcTokenHolder {
   /*
-   * This token is used to tell the datastore or tracing store “I am webKnossos”.
+   * This token is used to tell the datastore or tracing store “I am WEBKNOSSOS”.
    * The respective module asks the remote webKnossos to validate that.
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
-  lazy val webKnossosToken: String = RandomIDGenerator.generateBlocking()
+  lazy val webknossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
-@Api
 class UserTokenController @Inject()(datasetDAO: DatasetDAO,
                                     datasetService: DatasetService,
                                     annotationDAO: AnnotationDAO,
@@ -56,8 +54,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  @ApiOperation(
-    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default.")
+  // Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
@@ -69,7 +66,6 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } yield Ok(Json.obj("token" -> token))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -77,7 +73,6 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
@@ -92,7 +87,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
-    if (token.contains(RpcTokenHolder.webKnossosToken)) {
+    if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {

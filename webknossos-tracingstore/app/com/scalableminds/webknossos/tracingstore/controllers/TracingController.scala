@@ -113,7 +113,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
-          newestVersion <- tracingService.currentVersion(tracingId)
+          newestVersion <- tracingService.currentVersion(tracingId) ?~> "annotation.getNewestVersion.failed"
         } yield {
           JsonOk(Json.obj("version" -> newestVersion))
         }

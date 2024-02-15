@@ -57,7 +57,6 @@ import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
 
-const { TabPane } = Tabs;
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 type OwnProps = {
@@ -117,7 +116,7 @@ function ensureValidScaleOnInferredDataSource(
     // If one of the data sources is null, return the other.
     const potentialSource = savedDataSourceOnServer || inferredDataSource;
     if (potentialSource && "dataLayers" in potentialSource) {
-      return potentialSource;
+      return potentialSource as APIDataSource;
     } else {
       return null;
     }
@@ -389,8 +388,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       return null;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'title' implicitly has an 'any' type.
-    function showJSONModal(title, object) {
+    function showJSONModal(title: string, object: any) {
       Modal.info({
         title,
         width: 800,
@@ -817,11 +815,99 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         <ExclamationCircleOutlined
           style={{
             marginLeft: 4,
-            color: "var(--ant-error)",
+            color: "var(--ant-color-error)",
           }}
         />
       </Tooltip>
     );
+
+    const tabs = [
+      {
+        label: <span> Data {formErrors.data ? errorIcon : ""}</span>,
+        key: "data",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "data"}>
+            {
+              // We use the Hideable component here to avoid that the user can "tab"
+              // to hidden form elements.
+            }
+            {form && (
+              <DatasetSettingsDataTab
+                key="SimpleAdvancedDataForm"
+                datasetId={this.props.datasetId}
+                allowRenamingDataset={false}
+                form={form}
+                activeDataSourceEditMode={this.state.activeDataSourceEditMode}
+                onChange={(activeEditMode) => {
+                  const currentForm = this.formRef.current;
+
+                  if (!currentForm) {
+                    return;
+                  }
+
+                  syncDataSourceFields(currentForm, activeEditMode);
+                  currentForm.validateFields();
+                  this.setState({
+                    activeDataSourceEditMode: activeEditMode,
+                  });
+                }}
+                additionalAlert={this.getDatasourceDiffAlert()}
+              />
+            )}
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>,
+        key: "sharing",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "sharing"}>
+            <DatasetSettingsSharingTab
+              form={form}
+              datasetId={this.props.datasetId}
+              dataset={this.state.dataset}
+            />
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span>Metadata</span>,
+        key: "general",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "general"}>
+            <DatasetSettingsMetadataTab />
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>,
+        key: "defaultConfig",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
+            <DatasetSettingsViewConfigTab />
+          </Hideable>
+        ),
+      },
+    ];
+
+    if (isUserAdmin && features().allowDeleteDatasets)
+      tabs.push({
+        label: <span> Delete Dataset </span>,
+        key: "deleteDataset",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
+            <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
+          </Hideable>
+        ),
+      });
 
     return (
       <Form
@@ -852,81 +938,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     activeTabKey,
                   })
                 }
-              >
-                <TabPane
-                  tab={<span> Data {formErrors.data ? errorIcon : ""}</span>}
-                  key="data"
-                  forceRender
-                >
-                  {
-                    // We use the Hideable component here to avoid that the user can "tab"
-                    // to hidden form elements.
-                  }
-                  <Hideable hidden={this.state.activeTabKey !== "data"}>
-                    {form && (
-                      <DatasetSettingsDataTab
-                        key="SimpleAdvancedDataForm"
-                        datasetId={this.props.datasetId}
-                        allowRenamingDataset={false}
-                        form={form}
-                        activeDataSourceEditMode={this.state.activeDataSourceEditMode}
-                        onChange={(activeEditMode) => {
-                          const currentForm = this.formRef.current;
-
-                          if (!currentForm) {
-                            return;
-                          }
-
-                          syncDataSourceFields(currentForm, activeEditMode);
-                          currentForm.validateFields();
-                          this.setState({
-                            activeDataSourceEditMode: activeEditMode,
-                          });
-                        }}
-                        additionalAlert={this.getDatasourceDiffAlert()}
-                      />
-                    )}
-                  </Hideable>
-                </TabPane>
-
-                <TabPane
-                  tab={<span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>}
-                  key="sharing"
-                  forceRender
-                >
-                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
-                    <DatasetSettingsSharingTab
-                      form={form}
-                      datasetId={this.props.datasetId}
-                      dataset={this.state.dataset}
-                    />
-                  </Hideable>
-                </TabPane>
-
-                <TabPane tab={<span>Metadata</span>} key="general" forceRender>
-                  <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <DatasetSettingsMetadataTab />
-                  </Hideable>
-                </TabPane>
-
-                <TabPane
-                  tab={<span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>}
-                  key="defaultConfig"
-                  forceRender
-                >
-                  <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-                    <DatasetSettingsViewConfigTab />
-                  </Hideable>
-                </TabPane>
-
-                {isUserAdmin && features().allowDeleteDatasets ? (
-                  <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
-                    <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
-                      <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
-                    </Hideable>
-                  </TabPane>
-                ) : null}
-              </Tabs>
+                items={tabs}
+              />
             </Card>
             <FormItem
               style={{

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, InputStream}
 

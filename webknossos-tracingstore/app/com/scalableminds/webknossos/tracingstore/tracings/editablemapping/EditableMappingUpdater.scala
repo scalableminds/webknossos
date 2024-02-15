@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, DefaultUndirectedGraph}
 

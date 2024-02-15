@@ -2,7 +2,6 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
@@ -16,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
-import models.job.WorkerDAO
+import models.job.JobService
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
@@ -34,9 +33,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                teamDAO: TeamDAO,
-                               workerDAO: WorkerDAO,
+                               jobService: JobService,
                                folderDAO: FolderDAO,
-                               additionalAxesDAO: DatasetLayerAdditionalAxesDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
@@ -47,13 +45,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
+  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
       _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.name.invalid.characters"
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.name.invalid.startsWithDot"
       _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
+    } yield ()
+
+  def assertValidLayerName(name: String): Fox[Unit] =
+    for {
+      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.layer.name.invalid.characters"
+      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
   def assertNewDatasetName(name: String, organizationId: ObjectId): Fox[Unit] =
@@ -289,14 +293,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataset: Dataset): Boolean = dataset.status == unreportedStatus
 
-  def addInitialTeams(dataset: Dataset, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataset: Dataset, teams: List[String], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
-      userTeams <- teamDAO.findAllEditable
-      userTeamIds = userTeams.map(_._id)
+      includeMemberOnlyTeams = user.isDatasetManager
+      userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-      _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- bool2Fox(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
       _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIdsValidated)
     } yield ()
@@ -329,8 +333,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
-      worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
-      jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
+      jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
+      jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
     } yield {
       Json.obj(
         "name" -> dataset.name,
@@ -351,6 +355,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "details" -> dataset.details,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "jobsEnabled" -> jobsEnabled,
+        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented

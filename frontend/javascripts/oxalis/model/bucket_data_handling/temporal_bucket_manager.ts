@@ -26,12 +26,12 @@ class TemporalBucketManager {
     this.loadedPromises.push(this.makeLoadedPromise(bucket));
   }
 
-  pullBucket(bucket: DataBucket): Array<Promise<void>> {
+  pullBucket(bucket: DataBucket): void {
     this.pullQueue.add({
       bucket: bucket.zoomedAddress,
       priority: PullQueueConstants.PRIORITY_HIGHEST,
     });
-    return this.pullQueue.pull();
+    this.pullQueue.pull();
   }
 
   makeLoadedPromise(bucket: DataBucket): Promise<void> {

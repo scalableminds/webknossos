@@ -1,7 +1,7 @@
 package security
 
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import play.silhouette.api.LoginInfo
+import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
@@ -32,8 +32,8 @@ case class Token(_id: ObjectId,
       BearerTokenAuthenticator(
         value,
         loginInfo,
-        lastUsedDateTime.toJodaDateTime,
-        expirationDateTime.toJodaDateTime,
+        lastUsedDateTime.toZonedDateTime,
+        expirationDateTime.toZonedDateTime,
         idleTimeout
       ))
 }
@@ -52,8 +52,8 @@ object Token {
         ObjectId.generate,
         b.id,
         b.loginInfo,
-        Instant.fromJoda(b.lastUsedDateTime),
-        Instant.fromJoda(b.expirationDateTime),
+        Instant.fromZonedDateTime(b.lastUsedDateTime),
+        Instant.fromZonedDateTime(b.expirationDateTime),
         b.idleTimeout,
         tokenType,
         Instant.now

@@ -24,7 +24,7 @@ import { useState } from "react";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
-  color: "var(--ant-disabled)",
+  color: "var(--ant-color-text-disabled)",
 };
 
 function getDisabledWhenReloadingStyle(isReloading: boolean) {
@@ -54,14 +54,14 @@ function NewAnnotationLink({
         title="New Annotation (Skeleton + Volume)"
         disabled={isReloading}
       >
-        <PlusOutlined />
+        <PlusOutlined className="icon-margin-right" />
         New Annotation
       </LinkWithDisabled>
       <span
         style={{
           marginLeft: 8,
           marginRight: 8,
-          color: "var(--ant-border-base)",
+          color: "var(--ant-color-border)",
         }}
       >
         |
@@ -73,7 +73,7 @@ function NewAnnotationLink({
       >
         <EllipsisOutlined
           style={{
-            color: "var(--ant-link)",
+            color: "var(--ant-color-link)",
           }}
         />
       </a>
@@ -178,7 +178,7 @@ function DatasetActionView(props: Props) {
         }
         return oldItems.filter(
           (item) =>
-            item.name != dataset.name || item.owningOrganization != dataset.owningOrganization,
+            item.name !== dataset.name || item.owningOrganization !== dataset.owningOrganization,
         );
       },
     );
@@ -193,7 +193,7 @@ function DatasetActionView(props: Props) {
       style={disabledWhenReloadingStyle}
       type="link"
     >
-      {isReloading ? <LoadingOutlined /> : <ReloadOutlined />}
+      {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
       Reload
     </a>
   );
@@ -203,7 +203,7 @@ function DatasetActionView(props: Props) {
         to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
         className="import-dataset"
       >
-        <PlusCircleOutlined />
+        <PlusCircleOutlined className="icon-margin-right" />
         Import
       </Link>
       {reloadLink}
@@ -211,7 +211,17 @@ function DatasetActionView(props: Props) {
         onClick={() =>
           Modal.error({
             title: "Cannot load this dataset",
-            content: dataset.status,
+            content: (
+              <div>
+                <p>{dataset.status}</p>
+                {dataset.status === "Deleted by user." ? (
+                  <p>
+                    Even though this dataset was deleted by a user, it is still shown here, because
+                    it was referenced by at least one annotation.
+                  </p>
+                ) : null}
+              </div>
+            ),
           })
         }
       >
@@ -241,7 +251,7 @@ function DatasetActionView(props: Props) {
             title="View Dataset"
             disabled={isReloading}
           >
-            <EyeOutlined />
+            <EyeOutlined className="icon-margin-right" />
             View
           </LinkWithDisabled>
           {dataset.isEditable ? (
@@ -251,7 +261,7 @@ function DatasetActionView(props: Props) {
                 title="Open Dataset Settings"
                 disabled={isReloading}
               >
-                <SettingOutlined />
+                <SettingOutlined className="icon-margin-right" />
                 Settings
               </LinkWithDisabled>
               {reloadLink}

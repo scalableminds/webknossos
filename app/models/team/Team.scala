@@ -57,9 +57,9 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       projectCount <- projectDAO.countForTeam(teamId)
       _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
       taskTypeCount <- taskTypeDAO.countForTeam(teamId)
-      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
+      _ <- bool2Fox(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
       annotationCount <- annotationDAO.countForTeam(teamId)
-      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
+      _ <- bool2Fox(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
@@ -209,8 +209,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield rows.toList
 
   def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
-    val clearQuery = q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _dataSet = $datasetId".asUpdate
-    val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataSet_allowedTeams(_dataSet, _team)
+    val clearQuery = q"DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".asUpdate
+    val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataset_allowedTeams(_dataset, _team)
              VALUES($datasetId, $teamId)""".asUpdate)
 
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
@@ -226,8 +226,11 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeTeamFromAllDatasetsAndFolders(teamId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _team = $teamId".asUpdate)
+      _ <- run(q"DELETE FROM webknossos.dataset_allowedTeams WHERE _team = $teamId".asUpdate)
       _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
     } yield ()
+
+  override def deleteOne(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(teamId)
 
 }

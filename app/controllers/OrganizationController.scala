@@ -1,7 +1,7 @@
 package controllers
 
-import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.Silhouette
+import org.apache.pekko.actor.ActorSystem
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

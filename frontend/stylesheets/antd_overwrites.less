@@ -1,3 +1,7 @@
+// Whenever possible try to customize antd v5 components through their "Design Tokens" and builtin themeing
+// See theme.tsx for details
+// https://ant.design/docs/react/customize-theme
+
 h1 {
   font-size: 36px;
 }
@@ -23,7 +27,7 @@ p {
 .ant-layout-sider,
 .ant-collapse-borderless,
 .ant-layout {
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
 }
 
 .ant-layout-header {
@@ -39,7 +43,6 @@ p {
 }
 
 .ant-notification {
-  z-index: 1040; // make sure we are above nav bar
   width: auto;
   max-width: 80vw;
 }
@@ -196,32 +199,6 @@ label.ant-checkbox-wrapper {
   pointer-events: none;
 }
 
-// The rules below are needed to have the row expand icon for tables of antd version 3.
-// The icon in version 4 does not work correctly in firefox.
-// See: https://github.com/ant-design/ant-design/issues/29303#issue-804593263
-.ant-table-row-expand-icon::after {
-  display: none;
-}
-.ant-table-row-expand-icon-expanded::before {
-  content: "-";
-}
-.ant-table-row-expand-icon-collapsed::before {
-  content: "+";
-}
-.ant-table-row-expand-icon::before {
-  position: unset;
-  transform: none;
-  background: inherit;
-  height: 100%;
-}
-
-.ant-table-row-expand-icon {
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  line-height: 13px;
-}
-
 // Custom component `LinkButton` renders a button that looks like a link.
 // Antd’s `button type="link"` only gets us halfway there, though, hence, this:
 .link-button {
@@ -269,7 +246,7 @@ label.ant-checkbox-wrapper {
 
 .ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
 .ant-list-empty-text {
-  color: fade(@text-color, 50%);
+  color: var(--ant-color-text-tertiary)
 }
 
 .action-bar {

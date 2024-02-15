@@ -68,7 +68,7 @@ export default function VerifyEmailView({ token }: { token: string }) {
     }
     if (exception) {
       let errorMessage;
-      if ("messages" in exception) {
+      if (typeof exception === "object" && "messages" in exception) {
         errorMessage = ((exception as any).messages as ServerErrorMessage[])
           .map((m: any) => m.error || "")
           .join(" ");

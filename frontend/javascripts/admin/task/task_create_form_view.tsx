@@ -10,12 +10,12 @@ import {
   Card,
   Radio,
   Upload,
-  Modal,
   InputNumber,
   Input,
   Spin,
   RadioChangeEvent,
   Tooltip,
+  Modal,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
@@ -125,8 +125,10 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   });
   saveAs(blob, filename);
 }
+
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
+
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
   let teamName: string | null = null;
@@ -164,7 +166,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         <div style={subHeadingStyle}>
           <WarningOutlined
             style={{
-              color: "var(--ant-warning)",
+              color: "var(--ant-color-warning)",
             }}
           />{" "}
           There were warnings during task creation:

@@ -27,6 +27,7 @@ import type {
   AdditionalCoordinate,
   AdditionalAxis,
 } from "types/api_flow_types";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
   BoundingBoxType,
@@ -48,7 +49,6 @@ import type {
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
@@ -226,7 +226,7 @@ export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
   readonly somePosition: Vector3 | undefined;
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined;
+  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -428,7 +428,7 @@ export type SaveQueueEntry = {
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;
-  stats: SkeletonTracingStats | null | undefined;
+  stats: TracingStats | null | undefined;
   info: string;
 };
 export type ProgressInfo = {
@@ -533,7 +533,7 @@ type UiInformation = {
 type BaseMeshInformation = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
-  readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
+  readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
 };
@@ -568,9 +568,11 @@ export type OxalisState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
-    string,
+    string, //layerName
     {
-      readonly meshes: Record<number, MeshInformation>;
+      // For meshes, the string represents additional coordinates, number is the segment ID.
+      // The undefined types were added to enforce null checks when using this structure.
+      readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored
@@ -579,6 +581,9 @@ export type OxalisState = {
       // The `segments` here should only be used for non-annotation volume
       // layers.
       readonly segments: SegmentMap;
+      // Note that segments that are not in the segment tab could be stored as selected.
+      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+      readonly selectedIds: { segments: number[]; group: number | null };
       readonly connectomeData: ConnectomeData;
     }
   >;

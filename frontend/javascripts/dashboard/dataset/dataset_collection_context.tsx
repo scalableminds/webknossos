@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import type {
   APIDatasetId,
   APIDatasetCompact,
-  APIDatasetCompactWithoutStatus,
+  APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
 } from "types/api_flow_types";
 import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
@@ -44,7 +44,7 @@ export type DatasetCollectionContextValue = {
   setGlobalSearchQuery: (val: string | null) => void;
   searchRecursively: boolean;
   setSearchRecursively: (val: boolean) => void;
-  getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatus) => string[] | null;
+  getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
   showCreateFolderPrompt: (parentFolderId: string) => void;
   queries: {
@@ -159,7 +159,7 @@ export default function DatasetCollectionContextProvider({
     await updateDatasetMutation.mutateAsync([id, updater]);
   }
 
-  const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatus) => {
+  const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => {
     if (folderHierarchyQuery.data?.itemById == null) {
       return null;
     }
@@ -303,7 +303,7 @@ function useManagedUrlParams(
       setActiveFolderId(folderId);
     }
     const recursive = params.get("recursive");
-    setSearchRecursively(!!recursive);
+    if (recursive != null) setSearchRecursively(recursive === "true");
 
     const folderSpecifier = _.last(location.pathname.split("/"));
 
@@ -350,7 +350,7 @@ function useManagedUrlParams(
         if (searchRecursively) {
           params.set("recursive", "true");
         } else {
-          params.delete("recursive");
+          params.set("recursive", "false");
         }
       } else {
         params.delete("folderId");

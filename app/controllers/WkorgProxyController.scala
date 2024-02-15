@@ -1,14 +1,16 @@
 package controllers
 
 import com.google.inject.Inject
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.UserAwareRequest
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
 import opengraph.OpenGraphService
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Action, AnyContent}
+import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
 
@@ -18,9 +20,11 @@ import scala.util.matching.Regex
 class WkorgProxyController @Inject()(ws: WSClient,
                                      conf: WkConf,
                                      sil: Silhouette[WkEnv],
+                                     val cspConfig: CSPConfig,
                                      multiUserDAO: MultiUserDAO,
                                      openGraphService: OpenGraphService)(implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with CspHeaders {
 
   def proxyPageOrMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesProxyPage(request)) {
@@ -32,14 +36,17 @@ class WkorgProxyController @Inject()(ws: WSClient,
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
+
       } yield
-        Ok(
-          views.html.main(
-            conf,
-            multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString,
-            openGraphTags.title,
-            openGraphTags.description,
-            openGraphTags.image
+        addCspHeader(
+          Ok(
+            views.html.main(
+              conf,
+              multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString,
+              openGraphTags.title,
+              openGraphTags.description,
+              openGraphTags.image
+            )
           )
         )
     }

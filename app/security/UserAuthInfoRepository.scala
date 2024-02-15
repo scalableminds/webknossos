@@ -1,8 +1,8 @@
 package security
 
-import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
-import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.api.{AuthInfo, LoginInfo}
+import play.silhouette.api.repositories.AuthInfoRepository
+import play.silhouette.api.util.PasswordInfo
+import play.silhouette.api.{AuthInfo, LoginInfo}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, UserService}

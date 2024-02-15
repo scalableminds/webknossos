@@ -10,6 +10,7 @@ import {
   Radio,
   Alert,
   Tooltip,
+  TabsProps,
 } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
@@ -53,7 +54,6 @@ import {
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -185,7 +185,9 @@ export function Hint({
   style: React.CSSProperties;
 }) {
   return (
-    <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>{children}</div>
+    <div style={{ ...style, fontSize: 12, color: "var(--ant-color-text-secondary)" }}>
+      {children}
+    </div>
   );
 }
 
@@ -505,6 +507,249 @@ function _DownloadModalView({
 
   // Will be false if no volumes exist.
 
+  const downloadTab = (
+    <>
+      <Row>
+        {maybeShowWarning()}
+        <Text
+          style={{
+            margin: "0 6px 12px",
+          }}
+        >
+          {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
+          {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
+          {messages["annotation.download"]}
+        </Text>
+      </Row>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Options
+      </Divider>
+      <Row>
+        <Col
+          span={9}
+          style={{
+            lineHeight: "20px",
+            padding: "5px 12px",
+          }}
+        >
+          Select the data you would like to download.
+          <Hint style={{ marginTop: 12 }}>
+            An NML file will always be included with any download.
+          </Hint>
+        </Col>
+        <Col span={15}>
+          <Radio.Group
+            defaultValue={initialFileFormatToDownload}
+            value={fileFormatToDownload}
+            onChange={(e) => setFileFormatToDownload(e.target.value)}
+            style={{ marginLeft: 16 }}
+          >
+            {hasVolumes ? (
+              <>
+                <Tooltip
+                  title={
+                    isVolumeNDimensional ? "WKW is not supported for n-dimensional volumes." : null
+                  }
+                >
+                  <Radio value="wkw" disabled={isVolumeNDimensional} style={radioButtonStyle}>
+                    Include volume annotations as WKW
+                    <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
+                  </Radio>
+                </Tooltip>
+                <Radio value="zarr3" style={radioButtonStyle}>
+                  Include volume annotations as Zarr
+                  <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
+                </Radio>
+              </>
+            ) : null}
+            <Radio value="nml" style={radioButtonStyle}>
+              {hasSkeleton ? "Skeleton annotations" : "Meta data"} {hasVolumes ? "only " : ""}
+              as NML
+            </Radio>
+          </Radio.Group>
+        </Col>
+      </Row>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      />
+      {moreInfoHint}
+    </>
+  );
+
+  const tiffExportTab = (
+    <>
+      <Row>
+        {maybeShowWarning()}
+        <Text
+          style={{
+            margin: "0 6px 12px",
+          }}
+        >
+          {messages["download.export_as_tiff"]({ typeName })}
+        </Text>
+      </Row>
+      {activeTabKey === "export" && !features().jobsEnabled ? (
+        workerInfo
+      ) : (
+        <div>
+          <Divider
+            style={{
+              margin: "18px 0",
+            }}
+          >
+            Export format
+          </Divider>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Radio.Group value={exportFormat} onChange={(ev) => setExportFormat(ev.target.value)}>
+              <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
+              <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
+            </Radio.Group>
+          </div>
+
+          <Divider
+            style={{
+              margin: "18px 0",
+            }}
+          >
+            Layer
+          </Divider>
+          <LayerSelection
+            layers={layers}
+            value={selectedLayerName}
+            onChange={setSelectedLayerName}
+            tracing={tracing}
+            style={{ width: "100%" }}
+          />
+
+          <Divider
+            style={{
+              margin: "18px 0",
+            }}
+          >
+            Bounding Box
+          </Divider>
+          <BoundingBoxSelection
+            value={selectedBoundingBoxId}
+            userBoundingBoxes={userBoundingBoxes}
+            setSelectedBoundingBoxId={(boxId: number | null) => {
+              if (boxId != null) {
+                setSelectedBoundingBoxId(boxId);
+              }
+            }}
+            style={{ width: "100%" }}
+          />
+          {boundingBoxCompatibilityAlerts}
+
+          <Divider
+            style={{
+              margin: "18px 0",
+            }}
+          >
+            Mag
+          </Divider>
+          <Row>
+            <Col span={19}>
+              <MagSlider
+                resolutionInfo={selectedLayerResolutionInfo}
+                value={mag}
+                onChange={setMag}
+              />
+            </Col>
+            <Col
+              span={5}
+              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+            >
+              {mag.join("-")}
+            </Col>
+          </Row>
+          <Text
+            style={{
+              margin: "0 6px 12px",
+              display: "block",
+            }}
+          >
+            Estimated file size:{" "}
+            {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
+            <br />
+            Resolution: {formatSelectedScale(dataset, mag)}
+          </Text>
+
+          <Divider />
+          <p>
+            Go to the{" "}
+            <a href="/jobs" target="_blank" rel="noreferrer">
+              Jobs Overview Page
+            </a>{" "}
+            to see running exports and to download the results.
+          </p>
+        </div>
+      )}
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      />
+      {moreInfoHint}
+      <Checkbox
+        style={{ position: "absolute", bottom: -62 }}
+        checked={keepWindowOpen}
+        onChange={handleKeepWindowOpenChecked}
+        disabled={activeTabKey === "export" && !features().jobsEnabled}
+      >
+        Keep window open
+      </Checkbox>
+    </>
+  );
+
+  const pythonClientTab = (
+    <>
+      <Row>
+        <Text
+          style={{
+            margin: "0 6px 12px",
+          }}
+        >
+          The following code snippets are suggestions to get you started quickly with the{" "}
+          <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
+            WEBKNOSSOS Python API
+          </a>
+          . To download and use this {typeName} in your Python project, simply copy and paste the
+          code snippets to your script.
+        </Text>
+      </Row>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Code Snippets
+      </Divider>
+      {maybeShowWarning()}
+      <Paragraph>
+        <CopyableCodeSnippet code="pip install webknossos" />
+        <CopyableCodeSnippet code={wkInitSnippet} onCopy={alertTokenIsPrivate} />
+      </Paragraph>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      />
+      {moreInfoHint}
+    </>
+  );
+
+  const tabs: TabsProps["items"] = [
+    { label: "TIFF Export", key: "export", children: tiffExportTab },
+    { label: "Python Client", key: "python", children: pythonClientTab },
+  ];
+  if (isAnnotation) tabs.unshift({ label: "Download", key: "download", children: downloadTab });
+
   return (
     <Modal
       title={`Download this ${typeName}`}
@@ -526,249 +771,7 @@ function _DownloadModalView({
       onCancel={onClose}
       style={{ overflow: "visible" }}
     >
-      <Tabs activeKey={activeTabKey} onChange={handleTabChange} type="card">
-        {isAnnotation ? (
-          <TabPane tab="Download" key="download">
-            <Row>
-              {maybeShowWarning()}
-              <Text
-                style={{
-                  margin: "0 6px 12px",
-                }}
-              >
-                {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
-                {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-                {messages["annotation.download"]}
-              </Text>
-            </Row>
-            <Divider
-              style={{
-                margin: "18px 0",
-              }}
-            >
-              Options
-            </Divider>
-            <Row>
-              <Col
-                span={9}
-                style={{
-                  lineHeight: "20px",
-                  padding: "5px 12px",
-                }}
-              >
-                Select the data you would like to download.
-                <Hint style={{ marginTop: 12 }}>
-                  An NML file will always be included with any download.
-                </Hint>
-              </Col>
-              <Col span={15}>
-                <Radio.Group
-                  defaultValue={initialFileFormatToDownload}
-                  value={fileFormatToDownload}
-                  onChange={(e) => setFileFormatToDownload(e.target.value)}
-                  style={{ marginLeft: 16 }}
-                >
-                  {hasVolumes ? (
-                    <>
-                      <Tooltip
-                        title={
-                          isVolumeNDimensional
-                            ? "WKW is not supported for n-dimensional volumes."
-                            : null
-                        }
-                      >
-                        <Radio value="wkw" disabled={isVolumeNDimensional} style={radioButtonStyle}>
-                          Include volume annotations as WKW
-                          <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
-                        </Radio>
-                      </Tooltip>
-                      <Radio value="zarr3" style={radioButtonStyle}>
-                        Include volume annotations as Zarr
-                        <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
-                      </Radio>
-                    </>
-                  ) : null}
-                  <Radio value="nml" style={radioButtonStyle}>
-                    {hasSkeleton ? "Skeleton annotations" : "Meta data"} {hasVolumes ? "only " : ""}
-                    as NML
-                  </Radio>
-                </Radio.Group>
-              </Col>
-            </Row>
-            <Divider
-              style={{
-                margin: "18px 0",
-              }}
-            />
-            {moreInfoHint}
-          </TabPane>
-        ) : null}
-        <TabPane tab="TIFF Export" key="export">
-          <Row>
-            {maybeShowWarning()}
-            <Text
-              style={{
-                margin: "0 6px 12px",
-              }}
-            >
-              {messages["download.export_as_tiff"]({ typeName })}
-            </Text>
-          </Row>
-          {activeTabKey === "export" && !features().jobsEnabled ? (
-            workerInfo
-          ) : (
-            <div>
-              <Divider
-                style={{
-                  margin: "18px 0",
-                }}
-              >
-                Export format
-              </Divider>
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <Radio.Group
-                  value={exportFormat}
-                  onChange={(ev) => setExportFormat(ev.target.value)}
-                >
-                  <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
-                  <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
-                </Radio.Group>
-              </div>
-
-              <Divider
-                style={{
-                  margin: "18px 0",
-                }}
-              >
-                Layer
-              </Divider>
-              <LayerSelection
-                layers={layers}
-                value={selectedLayerName}
-                onChange={setSelectedLayerName}
-                tracing={tracing}
-                style={{ width: "100%" }}
-              />
-
-              <Divider
-                style={{
-                  margin: "18px 0",
-                }}
-              >
-                Bounding Box
-              </Divider>
-              <BoundingBoxSelection
-                value={selectedBoundingBoxId}
-                userBoundingBoxes={userBoundingBoxes}
-                setSelectedBoundingBoxId={(boxId: number | null) => {
-                  if (boxId != null) {
-                    setSelectedBoundingBoxId(boxId);
-                  }
-                }}
-                style={{ width: "100%" }}
-              />
-              {boundingBoxCompatibilityAlerts}
-
-              <Divider
-                style={{
-                  margin: "18px 0",
-                }}
-              >
-                Mag
-              </Divider>
-              <Row>
-                <Col span={19}>
-                  <MagSlider
-                    resolutionInfo={selectedLayerResolutionInfo}
-                    value={mag}
-                    onChange={setMag}
-                  />
-                </Col>
-                <Col
-                  span={5}
-                  style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
-                >
-                  {mag.join("-")}
-                </Col>
-              </Row>
-              <Text
-                style={{
-                  margin: "0 6px 12px",
-                  display: "block",
-                }}
-              >
-                Estimated file size:{" "}
-                {estimateFileSize(
-                  selectedLayer,
-                  mag,
-                  selectedBoundingBox.boundingBox,
-                  exportFormat,
-                )}
-                <br />
-                Resolution: {formatSelectedScale(dataset, mag)}
-              </Text>
-
-              <Divider />
-              <p>
-                Go to the{" "}
-                <a href="/jobs" target="_blank" rel="noreferrer">
-                  Jobs Overview Page
-                </a>{" "}
-                to see running exports and to download the results.
-              </p>
-            </div>
-          )}
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          />
-          {moreInfoHint}
-          <Checkbox
-            style={{ position: "absolute", bottom: -62 }}
-            checked={keepWindowOpen}
-            onChange={handleKeepWindowOpenChecked}
-            disabled={activeTabKey === "export" && !features().jobsEnabled}
-          >
-            Keep window open
-          </Checkbox>
-        </TabPane>
-
-        <TabPane tab="Python Client" key="python">
-          <Row>
-            <Text
-              style={{
-                margin: "0 6px 12px",
-              }}
-            >
-              The following code snippets are suggestions to get you started quickly with the{" "}
-              <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-                WEBKNOSSOS Python API
-              </a>
-              . To download and use this {typeName} in your Python project, simply copy and paste
-              the code snippets to your script.
-            </Text>
-          </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Code Snippets
-          </Divider>
-          {maybeShowWarning()}
-          <Paragraph>
-            <CopyableCodeSnippet code="pip install webknossos" />
-            <CopyableCodeSnippet code={wkInitSnippet} onCopy={alertTokenIsPrivate} />
-          </Paragraph>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          />
-          {moreInfoHint}
-        </TabPane>
-      </Tabs>
+      <Tabs activeKey={activeTabKey} onChange={handleTabChange} type="card" items={tabs} />
     </Modal>
   );
 }

@@ -3,7 +3,7 @@ package com.scalableminds.util.io
 import java.io._
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import java.nio.charset.Charset

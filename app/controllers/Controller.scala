@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.Fox

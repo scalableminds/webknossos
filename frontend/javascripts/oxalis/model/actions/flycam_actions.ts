@@ -80,7 +80,7 @@ export const setPositionAction = (position: Vector3, dimensionToSkip?: number | 
     dimensionToSkip,
   } as const);
 
-export const setAdditionalCoordinatesAction = (values: AdditionalCoordinate[] | null) =>
+export const setAdditionalCoordinatesAction = (values: AdditionalCoordinate[] | null | undefined) =>
   ({
     type: "SET_ADDITIONAL_COORDINATES",
     values,

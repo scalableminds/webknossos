@@ -168,7 +168,7 @@ async function inferFromEmbedding(
   // data copies).
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
-    maskData[idx] = masks.data[idx + startOffset] > 0 ? 1 : 0;
+    maskData[idx] = (masks.data[idx + startOffset] as number) > 0 ? 1 : 0;
   }
 
   const size = embeddingBoxInTargetMag.getSize();

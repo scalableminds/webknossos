@@ -3,6 +3,7 @@ import React from "react";
 
 type Props = {
   icon: React.ReactElement;
+  label?: string;
   onChange: (value: string, event: React.SyntheticEvent<HTMLInputElement>) => void;
 };
 
@@ -57,13 +58,20 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
       <Button
         size="small"
         icon={this.props.icon}
-        style={{ height: 22, width: 22 }}
+        style={{
+          height: 22,
+          width: this.props.label ? "initial" : 22,
+          fontSize: "12px",
+          color: "#7c7c7c",
+        }}
         onClick={() =>
           this.setState({
             isEditing: true,
           })
         }
-      />
+      >
+        {this.props.label ? <span style={{ marginLeft: 0 }}>{this.props.label}</span> : null}
+      </Button>
     );
   }
 }

@@ -139,6 +139,7 @@ import Constants, {
   AnnotationToolEnum,
   TDViewDisplayModeEnum,
   MappingStatusEnum,
+  EMPTY_OBJECT,
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
@@ -2257,8 +2258,12 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
+    } else {
+      throw new Error(
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+      );
     }
   }
 
@@ -2275,8 +2280,12 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes[segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
+    } else {
+      throw new Error(
+        `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+      );
     }
   }
 
@@ -2293,7 +2302,7 @@ class DataApi {
       layerName,
     ).name;
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].meshes,
+      Store.getState().localSegmentationData[effectiveLayerName].meshes || EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {

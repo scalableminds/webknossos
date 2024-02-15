@@ -30,7 +30,7 @@ import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer, APIDatasetId } from "types/api_flow_types";
+import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
@@ -66,14 +66,14 @@ export default function DatasetSettingsDataTab({
   activeDataSourceEditMode,
   onChange,
   additionalAlert,
-  datasetId,
+  dataset,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
-  datasetId?: APIDatasetId | undefined;
+  dataset?: APIDataset | null | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
@@ -119,7 +119,7 @@ export default function DatasetSettingsDataTab({
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm
-            datasetId={datasetId}
+            dataset={dataset}
             allowRenamingDataset={allowRenamingDataset}
             form={form}
             dataSource={dataSource}
@@ -153,12 +153,12 @@ function SimpleDatasetForm({
   allowRenamingDataset,
   dataSource,
   form,
-  datasetId,
+  dataset,
 }: {
   allowRenamingDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
-  datasetId?: APIDatasetId | undefined;
+  dataset: APIDataset | null | undefined;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
@@ -257,7 +257,7 @@ function SimpleDatasetForm({
           // the layer name may change in this view, the order does not, so idx is the right key choice here
           <List.Item key={`layer-${idx}`}>
             <SimpleLayerForm
-              datasetId={datasetId}
+              dataset={dataset}
               layer={layer}
               index={idx}
               onRemoveLayer={onRemoveLayer}
@@ -283,13 +283,13 @@ function SimpleLayerForm({
   index,
   onRemoveLayer,
   form,
-  datasetId,
+  dataset,
 }: {
   layer: DataLayer;
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
   form: FormInstance;
-  datasetId?: APIDatasetId | undefined;
+  dataset: APIDataset | null | undefined;
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
@@ -318,18 +318,18 @@ function SimpleLayerForm({
       );
     },
     initialJobKeyExtractor: (job) =>
-      job.type === "find_largest_segment_id" && job.datasetName === datasetId?.name
+      job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
         ? job.datasetName ?? "largest_segment_id"
         : null,
   });
   const activeJob = runningJobs[0];
 
   const startJobFn =
-    datasetId != null
+    dataset != null
       ? async () => {
           const job = await startFindLargestSegmentIdJob(
-            datasetId.name,
-            datasetId.owningOrganization,
+            dataset.name,
+            dataset.owningOrganization,
             layer.name,
           );
           Toast.info(
@@ -561,24 +561,28 @@ function SimpleLayerForm({
                         return parseInt(value, 10);
                       }}
                     />
-                    {datasetId && features().jobsEnabled && (
-                      <Button
-                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                        title={`${
-                          activeJob != null ? "Scanning" : "Scan"
-                        } the data to derive the value automatically`}
-                        style={{ marginLeft: 8 }}
-                        loading={activeJob != null}
-                        disabled={activeJob != null || startJob == null}
-                        onClick={
-                          startJob != null && startJobFn != null
-                            ? () => startJob(startJobFn)
-                            : () => Promise.resolve()
-                        }
-                      >
-                        Detect
-                      </Button>
-                    )}
+                    {dataset &&
+                      features().jobsEnabled &&
+                      dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+                        APIJobType.FIND_LARGEST_SEGMENT_ID,
+                      ) && (
+                        <Button
+                          type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                          title={`${
+                            activeJob != null ? "Scanning" : "Scan"
+                          } the data to derive the value automatically`}
+                          style={{ marginLeft: 8 }}
+                          loading={activeJob != null}
+                          disabled={activeJob != null || startJob == null}
+                          onClick={
+                            startJob != null && startJobFn != null
+                              ? () => startJob(startJobFn)
+                              : () => Promise.resolve()
+                          }
+                        >
+                          Detect
+                        </Button>
+                      )}
                   </DelegatePropsToFirstChild>
                 </FormItemWithInfo>
               </div>

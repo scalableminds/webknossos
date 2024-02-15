@@ -6,7 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.{DataStoreConfig, NativeDracoToStlConverter}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
@@ -54,24 +54,69 @@ class DSMeshController @Inject()(
                                                                                 datasetName,
                                                                                 layerName) ~> NOT_FOUND
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
-      adHocMeshRequest = AdHocMeshRequest(
-        Some(dataSource),
+      before = Instant.now
+      verticesNested <- getAllAdHocChunks(
+        dataSource,
         segmentationLayer,
-        Cuboid(VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)), 100, 100, 129),
         segmentId,
-        Vec3Int.ones,
-        dataSource.scale,
-        None,
-        None,
-        None
-      )
-      // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
-      // consecutive 3D points (i.e., nine floats) form a triangle.
-      // There are no shared vertices between triangles.
-      (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      encoded = adHocMeshToStl(vertices)
-      array = combineEncodedChunksToStl(Seq(encoded))
+        VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)))
+      _ = Instant.logSince(before, "adHocMeshing")
+      beforeEncoding = Instant.now
+      encoded = verticesNested.map(adHocMeshToStl)
+      array = combineEncodedChunksToStl(encoded)
+      _ = Instant.logSince(beforeEncoding, "transCoding")
     } yield Ok(array)
+  }
+
+  private def getAllAdHocChunks(
+      dataSource: DataSource,
+      segmentationLayer: SegmentationLayer,
+      segmentId: Long,
+      topLeft: VoxelPosition,
+      visited: collection.mutable.Set[VoxelPosition] = collection.mutable.Set[VoxelPosition]())
+    : Fox[List[Array[Float]]] = {
+    val adHocMeshRequest = AdHocMeshRequest(
+      Some(dataSource),
+      segmentationLayer,
+      Cuboid(topLeft, 100, 100, 50),
+      segmentId,
+      Vec3Int.ones,
+      dataSource.scale,
+      None,
+      None,
+      None
+    )
+    visited += topLeft
+    for {
+      (vertices: Array[Float], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+      nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, visited)
+      _ = visited ++= nextPositions
+      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
+        getAllAdHocChunks(dataSource, segmentationLayer, segmentId, position, visited)
+      }
+      allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
+    } yield allVertices
+  }
+
+  private def generateNextTopLeftsFromNeighbors(oldTopLeft: VoxelPosition,
+                                                neighborIds: List[Int],
+                                                visited: collection.mutable.Set[VoxelPosition]): List[VoxelPosition] = {
+    // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
+    val neighborLookup = Seq(
+      Vec3Int(0, 0, -1),
+      Vec3Int(0, -1, 0),
+      Vec3Int(-1, 0, 0),
+      Vec3Int(0, 0, 1),
+      Vec3Int(0, 1, 0),
+      Vec3Int(1, 0, 0),
+    )
+    val neighborPositions = neighborIds.map { neighborId =>
+      val neighborMultiplier = neighborLookup(neighborId)
+      oldTopLeft.move(neighborMultiplier.x * 100 * oldTopLeft.mag.x,
+                      neighborMultiplier.y * 100 * oldTopLeft.mag.y,
+                      neighborMultiplier.z * 50 * oldTopLeft.mag.z)
+    }
+    neighborPositions.filterNot(visited.contains)
   }
 
   private def adHocMeshToStl(vertexBuffer: Array[Float]): Array[Byte] = {

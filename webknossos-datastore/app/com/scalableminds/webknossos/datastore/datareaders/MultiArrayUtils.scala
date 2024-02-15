@@ -1,23 +1,24 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
 
-object MultiArrayUtils {
+object MultiArrayUtils extends LazyLogging {
 
   def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
-    val size = shape.product
+    val length = shape.product
     dataType match {
-      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](size)
-      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](size)
-      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](size)
-      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](size)
-      case ArrayDataType.f4                    => new Array[Float](size)
-      case ArrayDataType.f8                    => new Array[Double](size)
+      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](length)
+      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](length)
+      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](length)
+      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](length)
+      case ArrayDataType.f4                    => new Array[Float](length)
+      case ArrayDataType.f8                    => new Array[Double](length)
     }
   }
 
@@ -120,22 +121,10 @@ object MultiArrayUtils {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator): Unit
   }
 
-  def orderFlippedView(source: MultiArray): MultiArray = {
-    val permutation = source.getShape.indices.reverse.toArray
+  def axisOrderXYZViewF(source: MultiArray, fullAxisOrder: FullAxisOrder, sourceIsF: Boolean): MultiArray = {
+    // create view with F order and wk-compatible axis order
+    val permutation = if (sourceIsF) fullAxisOrder.arrayFToWkFPermutation else fullAxisOrder.arrayCToWkFPermutation
     source.permute(permutation)
-  }
-
-  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
-    /* create a view in which the last three axes are XYZ, rest unchanged
-     * optionally flip the axes afterwards
-     *
-     * Note that we are at this point unsure if this function should be using the *inverse* permutation.
-     * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
-     * e.g. with axis order ZXY
-     */
-    val permutation = axisOrder.permutation(source.getRank)
-    val flippedIfNeeded = if (flip) permutation.reverse else permutation
-    source.permute(flippedIfNeeded)
   }
 
 }

@@ -3,7 +3,7 @@ import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -118,12 +118,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
 
   const tabs: TabsProps["items"] = [
     {
-      label: (
-        <span>
-          <UploadOutlined />
-          Upload Dataset
-        </span>
-      ),
+      label: "Upload Dataset",
+      icon: <UploadOutlined />,
       key: DatasetAddType.UPLOAD,
       children: (
         <DatasetUploadView
@@ -133,12 +129,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
       ),
     },
     {
-      label: (
-        <span>
-          <DatabaseOutlined />
-          Add Remote Dataset
-        </span>
-      ),
+      icon: <DatabaseOutlined />,
+      label: "Add Remote Dataset",
       key: DatasetAddType.REMOTE,
       children: (
         <DatasetAddRemoteView
@@ -148,12 +140,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
       ),
     },
     {
-      label: (
-        <span>
-          <CopyOutlined />
-          Compose From Existing Datasets
-        </span>
-      ),
+      icon: <CopyOutlined />,
+      label: "Compose From Existing Datasets",
       key: DatasetAddType.COMPOSE,
       children: (
         <DatasetAddComposeView
@@ -317,13 +305,14 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
   if (!features().isWkorgInstance) {
     return null;
   }
 
   return (
-    <Sider className="hide-on-small-screen" width={300}>
+    <Sider className="hide-on-small-screen" width={300} theme={theme}>
       {banners[bannerIndex]}
     </Sider>
   );

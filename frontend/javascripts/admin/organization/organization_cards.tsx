@@ -36,10 +36,10 @@ export function TeamAndPowerPlanUpgradeCards({
       <Col span={12}>
         <Card
           title={`${PricingPlanEnum.Team} Plan`}
-          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
             <Button type="primary" onClick={teamUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+              <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}
         >
@@ -53,10 +53,10 @@ export function TeamAndPowerPlanUpgradeCards({
       <Col span={12}>
         <Card
           title={`${PricingPlanEnum.Power} Plan`}
-          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
             <Button type="primary" onClick={powerUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+              <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}
         >
@@ -131,9 +131,11 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       style={{
         marginBottom: 20,
       }}
-      bodyStyle={{
-        background: "#5660ff",
-        color: "white",
+      styles={{
+        body: {
+          background: "var(--color-wk-blue)",
+          color: "white",
+        },
       }}
     >
       <p>

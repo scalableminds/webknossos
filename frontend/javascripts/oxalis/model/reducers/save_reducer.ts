@@ -1,13 +1,10 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState, SaveQueueEntry, IsBusyInfo } from "oxalis/store";
+import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
 import type {
-  PushSaveQueueTransaction,
   SetVersionNumberAction,
-  ShiftSaveQueueAction,
   SetLastSaveTimestampAction,
-  SetSaveBusyAction,
   SaveQueueType,
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";

@@ -61,7 +61,11 @@ import {
   hasConnectomeFile,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getNodeAndTree,
+  findTreeByNodeId,
+  getNodeAndTreeOrNull,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
@@ -423,9 +427,12 @@ function getNodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
-  const clickedTree = findTreeByNodeId(trees, clickedNodeId);
+  const { node: clickedNode, tree: clickedTree } = getNodeAndTreeOrNull(
+    skeletonTracing,
+    clickedNodeId,
+  );
 
-  if (clickedTree == null) {
+  if (clickedTree == null || clickedNode == null) {
     return [{ key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" }];
   }
 
@@ -483,6 +490,29 @@ function getNodeContextMenuOptions({
                 label: "Perform Min-Cut between these Nodes",
               }
             : null,
+
+          isProofreadingActive
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () =>
+                  Store.dispatch(
+                    cutAgglomerateFromNeighborsAction(clickedNode.position, clickedTree),
+                  ),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
+                  </Tooltip>
+                ),
+              }
+            : null,
+
           {
             key: "delete-edge",
             disabled: !areNodesConnected,

@@ -1,5 +1,6 @@
 import { Vector3 } from "oxalis/constants";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { Tree } from "oxalis/store";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
@@ -54,8 +55,9 @@ export const minCutAgglomerateWithPositionAction = (position: Vector3) =>
     position,
   } as const);
 
-export const cutAgglomerateFromNeighborsAction = (position: Vector3) =>
+export const cutAgglomerateFromNeighborsAction = (position: Vector3, tree?: Tree) =>
   ({
     type: "CUT_AGGLOMERATE_FROM_NEIGHBORS",
     position,
+    tree,
   } as const);

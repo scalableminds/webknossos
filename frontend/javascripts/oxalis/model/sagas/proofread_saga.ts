@@ -439,27 +439,11 @@ function* performMinCut(
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
-      let firstNodeId;
-      let secondNodeId;
-      for (const node of sourceTree.nodes.values()) {
-        if (_.isEqual(node.position, edge.position1)) {
-          firstNodeId = node.id;
-        } else if (_.isEqual(node.position, edge.position2)) {
-          secondNodeId = node.id;
-        }
-        if (firstNodeId && secondNodeId) {
-          break;
-        }
-      }
-
-      if (!firstNodeId || !secondNodeId) {
-        Toast.warning(
-          `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
-            !secondNodeId ? [", ", edge.position2] : null
-          } in ${sourceTree.name}.`,
-        );
+      const result = getDeleteEdgeActionForEdgePositions(sourceTree, edge);
+      if (result == null) {
         return true;
       }
+      const { firstNodeId, secondNodeId } = result;
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
@@ -477,7 +461,7 @@ function* performCutFromNeighbors(
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
-  sourceTree: Tree | null,
+  sourceTree: Tree | null | undefined,
   items: UpdateAction[],
 ): Saga<
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
@@ -506,27 +490,11 @@ function* performCutFromNeighbors(
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
-      let firstNodeId;
-      let secondNodeId;
-      for (const node of sourceTree.nodes.values()) {
-        if (_.isEqual(node.position, edge.position1)) {
-          firstNodeId = node.id;
-        } else if (_.isEqual(node.position, edge.position2)) {
-          secondNodeId = node.id;
-        }
-        if (firstNodeId && secondNodeId) {
-          break;
-        }
-      }
-
-      if (!firstNodeId || !secondNodeId) {
-        Toast.warning(
-          `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
-            !secondNodeId ? [", ", edge.position2] : null
-          } in ${sourceTree.name}.`,
-        );
+      const result = getDeleteEdgeActionForEdgePositions(sourceTree, edge);
+      if (result == null) {
         return { didCancel: true };
       }
+      const { firstNodeId, secondNodeId } = result;
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
@@ -587,8 +555,6 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
 
-  const editableMappingId = volumeTracing.mappingName;
-
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
@@ -622,7 +588,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
       sourcePosition,
       targetPosition,
       agglomerateFileMag,
-      editableMappingId,
+      volumeTracing.mappingName,
       volumeTracingId,
       null,
       items,
@@ -689,6 +655,9 @@ function* handleProofreadCutNeighbors(action: Action) {
     return;
   }
 
+  // This action does not depend on the active agglomerate. Instead, it
+  // only depends on the rightclicked agglomerate.
+
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -719,14 +688,12 @@ function* handleProofreadCutNeighbors(action: Action) {
 
   const { didCancel, neighborInfo } = yield* call(
     performCutFromNeighbors,
-    // We ignore the active (source) agglomerate, because the action
-    // only depends on the clicked agglomerate.
     targetAgglomerateId,
     targetPosition,
     agglomerateFileMag,
     editableMappingId,
     volumeTracingId,
-    null,
+    action.tree,
     items,
   );
   if (didCancel) {
@@ -920,4 +887,32 @@ function* createGetUnmappedDataValueFn(
 
     return Number(new TypedArrayClass(buffer)[0]);
   };
+}
+
+function getDeleteEdgeActionForEdgePositions(
+  sourceTree: Tree,
+  edge: { position1: Vector3; position2: Vector3; segmentId1: number; segmentId2: number },
+) {
+  let firstNodeId;
+  let secondNodeId;
+  for (const node of sourceTree.nodes.values()) {
+    if (_.isEqual(node.position, edge.position1)) {
+      firstNodeId = node.id;
+    } else if (_.isEqual(node.position, edge.position2)) {
+      secondNodeId = node.id;
+    }
+    if (firstNodeId && secondNodeId) {
+      break;
+    }
+  }
+
+  if (!firstNodeId || !secondNodeId) {
+    Toast.warning(
+      `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
+        !secondNodeId ? [", ", edge.position2] : null
+      } in ${sourceTree.name}.`,
+    );
+    return null;
+  }
+  return { firstNodeId, secondNodeId };
 }

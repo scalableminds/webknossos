@@ -289,8 +289,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
-  const { tracingId: volumeTracingId } = preparation.volumeTracing;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { tracingId: volumeTracingId } = volumeTracing;
 
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
@@ -306,7 +306,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
 
-  const editableMappingId = volumeTracingWithEditableMapping.mappingName;
+  const editableMappingId = volumeTracing.mappingName;
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -378,20 +378,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   yield* put(
     setTreeNameAction(
-      getTreeNameForAgglomerateSkeleton(
-        newSourceAgglomerateId,
-        volumeTracingWithEditableMapping.mappingName,
-      ),
+      getTreeNameForAgglomerateSkeleton(newSourceAgglomerateId, volumeTracing.mappingName),
       sourceTree.treeId,
     ),
   );
   if (sourceTree !== targetTree) {
     yield* put(
       setTreeNameAction(
-        getTreeNameForAgglomerateSkeleton(
-          newTargetAgglomerateId,
-          volumeTracingWithEditableMapping.mappingName,
-        ),
+        getTreeNameForAgglomerateSkeleton(newTargetAgglomerateId, volumeTracing.mappingName),
         targetTree.treeId,
       ),
     );
@@ -581,9 +575,9 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   if (!preparation) {
     return;
   }
-  const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
   if (activeCellId === 0) return;
-  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
 
   const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
   const sourcePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
@@ -603,7 +597,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
 
-  const editableMappingId = volumeTracingWithEditableMapping.mappingName;
+  const editableMappingId = volumeTracing.mappingName;
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -683,7 +677,6 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-  if (preparation.volumeTracing.mappingName == null) return;
 
   yield* refreshAffectedMeshes(volumeTracingId, [
     {
@@ -713,9 +706,9 @@ function* handleProofreadCutNeighbors(action: Action) {
   if (!preparation) {
     return;
   }
-  const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
   if (activeCellId === 0) return;
-  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
 
   const targetPosition = V3.floor(action.position);
 
@@ -727,7 +720,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   }
   const targetAgglomerateId = idInfos[0].agglomerateId;
 
-  const editableMappingId = volumeTracingWithEditableMapping.mappingName;
+  const editableMappingId = volumeTracing.mappingName;
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -768,8 +761,6 @@ function* handleProofreadCutNeighbors(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-  if (preparation.volumeTracing.mappingName == null) return;
-
   yield* refreshAffectedMeshes(volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,
@@ -787,20 +778,23 @@ function* handleProofreadCutNeighbors(action: Action) {
 // Helper functions
 
 function* prepareSplitOrMerge(): Saga<{
-  volumeTracing: VolumeTracing;
-  volumeTracingLayer: APISegmentationLayer;
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3) => Promise<number>;
   getUnmappedDataValue: (position: Vector3) => Promise<number>;
   getMappedAndUnmapped: (
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
-  volumeTracingWithEditableMapping: VolumeTracing & { mappingName: string };
+  volumeTracing: VolumeTracing & { mappingName: string };
 } | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  if (volumeTracingLayer == null) return null;
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (volumeTracing == null) return null;
+  if (volumeTracingLayer == null || volumeTracing == null) {
+    return null;
+  }
+  const { mappingName } = volumeTracing;
+  if (mappingName == null) {
+    return null;
+  }
 
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, volumeTracing.tracingId);
   if (!isHdf5MappingEnabled) {
@@ -841,22 +835,12 @@ function* prepareSplitOrMerge(): Saga<{
     return { agglomerateId, unmappedId };
   };
 
-  const volumeTracingWithEditableMapping = yield* select((state) =>
-    getActiveSegmentationTracing(state),
-  );
-  const mappingName = volumeTracingWithEditableMapping?.mappingName;
-  if (volumeTracingWithEditableMapping == null || mappingName == null) {
-    return null;
-  }
-
   return {
     agglomerateFileMag,
     getDataValue,
     getUnmappedDataValue,
     getMappedAndUnmapped,
-    volumeTracingWithEditableMapping: { ...volumeTracingWithEditableMapping, mappingName },
-    volumeTracingLayer,
-    volumeTracing,
+    volumeTracing: { ...volumeTracing, mappingName },
   };
 }
 

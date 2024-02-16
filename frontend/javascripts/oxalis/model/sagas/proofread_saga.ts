@@ -780,7 +780,6 @@ function* handleProofreadCutNeighbors(action: Action) {
 function* prepareSplitOrMerge(): Saga<{
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3) => Promise<number>;
-  getUnmappedDataValue: (position: Vector3) => Promise<number>;
   getMappedAndUnmapped: (
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
@@ -838,7 +837,6 @@ function* prepareSplitOrMerge(): Saga<{
   return {
     agglomerateFileMag,
     getDataValue,
-    getUnmappedDataValue,
     getMappedAndUnmapped,
     volumeTracing: { ...volumeTracing, mappingName },
   };

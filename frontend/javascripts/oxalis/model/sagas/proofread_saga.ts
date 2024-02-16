@@ -226,7 +226,11 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
-let currentlyPerformingMinCut = false;
+// "Min Cut" as well as "Cut from All neighbors" are proofreading operations
+// that can remove multiple edges. While doing so, DeleteEdgeActions might be
+// dispatched to mutate the agglomerate skeletons. These actions themselves
+// should not be interpreted as new proofreading actions.
+let currentlyPerformingMultiCut = false;
 
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
@@ -241,7 +245,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   }
 
   // Prevent this method from running recursively into itself during Min-Cut.
-  if (currentlyPerformingMinCut) {
+  if (currentlyPerformingMultiCut) {
     return;
   }
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -423,7 +427,7 @@ function* performMinCut(
     return true;
   }
 
-  currentlyPerformingMinCut = true;
+  currentlyPerformingMultiCut = true;
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
     segmentPosition1: sourcePosition,
@@ -461,7 +465,7 @@ function* performMinCut(
             !secondNodeId ? [", ", edge.position2] : null
           } in ${sourceTree.name}.`,
         );
-        currentlyPerformingMinCut = false;
+        currentlyPerformingMultiCut = false;
         return true;
       }
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
@@ -471,7 +475,7 @@ function* performMinCut(
       splitAgglomerate(sourceAgglomerateId, edge.position1, edge.position2, agglomerateFileMag),
     );
   }
-  currentlyPerformingMinCut = false;
+  currentlyPerformingMultiCut = false;
 
   return false;
 }
@@ -488,7 +492,7 @@ function* performCutFromNeighbors(
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
   // todop: do we need this?
-  // currentlyPerformingMinCut = true;
+  // currentlyPerformingMultiCut = true;
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
     segmentPosition,
@@ -532,7 +536,7 @@ function* performCutFromNeighbors(
             !secondNodeId ? [", ", edge.position2] : null
           } in ${sourceTree.name}.`,
         );
-        // currentlyPerformingMinCut = false;
+        // currentlyPerformingMultiCut = false;
         return { didCancel: true };
       }
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
@@ -540,7 +544,7 @@ function* performCutFromNeighbors(
 
     items.push(splitAgglomerate(agglomerateId, edge.position1, edge.position2, agglomerateFileMag));
   }
-  // currentlyPerformingMinCut = false;
+  // currentlyPerformingMultiCut = false;
 
   return { didCancel: false, neighborInfo };
 }
@@ -911,7 +915,9 @@ function* createGetUnmappedDataValueFn(
 
   const fallbackLayerName = volumeTracing.fallbackLayer;
   if (fallbackLayerName == null) {
-    // todop: should not happen, right?
+    // Proofreading is done on editable mappings which only exist when there is
+    // an agglomerate file (which is only possible when there is a segmentation layer
+    // in the dataset).
     throw new Error("No fallback layer exists for volume tracing during proofreading.");
   }
 

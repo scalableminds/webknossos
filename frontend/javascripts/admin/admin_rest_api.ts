@@ -2463,7 +2463,7 @@ export async function getEdgesForAgglomerateMinCut(
   );
 }
 
-type NeighborInfo = {
+export type NeighborInfo = {
   segmentId: number;
   neighbors: Array<{ segmentId: number; position: Vector3 }>;
 };

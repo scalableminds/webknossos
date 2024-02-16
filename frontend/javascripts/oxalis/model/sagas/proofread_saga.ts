@@ -309,7 +309,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
 
-  const partnerInfos = yield* call(getPartnerAgglomerateIds, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
     sourceNodePosition,
     targetNodePosition,
   ]);
@@ -419,7 +419,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   });
 
   // todop: test fork
-  yield* fork(removeOldAndLoadUpdatedMeshes, layerName, [
+  // We fork here to avoid that the user is blocked (via isBusy) while the
+  // meshes are refreshed.
+  yield* fork(refreshAffectedMeshes, layerName, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
@@ -615,7 +617,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const sourcePosition = V3.floor(sourcePositionMaybe);
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getPartnerAgglomerateIds, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
     sourcePosition,
     targetPosition,
   ]);
@@ -709,7 +711,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
 
-  yield* removeOldAndLoadUpdatedMeshes(layerName, [
+  yield* refreshAffectedMeshes(layerName, [
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
@@ -755,7 +757,7 @@ function* handleProofreadCutNeighbors(action: Action) {
 
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getPartnerAgglomerateIds, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
     targetPosition,
   ]);
   if (!partnerInfos) {
@@ -807,7 +809,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
 
-  yield* removeOldAndLoadUpdatedMeshes(layerName, [
+  yield* refreshAffectedMeshes(layerName, [
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
@@ -865,7 +867,7 @@ function* prepareSplitOrMerge(
   return { layerName, agglomerateFileMag, getDataValue };
 }
 
-function* getPartnerAgglomerateIds(
+function* getAgglomerateInfos(
   volumeTracingLayer: APISegmentationLayer,
   getDataValue: (position: Vector3) => Promise<number>,
   positions: Vector3[],
@@ -911,7 +913,7 @@ function* getPartnerAgglomerateIds(
   };
 }
 
-function* removeOldAndLoadUpdatedMeshes(
+function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
     agglomerateId: number;

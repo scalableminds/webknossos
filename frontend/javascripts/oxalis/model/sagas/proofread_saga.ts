@@ -83,10 +83,16 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEveryUnlessBusy(
-    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION", "CUT_AGGLOMERATE_FROM_NEIGHBORS"],
+    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
     handleProofreadMergeOrMinCutOrCutNeighbors,
     "Proofreading in progress",
   );
+  yield* takeEveryUnlessBusy(
+    ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
+    handleProofreadCutNeighbors,
+    "Proofreading in progress",
+  );
+
   yield* takeEvery(
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
     checkForAgglomerateSkeletonModification,
@@ -309,7 +315,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
     sourceNodePosition,
     targetNodePosition,
   ]);
@@ -617,7 +623,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const sourcePosition = V3.floor(sourcePositionMaybe);
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
     sourcePosition,
     targetPosition,
   ]);
@@ -753,11 +759,9 @@ function* handleProofreadCutNeighbors(action: Action) {
   }
   const { layerName, agglomerateFileMag, getDataValue } = preparation;
 
-  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracingLayer, getDataValue, [
+  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
     targetPosition,
   ]);
   if (!partnerInfos) {
@@ -868,7 +872,7 @@ function* prepareSplitOrMerge(
 }
 
 function* getAgglomerateInfos(
-  volumeTracingLayer: APISegmentationLayer,
+  volumeTracing: VolumeTracing,
   getDataValue: (position: Vector3) => Promise<number>,
   positions: Vector3[],
 ): Saga<{
@@ -878,10 +882,7 @@ function* getAgglomerateInfos(
     unmappedId: number;
   }>;
 } | null> {
-  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracingLayer);
-  if (!getUnmappedDataValue) {
-    return null;
-  }
+  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracing);
 
   const getMappedAndUnmapped = async (position: Vector3) => {
     const [agglomerateId, unmappedId] = await Promise.all([
@@ -953,20 +954,21 @@ function* refreshAffectedMeshes(
 }
 
 function* createGetUnmappedDataValueFn(
-  volumeTracingLayer: APISegmentationLayer,
-): Saga<((nodePosition: Vector3) => Promise<number>) | null> {
-  if (volumeTracingLayer.tracingId == null) return null;
-  const layerName = volumeTracingLayer.tracingId;
+  volumeTracing: VolumeTracing,
+): Saga<(nodePosition: Vector3) => Promise<number>> {
+  const layerName = volumeTracing.tracingId;
+  const layer = yield* select((state) => getLayerByName(state.dataset, layerName));
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const resolutionInfo = getResolutionInfo(layer.resolutions);
   const mag = resolutionInfo.getFinestResolution();
 
-  const fallbackLayerName = volumeTracingLayer.fallbackLayer;
-  if (fallbackLayerName == null) return null;
-  const TypedArrayClass = yield* select((state) => {
-    const { elementClass } = getLayerByName(state.dataset, layerName);
-    return getConstructorForElementClass(elementClass)[0];
-  });
+  const fallbackLayerName = volumeTracing.fallbackLayer;
+  if (fallbackLayerName == null) {
+    // todop: should not happen, right?
+    throw new Error("No fallback layer exists for volume tracing during proofreading.");
+  }
+
+  const TypedArrayClass = getConstructorForElementClass(layer.elementClass)[0];
 
   return async (nodePosition: Vector3) => {
     const buffer = await api.data.getRawDataCuboid(

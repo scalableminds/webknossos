@@ -212,6 +212,18 @@ export const deleteEdgeAction = (
     timestamp,
   } as const);
 
+export const deleteIncidentEdgesOfNodeAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "DELETE_INCIDENT_EDGES_OF_NODE",
+    sourceNodeId,
+    targetNodeId,
+    timestamp,
+  } as const);
+
 export const setActiveNodeAction = (
   nodeId: number,
   suppressAnimation: boolean = false,

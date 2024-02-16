@@ -51,6 +51,7 @@ import {
   createBranchPointAction,
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
+  deleteIncidentEdgesOfNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
@@ -411,6 +412,9 @@ function getNodeContextMenuOptions({
 
   const dispatch = useDispatch();
 
+  const deleteIncidentEdgesOfNode = (nodeId: number, treeId: number) =>
+    dispatch(deleteIncidentEdgesOfNodeAction(nodeId, treeId));
+
   if (skeletonTracing == null) {
     throw new Error(
       "NodeContextMenuOptions should not have been called without existing skeleton tracing.",
@@ -496,6 +500,15 @@ function getNodeContextMenuOptions({
           {
             key: "delete-node",
             onClick: () => Actions.deleteNode(dispatch, clickedNodeId, clickedTree.treeId),
+            label: (
+              <>
+                Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
+              </>
+            ),
+          },
+          {
+            key: "delete-incident-edges",
+            onClick: () => deleteIncidentEdgesOfNode(clickedNodeId, clickedTree.treeId),
             label: (
               <>
                 Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}

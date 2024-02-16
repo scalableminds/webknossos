@@ -7,8 +7,6 @@ import {
   type CreateNodeAction,
   type DeleteNodeAction,
   deleteEdgeAction,
-  type DeleteEdgeAction,
-  type MergeTreesAction,
   setTreeNameAction,
   type SetNodePositionAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -16,13 +14,7 @@ import {
   initializeEditableMappingAction,
   setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type {
-  CutAgglomerateFromNeighborsAction,
-  MinCutAgglomerateAction,
-  MinCutAgglomerateWithPositionAction,
-  ProofreadAtPositionAction,
-  ProofreadMergeAction,
-} from "oxalis/model/actions/proofread_actions";
+import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -66,7 +58,6 @@ import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
@@ -241,6 +232,7 @@ let currentlyPerformingMinCut = false;
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
+  // Handles split, merge and min-cut actions on agglomerates.
   if (
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
@@ -248,7 +240,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   ) {
     return;
   }
-  // Handles split, merge and min-cut actions on agglomerates.
 
   // Prevent this method from running recursively into itself during Min-Cut.
   if (currentlyPerformingMinCut) {
@@ -257,17 +248,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  if (volumeTracingLayer == null) return;
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (volumeTracing == null) return;
-  const { tracingId: volumeTracingId } = volumeTracing;
-
   const { sourceNodeId, targetNodeId } = action;
-
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
-
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId);
@@ -280,7 +262,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     sourceTree.type === TreeTypeEnum.AGGLOMERATE && targetTree.type === TreeTypeEnum.AGGLOMERATE;
   const isModifyingAnyAgglomerateSkeletons =
     sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
-  const isProofreadingToolActive = activeTool === AnnotationToolEnum.PROOFREAD;
+  const isProofreadingToolActive = yield* select(
+    (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+  );
 
   if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {
     Toast.warning(
@@ -301,23 +285,24 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
+  const preparation = yield* call(prepareSplitOrMerge);
   if (!preparation) {
     return;
   }
-  const { layerName, agglomerateFileMag, getDataValue } = preparation;
+  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
+    preparation;
+  const { tracingId: volumeTracingId } = preparation.volumeTracing;
 
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
+  const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     sourceNodePosition,
     targetNodePosition,
   ]);
-  if (!partnerInfos) {
+  if (!idInfos) {
     return;
   }
-  const { volumeTracingWithEditableMapping, idInfos } = partnerInfos;
   const [sourceInfo, targetInfo] = idInfos;
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
@@ -593,18 +578,14 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  if (volumeTracingLayer == null) return;
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (volumeTracing == null) return;
-  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
-  if (activeCellId === 0) return;
-
-  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
+  const preparation = yield* call(prepareSplitOrMerge);
   if (!preparation) {
     return;
   }
-  const { layerName, agglomerateFileMag, getDataValue } = preparation;
+  const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
+  if (activeCellId === 0) return;
+  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
+    preparation;
 
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
   const sourcePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
@@ -613,14 +594,13 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const sourcePosition = V3.floor(sourcePositionMaybe);
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
+  const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     sourcePosition,
     targetPosition,
   ]);
-  if (!partnerInfos) {
+  if (idInfos == null) {
     return;
   }
-  const { volumeTracingWithEditableMapping, idInfos } = partnerInfos;
   const [sourceInfo, targetInfo] = idInfos;
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
@@ -705,7 +685,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-  if (volumeTracing.mappingName == null) return;
+  if (preparation.volumeTracing.mappingName == null) return;
 
   yield* refreshAffectedMeshes(layerName, [
     {
@@ -731,28 +711,23 @@ function* handleProofreadCutNeighbors(action: Action) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  if (volumeTracingLayer == null) return;
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (volumeTracing == null) return;
-  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
-  if (activeCellId === 0) return;
-
-  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
+  const preparation = yield* call(prepareSplitOrMerge);
   if (!preparation) {
     return;
   }
-  const { layerName, agglomerateFileMag, getDataValue } = preparation;
+  const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
+  if (activeCellId === 0) return;
+  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
+    preparation;
 
   const targetPosition = V3.floor(action.position);
 
-  const partnerInfos = yield* call(getAgglomerateInfos, volumeTracing, getDataValue, [
+  const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     targetPosition,
   ]);
-  if (!partnerInfos) {
+  if (!idInfos) {
     return;
   }
-  const { volumeTracingWithEditableMapping, idInfos } = partnerInfos;
   const targetAgglomerateId = idInfos[0].agglomerateId;
 
   const editableMappingId = volumeTracingWithEditableMapping.mappingName;
@@ -796,7 +771,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-  if (volumeTracing.mappingName == null) return;
+  if (preparation.volumeTracing.mappingName == null) return;
 
   yield* refreshAffectedMeshes(layerName, [
     {
@@ -814,14 +789,23 @@ function* handleProofreadCutNeighbors(action: Action) {
 
 // Helper functions
 
-function* prepareSplitOrMerge(
-  volumeTracing: VolumeTracing,
-  volumeTracingLayer: APISegmentationLayer,
-): Saga<{
+function* prepareSplitOrMerge(): Saga<{
+  volumeTracing: VolumeTracing;
+  volumeTracingLayer: APISegmentationLayer;
   layerName: string;
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3) => Promise<number>;
+  getUnmappedDataValue: (position: Vector3) => Promise<number>;
+  getMappedAndUnmapped: (
+    position: Vector3,
+  ) => Promise<{ agglomerateId: number; unmappedId: number }>;
+  volumeTracingWithEditableMapping: VolumeTracing & { mappingName: string };
 } | null> {
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+  if (volumeTracingLayer == null) return null;
+  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  if (volumeTracing == null) return null;
+
   const layerName = volumeTracing.tracingId;
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled) {
@@ -852,20 +836,6 @@ function* prepareSplitOrMerge(
     );
   };
 
-  return { layerName, agglomerateFileMag, getDataValue };
-}
-
-function* getAgglomerateInfos(
-  volumeTracing: VolumeTracing,
-  getDataValue: (position: Vector3) => Promise<number>,
-  positions: Vector3[],
-): Saga<{
-  volumeTracingWithEditableMapping: VolumeTracing & { mappingName: string };
-  idInfos: Array<{
-    agglomerateId: number;
-    unmappedId: number;
-  }>;
-} | null> {
   const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracing);
 
   const getMappedAndUnmapped = async (position: Vector3) => {
@@ -876,8 +846,6 @@ function* getAgglomerateInfos(
     return { agglomerateId, unmappedId };
   };
 
-  const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
-
   const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),
   );
@@ -885,6 +853,29 @@ function* getAgglomerateInfos(
   if (volumeTracingWithEditableMapping == null || mappingName == null) {
     return null;
   }
+
+  return {
+    layerName,
+    agglomerateFileMag,
+    getDataValue,
+    getUnmappedDataValue,
+    getMappedAndUnmapped,
+    volumeTracingWithEditableMapping: { ...volumeTracingWithEditableMapping, mappingName },
+    volumeTracingLayer,
+    volumeTracing,
+  };
+}
+
+function* getAgglomerateInfos(
+  getMappedAndUnmapped: (
+    position: Vector3,
+  ) => Promise<{ agglomerateId: number; unmappedId: number }>,
+  positions: Vector3[],
+): Saga<Array<{
+  agglomerateId: number;
+  unmappedId: number;
+}> | null> {
+  const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
     console.warn("At least one id was zero:", idInfos);
     Toast.warning(
@@ -892,10 +883,7 @@ function* getAgglomerateInfos(
     );
     return null;
   }
-  return {
-    volumeTracingWithEditableMapping: { ...volumeTracingWithEditableMapping, mappingName },
-    idInfos,
-  };
+  return idInfos;
 }
 
 function* refreshAffectedMeshes(

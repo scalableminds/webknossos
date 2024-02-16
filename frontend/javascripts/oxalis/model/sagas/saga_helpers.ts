@@ -4,7 +4,7 @@ import { call, put, takeEvery } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {} from "redux-saga/effects";
-import { ActionPattern, ActionMatchingPattern } from "@redux-saga/types";
+import { ActionPattern } from "@redux-saga/types";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
   actionDescriptor: P,

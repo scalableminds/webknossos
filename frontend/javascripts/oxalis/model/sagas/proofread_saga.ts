@@ -226,12 +226,6 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
-// "Min Cut" as well as "Cut from All neighbors" are proofreading operations
-// that can remove multiple edges. While doing so, DeleteEdgeActions might be
-// dispatched to mutate the agglomerate skeletons. These actions themselves
-// should not be interpreted as new proofreading actions.
-let currentlyPerformingMultiCut = false;
-
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
@@ -243,11 +237,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   ) {
     return;
   }
-
-  // Prevent this method from running recursively into itself during Min-Cut.
-  if (currentlyPerformingMultiCut) {
+  if (action.type === "DELETE_EDGE" && action.initiator === "PROOFREADING") {
+    // Ignore DeleteEdge actions that were dispatched by the proofreading saga itself
     return;
   }
+
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -427,7 +421,6 @@ function* performMinCut(
     return true;
   }
 
-  currentlyPerformingMultiCut = true;
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
     segmentPosition1: sourcePosition,
@@ -465,17 +458,15 @@ function* performMinCut(
             !secondNodeId ? [", ", edge.position2] : null
           } in ${sourceTree.name}.`,
         );
-        currentlyPerformingMultiCut = false;
         return true;
       }
-      yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
+      yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
     items.push(
       splitAgglomerate(sourceAgglomerateId, edge.position1, edge.position2, agglomerateFileMag),
     );
   }
-  currentlyPerformingMultiCut = false;
 
   return false;
 }
@@ -491,8 +482,6 @@ function* performCutFromNeighbors(
 ): Saga<
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
-  // todop: do we need this?
-  // currentlyPerformingMultiCut = true;
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
     segmentPosition,
@@ -536,15 +525,13 @@ function* performCutFromNeighbors(
             !secondNodeId ? [", ", edge.position2] : null
           } in ${sourceTree.name}.`,
         );
-        // currentlyPerformingMultiCut = false;
         return { didCancel: true };
       }
-      yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
+      yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
     items.push(splitAgglomerate(agglomerateId, edge.position1, edge.position2, agglomerateFileMag));
   }
-  // currentlyPerformingMultiCut = false;
 
   return { didCancel: false, neighborInfo };
 }

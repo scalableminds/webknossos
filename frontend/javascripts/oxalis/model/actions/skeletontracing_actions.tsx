@@ -204,12 +204,14 @@ export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
   timestamp: number = Date.now(),
+  initiator: "PROOFREADING" | "UNKNOWN" = "UNKNOWN",
 ) =>
   ({
     type: "DELETE_EDGE",
     sourceNodeId,
     targetNodeId,
     timestamp,
+    initiator,
   } as const);
 
 export const deleteIncidentEdgesOfNodeAction = (

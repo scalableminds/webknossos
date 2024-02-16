@@ -12,7 +12,6 @@ import type {
 import type {
   ActiveMappingInfo,
   MutableNode,
-  MutableTreeMap,
   OxalisState,
   SegmentMap,
   SkeletonTracing,
@@ -51,7 +50,6 @@ import {
   createBranchPointAction,
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
-  deleteIncidentEdgesOfNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
@@ -411,10 +409,6 @@ function getNodeContextMenuOptions({
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
   const isVolumeModificationAllowed = !hasEditableMapping(state);
 
-  // todop: remove
-  const deleteIncidentEdgesOfNode = (nodeId: number, treeId: number) =>
-    Store.dispatch(deleteIncidentEdgesOfNodeAction(nodeId, treeId));
-
   if (skeletonTracing == null) {
     throw new Error(
       "NodeContextMenuOptions should not have been called without existing skeleton tracing.",
@@ -526,15 +520,6 @@ function getNodeContextMenuOptions({
           {
             key: "delete-node",
             onClick: () => Actions.deleteNode(Store.dispatch, clickedNodeId, clickedTree.treeId),
-            label: (
-              <>
-                Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
-              </>
-            ),
-          },
-          {
-            key: "delete-incident-edges",
-            onClick: () => deleteIncidentEdgesOfNode(clickedNodeId, clickedTree.treeId),
             label: (
               <>
                 Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}

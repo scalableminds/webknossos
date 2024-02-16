@@ -301,12 +301,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const preparation = yield* call(
-    prepareSplitOrMerge,
-    volumeTracingId,
-    volumeTracing,
-    volumeTracingLayer,
-  );
+  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
   if (!preparation) {
     return;
   }
@@ -605,12 +600,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
   if (activeCellId === 0) return;
 
-  const preparation = yield* call(
-    prepareSplitOrMerge,
-    volumeTracingId,
-    volumeTracing,
-    volumeTracingLayer,
-  );
+  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
   if (!preparation) {
     return;
   }
@@ -748,12 +738,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
   if (activeCellId === 0) return;
 
-  const preparation = yield* call(
-    prepareSplitOrMerge,
-    volumeTracingId,
-    volumeTracing,
-    volumeTracingLayer,
-  );
+  const preparation = yield* call(prepareSplitOrMerge, volumeTracing, volumeTracingLayer);
   if (!preparation) {
     return;
   }
@@ -830,7 +815,6 @@ function* handleProofreadCutNeighbors(action: Action) {
 // Helper functions
 
 function* prepareSplitOrMerge(
-  volumeTracingId: string,
   volumeTracing: VolumeTracing,
   volumeTracingLayer: APISegmentationLayer,
 ): Saga<{
@@ -838,7 +822,7 @@ function* prepareSplitOrMerge(
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3) => Promise<number>;
 } | null> {
-  const layerName = volumeTracingId;
+  const layerName = volumeTracing.tracingId;
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled) {
     return null;

@@ -289,8 +289,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   if (!preparation) {
     return;
   }
-  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
-    preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
   const { tracingId: volumeTracingId } = preparation.volumeTracing;
 
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
@@ -366,7 +365,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+  yield* call([api.data, api.data.reloadBuckets], volumeTracingId, (bucket) =>
     bucket.containsValue(targetAgglomerateId),
   );
 
@@ -407,7 +406,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // todop: test fork
   // We fork here to avoid that the user is blocked (via isBusy) while the
   // meshes are refreshed.
-  yield* fork(refreshAffectedMeshes, layerName, [
+  yield* fork(refreshAffectedMeshes, volumeTracingId, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
@@ -584,10 +583,9 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   }
   const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
   if (activeCellId === 0) return;
-  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
-    preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
 
-  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
+  const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
   const sourcePositionMaybe = segments.getNullable(activeCellId)?.somePosition;
   if (sourcePositionMaybe == null) return;
 
@@ -675,7 +673,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+  yield* call([api.data, api.data.reloadBuckets], volumeTracingId, (bucket) =>
     bucket.containsValue(targetAgglomerateId),
   );
 
@@ -687,7 +685,7 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
   /* Reload agglomerate skeleton */
   if (preparation.volumeTracing.mappingName == null) return;
 
-  yield* refreshAffectedMeshes(layerName, [
+  yield* refreshAffectedMeshes(volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
@@ -717,8 +715,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   }
   const { tracingId: volumeTracingId, activeCellId } = preparation.volumeTracing;
   if (activeCellId === 0) return;
-  const { layerName, agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } =
-    preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracingWithEditableMapping } = preparation;
 
   const targetPosition = V3.floor(action.position);
 
@@ -761,7 +758,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   yield* call([Model, Model.ensureSavedState]);
 
   /* Reload the segmentation */
-  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
+  yield* call([api.data, api.data.reloadBuckets], volumeTracingId, (bucket) =>
     bucket.containsValue(targetAgglomerateId),
   );
 
@@ -773,7 +770,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   /* Reload agglomerate skeleton */
   if (preparation.volumeTracing.mappingName == null) return;
 
-  yield* refreshAffectedMeshes(layerName, [
+  yield* refreshAffectedMeshes(volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
@@ -792,7 +789,6 @@ function* handleProofreadCutNeighbors(action: Action) {
 function* prepareSplitOrMerge(): Saga<{
   volumeTracing: VolumeTracing;
   volumeTracingLayer: APISegmentationLayer;
-  layerName: string;
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3) => Promise<number>;
   getUnmappedDataValue: (position: Vector3) => Promise<number>;
@@ -806,8 +802,7 @@ function* prepareSplitOrMerge(): Saga<{
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return null;
 
-  const layerName = volumeTracing.tracingId;
-  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
+  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, volumeTracing.tracingId);
   if (!isHdf5MappingEnabled) {
     return null;
   }
@@ -829,7 +824,7 @@ function* prepareSplitOrMerge(): Saga<{
   const getDataValue = (position: Vector3) => {
     const { additionalCoordinates } = Store.getState().flycam;
     return api.data.getDataValue(
-      layerName,
+      volumeTracing.tracingId,
       position,
       agglomerateFileZoomstep,
       additionalCoordinates,
@@ -855,7 +850,6 @@ function* prepareSplitOrMerge(): Saga<{
   }
 
   return {
-    layerName,
     agglomerateFileMag,
     getDataValue,
     getUnmappedDataValue,

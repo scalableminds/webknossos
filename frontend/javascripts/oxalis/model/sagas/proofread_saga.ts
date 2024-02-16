@@ -57,7 +57,6 @@ import { V3 } from "libs/mjs";
 import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
-import { APISegmentationLayer } from "types/api_flow_types";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";

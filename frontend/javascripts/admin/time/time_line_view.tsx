@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
-import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
+import { getEditableUsers, getTimeTrackingForUser, getUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -34,6 +34,8 @@ type TimeTrackingStats = {
 };
 type StateProps = {
   activeUser: APIUser;
+  initialUserId: string | null;
+  initialDateRange: DateRange | null;
 };
 type Props = StateProps;
 type State = {
@@ -80,10 +82,18 @@ function compressTimeLogs(logs) {
 }
 
 class TimeLineView extends React.PureComponent<Props, State> {
+  getInitialDateRange() {
+    let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
+    if (this.props.initialDateRange != null) {
+      dateRange = this.props.initialDateRange;
+    }
+    return dateRange;
+  }
+
   state: State = {
     user: null,
     users: [],
-    dateRange: [dayjs().startOf("day"), dayjs().endOf("day")],
+    dateRange: this.getInitialDateRange(),
     timeTrackingData: [],
     stats: {
       totalTime: 0,
@@ -109,7 +119,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
       isFetchingUsers: true,
     });
     const users = await getEditableUsers();
+    // TODO make sure this is done only once.
+    const user = this.props.initialUserId != null ? await getUser(this.props.initialUserId) : null;
     this.setState({
+      user,
       users,
       isFetchingUsers: false,
     });
@@ -427,6 +440,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),
+  initialUserId: state.temporaryConfiguration.timeLineViewConfig.userId,
+  initialDateRange: state.temporaryConfiguration.timeLineViewConfig.timeSpan,
 });
 
 const connector = connect(mapStateToProps);

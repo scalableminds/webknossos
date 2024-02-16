@@ -8,6 +8,9 @@ import dayjs from "dayjs";
 import { DownloadOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
+import { Link } from "react-router-dom";
+import { Store } from "oxalis/singletons";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 
 const { Column } = Table;
 const { RangePicker } = DatePicker;
@@ -156,7 +159,6 @@ function TimeTrackingOverview() {
         }}
       />
       <Spin spinning={allTimeEntries.length < 1} size="large">
-        {" "}
         {/* fix me */}
         <Table
           dataSource={filteredTimeEntries}
@@ -181,9 +183,28 @@ function TimeTrackingOverview() {
             render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}
             sorter={true}
           />
-          <Column title="Details" key="details" />{" "}
+          <Column
+            key="details"
+            dataIndex="user"
+            render={(user) => (
+              <Link
+                to="/reports/timetracking"
+                onClick={() =>
+                  Store.dispatch(
+                    Store.dispatch(
+                      updateTemporarySettingAction("timeLineViewConfig", {
+                        userId: user.id,
+                        timeSpan: [startDate, endDate],
+                      }),
+                    ),
+                  )
+                }
+              >
+                Details
+              </Link>
+            )}
+          />
         </Table>
-        {/* render word "details" and link to https://webknossos.org/reports/timetracking (vorausgefüllt)*/}
       </Spin>
       <Button
         type="primary"

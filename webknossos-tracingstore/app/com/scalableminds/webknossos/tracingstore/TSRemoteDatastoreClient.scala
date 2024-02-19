@@ -6,7 +6,12 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, MissingBucketHeaders, SegmentIndexData}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  MissingBucketHeaders,
+  SegmentIndexData
+}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -139,8 +144,6 @@ class TSRemoteDatastoreClient @Inject()(
 
       indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
     } yield indices
-
-
 
   def querySegmentIndexForMultipleSegments(remoteFallbackLayer: RemoteFallbackLayer,
                                            segmentIds: Seq[Long],

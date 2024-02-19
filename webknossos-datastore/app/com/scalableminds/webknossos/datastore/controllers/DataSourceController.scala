@@ -608,7 +608,6 @@ class DataSourceController @Inject()(
     Action.async(validateJson[GetMultipleSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
-        logger.info("Querying segment index for " + request.body.segmentIds.mkString(","))
         for {
           segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             for {

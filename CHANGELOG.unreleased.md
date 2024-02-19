@@ -21,8 +21,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Content Security Policy (CSP) settings are now relaxed by default. To keep stricter CSP rules, add them to your specific `application.conf`. [#7589](https://github.com/scalableminds/webknossos/pull/7589)
 - HDF5 agglomerate mappings are now pinned to a volume annotation layer once the user performs a volume annotation action while a mapping is active. [#7549](https://github.com/scalableminds/webknossos/pull/7549)
 - WEBKNOSSOS now uses Java 21. [#7599](https://github.com/scalableminds/webknossos/pull/7599)
-- Email verification is disabled by default. To enable it, set `webKnossos.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620)
-
+- Email verification is disabled by default. To enable it, set `webKnossos.user.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620) [#7621](https://github.com/scalableminds/webknossos/pull/7621)
+- Added more documentation for N5 and Neuroglancer precomputed web upload. [#7622](https://github.com/scalableminds/webknossos/pull/7622)
 
 ### Fixed
 - Fixed rare SIGBUS crashes of the datastore module that were caused by memory mapping on unstable file systems. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
@@ -33,8 +33,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug in ND volume annotation downloads where the additionalAxes metadata had wrong indices. [#7592](https://github.com/scalableminds/webknossos/pull/7592)
 - Fixed a bug in proofreading aka editable mapping annotations where splitting would sometimes give the new id to the selected segment rather than to the split-off one. [#7608](https://github.com/scalableminds/webknossos/pull/7608)
 - Fixed small styling errors as a follow up to the antd v5 upgrade [#7612](https://github.com/scalableminds/webknossos/pull/7612)
--Fixed deprecation warnings caused by Antd <Collapse> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
-
+- Fixed deprecation warnings caused by Antd <Collapse> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
+- Fixed small styling error with a welcome notification for new users on webknossos.org. [7623](https://github.com/scalableminds/webknossos/pull/7623)
 
 ### Removed
 

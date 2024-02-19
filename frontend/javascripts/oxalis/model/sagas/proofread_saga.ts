@@ -1,5 +1,5 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery, put, call, all, fork } from "typed-redux-saga";
+import { takeEvery, put, call, all, spawn } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import { AnnotationToolEnum, MappingStatusEnum, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
@@ -61,6 +61,7 @@ import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import { Action } from "../actions/actions";
+import { sleep } from "libs/utils";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -394,10 +395,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
-  // todop: test fork
-  // We fork here to avoid that the user is blocked (via isBusy) while the
-  // meshes are refreshed.
-  yield* fork(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
@@ -616,8 +614,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-
-  yield* refreshAffectedMeshes(volumeTracingId, [
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
@@ -701,7 +698,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   ]);
 
   /* Reload agglomerate skeleton */
-  yield* refreshAffectedMeshes(volumeTracingId, [
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
@@ -810,6 +807,8 @@ function* refreshAffectedMeshes(
     nodePosition: Vector3;
   }>,
 ) {
+  // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
+  // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
   if (!proofreadUsingMeshes()) {
     return;
   }

@@ -32,7 +32,10 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getServerVolumeTracings,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
@@ -625,18 +628,21 @@ function determineDefaultState(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName } = volumeTracing;
-
-    if (mappingName == null) continue;
+    const { id: layerName, mappingName, mappingIsPinned } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    if (stateByLayer[layerName].mappingInfo == null) {
-      stateByLayer[layerName].mappingInfo = {
-        mappingName,
-        mappingType: "HDF5",
-      };
+    if (stateByLayer[layerName].mappingInfo == null || mappingIsPinned) {
+      // A pinned mapping always takes precedence over the URL configuration.
+      if (mappingName == null) {
+        delete stateByLayer[layerName].mappingInfo;
+      } else {
+        stateByLayer[layerName].mappingInfo = {
+          mappingName,
+          mappingType: "HDF5",
+        };
+      }
     }
   }
 

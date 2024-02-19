@@ -109,9 +109,7 @@ export function* ensureMaybeActiveMappingIsPinned(
       return error as EnsureMappingIsPinnedReturnType;
     }
   } else {
-    if (!isSomeMappingActive) {
-      yield* put(setMappingIsPinnedAction());
-    }
+    yield* put(setMappingIsPinnedAction());
     return { isMappingPinnedIfNeeded: true, reason: "Pinned that no mapping is active." };
   }
 }

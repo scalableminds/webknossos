@@ -32,10 +32,7 @@ import {
   getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getServerVolumeTracings,
-  getVolumeTracingById,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,

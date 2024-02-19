@@ -43,6 +43,10 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   private lazy val segmentIndexBuffer: mutable.Map[String, ListOfVec3IntProto] =
     new mutable.HashMap[String, ListOfVec3IntProto]()
 
+  // Used during initial saving of annotation: For each bucket, multiple segment ids are requested, which may overlap.
+  private lazy val fileSegmentIndexCache: mutable.Map[String, ListOfVec3IntProto] =
+    new mutable.HashMap[String, ListOfVec3IntProto]()
+
   def put(segmentId: Long,
           mag: Vec3Int,
           additionalCoordinates: Option[Seq[AdditionalCoordinate]],
@@ -108,6 +112,16 @@ class VolumeSegmentIndexBuffer(tracingId: String,
           _ = if (wasMiss) misses = segmentId :: misses
           else hits = (segmentId, bucketPositions.values.map(vec3IntFromProto)) :: hits
         } yield ())
+      _ = misses.map(
+        segmentId =>
+          fileSegmentIndexCache
+            .get(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) match {
+            case Some(positions) => {
+              hits = (segmentId, positions.values.map(vec3IntFromProto)) :: hits
+              misses = misses.filterNot(_ == segmentId)
+            }
+            case None => ()
+        })
     } yield (hits, misses)
   }
 
@@ -124,11 +138,19 @@ class VolumeSegmentIndexBuffer(tracingId: String,
                                                                                    segmentIds)
       fileBucketPositions <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.querySegmentIndexForMultipleSegments(layer,
-                                                                     mutableIndexMisses,
-                                                                     mag,
-                                                                     mappingName,
-                                                                     userToken)
+          for {
+            fileBucketPositionsOpt <- Fox.runIf(mutableIndexMisses.nonEmpty)(
+              remoteDatastoreClient
+                .querySegmentIndexForMultipleSegments(layer, mutableIndexMisses, mag, mappingName, userToken))
+            fileBucketPositions = fileBucketPositionsOpt.getOrElse(Seq())
+            _ = fileBucketPositions.map {
+              case (segmentId, positions) =>
+                fileSegmentIndexCache(
+                  segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
+                  ListOfVec3IntProto(positions.map(vec3IntToProto))
+            }
+
+          } yield fileBucketPositions
         case _ => Fox.successful(List[(Long, Seq[Vec3Int])]())
       }
     } yield (mutableIndexHits ++ fileBucketPositions)

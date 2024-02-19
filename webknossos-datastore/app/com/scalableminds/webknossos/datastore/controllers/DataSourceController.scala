@@ -617,7 +617,7 @@ class DataSourceController @Inject()(
                                                                               dataLayerName,
                                                                               segmentId)
               bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, request.body.mag, fileMag)
-            } yield SegmentIndexData(segmentId, bucketPositions)
+            } yield SegmentIndexData(segmentId, bucketPositions.toSeq)
           }
         } yield Ok(Json.toJson(segmentIdsAndBucketPositions))
       }

@@ -20,6 +20,7 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import {getReadableAnnotations} from "admin/admin_rest_api";
 const dataSetId = {
   name: "confocal-multi_knossos",
   owningOrganization: "Organization_X",
@@ -239,3 +240,10 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
     id: "annotations-complexUpdateActions",
   });
 });
+test("getReadableAnnotations()", async (t) => {
+  const annotations = await api.getReadableAnnotations(false, 0);
+  t.snapshot(replaceVolatileValues(annotations), {
+    id: "annotations-listReadable",
+  });
+});
+

@@ -24,6 +24,7 @@ RUN apt-get update \
   postgresql-client \
   yarn \
   git \
+  libblosc1 \
   # The following packages are necessary to run headless-gl
   && apt-get install -y \
   mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \

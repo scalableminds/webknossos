@@ -109,6 +109,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
     if (isAdminOrTeamManger) {
       this.fetchData();
+      if (this.props.initialDateRange != null && this.props.initialDateRange?.length > 0)
+        this.handleDateChange(this.props.initialDateRange);
     } else {
       this.fetchDataFromLoggedInUser();
     }
@@ -119,7 +121,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
       isFetchingUsers: true,
     });
     const users = await getEditableUsers();
-    // TODO make sure this is done only once.
     const user = this.props.initialUserId != null ? await getUser(this.props.initialUserId) : null;
     this.setState({
       user,
@@ -183,9 +184,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.fetchTimeTrackingData();
   };
 
-  handleUserChange = async (userId: number) => {
+  handleUserChange = async (userId: string) => {
     await this.setState((prevState) => ({
-      // @ts-expect-error ts-migrate(2367) FIXME: This condition will always return 'false' since th... Remove this comment to see the full error message
       user: prevState.users.find((u) => u.id === userId),
     }));
     this.fetchTimeTrackingData();
@@ -335,6 +335,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                         value: user.id,
                         label: `${user.lastName}, ${user.firstName} (${user.email})`,
                       }))}
+                    value={this.state.user?.id}
                   />
                 ) : (
                   <table

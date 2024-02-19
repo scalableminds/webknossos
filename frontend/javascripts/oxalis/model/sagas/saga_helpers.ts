@@ -103,9 +103,15 @@ export function* ensureMaybeActiveMappingIsPinned(
     volumeTracing.tracingId in activeMappingByLayer &&
     activeMappingByLayer[volumeTracing.tracingId].mappingType === "HDF5";
   if (isSomeMappingActive && isHDF5Mapping) {
-    return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
+    try {
+      return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
+    } catch (error: any) {
+      return error as EnsureMappingIsPinnedReturnType;
+    }
   } else {
-    yield* put(setMappingIsPinnedAction());
+    if (!isSomeMappingActive) {
+      yield* put(setMappingIsPinnedAction());
+    }
     return { isMappingPinnedIfNeeded: true, reason: "Pinned that no mapping is active." };
   }
 }

@@ -20,7 +20,7 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import {getReadableAnnotations} from "admin/admin_rest_api";
+import { getReadableAnnotations } from "admin/admin_rest_api";
 const dataSetId = {
   name: "confocal-multi_knossos",
   owningOrganization: "Organization_X",
@@ -246,4 +246,3 @@ test("getReadableAnnotations()", async (t) => {
     id: "annotations-listReadable",
   });
 });
-

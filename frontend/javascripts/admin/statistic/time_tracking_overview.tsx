@@ -16,6 +16,8 @@ const { Column } = Table;
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTracked"];
+const ALL_ANNOTATIONS_KEY = "ALL_ANNOTATIONS";
+const ALL_TASKS_KEY = "ALL_TASKS";
 
 type TimeEntry = {
   user: {
@@ -34,7 +36,7 @@ function TimeTrackingOverview() {
     teamIds: string[],
     projectIds: string[],
   ) => {
-    return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=false&teamIds=${teamIds.join(
+    return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=${!includeAllAnnotations}&teamIds=${teamIds.join(
       ",",
     )}&projectIds=${projectIds.join(",")}`;
   };
@@ -59,15 +61,20 @@ function TimeTrackingOverview() {
     [],
   );
 
-  const [selectedProjects, setSelectedProjects] = useState(allProjects.map((p) => p.id));
+  const [selectedProjectIds, setSelectedProjectIds] = useState(allProjects.map((p) => p.id));
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
+  const [includeAllAnnotations, setIncludeAllAnnotations] = useState(false);
 
   const filteredTimeEntries = useFetch(
     async () => {
       const filteredTeams =
-        selectedTeams.length > 0 ? selectedTeams : allTeams.map((team) => team.id);
+        selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       const filteredProjects =
-        selectedProjects.length > 0 ? selectedProjects : allProjects.map((project) => project.id);
+        selectedProjectIds.length === 0 ||
+        selectedProjectIds.includes(ALL_ANNOTATIONS_KEY) ||
+        selectedProjectIds.includes(ALL_TASKS_KEY)
+          ? allProjects.map((project) => project.id)
+          : selectedProjectIds;
       if (filteredTeams.length < 1 || filteredProjects.length < 1) return [];
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
@@ -79,7 +86,7 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, selectedProjects, startDate, endDate, allTimeEntries],
+    [selectedTeams, selectedProjectIds, startDate, endDate, allTimeEntries],
   );
   const filterStyle = { marginInline: 10 };
   const selectWidth = 200;
@@ -106,6 +113,40 @@ function TimeTrackingOverview() {
     saveAs(blob, filename);
   };
 
+  const getTaskFilterOptions = () => {
+    const additionalProjectFilters = [
+      { label: "All Annotations", value: ALL_ANNOTATIONS_KEY },
+      { label: "All Tasks", value: ALL_TASKS_KEY },
+    ];
+    const mappedProjects = allProjects.map((project) => {
+      return {
+        label: project.name,
+        value: project.id,
+      };
+    });
+    return mappedProjects.concat(additionalProjectFilters);
+  };
+
+  //TODO
+  const setSelectedProjects = (selectedProjectIds: string[], projectId: string) => {
+    if (projectId == ALL_ANNOTATIONS_KEY) {
+      setSelectedProjectIds([ALL_ANNOTATIONS_KEY]);
+      setIncludeAllAnnotations(true);
+    } // set all projects and true
+    else if (projectId == ALL_TASKS_KEY) {
+      setSelectedProjectIds([ALL_TASKS_KEY]);
+      setIncludeAllAnnotations(false);
+    } else {
+      let prevSelectedIds = selectedProjectIds;
+      if (
+        selectedProjectIds.find((id) => id === ALL_ANNOTATIONS_KEY || id === ALL_TASKS_KEY) != null
+      )
+        prevSelectedIds = [];
+      if (includeAllAnnotations) setIncludeAllAnnotations(false);
+      setSelectedProjectIds([...prevSelectedIds, projectId]);
+    }
+  };
+
   return (
     <Card
       title={"Annotation Time per User"}
@@ -126,7 +167,7 @@ function TimeTrackingOverview() {
           };
         })}
         value={selectedTeams}
-        onSelect={(teamId: string) => setSelectedTeams([...selectedTeams, teamId])}
+        onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
         onDeselect={(removedTeamId: string) =>
           setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId))
         }
@@ -136,19 +177,14 @@ function TimeTrackingOverview() {
         placeholder="Filter projects"
         defaultValue={[]}
         style={{ width: selectWidth, ...filterStyle }}
-        options={allProjects.map((project) => {
-          return {
-            label: project.name,
-            value: project.id,
-          };
-        })}
-        value={selectedProjects}
+        options={getTaskFilterOptions()}
+        value={selectedProjectIds}
         onDeselect={(removedProjectId: string) =>
-          setSelectedProjects(
-            selectedProjects.filter((projectId) => projectId !== removedProjectId),
+          setSelectedProjectIds(
+            selectedProjectIds.filter((projectId) => projectId !== removedProjectId),
           )
         }
-        onSelect={(projectId: string) => setSelectedProjects([...selectedProjects, projectId])}
+        onSelect={(projectId: string) => setSelectedProjects(selectedProjectIds, projectId)}
       />
       <RangePicker
         style={filterStyle}

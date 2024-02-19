@@ -74,7 +74,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEveryUnlessBusy(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
-    handleProofreadMergeOrMinCutOrCutNeighbors,
+    handleProofreadMergeOrMinCut,
     "Proofreading in progress",
   );
   yield* takeEveryUnlessBusy(
@@ -515,8 +515,8 @@ function* clearProofreadingByproducts() {
   coarselyLoadedSegmentIds = [];
 }
 
-function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
-  // Actually, action is ProofreadMergeAction | MinCutAgglomerateWithPositionAction | CutAgglomerateFromNeighborsAction
+function* handleProofreadMergeOrMinCut(action: Action) {
+  // Actually, action is ProofreadMergeAction | MinCutAgglomerateWithPositionAction
   // but the takeEveryUnlessBusy wrapper does not understand this.
   if (
     action.type !== "PROOFREAD_MERGE" &&
@@ -597,23 +597,6 @@ function* handleProofreadMergeOrMinCutOrCutNeighbors(action: Action) {
       return;
     }
   }
-  // } else if (action.type === "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
-  //   const { didCancel, neighborInfo } = yield* call(
-  //     performCutFromNeighbors,
-  //     // We ignore the active (source) agglomerate, because the action
-  //     // only depends on the clicked agglomerate.
-  //     targetAgglomerateId,
-  //     targetPosition,
-  //     agglomerateFileMag,
-  //     editableMappingId,
-  //     volumeTracingId,
-  //     null,
-  //     items,
-  //   );
-  //   if (hasErrored) {
-  //     return;
-  //   }
-  // }
 
   if (items.length === 0) {
     return;

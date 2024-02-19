@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
@@ -93,6 +94,8 @@ class VolumeTracingService @Inject()(
 
   adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+
+  val fallbackLayerCache: AlfuCache[String, Option[RemoteFallbackLayer]] = AlfuCache(maxCapacity = 100)
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -975,7 +978,10 @@ class VolumeTracingService @Inject()(
       Fox.failure("Cannot merge tracings with and without editable mappings")
     }
 
-  def getFallbackLayer(tracingId: String) = Fox[Option[RemoteFallbackLayer]] {
+  def getFallbackLayer(tracingId: String): Fox[Option[RemoteFallbackLayer]] =
+    fallbackLayerCache.getOrLoad(tracingId, t => getFallbackLayerFromWebknossos(t))
+
+  private def getFallbackLayerFromWebknossos(tracingId: String) = Fox[Option[RemoteFallbackLayer]] {
     for {
       tracing <- find(tracingId)
       dataSource <- remoteWebKnossosClient.getDataSourceForTracing(tracingId)

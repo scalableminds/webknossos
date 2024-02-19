@@ -38,12 +38,12 @@ function extendPricingPlan(organization: APIOrganization) {
 
   Modal.confirm({
     title: "Extend Current Plan",
-    okText: "Request Extension",
+    okText: "Request an Email Quote",
     onOk: () => {
       sendExtendPricingPlanEmail();
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     },
-    icon: <FieldTimeOutlined style={{ color: "var(--ant-primary-color)" }} />,
+    icon: <FieldTimeOutlined style={{ color: "var(--ant-color-primary)" }} />,
     width: 1000,
     content: (
       <div>
@@ -87,10 +87,10 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
     <Modal
       title={
         <>
-          <UserAddOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade User Quota
+          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
         </>
       }
-      okText={"Request More Users"}
+      okText={"Buy more Users"}
       onOk={handleUserUpgrade}
       onCancel={destroy}
       width={800}
@@ -131,10 +131,10 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
     <Modal
       title={
         <>
-          <DatabaseOutlined style={{ color: "var(--ant-primary-color)" }} /> Upgrade Storage Space
+          <DatabaseOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade Storage Space
         </>
       }
-      okText={"Request More Storage Space"}
+      okText={"Buy more Storage Space"}
       onOk={handleStorageUpgrade}
       onCancel={destroy}
       width={800}
@@ -263,7 +263,7 @@ function UpgradePricingPlanModal({
       open
       title={
         <>
-          <RocketOutlined style={{ color: "var(--ant-primary-color)" }} /> {title}
+          <RocketOutlined style={{ color: "var(--ant-color-primary)" }} /> {title}
         </>
       }
       width={800}

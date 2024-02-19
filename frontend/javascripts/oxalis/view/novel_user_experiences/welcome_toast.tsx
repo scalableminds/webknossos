@@ -10,9 +10,6 @@ function showWelcomeToast() {
     className: "webknossos-welcome-toast",
     duration: 0,
     placement: "bottomRight",
-    style: {
-      width: 360,
-    },
     icon: <i className="logo" />,
     message: "Welcome to WEBKNOSSOS",
     description: (

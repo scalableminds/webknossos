@@ -447,23 +447,24 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <FolderOutlined
-            style={{
-              fontSize: 50,
-            }}
-          />
-          <br />
-          {isRetrying
-            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-            : `Uploading Dataset ${form.getFieldValue("name")}.`}
-          <br />
-          {isRetrying ? "Retrying to continue the upload …" : null}
-          <br />
-          <Progress // Round to 1 digit after the comma.
-            percent={Math.round(uploadProgress * 1000) / 10}
-            status="active"
-          />
-          {isFinishing ? <Spin style={{ marginTop: 4 }} tip="Processing uploaded files …" /> : null}
+          <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
+            <FolderOutlined
+              style={{
+                fontSize: 50,
+              }}
+            />
+            <br />
+            {isRetrying
+              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+              : `Uploading Dataset ${form.getFieldValue("name")}.`}
+            <br />
+            {isRetrying ? "Retrying to continue the upload …" : null}
+            <br />
+            <Progress // Round to 1 digit after the comma.
+              percent={Math.round(uploadProgress * 1000) / 10}
+              status="active"
+            />
+          </Spin>
         </div>
       </Modal>
     );
@@ -917,6 +918,7 @@ function FileUploadArea({
       )}
     />
   );
+
   return (
     <div>
       <div
@@ -932,7 +934,7 @@ function FileUploadArea({
         <InboxOutlined
           style={{
             fontSize: 48,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
         <p
@@ -1003,6 +1005,50 @@ function FileUploadArea({
                       trigger="hover"
                     >
                       OME-Zarr 0.4+ (NGFF) datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      Neuroglancer Precomputed datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      N5 datasets{" "}
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,

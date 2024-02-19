@@ -3,12 +3,12 @@ import {
   Button,
   Dropdown,
   Empty,
-  Input,
   Spin,
   Modal,
   Tooltip,
   notification,
   MenuProps,
+  Space,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -103,7 +103,6 @@ import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
 
 const { confirm } = Modal;
-const InputGroup = Input.Group;
 const treeTabId = "tree-list";
 
 type TreeOrTreeGroup = {
@@ -842,7 +841,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <InputGroup compact className="compact-icons">
+                <Space.Compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -896,8 +895,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
-                <InputGroup compact className="compact-icons compact-items">
+                </Space.Compact>
+                <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
@@ -926,12 +925,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
+                </Space.Compact>
                 {!showSkeletons ? (
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined
                       style={{
-                        color: "var(--ant-warning)",
+                        color: "var(--ant-color-warning)",
                       }}
                     />
                   </Tooltip>

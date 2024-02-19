@@ -26,7 +26,7 @@ type SrcAndDstSynapse = BaseSynapse & {
   src: number;
   dst: number;
 };
-type DirectionCaptionsKeys = keyof typeof directionCaptions;
+export type DirectionCaptionsKeys = keyof typeof directionCaptions;
 export type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
 export type Agglomerate = Record<DirectionCaptionsKeys, Array<number>>;
 export type ConnectomeData = {

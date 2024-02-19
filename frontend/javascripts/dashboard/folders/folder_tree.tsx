@@ -7,10 +7,10 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Modal, MenuProps } from "antd";
+import { Dropdown, Modal, MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
-import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
@@ -223,9 +223,9 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
+        icon: <PlusOutlined />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <PlusOutlined />
             {newFolderText}
           </PricingEnforcedSpan>
         ),
@@ -234,9 +234,9 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
+        icon: <EditOutlined />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <EditOutlined />
             Edit Folder
           </PricingEnforcedSpan>
         ),

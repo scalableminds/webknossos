@@ -1,6 +1,6 @@
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Input, Dropdown, Tooltip } from "antd";
+import { Dropdown, Tooltip, Space } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -36,8 +36,8 @@ import Store from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
-import { MenuProps } from "rc-menu";
-const InputGroup = Input.Group;
+import type { MenuProps } from "rc-menu";
+
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
@@ -46,6 +46,7 @@ const enum SortByEnum {
   ID = "ID",
   NATURAL = "NATURAL",
 }
+
 type SortByEnumType = keyof typeof SortByEnum;
 type SortOptions = {
   sortBy: SortByEnumType;
@@ -445,7 +446,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
             return (
               <React.Fragment>
                 {this.renderMarkdownModal()}
-                <InputGroup compact className="compact-items compact-icons">
+                <Space.Compact className="compact-items compact-icons">
                   <AdvancedSearchPopover
                     onSelect={(comment) => this.props.setActiveNode(comment.nodeId)}
                     data={_.flatMap(this.props.skeletonTracing.trees, (tree) => tree.comments)}
@@ -504,7 +505,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     icon={<ShrinkOutlined />}
                     title="Collapse or expand groups"
                   />
-                </InputGroup>
+                </Space.Compact>
                 <div
                   style={{
                     flex: "1 1 auto",

@@ -18,6 +18,8 @@ import generatePicker from "antd/es/date-picker/generatePicker";
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
+import { Store } from "oxalis/singletons";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 
 const FormItem = Form.Item;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -82,18 +84,10 @@ function compressTimeLogs(logs) {
 }
 
 class TimeLineView extends React.PureComponent<Props, State> {
-  getInitialDateRange() {
-    let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
-    if (this.props.initialDateRange != null) {
-      dateRange = this.props.initialDateRange;
-    }
-    return dateRange;
-  }
-
   state: State = {
     user: null,
     users: [],
-    dateRange: this.getInitialDateRange(),
+    dateRange: [dayjs().startOf("day"), dayjs().endOf("day")],
     timeTrackingData: [],
     stats: {
       totalTime: 0,
@@ -104,15 +98,23 @@ class TimeLineView extends React.PureComponent<Props, State> {
     isFetchingUsers: false,
   };
 
-  componentDidMount() {
+  async componentDidMount() {
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
 
     if (isAdminOrTeamManger) {
-      this.fetchData();
-      if (this.props.initialDateRange != null && this.props.initialDateRange?.length > 0)
-        this.handleDateChange(this.props.initialDateRange);
+      console.log(this.state.dateRange);
+      await this.fetchData();
     } else {
-      this.fetchDataFromLoggedInUser();
+      this.fetchDataFromLoggedInUser(); //TODO maybe await too?
+    }
+    if (this.props.initialDateRange != null) {
+      this.handleDateChange(this.props.initialDateRange);
+      Store.dispatch(
+        updateTemporarySettingAction("timeLineViewConfig", {
+          userId: null,
+          timeSpan: null,
+        }),
+      );
     }
   }
 

@@ -191,12 +191,10 @@ function TimeTrackingOverview() {
                 to="/reports/timetracking"
                 onClick={() =>
                   Store.dispatch(
-                    Store.dispatch(
-                      updateTemporarySettingAction("timeLineViewConfig", {
-                        userId: user.id,
-                        timeSpan: [startDate, endDate],
-                      }),
-                    ),
+                    updateTemporarySettingAction("timeLineViewConfig", {
+                      userId: user.id,
+                      timeSpan: [startDate, endDate],
+                    }),
                   )
                 }
               >

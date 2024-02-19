@@ -1,7 +1,7 @@
-import ErrorHandling from "libs/error_handling";
-
 import features from "features";
+import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import _ from "lodash";
 import {
   ComputeQuickSelectForRectAction,
   ComputeSAMForSkeletonAction,
@@ -10,9 +10,9 @@ import {
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
 import { all, call, put, takeEvery, takeLatest } from "typed-redux-saga";
 
-import createProgressCallback from "libs/progress_callback";
-import { AnnotationToolEnum, BoundingBoxType, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum, BoundingBoxType, OrthoView, Vector3 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import type { Node, VolumeTracing } from "oxalis/store";
 import { Tree } from "oxalis/store";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracingLayer } from "../accessors/volumetracing_accessor";
@@ -20,10 +20,15 @@ import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import performQuickSelectHeuristic, { prepareQuickSelect } from "./quick_select_heuristic_saga";
 import performQuickSelectML, {
+  EMBEDDING_SIZE,
   SAMNodeSelect,
   getInferenceSession,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
+import {
+  showAdGetSkeletonQuickSelectInfoComponents,
+  showFollowupInterpolationToast,
+} from "./skeleton_quick_select_info_components";
 import { performVolumeInterpolation } from "./volume/volume_interpolation_saga";
 
 function* shouldUseHeuristic() {
@@ -31,12 +36,190 @@ function* shouldUseHeuristic() {
   return useHeuristic || !features().segmentAnythingEnabled;
 }
 
-const SKELETON_SAM_PREDICTION_BOUNDS = 300;
-
 type SkeletonSamPrediction = {
   saga: Saga<void>;
   bounds: BoundingBoxType;
 };
+
+function prepareSkeletonSAMInput(nodes: Node[], dimensions: Vector3, activeViewport: OrthoView) {
+  const [firstDim, secondDim, thirdDim] = dimensions;
+  const nodePositions = nodes.map((node) => node.position);
+  const sum = nodePositions.reduce((currentSum: Vector3, position: Vector3) => {
+    return currentSum.map((sum, index) => sum + position[index]) as Vector3;
+  });
+  const center = sum.map((sum) => sum / nodePositions.length) as Vector3;
+  const embeddingPrefetchTopLeft: Vector3 = [...center];
+  const embeddingPrefetchBottomRight: Vector3 = [...center];
+  embeddingPrefetchTopLeft[firstDim] -= EMBEDDING_SIZE[0] / 2;
+  embeddingPrefetchTopLeft[secondDim] -= EMBEDDING_SIZE[1] / 2;
+  embeddingPrefetchBottomRight[firstDim] += EMBEDDING_SIZE[0] / 2;
+  embeddingPrefetchBottomRight[secondDim] += EMBEDDING_SIZE[1] / 2;
+
+  const prefetchBounds = {
+    min: embeddingPrefetchTopLeft,
+    max: embeddingPrefetchBottomRight,
+  };
+  const nodeSelect: SAMNodeSelect = {
+    nodePositions,
+    bounds: prefetchBounds,
+    viewport: activeViewport,
+  };
+  return nodeSelect;
+}
+
+function* interpolateBetweenPredictions(
+  firstPredictedSliceBounds: BoundingBoxType,
+  secondPredictedSliceBounds: BoundingBoxType,
+  volumeTracing: VolumeTracing,
+  activeViewport: OrthoView,
+  thirdDim: number,
+  labeledResolution: Vector3,
+  labeledZoomStep: number,
+): Saga<void> {
+  // First wait for the predictions between which this saga should interpolate.
+  const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
+  if (volumeTracingLayer == null) {
+    return;
+  }
+  const interpolationBoxMag1 = new BoundingBox(firstPredictedSliceBounds).extend(
+    new BoundingBox(secondPredictedSliceBounds),
+  );
+  const interpolationDepth = interpolationBoxMag1.getSize()[thirdDim];
+  const directionFactor = Math.sign(
+    firstPredictedSliceBounds.min[thirdDim] - secondPredictedSliceBounds.min[thirdDim],
+  );
+  // Add one to the max of the thirdDim to include the last slice in the data being loaded during the interpolation.
+  interpolationBoxMag1.max[thirdDim] += 1;
+
+  // Now interpolate between the two predictions.
+  yield* call(
+    performVolumeInterpolation,
+    volumeTracing,
+    volumeTracingLayer,
+    activeViewport,
+    interpolationBoxMag1,
+    labeledResolution,
+    labeledZoomStep,
+    interpolationDepth,
+    directionFactor,
+    false,
+  );
+}
+
+type QuickSelectPreparationParameter = {
+  labeledZoomStep: number;
+  labeledResolution: Vector3;
+  firstDim: number;
+  secondDim: number;
+  thirdDim: number;
+  volumeTracing: VolumeTracing;
+  activeViewport: OrthoView;
+};
+
+function prepareSkeletonSAMPredictions(
+  nodePositionsGroupedBySlice: Record<number, Node[]>,
+  options: QuickSelectPreparationParameter,
+) {
+  let previousPredictionBounds: BoundingBoxType | null = null;
+  const samPredictions = [];
+  const interpolationSagas = [];
+  const {
+    volumeTracing,
+    activeViewport,
+    labeledZoomStep,
+    labeledResolution,
+    firstDim,
+    secondDim,
+    thirdDim,
+  } = options;
+  for (const nodesOfASingleSlice of Object.values(nodePositionsGroupedBySlice) as Node[][]) {
+    const nodeQuickSelectInput = prepareSkeletonSAMInput(
+      nodesOfASingleSlice,
+      [firstDim, secondDim, thirdDim],
+      activeViewport,
+    );
+    const currentPredictionSaga = call(performQuickSelectML, nodeQuickSelectInput);
+    samPredictions.push(currentPredictionSaga);
+    const currentPredictionBounds = nodeQuickSelectInput.bounds;
+    if (previousPredictionBounds) {
+      const isTooCloseToPreviousPrediction =
+        Math.abs(previousPredictionBounds.max[thirdDim] - currentPredictionBounds.min[thirdDim]) <
+        2;
+      if (!isTooCloseToPreviousPrediction) {
+        interpolationSagas.push(
+          call(
+            interpolateBetweenPredictions,
+            currentPredictionBounds,
+            previousPredictionBounds,
+            volumeTracing,
+            activeViewport,
+            thirdDim,
+            labeledResolution,
+            labeledZoomStep,
+          ),
+        );
+      }
+    }
+    previousPredictionBounds = currentPredictionBounds;
+  }
+  return { samPredictions, interpolationSagas };
+}
+
+function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
+  const tree: Tree = yield* select(
+    (state) => enforceSkeletonTracing(state.tracing).trees[action.treeId],
+  );
+  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+
+  if (busyBlockingInfo.isBusy) {
+    console.warn(
+      `Ignoring skelton SAM annotation request (reason: ${busyBlockingInfo.reason || "unknown"})`,
+    );
+    return;
+  }
+
+  yield* put(setBusyBlockingInfoAction(true, "Annotating nodes of Tree with SAM ..."));
+  const preparation = yield* call(prepareQuickSelect, action);
+  if (preparation == null) {
+    return;
+  }
+  const activeViewport = action.viewport;
+  const { labeledZoomStep, firstDim, secondDim, thirdDim, labeledResolution, volumeTracing } =
+    preparation;
+
+  const getNodesThirdDimSlice = (node: Node) => node.position[thirdDim];
+  const nodePositionsGroupedBySlice = _.groupBy(
+    _.sortBy([...tree.nodes.values()], getNodesThirdDimSlice),
+    getNodesThirdDimSlice,
+  ) as Record<number, Node[]>;
+  const options = {
+    labeledZoomStep,
+    labeledResolution,
+    firstDim,
+    secondDim,
+    thirdDim,
+    volumeTracing,
+    activeViewport,
+  };
+  const { samPredictions, interpolationSagas } = prepareSkeletonSAMPredictions(
+    nodePositionsGroupedBySlice,
+    options,
+  );
+  const modal = showAdGetSkeletonQuickSelectInfoComponents();
+
+  yield* all(samPredictions);
+  yield* put(setBusyBlockingInfoAction(false));
+  modal.update({
+    okButtonProps: { disabled: false },
+    okText: "Proceed with correcting the selections",
+  });
+  const shouldPerformInterpolation = yield* call(showFollowupInterpolationToast);
+  if (shouldPerformInterpolation) {
+    yield* put(setBusyBlockingInfoAction(true, "Interpolating between SAM predictions ..."));
+    yield* all(interpolationSagas);
+    yield* put(setBusyBlockingInfoAction(false));
+  }
+}
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
@@ -53,110 +236,7 @@ export default function* listenToQuickSelect(): Saga<void> {
             yield* call(performQuickSelectML, action);
           }
         } else {
-          const tree: Tree = yield* select(
-            (state) => enforceSkeletonTracing(state.tracing).trees[action.treeId],
-          );
-          const activeViewport = action.viewport;
-          const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-          if (busyBlockingInfo.isBusy) {
-            console.warn(
-              `Ignoring skelton SAM annotation request (reason: ${
-                busyBlockingInfo.reason || "unknown"
-              })`,
-            );
-            return;
-          }
-
-          yield* put(setBusyBlockingInfoAction(true, "Annotating nodes of Tree ..."));
-          const progressCallback = createProgressCallback({
-            pauseDelay: 200,
-            successMessageDelay: 1000,
-            key: "TREE_SAM_ANNOTATION_PROGRESS",
-          });
-          const preparation = yield* call(prepareQuickSelect, action);
-          if (preparation == null) {
-            return;
-          }
-          const {
-            labeledZoomStep,
-            firstDim,
-            secondDim,
-            thirdDim,
-            labeledResolution,
-            volumeTracing,
-          } = preparation;
-          function* interpolateBetweenPredictions(
-            predictFirstSlice: SkeletonSamPrediction,
-            predictSecondSlice: SkeletonSamPrediction,
-          ): Saga<void> {
-            // First wait for the predictions between which this saga should interpolate.
-            yield* all([predictFirstSlice.saga, predictSecondSlice.saga]);
-            const volumeTracingLayer = yield* select((store) =>
-              getActiveSegmentationTracingLayer(store),
-            );
-            if (volumeTracingLayer == null) {
-              return;
-            }
-            const interpolationBoxMag1 = new BoundingBox(predictFirstSlice.bounds).extend(
-              new BoundingBox(predictSecondSlice.bounds),
-            );
-            const interpolationDepth = interpolationBoxMag1.getSize()[thirdDim];
-            const directionFactor = Math.sign(
-              predictFirstSlice.bounds.min[thirdDim] - predictSecondSlice.bounds.min[thirdDim],
-            );
-            // Add one to the max of the thirdDim to include the last slice in the data being loaded during the interpolation.
-            interpolationBoxMag1.max[thirdDim] += 1;
-
-            // Now interpolate between the two predictions.
-            yield* call(
-              performVolumeInterpolation,
-              volumeTracing,
-              volumeTracingLayer,
-              activeViewport,
-              interpolationBoxMag1,
-              labeledResolution,
-              labeledZoomStep,
-              interpolationDepth,
-              directionFactor,
-              false,
-            );
-          }
-          let previousPrediction: SkeletonSamPrediction | null = null;
-          const interpolationSagas = [];
-          for (const node of tree.nodes.values()) {
-            const nodePosition: Vector3 = [...node.position];
-            const embeddingPrefetchTopLeft: Vector3 = [...node.position];
-            const embeddingPrefetchBottomRight: Vector3 = [...node.position];
-            embeddingPrefetchTopLeft[firstDim] -= SKELETON_SAM_PREDICTION_BOUNDS;
-            embeddingPrefetchTopLeft[secondDim] -= SKELETON_SAM_PREDICTION_BOUNDS;
-            embeddingPrefetchBottomRight[firstDim] += SKELETON_SAM_PREDICTION_BOUNDS;
-            embeddingPrefetchBottomRight[secondDim] += SKELETON_SAM_PREDICTION_BOUNDS;
-            const prefetchBounds = {
-              min: embeddingPrefetchTopLeft,
-              max: embeddingPrefetchBottomRight,
-            };
-            const nodeSelect: SAMNodeSelect = {
-              nodePosition,
-              bounds: prefetchBounds,
-              viewport: activeViewport,
-            };
-            const currentPredictionSaga = call(performQuickSelectML, nodeSelect);
-            const currentPrediction = { saga: currentPredictionSaga, bounds: prefetchBounds };
-            if (previousPrediction) {
-              const isTooCloseToPreviousPrediction =
-                Math.abs(previousPrediction.bounds.max[thirdDim] - prefetchBounds.min[thirdDim]) <
-                2;
-              if (!isTooCloseToPreviousPrediction) {
-                interpolationSagas.push(
-                  call(interpolateBetweenPredictions, currentPrediction, previousPrediction),
-                );
-              }
-            }
-            previousPrediction = currentPrediction;
-          }
-          yield* all([...interpolationSagas]);
-          yield* call(progressCallback, true, "Finished annotating all nodes");
+          yield* call(performSkeletonQuickSelectSAM, action);
         }
       } catch (ex) {
         Toast.error((ex as Error).toString());

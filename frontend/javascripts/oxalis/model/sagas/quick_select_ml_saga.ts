@@ -19,7 +19,7 @@ import Dimensions from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
-const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
+export const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
 type CacheEntry = {
   embeddingPromise: Promise<Float32Array>;
   embeddingBoxMag1: BoundingBox;
@@ -27,7 +27,7 @@ type CacheEntry = {
   layerName: string;
 };
 export type SAMNodeSelect = {
-  nodePosition: Vector3;
+  nodePositions: Vector3[];
   bounds: BoundingBoxType;
   viewport: OrthoView;
 };
@@ -119,11 +119,11 @@ async function inferFromEmbedding(
   embedding: Float32Array,
   embeddingBoxInTargetMag: BoundingBox,
   userBoxInTargetMag: BoundingBox,
-  nodePosition: Vector3 | null,
+  nodePositions: Vector3[] | null,
   activeViewport: OrthoView,
 ) {
   const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
-  const shouldDetectRectangle = nodePosition == null;
+  const shouldDetectRectangle = nodePositions == null;
   const ort = await import("onnxruntime-web");
 
   let ortSession;
@@ -151,29 +151,26 @@ async function inferFromEmbedding(
       bottomRight[maybeAdjustedSecondDim],
     ]);
   } else {
-    onnxCoord = new Float32Array([
-      nodePosition[maybeAdjustedFirstDim] - embeddingBoxInTargetMag.min[maybeAdjustedFirstDim],
-      nodePosition[maybeAdjustedSecondDim] - embeddingBoxInTargetMag.min[maybeAdjustedSecondDim],
-      0,
-      0,
-    ]);
+    const nodePositionsInEmbedding = nodePositions.map((position) => {
+      return [
+        position[maybeAdjustedFirstDim] - embeddingBoxInTargetMag.min[maybeAdjustedFirstDim],
+        position[maybeAdjustedSecondDim] - embeddingBoxInTargetMag.min[maybeAdjustedSecondDim],
+      ];
+    });
+    onnxCoord = new Float32Array([..._.flatten(nodePositionsInEmbedding), 0, 0]);
   }
-  /*
-max
-: 
-(3) [4176, 3955, 1045]
-min
-: 
-(3) [3152, 2931, 1044]*/
+
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
-  const onnxLabel = shouldDetectRectangle ? new Float32Array([2, 3]) : new Float32Array([1, -1]);
+  const onnxLabel = shouldDetectRectangle
+    ? new Float32Array([2, 3])
+    : new Float32Array([...new Array(nodePositions.length).fill(1), -1]);
   const onnxMaskInput = new Float32Array(256 * 256);
   const onnxHasMaskInput = new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
-    point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
-    point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
+    point_coords: new ort.Tensor("float32", onnxCoord, [1, Math.round(onnxCoord.length / 2), 2]),
+    point_labels: new ort.Tensor("float32", onnxLabel, [1, onnxLabel.length]),
     mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
     orig_im_size: new ort.Tensor("float32", origImSize, [2]),
@@ -309,7 +306,7 @@ export default function* performQuickSelect(
       ? action
       : { startPosition: action.bounds.min, endPosition: action.bounds.max };
   const quickSelectGeometry = "type" in action ? action.quickSelectGeometry : null;
-  const nodePosition = "nodePosition" in action ? action.nodePosition : null;
+  const nodePositions = "nodePositions" in action ? action.nodePositions : null;
 
   // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
@@ -366,7 +363,7 @@ export default function* performQuickSelect(
     embedding,
     embeddingBoxInTargetMag,
     userBoxInTargetMag,
-    nodePosition,
+    nodePositions,
     activeViewport,
   );
   if (!mask) {

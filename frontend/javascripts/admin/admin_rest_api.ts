@@ -2219,9 +2219,9 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, [1,1,1])),
+          position: V3.toArray(V3.sub(position, [1, 1, 1])),
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1,1,1])),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
           ...rest,

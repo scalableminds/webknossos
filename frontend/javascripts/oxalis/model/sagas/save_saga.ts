@@ -481,6 +481,14 @@ function* watchForSaveConflicts() {
       //   3) we acquire a mutex
       // should not occur, because there is a grace period for which the mutex has to be free until it can
       // be acquired again (see annotation.mutex.expiryTime in application.conf).
+      // The downside of an early return here is that we won't be able to warn the user early
+      // if the user opened the annotation in two tabs and mutated it there.
+      // However,
+      //   a) this scenario is pretty rare and the worst case is that they get a 409 error
+      //      during saving and
+      //   b) checking for newer versions when the active user may update the annotation introduces
+      //      a race condition between this saga and the actual save saga. Synchronizing these sagas
+      //      would be possible, but would add further complexity to the mission critical save saga.
       return;
     }
 

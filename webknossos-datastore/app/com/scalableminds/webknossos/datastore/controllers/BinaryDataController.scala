@@ -261,7 +261,6 @@ class BinaryDataController @Inject()(
             segmentationLayer,
             request.body.cuboid(dataLayer),
             request.body.segmentId,
-            request.body.subsamplingStrides,
             request.body.scale,
             request.body.mapping,
             request.body.mappingType,

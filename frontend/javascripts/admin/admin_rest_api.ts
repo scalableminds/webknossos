@@ -2184,7 +2184,6 @@ type MeshRequest = {
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
-  subsamplingStrides: Vector3;
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
@@ -2205,7 +2204,6 @@ export function computeAdHocMesh(
     additionalCoordinates,
     cubeSize,
     mappingName,
-    subsamplingStrides,
 
     ...rest
   } = meshRequest;
@@ -2221,13 +2219,11 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          position: V3.toArray(V3.sub(position, [1,1,1])),
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1,1,1])),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
-          subsamplingStrides,
           ...rest,
         },
       },
@@ -2262,7 +2258,7 @@ export function getBucketPositionsForAdHocMesh(
         method: "POST",
       },
     );
-    return positions;
+    return  ;
   });
 }
 

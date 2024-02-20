@@ -50,7 +50,6 @@ case class WebknossosAdHocMeshRequest(
     mag: Vec3Int,
     cubeSize: Vec3Int,
     segmentId: Long,
-    subsamplingStrides: Vec3Int,
     scale: Vec3Double,
     mapping: Option[String] = None,
     mappingType: Option[String] = None,

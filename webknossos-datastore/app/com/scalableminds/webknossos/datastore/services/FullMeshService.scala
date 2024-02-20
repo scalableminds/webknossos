@@ -17,7 +17,6 @@ case class FullMeshRequest(
     mappingName: Option[String],
     mappingType: Option[String], // json, agglomerate, editableMapping
     mag: Option[Vec3Int],
-    subsamplingStrides: Option[Vec3Int],
     seedPosition: Option[Vec3Double], // required for ad-hoc meshing
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
 )
@@ -46,7 +45,6 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository) {
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.needeForAdHoc"
-      subsamplingStrides <- fullMeshRequest.subsamplingStrides.toFox ?~> "subsamplingStrides.needeForAdHoc"
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName)

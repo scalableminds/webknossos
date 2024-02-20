@@ -48,6 +48,7 @@ class DSMeshController @Inject()(
     val layerName = "segmentation"
     val segmentId = 1997
     val seedPosition = Vec3Int(3455, 3455, 1023)
+    val chunkSize = Vec3Int.full(101)
 
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
@@ -59,7 +60,8 @@ class DSMeshController @Inject()(
         dataSource,
         segmentationLayer,
         segmentId,
-        VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)))
+        VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, Vec3Int(4, 4, 1)),
+        chunkSize)
       _ = Instant.logSince(before, "adHocMeshing")
       beforeEncoding = Instant.now
       encoded = verticesNested.map(adHocMeshToStl)
@@ -73,14 +75,14 @@ class DSMeshController @Inject()(
       segmentationLayer: SegmentationLayer,
       segmentId: Long,
       topLeft: VoxelPosition,
+      chunkSize: Vec3Int,
       visited: collection.mutable.Set[VoxelPosition] = collection.mutable.Set[VoxelPosition]())
     : Fox[List[Array[Float]]] = {
     val adHocMeshRequest = AdHocMeshRequest(
       Some(dataSource),
       segmentationLayer,
-      Cuboid(topLeft, 100, 100, 50),
+      Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       segmentId,
-      Vec3Int.ones,
       dataSource.scale,
       None,
       None,
@@ -89,10 +91,10 @@ class DSMeshController @Inject()(
     visited += topLeft
     for {
       (vertices: Array[Float], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, visited)
+      nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunks(dataSource, segmentationLayer, segmentId, position, visited)
+        getAllAdHocChunks(dataSource, segmentationLayer, segmentId, position, chunkSize, visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices
@@ -100,6 +102,7 @@ class DSMeshController @Inject()(
 
   private def generateNextTopLeftsFromNeighbors(oldTopLeft: VoxelPosition,
                                                 neighborIds: List[Int],
+                                                chunkSize: Vec3Int,
                                                 visited: collection.mutable.Set[VoxelPosition]): List[VoxelPosition] = {
     // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
     val neighborLookup = Seq(
@@ -112,9 +115,9 @@ class DSMeshController @Inject()(
     )
     val neighborPositions = neighborIds.map { neighborId =>
       val neighborMultiplier = neighborLookup(neighborId)
-      oldTopLeft.move(neighborMultiplier.x * 100 * oldTopLeft.mag.x,
-                      neighborMultiplier.y * 100 * oldTopLeft.mag.y,
-                      neighborMultiplier.z * 50 * oldTopLeft.mag.z)
+      oldTopLeft.move(neighborMultiplier.x * chunkSize.x * oldTopLeft.mag.x,
+                      neighborMultiplier.y * chunkSize.y * oldTopLeft.mag.y,
+                      neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z)
     }
     neighborPositions.filterNot(visited.contains)
   }

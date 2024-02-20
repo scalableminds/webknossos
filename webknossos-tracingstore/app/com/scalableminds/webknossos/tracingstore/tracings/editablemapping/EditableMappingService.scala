@@ -516,7 +516,6 @@ class EditableMappingService @Inject()(
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
         segmentId = request.segmentId,
-        subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
         mappingType = None,

@@ -267,7 +267,7 @@ export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // The plane in orthogonal mode is a little smaller than the viewport
 // There is an outer yellow CSS border and an inner (red/green/blue) border
 // that is a result of the plane being smaller than the renderer viewport
-export const OUTER_CSS_BORDER = 2;
+export const OUTER_CSS_BORDER = 0;
 const VIEWPORT_WIDTH = 376;
 export const ensureSmallerEdge = false;
 export const Unicode = {

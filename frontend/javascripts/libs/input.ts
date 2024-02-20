@@ -676,9 +676,10 @@ export class InputMouse {
       width: 0,
       height: 0,
     };
-    return _.extend({}, boundingRect, {
+    return {
+      ...boundingRect,
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,
-    });
+    };
   }
 }

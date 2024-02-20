@@ -547,7 +547,11 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
                 requiredPricingPlan={PricingPlanEnum.Power}
-                render={() => <TimeLineView />}
+                render={({ location }: ContextRouter) => {
+                  const params = Utils.getUrlParamsObjectFromString(location.search);
+                  debugger;
+                  <TimeLineView />;
+                }}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

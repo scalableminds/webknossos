@@ -232,21 +232,13 @@ function TimeTrackingOverview() {
           <Column
             key="details"
             dataIndex="user"
-            render={(user) => (
-              <Link
-                to="/reports/timetracking"
-                onClick={() =>
-                  Store.dispatch(
-                    updateTemporarySettingAction("timeLineViewConfig", {
-                      userId: user.id,
-                      timeSpan: [startDate, endDate],
-                    }),
-                  )
-                }
-              >
-                Details
-              </Link>
-            )}
+            render={(user) => {
+              const params = new URLSearchParams();
+              params.append("user", user.id);
+              params.append("start", startDate.valueOf().toString());
+              params.append("end", endDate.valueOf().toString());
+              return <Link to={{ pathname: `/reports/timetracking?${params}` }}>Details</Link>;
+            }}
           />
         </Table>
       </Spin>

@@ -519,6 +519,7 @@ export function* finalizeQuickSelect(
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  closeVolumeUndoBatchAfterwards: boolean = true,
 ) {
   if (quickSelectGeometry) {
     quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
@@ -552,7 +553,9 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  if (closeVolumeUndoBatchAfterwards) {
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  }
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(

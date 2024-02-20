@@ -34,7 +34,6 @@ import {
   Tooltip,
   Tree,
 } from "antd";
-import features from "features";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
@@ -406,7 +405,11 @@ class SegmentsView extends React.Component<Props, State> {
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
     );
 
-    if (features().jobsEnabled) {
+    if (
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
       this.pollJobData();
     }
   }
@@ -682,7 +685,6 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     if (
-      !features().jobsEnabled ||
       !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobType.COMPUTE_MESH_FILE,
       )

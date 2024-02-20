@@ -419,7 +419,6 @@ function AdditionalSkeletonModesButtons() {
   const mergerModeButtonStyle = isMergerModeEnabled ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
 
   const isMaterializeVolumeAnnotationEnabled =
-    features().jobsEnabled &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
       APIJobType.MATERIALIZE_VOLUME_ANNOTATION,
     );
@@ -452,16 +451,15 @@ function AdditionalSkeletonModesButtons() {
           alt="Merger Mode"
         />
       </ButtonComponent>
-      {isMergerModeEnabled &&
-        isMaterializeVolumeAnnotationEnabled(
-          <ButtonComponent
-            style={NARROW_BUTTON_STYLE}
-            onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
-            title="Materialize this merger mode annotation into a new dataset."
-          >
-            <ExportOutlined />
-          </ButtonComponent>,
-        )}
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && (
+        <ButtonComponent
+          style={NARROW_BUTTON_STYLE}
+          onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
+          title="Materialize this merger mode annotation into a new dataset."
+        >
+          <ExportOutlined />
+        </ButtonComponent>
+      )}
       {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}

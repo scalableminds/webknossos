@@ -39,7 +39,6 @@ import { ArbitraryVectorInput } from "libs/vector_input";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import features from "features";
 import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
@@ -251,9 +250,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isArbitrarySupported = hasSkeleton || isViewMode;
     const isAIAnalysisEnabled = () => {
       const jobsEnabled =
-        features().jobsEnabled &&
-        (dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
-          dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI));
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI);
       return jobsEnabled;
     };
 

@@ -15,6 +15,7 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
+import { APIJobType } from "types/api_flow_types";
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
@@ -91,6 +92,10 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
+  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+    APIJobType.EXPORT_TIFF,
+  );
+
   return (
     <div
       className="padded-tab-content"
@@ -109,15 +114,11 @@ export default function BoundingBoxTab() {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
-            isExportEnabled={dataset.dataStore.jobsEnabled}
+            isExportEnabled={isExportEnabled}
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
-            onExport={
-              dataset.dataStore.jobsEnabled
-                ? _.partial(setSelectedBoundingBoxForExport, bb)
-                : () => {}
-            }
+            onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}

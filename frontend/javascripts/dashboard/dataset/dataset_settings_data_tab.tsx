@@ -12,7 +12,6 @@ import {
   Space,
   Button,
 } from "antd";
-import features from "features";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -561,28 +560,28 @@ function SimpleLayerForm({
                         return parseInt(value, 10);
                       }}
                     />
-                    {dataset &&
-                      features().jobsEnabled &&
-                      dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-                        APIJobType.FIND_LARGEST_SEGMENT_ID,
-                      ) && (
-                        <Button
-                          type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                          title={`${
-                            activeJob != null ? "Scanning" : "Scan"
-                          } the data to derive the value automatically`}
-                          style={{ marginLeft: 8 }}
-                          loading={activeJob != null}
-                          disabled={activeJob != null || startJob == null}
-                          onClick={
-                            startJob != null && startJobFn != null
-                              ? () => startJob(startJobFn)
-                              : () => Promise.resolve()
-                          }
-                        >
-                          Detect
-                        </Button>
-                      )}
+                    {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
+                      APIJobType.FIND_LARGEST_SEGMENT_ID,
+                    ) ? (
+                      <Button
+                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                        title={`${
+                          activeJob != null ? "Scanning" : "Scan"
+                        } the data to derive the value automatically`}
+                        style={{ marginLeft: 8 }}
+                        loading={activeJob != null}
+                        disabled={activeJob != null || startJob == null}
+                        onClick={
+                          startJob != null && startJobFn != null
+                            ? () => startJob(startJobFn)
+                            : () => Promise.resolve()
+                        }
+                      >
+                        Detect
+                      </Button>
+                    ) : (
+                      <></>
+                    )}
                   </DelegatePropsToFirstChild>
                 </FormItemWithInfo>
               </div>

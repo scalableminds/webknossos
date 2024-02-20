@@ -274,7 +274,6 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
-  debugger;
   const isJSONMappingActive =
     segmentationTracingLayer != null &&
     activeMappingByLayer[segmentationTracingLayer.tracingId]?.mappingType === "JSON" &&

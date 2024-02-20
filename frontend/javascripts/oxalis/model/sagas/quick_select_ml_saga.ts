@@ -307,6 +307,8 @@ export default function* performQuickSelect(
       : { startPosition: action.bounds.min, endPosition: action.bounds.max };
   const quickSelectGeometry = "type" in action ? action.quickSelectGeometry : null;
   const nodePositions = "nodePositions" in action ? action.nodePositions : null;
+  const isSamNodeSelect = "nodePositions" in action;
+  const closeVolumeUndoBatchAfterPrediction = !isSamNodeSelect;
 
   // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
@@ -389,5 +391,6 @@ export default function* performQuickSelect(
     mask,
     overwriteMode,
     labeledZoomStep,
+    closeVolumeUndoBatchAfterPrediction,
   );
 }

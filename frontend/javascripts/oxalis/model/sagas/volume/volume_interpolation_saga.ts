@@ -277,17 +277,6 @@ export function* performVolumeInterpolation(
   directionFactor: number,
   onlyExtrude: boolean,
 ): Saga<void> {
-  console.log({
-    volumeTracing,
-    volumeTracingLayer,
-    activeViewport,
-    relevantBoxMag1,
-    labeledResolution,
-    labeledZoomStep,
-    interpolationDepth,
-    directionFactor,
-    onlyExtrude,
-  });
   const activeCellId = volumeTracing.activeCellId;
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);

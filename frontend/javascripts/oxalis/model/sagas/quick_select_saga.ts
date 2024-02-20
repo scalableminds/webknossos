@@ -6,6 +6,7 @@ import {
   ComputeQuickSelectForRectAction,
   ComputeSAMForSkeletonAction,
   MaybePrefetchEmbeddingAction,
+  finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
 import { all, call, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -208,6 +209,7 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
   const modal = showAdGetSkeletonQuickSelectInfoComponents();
 
   yield* all(samPredictions);
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(setBusyBlockingInfoAction(false));
   modal.update({
     okButtonProps: { disabled: false },
@@ -217,6 +219,7 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
   if (shouldPerformInterpolation) {
     yield* put(setBusyBlockingInfoAction(true, "Interpolating between SAM predictions ..."));
     yield* all(interpolationSagas);
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(setBusyBlockingInfoAction(false));
   }
 }

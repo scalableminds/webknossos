@@ -31,6 +31,7 @@ const getExplanationForDisabledVolume = (
   isZoomInvalidForTracing: boolean,
   isEditableMappingActive: boolean,
   isSegmentationTracingTransformed: boolean,
+  isJSONMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
@@ -54,6 +55,9 @@ const getExplanationForDisabledVolume = (
 
   if (isSegmentationTracingTransformed) {
     return "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations.";
+  }
+  if (isJSONMappingActive) {
+    return "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.";
   }
 
   return "Volume annotation is currently disabled.";
@@ -122,7 +126,7 @@ function _getDisabledInfoForProofreadTool(
 ) {
   // The explanations are prioritized according to effort the user has to put into
   // activating proofreading.
-  // 1) If a non editable mapping is pinned to the annotation, proofreading actions are
+  // 1) If a non editable mapping is locked to the annotation, proofreading actions are
   //    not allowed for this annotation.
   // 2) If no agglomerate mapping is available (or activated), the user should know
   //    about this requirement and be able to set it up (this can be the most difficult
@@ -150,7 +154,7 @@ function _getDisabledInfoForProofreadTool(
     }
   } else {
     explanation =
-      "A mapping that does not support proofreading actions is pinned to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
+      "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
   }
   return {
     isDisabled,
@@ -246,6 +250,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   }
 > {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
+  const { activeMappingByLayer } = state.temporaryConfiguration;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
@@ -269,6 +274,11 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+  debugger;
+  const isJSONMappingActive =
+    segmentationTracingLayer != null &&
+    activeMappingByLayer[segmentationTracingLayer.tracingId]?.mappingType === "JSON" &&
+    activeMappingByLayer[segmentationTracingLayer.tracingId]?.mappingStatus === "ENABLED";
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,
     isInMergerMode,
@@ -276,9 +286,10 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isZoomInvalidForTracing,
     isEditableMappingActive,
     isSegmentationTracingTransformed,
+    isJSONMappingActive,
   );
   const isUneditableMappingPinned =
-    (segmentationTracingLayer?.mappingIsPinned && !segmentationTracingLayer?.mappingIsEditable) ??
+    (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.mappingIsEditable) ??
     false;
 
   const isVolumeDisabled =
@@ -288,6 +299,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     // this condition doesn't need to be checked here
     !isSegmentationTracingVisibleForMag ||
     isInMergerMode ||
+    isJSONMappingActive ||
     isSegmentationTracingTransformed;
 
   if (isVolumeDisabled || isEditableMappingActive) {

@@ -769,7 +769,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
-  mappingIsPinned?: boolean;
+  mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

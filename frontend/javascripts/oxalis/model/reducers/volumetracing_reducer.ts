@@ -229,7 +229,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
-    mappingIsPinned: tracing.mappingIsPinned,
+    mappingIsLocked: tracing.mappingIsLocked,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
@@ -392,7 +392,7 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsPinned) return state;
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
@@ -400,19 +400,19 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_IS_EDITABLE": {
       // Editable mappings cannot be disabled or switched for now.
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsPinned) return state;
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
-      // An editable mapping is always pinned.
+      // An editable mapping is always locked.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
-        mappingIsPinned: true,
+        mappingIsLocked: true,
       });
     }
     case "SET_MAPPING_IS_PINNED": {
-      if (volumeTracing.mappingIsPinned) return state;
+      if (volumeTracing.mappingIsLocked) return state;
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {
-        mappingIsPinned: true,
+        mappingIsLocked: true,
       });
     }
 

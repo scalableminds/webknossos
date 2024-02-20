@@ -403,12 +403,12 @@ function AdditionalSkeletonModesButtons() {
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
   const isMappingPinned =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsPinned;
+    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
   const isMergerModeDisabled = isEditableMappingActive || isMappingPinned;
   const mergerModeTooltipText = isEditableMappingActive
     ? "Merger mode cannot be enabled while an editable mapping is active."
     : isMappingPinned
-    ? "Merger mode cannot be enabled while a mapping is pinned. Please create a new annotation and use the merger mode there."
+    ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
     : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
 
   const toggleNewNodeNewTreeMode = () =>

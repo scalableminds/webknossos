@@ -82,7 +82,7 @@ import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import {
-  ensureMaybeActiveMappingIsPinned,
+  ensureMaybeActiveMappingIsLocked,
   takeEveryUnlessBusy,
 } from "oxalis/model/sagas/saga_helpers";
 import {
@@ -222,9 +222,9 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    // As changes to the volume layer will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
+    // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
     const { isMappingPinnedIfNeeded } = yield* call(
-      ensureMaybeActiveMappingIsPinned,
+      ensureMaybeActiveMappingIsLocked,
       volumeTracing,
     );
     if (!isMappingPinnedIfNeeded) {
@@ -447,8 +447,8 @@ export function* floodFill(): Saga<void> {
       continue;
     }
     // As the flood fill will be applied to the volume layer,
-    // the potentially existing mapping should be pinned to ensure a consistent state.
-    yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+    // the potentially existing mapping should be locked to ensure a consistent state.
+    yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     const progressCallback = createProgressCallback({
@@ -708,14 +708,14 @@ export function* diffVolumeTracing(
 
     if (
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
-      prevVolumeTracing.mappingIsPinned !== volumeTracing.mappingIsPinned
+      prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
     ) {
-      // Once the first volume action is performed on a volume layer, the mapping state is pinned.
+      // Once the first volume action is performed on a volume layer, the mapping state is locked.
       // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
         volumeTracing.mappingName || null,
         volumeTracing.mappingIsEditable || null,
-        volumeTracing.mappingIsPinned,
+        volumeTracing.mappingIsLocked,
       );
       yield action;
     }

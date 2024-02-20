@@ -38,7 +38,7 @@ import { Model, api } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
-import { ensureMaybeActiveMappingIsPinned } from "../saga_helpers";
+import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -434,8 +434,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
     return;
   }
-  // As the interpolation will be applied, the potentially existing mapping should be pinned to ensure a consistent state.
-  const { isMappingPinnedIfNeeded } = yield* call(ensureMaybeActiveMappingIsPinned, volumeTracing);
+  // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+  const { isMappingPinnedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
   if (!isMappingPinnedIfNeeded) {
     return;
   }

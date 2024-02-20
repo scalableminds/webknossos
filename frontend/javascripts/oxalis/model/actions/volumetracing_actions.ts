@@ -43,7 +43,7 @@ export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
-export type SetMappingIsPinnedAction = ReturnType<typeof setMappingIsPinnedAction>;
+export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
@@ -90,7 +90,7 @@ export type VolumeTracingAction =
   | SetLargestSegmentIdAction
   | SetSelectedSegmentsOrGroupAction
   | SetMappingIsEditableAction
-  | SetMappingIsPinnedAction
+  | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | MaybePrefetchEmbeddingAction
@@ -360,7 +360,7 @@ export const setMappingIsEditableAction = () =>
     type: "SET_MAPPING_IS_EDITABLE",
   } as const);
 
-export const setMappingIsPinnedAction = () =>
+export const setMappingIsLockedAction = () =>
   ({
     type: "SET_MAPPING_IS_PINNED",
   } as const);

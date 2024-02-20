@@ -563,7 +563,7 @@ export function isMappingPinned(
 
   if (volumeTracing == null) return false;
 
-  return !!volumeTracing.mappingIsPinned;
+  return !!volumeTracing.mappingIsLocked;
 }
 
 export function isMappingActivationAllowed(

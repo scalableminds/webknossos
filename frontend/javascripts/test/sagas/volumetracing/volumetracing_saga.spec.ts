@@ -22,7 +22,7 @@ import test from "ava";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 import { ActiveMappingInfo } from "oxalis/store";
-import { askUserForPinningActiveMapping } from "oxalis/model/sagas/saga_helpers";
+import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
 
 mockRequire("app", {
   currentUser: {
@@ -40,7 +40,7 @@ mockRequire("libs/toast", {
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const { ensureMaybeActiveMappingIsPinned } = require("oxalis/model/sagas/saga_helpers");
+const { ensureMaybeActiveMappingIsLocked } = require("oxalis/model/sagas/saga_helpers");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -129,7 +129,7 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingType: "HDF5",
 };
 
-const ensureMaybeMappingIsPinnedReturnValueDummy = { isMappingPinnedIfNeeded: true };
+const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingPinnedIfNeeded: true };
 
 const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
@@ -207,7 +207,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
     zoomStep: 0,
   });
   saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsPinnedReturnValueDummy);
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -248,7 +248,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsPinnedReturnValueDummy);
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -299,7 +299,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsPinnedReturnValueDummy);
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -361,7 +361,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     zoomStep: 0,
   }); // pass labeled resolution
   saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsPinnedReturnValueDummy);
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -439,53 +439,53 @@ test("VolumeTracingSaga should pin an active mapping upon first volume annotatio
     resolution: [1, 1, 1],
     zoomStep: 0,
   });
-  // Test whether nested saga ensureMaybeActiveMappingIsPinned is called.
+  // Test whether nested saga ensureMaybeActiveMappingIsLocked is called.
   expectValueDeepEqual(
     t,
     saga.next(ACTIVE_CELL_ID),
-    call(ensureMaybeActiveMappingIsPinned, volumeTracing),
+    call(ensureMaybeActiveMappingIsLocked, volumeTracing),
   );
 });
 
-test("ensureMaybeActiveMappingIsPinned should pin an existing mapping to the annotation", (t) => {
+test("ensureMaybeActiveMappingIsLocked should pin an existing mapping to the annotation", (t) => {
   const activeMappingByLayer = { [volumeTracing.tracingId]: dummyActiveMapping };
-  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
-    call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer),
+    call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer),
   );
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsPinned should pin 'no mapping' in case no mapping is active.", (t) => {
-  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case no mapping is active.", (t) => {
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
-  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsPinnedAction()));
+  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsPinned should pin 'no mapping' in case a mapping is active but disabled.", (t) => {
+test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case a mapping is active but disabled.", (t) => {
   const jsonDummyMapping = { ...dummyActiveMapping, mappingStatus: MappingStatusEnum.DISABLED };
-  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsPinnedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction()),
   );
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsPinned should pin 'no mapping' in case a JSON mapping is active.", (t) => {
+test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case a JSON mapping is active.", (t) => {
   const jsonDummyMapping = { ...dummyActiveMapping, mappingType: "JSON" };
-  const saga = ensureMaybeActiveMappingIsPinned(volumeTracing);
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsPinnedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction()),
   );
   t.true(saga.next().done);
 });

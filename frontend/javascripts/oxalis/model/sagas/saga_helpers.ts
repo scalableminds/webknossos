@@ -10,7 +10,7 @@ import Toast from "libs/toast";
 import { Store } from "oxalis/singletons";
 // @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
 import type { Pattern } from "redux-saga";
-import { setMappingIsPinnedAction } from "../actions/volumetracing_actions";
+import { setMappingIsLockedAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 
 export function* takeEveryUnlessBusy(
@@ -46,24 +46,24 @@ export function* takeEveryUnlessBusy(
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 
-type EnsureMappingIsPinnedReturnType = {
+type EnsureMappingIsLockedReturnType = {
   isMappingPinnedIfNeeded: boolean;
   reason?: string;
 };
 
-export function askUserForPinningActiveMapping(
+export function askUserForLockingActiveMapping(
   volumeTracing: VolumeTracing,
   activeMappingByLayer: Record<string, ActiveMappingInfo>,
-): Promise<EnsureMappingIsPinnedReturnType> {
+): Promise<EnsureMappingIsLockedReturnType> {
   return new Promise((resolve, reject) => {
-    if (!volumeTracing.mappingIsPinned) {
+    if (!volumeTracing.mappingIsLocked) {
       const pinMapping = async () => {
-        // A mapping that is active and is being annotated needs to be pinned to ensure a consistent state in the future.
+        // A mapping that is active and is being annotated needs to be locked to ensure a consistent state in the future.
         // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
         const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
         if (activeMapping.mappingName) {
-          Store.dispatch(setMappingIsPinnedAction());
-          const message = messages["tracing.pin_mapping_confirmed"](activeMapping.mappingName);
+          Store.dispatch(setMappingIsLockedAction());
+          const message = messages["tracing.locked_mapping_confirmed"](activeMapping.mappingName);
           Toast.info(message, { timeout: 10000 });
           console.log(message);
           resolve({ isMappingPinnedIfNeeded: true, reason: "User confirmed." });
@@ -73,9 +73,9 @@ export function askUserForPinningActiveMapping(
         }
       };
       Modal.confirm({
-        title: "Should the active Mapping be pinned?",
-        content: messages["tracing.pin_mapping_info"],
-        okText: "Enable Mapping Permanently",
+        title: "Should the active Mapping be locked?",
+        content: messages["tracing.locked_mapping_info"],
+        okText: "Lock Mapping",
         cancelText: "Abort Annotation Action",
         width: 600,
         onOk: pinMapping,
@@ -87,11 +87,11 @@ export function askUserForPinningActiveMapping(
   });
 }
 
-export function* ensureMaybeActiveMappingIsPinned(
+export function* ensureMaybeActiveMappingIsLocked(
   volumeTracing: VolumeTracing,
-): Saga<EnsureMappingIsPinnedReturnType> {
-  if (volumeTracing.mappingIsPinned) {
-    return { isMappingPinnedIfNeeded: true, reason: "Mapping is already pinned." };
+): Saga<EnsureMappingIsLockedReturnType> {
+  if (volumeTracing.mappingIsLocked) {
+    return { isMappingPinnedIfNeeded: true, reason: "Mapping is already locked." };
   }
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
@@ -104,13 +104,13 @@ export function* ensureMaybeActiveMappingIsPinned(
     activeMappingByLayer[volumeTracing.tracingId].mappingType === "HDF5";
   if (isSomeMappingActive && isHDF5Mapping) {
     try {
-      return yield* call(askUserForPinningActiveMapping, volumeTracing, activeMappingByLayer);
+      return yield* call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer);
     } catch (error: any) {
-      return error as EnsureMappingIsPinnedReturnType;
+      return error as EnsureMappingIsLockedReturnType;
     }
   } else {
-    yield* put(setMappingIsPinnedAction());
-    return { isMappingPinnedIfNeeded: true, reason: "Pinned that no mapping is active." };
+    yield* put(setMappingIsLockedAction());
+    return { isMappingPinnedIfNeeded: true, reason: "Locked that no mapping is active." };
   }
 }
 

@@ -179,7 +179,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     const disabledMessage = this.props.isEditableMappingActive
       ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
       : this.props.mapping
-      ? "This mapping has been permanently enabled, because the segmentation was modified while it was active. It can no longer be disabled or changed."
+      ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
       : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
       <React.Fragment>

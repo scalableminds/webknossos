@@ -625,13 +625,13 @@ function determineDefaultState(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName, mappingIsPinned } = volumeTracing;
+    const { id: layerName, mappingName, mappingIsLocked: mappingIsLocked } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    if (stateByLayer[layerName].mappingInfo == null || mappingIsPinned) {
-      // A pinned mapping always takes precedence over the URL configuration.
+    if (stateByLayer[layerName].mappingInfo == null || mappingIsLocked) {
+      // A locked mapping always takes precedence over the URL configuration.
       if (mappingName == null) {
         delete stateByLayer[layerName].mappingInfo;
       } else {

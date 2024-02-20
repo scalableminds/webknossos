@@ -2258,7 +2258,7 @@ export function getBucketPositionsForAdHocMesh(
         method: "POST",
       },
     );
-    return  ;
+    return positions;
   });
 }
 

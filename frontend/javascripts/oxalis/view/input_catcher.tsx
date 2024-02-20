@@ -146,7 +146,7 @@ function InputCatcher({
   );
 
   return (
-    <div className={`inputcatcher_border ${viewportID}`}>
+    <div className={`inputcatcher-border ${viewportID}`}>
       <div
         className="flexlayout-dont-overflow"
         onContextMenu={ignoreContextMenu}

@@ -1,5 +1,5 @@
 import { getProjects, getTeams } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, DatePicker, Button } from "antd";
+import { Card, Select, Spin, Table, Button } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -11,11 +11,14 @@ import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
 import { Store } from "oxalis/singletons";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
+import generatePicker from "antd/es/date-picker/generatePicker";
 
 const { Column } = Table;
+const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
 
-const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTracked"];
+const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 const ALL_ANNOTATIONS_KEY = "ALL_ANNOTATIONS";
 const ALL_TASKS_KEY = "ALL_TASKS";
 
@@ -36,13 +39,15 @@ function TimeTrackingOverview() {
     teamIds: string[],
     projectIds: string[],
   ) => {
+    // omit project parameter in request if annotation data is requested
+    const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
     return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=${!includeAllAnnotations}&teamIds=${teamIds.join(
       ",",
-    )}&projectIds=${projectIds.join(",")}`;
+    )}${projectsParam}`;
   };
 
   const currentTime = dayjs();
-  const [startDate, setStartDate] = useState(currentTime.subtract(7, "d"));
+  const [startDate, setStartDate] = useState(currentTime.startOf("d").subtract(6, "d"));
   const [endDate, setEndeDate] = useState(currentTime);
   // TODO make sure this is resolved
   const [allTeams, allProjects, allTimeEntries] = useFetch(
@@ -69,13 +74,14 @@ function TimeTrackingOverview() {
     async () => {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
-      const filteredProjects =
-        selectedProjectIds.length === 0 ||
-        selectedProjectIds.includes(ALL_ANNOTATIONS_KEY) ||
-        selectedProjectIds.includes(ALL_TASKS_KEY)
+      let filteredProjects =
+        selectedProjectIds.length === 0 || selectedProjectIds.includes(ALL_TASKS_KEY)
           ? allProjects.map((project) => project.id)
           : selectedProjectIds;
-      if (filteredTeams.length < 1 || filteredProjects.length < 1) return [];
+      const selectAnnotations = selectedProjectIds.includes(ALL_ANNOTATIONS_KEY);
+      if (selectAnnotations) filteredProjects = [];
+      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !selectAnnotations))
+        return [];
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
         endDate.valueOf(),
@@ -96,14 +102,18 @@ function TimeTrackingOverview() {
       return;
     }
     const timeEntriesAsString = filteredTimeEntries
-      .map(
-        (row) =>
-          [row.user.id, row.user.firstName, row.user.lastName, formatMilliseconds(row.timeMillis)]
-            .map(String) // convert every value to String
-            .map((v) => v.replaceAll('"', '""')) // escape double quotes
-            .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-            .join(","), // comma-separated
-      )
+      .map((row) => {
+        return [
+          row.user.id,
+          row.user.firstName,
+          row.user.lastName,
+          Math.round(row.timeMillis / 1000),
+        ]
+          .map(String) // convert every value to String
+          .map((v) => v.replaceAll('"', '""')) // escape double quotes
+          .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+          .join(","); // comma-separated
+      })
       .join("\n"); // rows starting on new lines
     const csv = [TIMETRACKING_CSV_HEADER, timeEntriesAsString].join("\n");
     const filename = "timetracking-export.csv";
@@ -157,7 +167,7 @@ function TimeTrackingOverview() {
     >
       <Select
         mode="multiple"
-        placeholder="Filter team"
+        placeholder="Filter teams"
         defaultValue={[]}
         style={{ width: selectWidth, ...filterStyle }}
         options={allTeams.map((team) => {
@@ -174,7 +184,7 @@ function TimeTrackingOverview() {
       />
       <Select
         mode="multiple"
-        placeholder="Filter projects"
+        placeholder="Filter type or projects"
         defaultValue={[]}
         style={{ width: selectWidth, ...filterStyle }}
         options={getTaskFilterOptions()}

@@ -32,16 +32,16 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class DataSourceController @Inject()(
-    dataSourceRepository: DataSourceRepository,
-    dataSourceService: DataSourceService,
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
-    accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
-    connectomeFileService: ConnectomeFileService,
-    storageUsageService: DSUsedStorageService,
-    datasetErrorLoggingService: DatasetErrorLoggingService,
-    uploadService: UploadService,
-    composeService: ComposeService
+                                      dataSourceRepository: DataSourceRepository,
+                                      dataSourceService: DataSourceService,
+                                      remoteWebKnossosClient: DSRemoteWebknossosClient,
+                                      accessTokenService: DataStoreAccessTokenService,
+                                      binaryDataServiceHolder: BinaryDataServiceHolder,
+                                      connectomeFileService: ConnectomeFileService,
+                                      storageUsageService: DSUsedStorageService,
+                                      datasetErrorLoggingService: DatasetErrorLoggingService,
+                                      uploadService: UploadService,
+                                      composeService: ComposeService
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with FoxImplicits {

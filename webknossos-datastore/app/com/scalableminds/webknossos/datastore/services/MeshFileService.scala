@@ -262,20 +262,34 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     }.toFox.flatten ?~> "mesh.file.open.failed"
   }
 
-  def listMeshChunksForSegmentV3(organizationName: String,
-                                 datasetName: String,
-                                 dataLayerName: String,
-                                 listMeshChunksRequest: ListMeshChunksRequest): Box[WebknossosSegmentInfo] = {
+  def listMeshChunksForSegmentsV3(organizationName: String,
+                                  datasetName: String,
+                                  dataLayerName: String,
+                                  meshFileName: String,
+                                  segmentIds: Seq[Long]): Fox[WebknossosSegmentInfo] = {
+    val meshChunksForUnmappedSegments = segmentIds.map(segmentId =>
+      listMeshChunksForSegmentV3(organizationName, datasetName, dataLayerName, meshFileName, segmentId).toOption)
+    val meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
+    for {
+      _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
+      chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
+    } yield chunkInfos
+  }
+
+  private def listMeshChunksForSegmentV3(organizationName: String,
+                                         datasetName: String,
+                                         dataLayerName: String,
+                                         meshFileName: String,
+                                         segmentId: Long): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+        .resolve(s"${meshFileName}.$meshFileExtension")
 
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      val segmentId = listMeshChunksRequest.segmentId
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val lodScaleMultiplier = cachedMeshFile.reader.float64().getAttr("/", "lod_scale_multiplier")
       val transform = cachedMeshFile.reader.float64().getMatrixAttr("/", "transform")

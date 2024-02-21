@@ -35,11 +35,14 @@ object FullMeshRequest {
 
 class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                 meshFileService: MeshFileService,
-                                binaryDataServiceHolder: BinaryDataServiceHolder,
+                                val binaryDataServiceHolder: BinaryDataServiceHolder,
+                                val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
+                                val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
                                 mappingService: MappingService,
                                 config: DataStoreConfig,
                                 adHocMeshServiceHolder: AdHocMeshServiceHolder)
-    extends LazyLogging {
+    extends LazyLogging
+    with MeshMappingHelper {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
   adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
@@ -170,14 +173,19 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
-      listMeshChunksRequest = ListMeshChunksRequest(
-        meshFileName,
-        fullMeshRequest.segmentId
-      )
       before = Instant.now
-      chunkInfos: WebknossosSegmentInfo <- meshFileService
-        .listMeshChunksForSegmentV3(organizationName, datasetName, layerName, listMeshChunksRequest)
-        .toFox
+      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(organizationName,
+                                                       datasetName,
+                                                       layerName,
+                                                       fullMeshRequest.mappingName,
+                                                       fullMeshRequest.editableMappingTracingId,
+                                                       fullMeshRequest.segmentId,
+                                                       token)
+      chunkInfos <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
+                                                                datasetName,
+                                                                layerName,
+                                                                meshFileName,
+                                                                segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationName, datasetName, layerName, meshFileName, chunkRange)

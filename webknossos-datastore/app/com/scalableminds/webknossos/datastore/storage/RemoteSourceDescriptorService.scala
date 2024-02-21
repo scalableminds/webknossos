@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient
+import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 
@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredential])
 
-class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebknossosClient,
                                               dataStoreConfig: DataStoreConfig,
                                               dataVaultService: DataVaultService) {
 

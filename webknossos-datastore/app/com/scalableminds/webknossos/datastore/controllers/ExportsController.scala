@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebKnossosClient,
+  DSRemoteWebknossosClient,
   DataStoreAccessTokenService,
   UserAccessRequest
 }
@@ -25,7 +25,7 @@ object JobExportProperties {
   implicit val jsonFormat: OFormat[JobExportProperties] = Json.format[JobExportProperties]
 }
 
-class ExportsController @Inject()(webKnossosClient: DSRemoteWebKnossosClient,
+class ExportsController @Inject()(webKnossosClient: DSRemoteWebknossosClient,
                                   accessTokenService: DataStoreAccessTokenService,
                                   config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends Controller

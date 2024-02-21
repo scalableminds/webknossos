@@ -35,7 +35,7 @@ trait RemoteWebKnossosClient {
   def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
 }
 
-class DSRemoteWebKnossosClient @Inject()(
+class DSRemoteWebknossosClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,

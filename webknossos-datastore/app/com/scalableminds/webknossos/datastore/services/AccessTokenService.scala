@@ -96,5 +96,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient)
+class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

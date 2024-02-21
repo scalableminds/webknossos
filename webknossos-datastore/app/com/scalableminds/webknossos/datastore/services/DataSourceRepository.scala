@@ -13,8 +13,8 @@ import play.api.i18n.{Messages, MessagesProvider}
 import scala.concurrent.ExecutionContext
 
 class DataSourceRepository @Inject()(
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
-    @Named("webknossos-datastore") val system: ActorSystem
+                                      remoteWebKnossosClient: DSRemoteWebknossosClient,
+                                      @Named("webknossos-datastore") val system: ActorSystem
 )(implicit ec: ExecutionContext)
     extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with LazyLogging

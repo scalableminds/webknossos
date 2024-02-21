@@ -25,11 +25,11 @@ import play.api.mvc._
 import scala.concurrent.ExecutionContext
 
 class ZarrStreamingController @Inject()(
-    dataSourceRepository: DataSourceRepository,
-    accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
-    remoteTracingstoreClient: DSRemoteTracingstoreClient,
+                                         dataSourceRepository: DataSourceRepository,
+                                         accessTokenService: DataStoreAccessTokenService,
+                                         binaryDataServiceHolder: BinaryDataServiceHolder,
+                                         remoteWebKnossosClient: DSRemoteWebknossosClient,
+                                         remoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit ec: ExecutionContext)
     extends Controller {
 

@@ -5,7 +5,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -16,11 +15,12 @@ class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     fullMeshService: FullMeshService,
-    dsRemoteWebKnossosClient: DSRemoteWebKnossosClient,
-    dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
-    binaryDataServiceHolder: BinaryDataServiceHolder
+    val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
+    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
+    val binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
+    with MeshMappingHelper
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
@@ -60,6 +60,29 @@ class DSMeshController @Inject()(
       None,
       55834,
       None,
+      None,
+      None,
+      None,
+      None,
+      None
+    )
+    for {
+      data: Array[Byte] <- fullMeshService
+        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
+    } yield Ok(data)
+  }
+
+  def testMappedStl: Action[AnyContent] = Action.async { implicit request =>
+    val organizationName = "sample_organization"
+    val datasetName = "test-agglomerate-file"
+    val layerName = "segmentation"
+    val meshfileName = "meshfile_1-1-1"
+
+    val stlRequest = FullMeshRequest(
+      Some(meshfileName),
+      None,
+      1,
+      Some("agglomerate_view_70"),
       None,
       None,
       None,
@@ -122,82 +145,25 @@ class DSMeshController @Inject()(
         for {
           positions <- formatVersion match {
             case 3 =>
-              targetMappingName match {
-                case None =>
-                  meshFileService.listMeshChunksForSegmentV3(organizationName, datasetName, dataLayerName, request.body) ?~> Messages(
-                    "mesh.file.listChunks.failed",
-                    request.body.segmentId.toString,
-                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-                case Some(mapping) =>
-                  for {
-                    segmentIds: List[Long] <- segmentIdsForAgglomerateId(organizationName,
-                                                                         datasetName,
-                                                                         dataLayerName,
-                                                                         mapping,
-                                                                         editableMappingTracingId,
-                                                                         request.body.segmentId,
-                                                                         urlOrHeaderToken(token, request))
-                    meshChunksForUnmappedSegments = segmentIds.map(
-                      segmentId =>
-                        meshFileService
-                          .listMeshChunksForSegmentV3(organizationName,
-                                                      datasetName,
-                                                      dataLayerName,
-                                                      ListMeshChunksRequest(request.body.meshFile, segmentId))
-                          .toOption)
-                    meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
-                    _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
-                    chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
-                  } yield chunkInfos
-              }
+              for {
+                segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(organizationName,
+                                                                             datasetName,
+                                                                             dataLayerName,
+                                                                             targetMappingName,
+                                                                             editableMappingTracingId,
+                                                                             request.body.segmentId,
+                                                                             urlOrHeaderToken(token, request))
+                chunkInfos <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
+                                                                          datasetName,
+                                                                          dataLayerName,
+                                                                          request.body.meshFile,
+                                                                          segmentIds)
+              } yield chunkInfos
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield Ok(Json.toJson(positions))
       }
     }
-
-  private def segmentIdsForAgglomerateId(organizationName: String,
-                                         datasetName: String,
-                                         dataLayerName: String,
-                                         mappingName: String,
-                                         editableMappingTracingId: Option[String],
-                                         agglomerateId: Long,
-                                         token: Option[String]): Fox[List[Long]] = {
-    val agglomerateFileKey = AgglomerateFileKey(
-      organizationName,
-      datasetName,
-      dataLayerName,
-      mappingName
-    )
-    editableMappingTracingId match {
-      case Some(tracingId) =>
-        for {
-          tracingstoreUri <- dsRemoteWebKnossosClient.getTracingstoreUri
-          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
-                                                                                                    tracingId,
-                                                                                                    agglomerateId,
-                                                                                                    token)
-          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
-            Fox.successful(segmentIdsResult.segmentIds)
-          else
-            for {
-              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-                agglomerateFileKey,
-                agglomerateId
-              )
-            } yield localSegmentIds
-        } yield segmentIds
-      case _ =>
-        for {
-          agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-            agglomerateFileKey,
-            agglomerateId
-          )
-        } yield segmentIds
-    }
-  }
 
   def readMeshChunkV0(token: Option[String],
                       organizationName: String,

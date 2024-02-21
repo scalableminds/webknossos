@@ -4,6 +4,7 @@
 # Health endpoint
 GET           /health                                                                                                                         @com.scalableminds.webknossos.datastore.controllers.Application.health
 GET           /test.stl                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DSMeshController.testStl
+GET           /testMapped.stl                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSMeshController.testMappedStl
 GET           /testAdHoc.stl                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSMeshController.testAdHocStl
 
 # Read image data

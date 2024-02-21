@@ -115,10 +115,7 @@ function _getSkeletonToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: 
   }
 
   return {
-    [AnnotationToolEnum.SKELETON]: {
-      isDisabled: false,
-      explanation: "",
-    },
+    [AnnotationToolEnum.SKELETON]: NOT_DISABLED_INFO,
   };
 }
 const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);

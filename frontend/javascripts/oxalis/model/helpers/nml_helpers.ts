@@ -320,7 +320,7 @@ function serializeTransform(state: OxalisState): string[] {
   if (transform.type === "affine") {
     return [
       serializeXmlComment(
-        "The node positions in this file were transformed using the following affine transform",
+        "The node positions in this file were transformed using the following affine transform:",
       ),
       serializeTag("transform", {
         type: "affine",

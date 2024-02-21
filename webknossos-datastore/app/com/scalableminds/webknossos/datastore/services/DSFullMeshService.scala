@@ -33,14 +33,14 @@ object FullMeshRequest {
   implicit val jsonFormat: OFormat[FullMeshRequest] = Json.format[FullMeshRequest]
 }
 
-class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
-                                meshFileService: MeshFileService,
-                                val binaryDataServiceHolder: BinaryDataServiceHolder,
-                                val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
-                                val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
-                                mappingService: MappingService,
-                                config: DataStoreConfig,
-                                adHocMeshServiceHolder: AdHocMeshServiceHolder)
+class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
+                                  meshFileService: MeshFileService,
+                                  val binaryDataServiceHolder: BinaryDataServiceHolder,
+                                  val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
+                                  val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
+                                  mappingService: MappingService,
+                                  config: DataStoreConfig,
+                                  adHocMeshServiceHolder: AdHocMeshServiceHolder)
     extends LazyLogging
     with MeshMappingHelper {
 

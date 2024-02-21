@@ -4,9 +4,16 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
-import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{SegmentAgglomeratePair, SegmentToAgglomerateProto}
+import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
+  SegmentAgglomeratePair,
+  SegmentToAgglomerateProto
+}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, RemoteFallbackLayer, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  RemoteFallbackLayer,
+  TracingDataStore
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.common.Box.tryo

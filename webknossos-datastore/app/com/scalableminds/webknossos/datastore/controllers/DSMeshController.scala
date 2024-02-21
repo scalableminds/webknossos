@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
-    fullMeshService: FullMeshService,
+    fullMeshService: DSFullMeshService,
     val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     val binaryDataServiceHolder: BinaryDataServiceHolder

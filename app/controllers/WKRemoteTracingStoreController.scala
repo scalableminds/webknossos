@@ -24,6 +24,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
@@ -38,7 +39,8 @@ class WKRemoteTracingStoreController @Inject()(
     analyticsService: AnalyticsService,
     datasetDAO: DatasetDAO,
     annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    annotationLayerDAO: AnnotationLayerDAO,
+    wkConf: WkConf)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -58,7 +60,9 @@ class WKRemoteTracingStoreController @Inject()(
             annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
           }
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
-          _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(report.timestamps, user, annotation))
+          trackTime = (report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges)
+          _ <- Fox.runOptional(userBox)(user =>
+            Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
           _ <- Fox.runOptional(userBox)(user =>
             Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
           _ = userBox.map { user =>

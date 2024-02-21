@@ -27,6 +27,7 @@ import {
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   pushSaveQueueTransaction,
@@ -289,6 +290,10 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   // Use untransformedPosition because agglomerate trees should not have
   // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return;
+  }
   const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).untransformedPosition;
   const targetNodePosition = targetTree.nodes.get(targetNodeId).untransformedPosition;
 
@@ -448,13 +453,18 @@ function* performMinCut(
     segmentsInfo,
   );
 
+  // Use untransformedPosition below because agglomerate trees should not have
+  // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return true;
+  }
+
   for (const edge of edgesToRemove) {
     if (sourceTree) {
       let firstNodeId;
       let secondNodeId;
       for (const node of sourceTree.nodes.values()) {
-        // Use untransformedPosition because agglomerate trees should not have
-        // any transforms, anyway.
         if (_.isEqual(node.untransformedPosition, edge.position1)) {
           firstNodeId = node.id;
         } else if (_.isEqual(node.untransformedPosition, edge.position2)) {

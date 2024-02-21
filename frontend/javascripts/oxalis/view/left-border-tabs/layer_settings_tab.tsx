@@ -391,12 +391,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   );
 
   getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
-    <Tooltip title="Delete this annotation layer.">
-      <i
-        onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash icon-margin-right"
-      />
-    </Tooltip>
+    <div className="flex-item">
+      <Tooltip title="Delete this annotation layer.">
+        <i
+          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+          className="fas fa-trash icon-margin-right"
+        />
+      </Tooltip>
+    </div>
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (

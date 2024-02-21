@@ -16,7 +16,7 @@ void throwRuntimeException(JNIEnv* env, const std::string msg) {
 // And encodes the results as STL faces (50 bytes per face)
 // No STL Header is included, as this will be called on chunks. The caller must add an stl header.
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeDracoToStlConverter_dracoToStl
-  (JNIEnv* env, jobject instance, jbyteArray inputJavaArray, jfloat offsetX, jfloat offsetY, jfloat offsetZ)
+  (JNIEnv* env, jobject instance, jbyteArray inputJavaArray, jfloat offsetX, jfloat offsetY, jfloat offsetZ, jdouble scaleX, jdouble scaleY, jdouble scaleZ)
 {
   jsize inputLength = env->GetArrayLength(inputJavaArray);
   jbyte* dataAsJByte = env->GetByteArrayElements(inputJavaArray, NULL);
@@ -54,6 +54,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
           pos[vertexIndex][0] += offsetX;
           pos[vertexIndex][1] += offsetY;
           pos[vertexIndex][2] += offsetZ;
+          pos[vertexIndex][0] *= scaleX;
+          pos[vertexIndex][1] *= scaleY;
+          pos[vertexIndex][2] *= scaleZ;
           encodeBuffer.Encode(&pos[vertexIndex], sizeof(float) * 3);
         }
 

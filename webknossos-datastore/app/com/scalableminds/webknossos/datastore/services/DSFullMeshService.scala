@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
@@ -57,11 +57,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     fullMeshRequest.meshFileName match {
       case Some(_) =>
         loadFullMeshFromMeshfile(token, organizationName, datasetName, dataLayerName, fullMeshRequest)
-      case None => loadFullMeshFromAdHoc(token, organizationName, datasetName, dataLayerName, fullMeshRequest)
+      case None => loadFullMeshFromAdHoc(organizationName, datasetName, dataLayerName, fullMeshRequest)
     }
 
   private def loadFullMeshFromAdHoc(
-      token: Option[String],
       organizationName: String,
       datasetName: String,
       dataLayerName: String,
@@ -132,14 +131,14 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                        fullMeshRequest.editableMappingTracingId,
                                                        fullMeshRequest.segmentId,
                                                        token)
-      chunkInfos <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
-                                                                datasetName,
-                                                                layerName,
-                                                                meshFileName,
-                                                                segmentIds)
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
+                                                                                       datasetName,
+                                                                                       layerName,
+                                                                                       meshFileName,
+                                                                                       segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
-        readMeshChunkAsStl(organizationName, datasetName, layerName, meshFileName, chunkRange)
+        readMeshChunkAsStl(organizationName, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
       _ = logger.info(s"output size: ${stlOutput.length}. took ${Instant.since(before)}")
@@ -149,7 +148,8 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                  datasetName: String,
                                  layerName: String,
                                  meshfileName: String,
-                                 chunkInfo: MeshChunk)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+                                 chunkInfo: MeshChunk,
+                                 transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunkV3(
         organizationName,
@@ -158,9 +158,15 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         MeshChunkDataRequestV3List(meshfileName, List(MeshChunkDataRequestV3(chunkInfo.byteOffset, chunkInfo.byteSize)))
       )
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
+      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"
       stlEncodedChunk <- tryo(
-        dracoToStlConverter
-          .dracoToStl(dracoMeshChunkBytes, chunkInfo.position.x, chunkInfo.position.y, chunkInfo.position.z))
+        dracoToStlConverter.dracoToStl(dracoMeshChunkBytes,
+                                       chunkInfo.position.x,
+                                       chunkInfo.position.y,
+                                       chunkInfo.position.z,
+                                       scale.x,
+                                       scale.y,
+                                       scale.z))
     } yield stlEncodedChunk
 
 }

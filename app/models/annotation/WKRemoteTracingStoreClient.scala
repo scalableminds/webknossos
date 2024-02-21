@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -24,7 +25,11 @@ import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataset: Dataset, rpc: RPC)(implicit ec: ExecutionContext)
+class WKRemoteTracingStoreClient(
+    tracingStore: TracingStore,
+    dataset: Dataset,
+    rpc: RPC,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
@@ -145,6 +150,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataset: Dataset, r
   }
 
   def mergeVolumeTracingsByContents(tracings: VolumeTracings,
+                                    dataSource: Option[DataSourceLike],
                                     initialData: List[Option[File]],
                                     persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
@@ -154,6 +160,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataset: Dataset, r
         .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
+      _ = dataSource.map(d => tracingDataSourceTemporaryStore.store(tracingId, d))
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .post(packedVolumeDataZips)
@@ -165,12 +172,14 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataset: Dataset, r
 
   def saveVolumeTracing(tracing: VolumeTracing,
                         initialData: Option[File] = None,
-                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty): Fox[String] = {
+                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
+                        dataSource: Option[DataSourceLike] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
+      _ = dataSource.map(d => tracingDataSourceTemporaryStore.store(tracingId, d))
       _ <- initialData match {
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout

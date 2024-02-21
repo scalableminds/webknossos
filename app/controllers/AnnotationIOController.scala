@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractSegmentationLayer,
   DataLayerLike,
+  DataSourceLike,
   GenericDataSource,
   SegmentationLayer
 }
@@ -122,10 +123,13 @@ class AnnotationIOController @Inject()(
                                                          wkUrl)
             volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset)
             tracingStoreClient <- tracingStoreService.clientFor(dataset)
+            dataSource <- datasetService.dataSourceFor(dataset)
+            usableDataSource <- dataSource.toUsable.toFox
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
                                                            tracingStoreClient,
-                                                           parsedFiles.otherFiles)
-            mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
+                                                           parsedFiles.otherFiles,
+                                                           usableDataSource)
+            mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient, usableDataSource)
             annotation <- annotationService.createFrom(request.identity,
                                                        dataset,
                                                        mergedSkeletonLayers ::: mergedVolumeLayers,
@@ -144,7 +148,8 @@ class AnnotationIOController @Inject()(
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] =
+                                       otherFiles: Map[String, File],
+                                       dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List())
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
@@ -155,7 +160,8 @@ class AnnotationIOController @Inject()(
         val idx = volumeLayerWithIndex._2
         for {
           savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
-                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles))
+                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                                                     dataSource = Some(dataSource))
         } yield
           AnnotationLayer(
             savedTracingId,
@@ -169,6 +175,7 @@ class AnnotationIOController @Inject()(
       for {
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
+          Some(dataSource),
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
           persistTracing = true
         )
@@ -183,7 +190,8 @@ class AnnotationIOController @Inject()(
     }
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
-                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
+                                         tracingStoreClient: WKRemoteTracingStoreClient,
+                                         dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {

@@ -293,7 +293,7 @@ class AnnotationService @Inject()(
                   editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
                 )
               }.getOrElse(volumeTracing)
-              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted)
+              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted, dataSource = Some(dataSource))
               name = annotationLayerParameters.name
                 .orElse(autoFallbackLayerName)
                 .getOrElse(AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))

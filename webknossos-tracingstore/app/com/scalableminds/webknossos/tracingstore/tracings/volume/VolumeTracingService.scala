@@ -984,7 +984,7 @@ class VolumeTracingService @Inject()(
     for {
       tracing <- find(tracingId)
       dataSource <- remoteWebKnossosClient.getDataSourceForTracing(tracingId)
-      dataSourceId <- remoteWebKnossosClient.getDataSourceIdForTracing(tracingId)
+      dataSourceId = dataSource.id
       fallbackLayerName = tracing.fallbackLayer
       fallbackLayer = dataSource.dataLayers
         .find(_.name == fallbackLayerName.getOrElse(""))

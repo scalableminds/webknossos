@@ -205,7 +205,6 @@ class VolumeTracingService @Inject()(
                                   volumeTracing.mappingName) ?~> "failed to update segment index"
         } yield ()
       }
-      _ <- segmentIndexBuffer.flush()
     } yield volumeTracing
 
   private def deleteSegmentData(tracingId: String,

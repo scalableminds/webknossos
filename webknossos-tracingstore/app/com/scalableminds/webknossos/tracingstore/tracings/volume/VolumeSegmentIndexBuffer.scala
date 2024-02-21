@@ -153,6 +153,13 @@ class VolumeSegmentIndexBuffer(tracingId: String,
           } yield fileBucketPositions
         case _ => Fox.successful(List[(Long, Seq[Vec3Int])]())
       }
-    } yield (mutableIndexHits ++ fileBucketPositions)
+      allHits = mutableIndexHits ++ fileBucketPositions
+      allHitsFilled = segmentIds.map { segmentId =>
+        allHits.find(_._1 == segmentId) match {
+          case Some((_, positions)) => (segmentId, positions)
+          case None                 => (segmentId, Seq())
+        }
+      }
+    } yield allHitsFilled
 
 }

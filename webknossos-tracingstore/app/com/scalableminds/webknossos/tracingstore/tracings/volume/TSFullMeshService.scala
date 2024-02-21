@@ -51,26 +51,42 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
-      verticesForChunks <- getAllAdHocChunks(token,
-                                             tracing,
-                                             tracingId,
-                                             mag,
-                                             fullMeshRequest,
-                                             VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
-                                             adHocChunkSize)
+      verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
+        getAllAdHocChunksWithSegmentIndex(token,
+                                          tracing,
+                                          tracingId,
+                                          mag,
+                                          fullMeshRequest,
+                                          VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag))
+      else
+        getAllAdHocChunksWithNeighborLogic(token,
+                                           tracing,
+                                           tracingId,
+                                           mag,
+                                           fullMeshRequest,
+                                           VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
+                                           adHocChunkSize)
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
     } yield array
 
-  private def getAllAdHocChunks(
+  private def getAllAdHocChunksWithSegmentIndex(
       token: Option[String],
       tracing: VolumeTracing,
       tracingId: String,
       mag: Vec3Int,
       fullMeshRequest: FullMeshRequest,
-      topLeft: VoxelPosition,
-      chunkSize: Vec3Int,
-      visited: collection.mutable.Set[VoxelPosition] = collection.mutable.Set[VoxelPosition]())(
+      topLeft: VoxelPosition)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] = ???
+
+  private def getAllAdHocChunksWithNeighborLogic(token: Option[String],
+                                                 tracing: VolumeTracing,
+                                                 tracingId: String,
+                                                 mag: Vec3Int,
+                                                 fullMeshRequest: FullMeshRequest,
+                                                 topLeft: VoxelPosition,
+                                                 chunkSize: Vec3Int,
+                                                 visited: collection.mutable.Set[VoxelPosition] =
+                                                   collection.mutable.Set[VoxelPosition]())(
       implicit ec: ExecutionContext): Fox[List[Array[Float]]] = {
     val adHocMeshRequest = WebknossosAdHocMeshRequest(
       position = Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
@@ -88,7 +104,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunks(token, tracing, tracingId, mag, fullMeshRequest, position, chunkSize, visited)
+        getAllAdHocChunksWithNeighborLogic(token,
+                                           tracing,
+                                           tracingId,
+                                           mag,
+                                           fullMeshRequest,
+                                           position,
+                                           chunkSize,
+                                           visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices

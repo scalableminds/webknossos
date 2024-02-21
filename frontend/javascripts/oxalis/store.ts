@@ -418,10 +418,6 @@ export type TemporaryConfiguration = {
   readonly preferredQualityForMeshPrecomputation: number;
   readonly preferredQualityForMeshAdHocComputation: number;
   readonly lastVisibleSegmentationLayerName: string | null | undefined;
-  readonly timeLineViewConfig: {
-    userId: string | null;
-    timeSpan: DateRange | null;
-  };
 };
 export type Script = APIScript;
 export type Task = APITask;

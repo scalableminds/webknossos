@@ -18,8 +18,7 @@ import generatePicker from "antd/es/date-picker/generatePicker";
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
-import { Store } from "oxalis/singletons";
-import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import * as Utils from "libs/utils";
 
 const FormItem = Form.Item;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -36,8 +35,6 @@ type TimeTrackingStats = {
 };
 type StateProps = {
   activeUser: APIUser;
-  initialUserId: string | null;
-  initialDateRange: DateRange | null;
 };
 type Props = StateProps;
 type State = {
@@ -48,6 +45,8 @@ type State = {
   stats: TimeTrackingStats;
   isLoading: boolean;
   isFetchingUsers: boolean;
+  initialUserId: string | null;
+  initialDateRange: DateRange | null;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -96,25 +95,40 @@ class TimeLineView extends React.PureComponent<Props, State> {
     },
     isLoading: false,
     isFetchingUsers: false,
+    initialDateRange: null,
+    initialUserId: null,
   };
+
+  parseQueryParams() {
+    const params = Utils.getUrlParamsObject();
+    let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
+    if (params == null) return { initialUserId: null, initialDateRange: dateRange };
+    const hasStart = _.has(params, "start");
+    const hasEnd = _.has(params, "end");
+    // if either start or end is provided, use one week as default range
+    if (!hasStart && hasEnd) {
+      const end = dayjs(+params.end); // + leads to the number being parsed as number; omitting it leads to wrong parsing
+      dateRange = [end.subtract(7, "d"), end];
+    } else if (hasStart && !hasEnd) {
+      const start = dayjs(+params.start);
+      dateRange = [start, start.add(7, "d")];
+    } else if (hasStart && hasEnd) {
+      dateRange = [dayjs(+params.start), dayjs(+params.end)];
+    }
+    this.setState({
+      initialUserId: _.has(params, "user") ? params.user : null,
+      dateRange,
+    });
+    this.handleDateChange(dateRange);
+  }
 
   async componentDidMount() {
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
-
+    this.parseQueryParams();
     if (isAdminOrTeamManger) {
-      console.log(this.state.dateRange);
       await this.fetchData();
     } else {
       this.fetchDataFromLoggedInUser(); //TODO maybe await too?
-    }
-    if (this.props.initialDateRange != null) {
-      this.handleDateChange(this.props.initialDateRange);
-      Store.dispatch(
-        updateTemporarySettingAction("timeLineViewConfig", {
-          userId: null,
-          timeSpan: null,
-        }),
-      );
     }
   }
 
@@ -123,7 +137,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       isFetchingUsers: true,
     });
     const users = await getEditableUsers();
-    const user = this.props.initialUserId != null ? await getUser(this.props.initialUserId) : null;
+    const user = this.state.initialUserId != null ? await getUser(this.state.initialUserId) : null;
     this.setState({
       user,
       users,
@@ -196,6 +210,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
     if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
+      debugger;
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
@@ -402,7 +417,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 </Col>
               </Row>
               The time tracking information displayed here only includes data acquired when working
-              on &quot;tasks&quot; and not explorative annotations.
+              on &quot;tasks&quot; and not explorative annotations. OH WAIT, WE CHANGED THAT!
             </Col>
           </Row>
         </Card>
@@ -443,8 +458,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),
-  initialUserId: state.temporaryConfiguration.timeLineViewConfig.userId,
-  initialDateRange: state.temporaryConfiguration.timeLineViewConfig.timeSpan,
 });
 
 const connector = connect(mapStateToProps);

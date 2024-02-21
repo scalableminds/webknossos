@@ -112,7 +112,6 @@ const defaultState: OxalisState = {
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
     lastVisibleSegmentationLayerName: null,
-    timeLineViewConfig: { userId: null, timeSpan: null },
   },
   task: null,
   dataset: {

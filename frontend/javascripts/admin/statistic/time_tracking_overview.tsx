@@ -237,7 +237,7 @@ function TimeTrackingOverview() {
               params.append("user", user.id);
               params.append("start", startDate.valueOf().toString());
               params.append("end", endDate.valueOf().toString());
-              return <Link to={{ pathname: `/reports/timetracking?${params}` }}>Details</Link>;
+              return <Link to={`/reports/timetracking?${params}`}>Details</Link>;
             }}
           />
         </Table>

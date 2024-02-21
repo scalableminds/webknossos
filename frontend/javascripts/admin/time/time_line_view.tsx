@@ -7,7 +7,12 @@ import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
-import { getEditableUsers, getTimeTrackingForUser, getUser } from "admin/admin_rest_api";
+import {
+  getEditableUsers,
+  getProjects,
+  getTimeTrackingForUser,
+  getUser,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -15,10 +20,11 @@ import TimeTrackingChart from "./time_line_chart_view";
 import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
 import generatePicker from "antd/es/date-picker/generatePicker";
 
-import type { APIUser, APITimeTracking } from "types/api_flow_types";
+import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
+import { ALL_ANNOTATIONS_KEY, ALL_TASKS_KEY } from "admin/statistic/time_tracking_overview";
 
 const FormItem = Form.Item;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -46,7 +52,9 @@ type State = {
   isLoading: boolean;
   isFetchingUsers: boolean;
   initialUserId: string | null;
-  initialDateRange: DateRange | null;
+  selectedProjectIds: string[];
+  allProjects: APIProject[];
+  includeAllAnnotations: boolean;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -95,19 +103,21 @@ class TimeLineView extends React.PureComponent<Props, State> {
     },
     isLoading: false,
     isFetchingUsers: false,
-    initialDateRange: null,
     initialUserId: null,
+    selectedProjectIds: [],
+    allProjects: [],
+    includeAllAnnotations: false,
   };
 
   parseQueryParams() {
     const params = Utils.getUrlParamsObject();
     let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
-    if (params == null) return { initialUserId: null, initialDateRange: dateRange };
+    if (params == null) return { initialUserId: null };
     const hasStart = _.has(params, "start");
     const hasEnd = _.has(params, "end");
     // if either start or end is provided, use one week as default range
     if (!hasStart && hasEnd) {
-      const end = dayjs(+params.end); // + leads to the number being parsed as number; omitting it leads to wrong parsing
+      const end = dayjs(+params.end); // + leads to the timestamp being parsed as number; omitting it leads to wrong parsing
       dateRange = [end.subtract(7, "d"), end];
     } else if (hasStart && !hasEnd) {
       const start = dayjs(+params.start);
@@ -138,14 +148,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
     });
     const users = await getEditableUsers();
     const user = this.state.initialUserId != null ? await getUser(this.state.initialUserId) : null;
+    const projects = await getProjects();
     this.setState({
       user,
       users,
+      allProjects: projects,
       isFetchingUsers: false,
     });
   }
 
   async fetchTimeTrackingData() {
+    debugger;
     this.setState({
       isLoading: true,
     });
@@ -156,6 +169,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
+          this.state.selectedProjectIds,
+          !this.state.includeAllAnnotations,
         ),
       );
       this.setState(
@@ -210,7 +225,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
   handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
     if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
-      debugger;
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
@@ -219,9 +233,32 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
-    await this.setState({
+    this.setState({
       dateRange,
     });
+    this.fetchTimeTrackingData();
+  };
+
+  handleSelectedProjectsChange = (projectId: string) => {
+    const prevSelectedProjectIds = this.state.selectedProjectIds;
+    let selectedProjectIds: string[] = [];
+    let includeAllAnnotations = false;
+    if (projectId == ALL_ANNOTATIONS_KEY) {
+      selectedProjectIds = [ALL_ANNOTATIONS_KEY];
+      includeAllAnnotations = true;
+    } else if (projectId == ALL_TASKS_KEY) {
+      selectedProjectIds = [ALL_TASKS_KEY];
+    } else {
+      let prevSelectedIds = prevSelectedProjectIds;
+      if (
+        prevSelectedProjectIds.find((id) => id === ALL_ANNOTATIONS_KEY || id === ALL_TASKS_KEY) !=
+        null
+      )
+        prevSelectedIds = [];
+      selectedProjectIds = [...prevSelectedIds, projectId];
+    }
+    console.log(selectedProjectIds, includeAllAnnotations);
+    this.setState({ selectedProjectIds, includeAllAnnotations });
     this.fetchTimeTrackingData();
   };
 
@@ -328,6 +365,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
     const { firstName, lastName, email } = this.props.activeUser;
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
+
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -396,6 +434,22 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   value={dateRange}
                   // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
                   onChange={this.handleDateChange}
+                />
+              </FormItem>
+              <FormItem {...formItemLayout} label="Type / Project">
+                <Select
+                  mode="multiple"
+                  placeholder="Filter type or projects"
+                  defaultValue={[]}
+                  options={this.state.allProjects.map((project) => {
+                    return {
+                      label: project.name,
+                      value: project.id,
+                    };
+                  })}
+                  value={this.state.selectedProjectIds}
+                  onDeselect={() => console.log("TODO") /*TODO*/}
+                  onSelect={(projectId: string) => this.handleSelectedProjectsChange(projectId)}
                 />
               </FormItem>
             </Col>

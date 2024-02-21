@@ -9,8 +9,6 @@ import { DownloadOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import { Store } from "oxalis/singletons";
-import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
 import generatePicker from "antd/es/date-picker/generatePicker";
 
@@ -19,8 +17,8 @@ const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-const ALL_ANNOTATIONS_KEY = "ALL_ANNOTATIONS";
-const ALL_TASKS_KEY = "ALL_TASKS";
+export const ALL_ANNOTATIONS_KEY = "ALL_ANNOTATIONS";
+export const ALL_TASKS_KEY = "ALL_TASKS";
 
 type TimeEntry = {
   user: {
@@ -200,6 +198,7 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         onChange={(dates, _dateStrings) => {
+          if (dates == null) return;
           setStartDate(dates[0]);
           setEndeDate(dates[1]);
         }}

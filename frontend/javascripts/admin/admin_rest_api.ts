@@ -1946,12 +1946,17 @@ export async function getTimeTrackingForUser(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
+  projectIds?: string[] | null,
+  onlyCountTasks?: boolean,
 ): Promise<Array<APITimeTracking>> {
-  const timeTrackingData = await Request.receiveJSON(
-    `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${
-      endDate.unix() * 1000
-    }`,
-  );
+  const params = new URLSearchParams();
+  params.append("startDate", startDate.valueOf().toString());
+  params.append("endDate", endDate.valueOf().toString());
+  onlyCountTasks;
+  if (onlyCountTasks != null) params.append("onlyCountTasks", onlyCountTasks ? "true" : "false");
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
   const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
   return timelogs;

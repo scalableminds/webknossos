@@ -80,7 +80,7 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       before = Instant.now
       verticesForChunks <- getAllAdHocChunks(dataSource,
                                              segmentationLayer,
-                                             fullMeshRequest.segmentId,
+                                             fullMeshRequest,
                                              VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
                                              adHocChunkSize)
       _ = Instant.logSince(before, "adHocMeshing")
@@ -93,7 +93,7 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
   private def getAllAdHocChunks(
       dataSource: DataSource,
       segmentationLayer: SegmentationLayer,
-      segmentId: Long,
+      fullMeshRequest: FullMeshRequest,
       topLeft: VoxelPosition,
       chunkSize: Vec3Int,
       visited: collection.mutable.Set[VoxelPosition] = collection.mutable.Set[VoxelPosition]())(
@@ -102,11 +102,11 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       Some(dataSource),
       segmentationLayer,
       Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-      segmentId,
+      fullMeshRequest.segmentId,
       dataSource.scale,
-      None,
-      None,
-      None
+      fullMeshRequest.mappingName,
+      fullMeshRequest.mappingType,
+      fullMeshRequest.additionalCoordinates
     )
     visited += topLeft
     for {
@@ -114,7 +114,7 @@ class FullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunks(dataSource, segmentationLayer, segmentId, position, chunkSize, visited)
+        getAllAdHocChunks(dataSource, segmentationLayer, fullMeshRequest, position, chunkSize, visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices

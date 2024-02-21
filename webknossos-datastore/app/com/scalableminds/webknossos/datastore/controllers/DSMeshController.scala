@@ -49,6 +49,30 @@ class DSMeshController @Inject()(
     } yield Ok(data)
   }
 
+  def testAdHocMappedStl: Action[AnyContent] = Action.async { implicit request =>
+    val organizationName = "sample_organization"
+    val datasetName = "test-agglomerate-file"
+    val layerName = "segmentation"
+    val segmentId = 1
+    val seedPosition = Vec3Int(100, 100, 75)
+
+    val stlRequest = FullMeshRequest(
+      None,
+      None,
+      segmentId,
+      mappingName = Some("agglomerate_view_70"),
+      mappingType = Some("HDF5"),
+      None,
+      Some(Vec3Int(1, 1, 1)),
+      Some(seedPosition),
+      None
+    )
+    for {
+      data: Array[Byte] <- fullMeshService
+        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
+    } yield Ok(data)
+  }
+
   def testStl: Action[AnyContent] = Action.async { implicit request =>
     val organizationName = "sample_organization"
     val datasetName = "l4dense_mesh_test"

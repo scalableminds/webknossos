@@ -1,12 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Float, Vec3Int}
-import com.scalableminds.util.time.Instant
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.{VoxelPosition, WebknossosAdHocMeshRequest}
-import com.scalableminds.webknossos.datastore.services.{AdHocMeshRequest, FullMeshHelper, FullMeshRequest}
+import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}

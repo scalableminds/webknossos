@@ -30,6 +30,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
+      val timeTrackingOnlyWithSignificantChanges: Boolean =
+        get[Boolean]("webKnossos.user.timeTrackingOnlyWithSignificantChanges")
       val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
 

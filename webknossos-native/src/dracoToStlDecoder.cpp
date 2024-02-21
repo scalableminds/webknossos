@@ -7,7 +7,7 @@
 void throwRuntimeException(JNIEnv* env, const std::string msg) {
     jclass exceptionClass = env->FindClass("java/lang/RuntimeException");
 
-    if (exceptionClass != NULL) {
+    if (exceptionClass != nullptr) {
         env->ThrowNew(exceptionClass, ("An error occurred in native code: " + msg).c_str());
     }
 }
@@ -68,11 +68,15 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeD
     } else {
       env->ReleaseByteArrayElements(inputJavaArray, dataAsJByte, 0);
       throwRuntimeException(env, "Invalid DRACO Encoding in Mesh Byte Array");
-      return env->NewByteArray(0);
+      return nullptr;
     }
+	} catch(const std::exception &e) {
+    env->ReleaseByteArrayElements(inputJavaArray, dataAsJByte, 0);
+    throwRuntimeException(env, "Native Exception while transcoding DRACO Mesh to STL Faces: " + std::string(e.what()));
+    return nullptr;
 	} catch (...) {
     env->ReleaseByteArrayElements(inputJavaArray, dataAsJByte, 0);
     throwRuntimeException(env, "Native Exception while transcoding DRACO Mesh to STL Faces");
-    return env->NewByteArray(0);
+    return nullptr;
 	}
 }

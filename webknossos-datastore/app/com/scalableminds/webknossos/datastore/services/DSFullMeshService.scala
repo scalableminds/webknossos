@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.{DataStoreConfig, NativeDracoToStlConverter}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
@@ -14,7 +14,6 @@ import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
 case class FullMeshRequest(

@@ -64,15 +64,18 @@ export async function hasSegmentIndex(
     tracing != null
       ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
       : null;
+  let segmentIndexInDataStore = false;
+  if (maybeVolumeTracing == null) {
+    segmentIndexInDataStore = await hasSegmentIndexInDataStore(
+      dataset.dataStore.url,
+      dataset.name,
+      visibleSegmentationLayer.name,
+      dataset.owningOrganization,
+    );
+  }
   return (
     visibleSegmentationLayer != null &&
-    (maybeVolumeTracing?.hasSegmentIndex ||
-      hasSegmentIndexInDataStore(
-        dataset.dataStore.url,
-        dataset.name,
-        visibleSegmentationLayer.name,
-        dataset.owningOrganization,
-      ))
+    (maybeVolumeTracing?.hasSegmentIndex || segmentIndexInDataStore)
   );
 }
 

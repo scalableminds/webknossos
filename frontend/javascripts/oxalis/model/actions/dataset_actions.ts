@@ -12,7 +12,8 @@ export type DatasetAction =
   | SetLayerMappingsAction
   | SetLayerTransformsAction
   | EnsureLayerMappingsAreLoadedAction
-  | SetLayerHasSegmentIndexAction;
+  | SetLayerHasSegmentIndexAction
+  | EnsureLayerMappingsAreLoadedAction;
 
 export const setDatasetAction = (dataset: APIDataset) =>
   ({

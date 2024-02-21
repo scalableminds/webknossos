@@ -835,7 +835,7 @@ export function getMaybeSegmentIndexAvailability(
   dataset: APIDataset,
   layerName: string | undefined,
 ) {
-  if (layerName == null || layerName.length < 1) {
+  if (layerName == null) {
     return false;
   }
   return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;

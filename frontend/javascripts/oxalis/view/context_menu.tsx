@@ -79,7 +79,6 @@ import {
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import {
   getVolumeRequestUrl,
-  hasSegmentIndex,
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -1222,12 +1221,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
           layersFinestResolution,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
+          volumeTracing?.mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           requestUrl,
           layersFinestResolution,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
+          volumeTracing?.mappingName,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(
           boundingBoxInRequestedMag,
@@ -1343,7 +1344,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && hasSegmentIndex;
+  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

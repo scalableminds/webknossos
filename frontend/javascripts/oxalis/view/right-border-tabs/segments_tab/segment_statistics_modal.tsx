@@ -22,6 +22,7 @@ import {
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import { pluralize } from "libs/utils";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
@@ -130,18 +131,22 @@ export function SegmentStatisticsModal({
     async () => {
       await api.tracing.save();
       if (requestUrl == null) return;
+      const maybeVolumeTracing =
+        tracingId != null ? getVolumeTracingById(tracing, tracingId) : null;
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
+          maybeVolumeTracing?.mappingName,
         ),
         getSegmentBoundingBoxes(
           requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
+          maybeVolumeTracing?.mappingName,
         ),
       ]).then(
         (response) => {

@@ -208,7 +208,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     val meshFileVersions = meshFileNames.map { fileName =>
       val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
-      mappingVersionForMeshFile(meshFilePath)
+      versionForMeshFile(meshFilePath)
     }
 
     val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
@@ -235,7 +235,23 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } ?~> "mesh.file.readEncoding.failed"
   }
 
-  private def mappingVersionForMeshFile(meshFilePath: Path): Long =
+  def mappingNameForMeshFile(organizationName: String,
+                             datasetName: String,
+                             dataLayerName: String,
+                             meshFileName: String): Option[String] = {
+    val meshFilePath =
+      dataBaseDir
+        .resolve(organizationName)
+        .resolve(datasetName)
+        .resolve(dataLayerName)
+        .resolve(meshesDir)
+        .resolve(s"${meshFileName}.$meshFileExtension")
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+      cachedMeshFile.reader.string().getAttr("/", "mapping_name")
+    }.toOption
+  }
+
+  private def versionForMeshFile(meshFilePath: Path): Long =
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       cachedMeshFile.reader.int64().getAttr("/", "artifact_schema_version")
     }.toOption.getOrElse(0)

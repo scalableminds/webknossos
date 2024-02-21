@@ -9,7 +9,8 @@ import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
+import com.scalableminds.webknossos.datastore.services.FullMeshRequest
+import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status
 import play.api.inject.ApplicationLifecycle
@@ -110,6 +111,16 @@ class TSRemoteDatastoreClient @Inject()(
         } yield result
     )
   }
+
+  def loadFullMeshStl(token: Option[String],
+                      remoteFallbackLayer: RemoteFallbackLayer,
+                      fullMeshRequest: FullMeshRequest): Fox[Array[Byte]] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      result <- rpc(s"$remoteLayerUri/meshes/fullMeshStl")
+        .addQueryStringOptional("token", token)
+        .postJsonWithBytesResponse(fullMeshRequest)
+    } yield result
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {

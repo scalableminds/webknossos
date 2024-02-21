@@ -16,7 +16,7 @@ trait MeshMappingHelper {
       organizationName: String,
       datasetName: String,
       dataLayerName: String,
-      targetMappingName: Option[String], // TODO find out if meshfile is computed for this mapping
+      targetMappingName: Option[String], // TODO find out if meshfile is computed for this mapping, use meshFileService.mappingNameForMeshFile
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
       token: Option[String])(implicit ec: ExecutionContext): Fox[List[Long]] =

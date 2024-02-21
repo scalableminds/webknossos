@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
+package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
 
 import scala.concurrent.ExecutionContext

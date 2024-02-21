@@ -129,7 +129,6 @@ class NodeShader {
       value: M4x4.transpose(affineMatrix),
     };
 
-    // this.storePropertyUnsubscribers.push();
     listenToStoreProperty(
       (storeState) =>
         getTransformsForSkeletonLayer(

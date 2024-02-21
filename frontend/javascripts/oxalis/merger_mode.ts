@@ -115,7 +115,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
 
 // Do not create nodes if they are set outside of segments.
 async function createNodeOverwrite(
-  _store: OxalisState,
+  state: OxalisState,
   call: (action: Action) => void,
   action: CreateNodeAction,
   mergerModeState: MergerModeState,
@@ -126,21 +126,11 @@ async function createNodeOverwrite(
     return;
   }
   const { position: untransformedPosition, additionalCoordinates } = action;
-  // Calculate where the node is actually rendered.
-  const transformedNodePosition = transformNodePosition(untransformedPosition, Store.getState());
 
-  // Apply the inverse of the segmentation transform to know where to look up
-  // the voxel value.
-  const inverseSegmentationTransform = getInverseSegmentationTransformer(
-    Store.getState(),
+  const segmentId = await getSegmentId(
+    state,
     segmentationLayerName,
-  );
-  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
-
-  const segmentId = await api.data.getDataValue(
-    segmentationLayerName,
-    segmentPosition,
-    null,
+    untransformedPosition,
     additionalCoordinates,
   );
 
@@ -174,22 +164,10 @@ async function onCreateNode(
     return;
   }
 
-  const state = Store.getState();
-  // Calculate where the node is actually rendered.
-  const transformedNodePosition = transformNodePosition(untransformedPosition, state);
-
-  // Apply the inverse of the segmentation transform to know where to look up
-  // the voxel value.
-  const inverseSegmentationTransform = getInverseSegmentationTransformer(
-    state,
+  const segmentId = await getSegmentId(
+    Store.getState(),
     segmentationLayerName,
-  );
-  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
-
-  const segmentId = await api.data.getDataValue(
-    segmentationLayerName,
-    segmentPosition,
-    null,
+    untransformedPosition,
     additionalCoordinates,
   );
 
@@ -210,6 +188,32 @@ async function onCreateNode(
     // Update mapping
     api.data.setMapping(segmentationLayerName, idMapping);
   }
+}
+
+async function getSegmentId(
+  state: OxalisState,
+  segmentationLayerName: string,
+  untransformedPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+) {
+  // Calculate where the node is actually rendered.
+  const transformedNodePosition = transformNodePosition(untransformedPosition, state);
+
+  // Apply the inverse of the segmentation transform to know where to look up
+  // the voxel value.
+  const inverseSegmentationTransform = getInverseSegmentationTransformer(
+    state,
+    segmentationLayerName,
+  );
+  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
+
+  const segmentId = await api.data.getDataValue(
+    segmentationLayerName,
+    segmentPosition,
+    null,
+    additionalCoordinates,
+  );
+  return segmentId;
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
@@ -248,17 +252,13 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
   }
 
   const state = Store.getState();
-  // Calculate where the node is actually rendered.
-  const transformedNodePosition = transformNodePosition(untransformedPosition, state);
 
-  // Apply the inverse of the segmentation transform to know where to look up
-  // the voxel value.
-  const inverseSegmentationTransform = getInverseSegmentationTransformer(
+  const segmentId = await getSegmentId(
     state,
     segmentationLayerName,
+    untransformedPosition,
+    state.flycam.additionalCoordinates,
   );
-  const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
-  const segmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
 
   if (nodeSegmentMap[id] !== segmentId) {
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.

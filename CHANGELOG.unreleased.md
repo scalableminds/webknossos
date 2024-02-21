@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...HEAD)
 
 ### Added
 - Added support for storing analytics events in the Postgres. [#7594](https://github.com/scalableminds/webknossos/pull/7594) [#7609](https://github.com/scalableminds/webknossos/pull/7609)
@@ -34,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed small styling errors as a follow up to the antd v5 upgrade [#7612](https://github.com/scalableminds/webknossos/pull/7612)
 - Fixed deprecation warnings caused by Antd <Collapse> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
 - Fixed small styling error with a welcome notification for new users on webknossos.org. [7623](https://github.com/scalableminds/webknossos/pull/7623)
+- Fixed that filtering by tags could produce false positives. [#7640](https://github.com/scalableminds/webknossos/pull/7640)
 
 ### Removed
 

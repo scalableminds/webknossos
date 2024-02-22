@@ -59,7 +59,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(color-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>

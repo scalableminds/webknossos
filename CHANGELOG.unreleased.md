@@ -37,6 +37,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed small styling error with a welcome notification for new users on webknossos.org. [#7623](https://github.com/scalableminds/webknossos/pull/7623)
 - Fixed that filtering by tags could produce false positives. [#7640](https://github.com/scalableminds/webknossos/pull/7640)
 - Fixed a slight offset when creating a node with the mouse. [#7639](https://github.com/scalableminds/webknossos/pull/7639)
+- Fixed small styling error with NML drag and drop uploading. [7641](https://github.com/scalableminds/webknossos/pull/7641)
+- Fixed a bug where the user list view would show duplicate team roles, and user changes (e.g. giving experience) would sometimes fail. [#7646](https://github.com/scalableminds/webknossos/pull/7646)
 
 ### Removed
 

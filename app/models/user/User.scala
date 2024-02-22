@@ -247,50 +247,74 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       isEditableAttribute = q"""
         (u._id IN
           (SELECT _id AS editableUsers FROM webknossos.users WHERE _organization IN
-              (SELECT _organization FROM webknossos.users WHERE _id = ${requestingUser._id} AND isadmin)
+              (SELECT _organization FROM webknossos.users WHERE _id = ${requestingUser._id} AND isAdmin)
             UNION
           SELECT _user AS editableUsers FROM webknossos.user_team_roles WHERE _team in
-              (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id} AND isteammanager)
+              (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id} AND isTeamManager)
           )
         )
-        OR COUNT(t._id) = 0
+        OR COUNT(autr.team_ids) = 0
         AS iseditable
         """
       r <- run(q"""
+          WITH
+          agg_experiences AS (
+            SELECT
+              u._id AS _user,
+              ARRAY_REMOVE(ARRAY_AGG(ux.domain), null) AS experience_domains,
+              ARRAY_REMOVE(ARRAY_AGG(ux.value), null) AS experience_values
+            FROM webknossos.users AS u
+            LEFT JOIN webknossos.user_experiences ux on ux._user = u._id
+            GROUP BY u._id
+          ),
+          agg_user_team_roles AS (
+            SELECT
+              u._id AS _user,
+              ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+              ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+              ARRAY_REMOVE(ARRAY_AGG(utr.isteammanager :: TEXT), null) AS team_managers
+            FROM webknossos.users AS u
+            LEFT JOIN webknossos.user_team_roles utr on utr._user = u._id
+            INNER JOIN webknossos.teams t on t._id = utr._team
+            GROUP BY u._id
+          )
           SELECT
             u._id,
             m._id,
             m.email,
-            u.firstname,
-            u.lastname,
+            u.firstName,
+            u.lastName,
             u.userConfiguration,
-            u.isadmin,
-            u.isorganizationowner,
-            u.isdatasetmanager,
-            u.isdeactivated,
-            ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
-            ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-            ARRAY_REMOVE(ARRAY_AGG(utr.isteammanager :: TEXT), null) AS team_managers,
-            ARRAY_REMOVE(ARRAY_AGG(ux.value), null) AS experience_values,
-            ARRAY_REMOVE(ARRAY_AGG(ux.domain), null) AS experience_domains,
-            u.lastactivity,
+            u.isAdmin,
+            u.isOrganizationOwner,
+            u.isDatasetManager,
+            u.isDeactivated,
+            autr.team_ids,
+            autr.team_names,
+            autr.team_managers,
+            aux.experience_values,
+            aux.experience_domains,
+            u.lastActivity,
             o._id,
             o.name,
-            m.noveluserexperienceinfos,
-            m.selectedtheme,
+            m.novelUserExperienceinfos,
+            m.selectedTheme,
             u.created,
-            u.lasttasktypeid,
-            m.issuperuser,
-            m.isemailverified,
+            u.lastTaskTypeId,
+            m.isSuperUser,
+            m.isEmailVerified,
             $isEditableAttribute
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o on o._id = u._organization
         INNER JOIN webknossos.multiusers m on u._multiuser = m._id
-        INNER JOIN webknossos.user_team_roles utr on utr._user = u._id
-        INNER JOIN webknossos.teams t on t._id = utr._team
-        LEFT JOIN webknossos.user_experiences ux on ux._user = u._id
+        INNER JOIN agg_user_team_roles autr on autr._user = u._id
+        INNER JOIN agg_experiences aux on aux._user = u._id
         WHERE $selectionPredicates
-        GROUP BY u._id, o._id, m._id, m.email, m.noveluserexperienceinfos, m.selectedtheme, m.issuperuser, m.isemailverified
+        GROUP BY
+          u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
+          u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id,
+          m._id, m.email, m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified,
+          autr.team_ids, autr.team_names, autr.team_managers, aux.experience_values, aux.experience_domains
          """.as[UserCompactInfo])
       users <- Fox.combined(r.toList.map(_.toUser))
       compactInfos = r.toList

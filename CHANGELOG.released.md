@@ -13,11 +13,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed a bug where the user list view would show duplicate team roles, and user changes (e.g. giving experience) would sometimes fail. [#7646](https://github.com/scalableminds/webknossos/pull/7646)
 
-### Removed
-
-### Breaking Changes
-
-
 ## [24.02.2](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
 [Commits](https://github.com/scalableminds/webknossos/compare/24.02.1...24.02.2)
 

@@ -9,9 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## [24.02.3](https://github.com/scalableminds/webknossos/releases/tag/24.02.3) - 2024-02-22
 [Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...24.02.3)
 
-### Postgres Evolutions:
-
-
 ## [24.02.2](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
 [Commits](https://github.com/scalableminds/webknossos/compare/24.02.1...24.02.2)
 

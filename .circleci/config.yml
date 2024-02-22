@@ -250,38 +250,38 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - run:
-          name: Remove dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
-      - run:
-          name: Wait 3min
-          command: sleep 180
-      - run:
-          name: Install dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      # - run:
+      #     name: Remove dev-deployment
+      #     command: >
+      #       curl
+      #       -X POST
+      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
+      #       https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      # - run:
+      #     name: Wait 3min
+      #     command: sleep 180
+      # - run:
+      #     name: Install dev-deployment
+      #     command: >
+      #       curl
+      #       -X POST
+      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
+      #       https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
             yarn install --frozen-lockfile &
-            sleep 180 &
+            sleep 1 &
             wait
-      - run:
-          name: Refresh datasets
-          command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
+      # - run:
+      #     name: Refresh datasets
+      #     command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
       - run:
           name: Run screenshot-tests
           command: |
             # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
             # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
-            URL=https://master.webknossos.xyz/ \
+            URL=https://fixnightly.webknossos.xyz/ \
             timeout 3000 \
             yarn test-screenshot
 
@@ -316,7 +316,7 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - build_test_deploy:
+      - nightly:
           context:
             - DockerHub
           filters:

@@ -146,30 +146,32 @@ function InputCatcher({
   );
 
   return (
-    <div
-      className="flexlayout-dont-overflow"
-      onContextMenu={ignoreContextMenu}
-      style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
-    >
+    <div className={`inputcatcher-border ${viewportID}`}>
       <div
-        id={`inputcatcher_${viewportID}`}
-        ref={(domElement) => {
-          domElementRef.current = domElement;
-        }}
-        data-value={viewportID}
-        className={`inputcatcher ${viewportID}`}
-        style={{
-          position: "relative",
-          // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
-          // which is why those are defined at the outer element.
-          pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
-        }}
+        className="flexlayout-dont-overflow"
+        onContextMenu={ignoreContextMenu}
+        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
       >
-        <ViewportStatusIndicator />
-        {displayScalebars && viewportID !== "arbitraryViewport" ? (
-          <Scalebar viewportID={viewportID} />
-        ) : null}
-        {children}
+        <div
+          id={`inputcatcher_${viewportID}`}
+          ref={(domElement) => {
+            domElementRef.current = domElement;
+          }}
+          data-value={viewportID}
+          className={`inputcatcher ${viewportID}`}
+          style={{
+            position: "relative",
+            // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
+            // which is why those are defined at the outer element.
+            pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
+          }}
+        >
+          <ViewportStatusIndicator />
+          {displayScalebars && viewportID !== "arbitraryViewport" ? (
+            <Scalebar viewportID={viewportID} />
+          ) : null}
+          {children}
+        </div>
       </div>
     </div>
   );

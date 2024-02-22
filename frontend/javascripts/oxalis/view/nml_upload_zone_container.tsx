@@ -59,7 +59,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>
@@ -132,7 +132,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   size="large"
                   icon={<FileOutlined />}
                   style={{
-                    backgroundColor: "var(--ant-primary)",
+                    backgroundColor: "var(--ant-color-primary)",
                   }}
                 />
               }

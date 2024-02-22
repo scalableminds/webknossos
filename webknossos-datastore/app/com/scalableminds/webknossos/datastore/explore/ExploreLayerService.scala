@@ -2,13 +2,6 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
@@ -16,16 +9,17 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataLayer
+  DataLayerWithMagLocators
 }
+
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class ExploreLayerService extends FoxImplicits {
 
-  def adaptLayersAndVoxelSize(
-      layersWithVoxelSizes: List[(DataLayer, Vec3Double)],
-      preferredVoxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] =
+  def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, Vec3Double)],
+                              preferredVoxelSize: Option[Vec3Double])(
+      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], Vec3Double)] =
     for {
       rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
       rescaledLayers = rescaledLayersAndVoxelSize._1
@@ -36,9 +30,9 @@ class ExploreLayerService extends FoxImplicits {
                                                                                  voxelSize)
     } yield (layersWithCoordinateTransformations, voxelSize)
 
-  def makeLayerNamesUnique(layers: List[DataLayer]): List[DataLayer] = {
+  def makeLayerNamesUnique(layers: List[DataLayerWithMagLocators]): List[DataLayerWithMagLocators] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
-    layers.map { layer: DataLayer =>
+    layers.map { layer =>
       var nameCandidate = layer.name
       var index = 1
       while (namesSetMutable.contains(nameCandidate)) {
@@ -49,32 +43,16 @@ class ExploreLayerService extends FoxImplicits {
       if (nameCandidate == layer.name) {
         layer
       } else
-        layer match {
-          case l: ZarrDataLayer         => l.copy(name = nameCandidate)
-          case l: ZarrSegmentationLayer => l.copy(name = nameCandidate)
-          case l: N5DataLayer           => l.copy(name = nameCandidate)
-          case l: N5SegmentationLayer   => l.copy(name = nameCandidate)
-          case _                        => throw new Exception("Encountered unsupported layer format during explore remote")
-        }
+        layer.mapped(name = nameCandidate)
     }
   }
 
-  private def addCoordinateTransformationsToLayers(layers: List[DataLayer],
+  private def addCoordinateTransformationsToLayers(layers: List[DataLayerWithMagLocators],
                                                    preferredVoxelSize: Option[Vec3Double],
-                                                   voxelSize: Vec3Double): List[DataLayer] =
+                                                   voxelSize: Vec3Double): List[DataLayerWithMagLocators] =
     layers.map(l => {
       val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
-      l match {
-        case l: ZarrDataLayer                => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: ZarrSegmentationLayer        => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: N5DataLayer                  => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: N5SegmentationLayer          => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: PrecomputedDataLayer         => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: PrecomputedSegmentationLayer => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: Zarr3DataLayer               => l.copy(coordinateTransformations = coordinateTransformations)
-        case l: Zarr3SegmentationLayer       => l.copy(coordinateTransformations = coordinateTransformations)
-        case _                               => throw new Exception("Encountered unsupported layer format during explore remote")
-      }
+      l.mapped(coordinateTransformations = coordinateTransformations)
     })
 
   private def isPowerOfTwo(x: Int): Boolean =
@@ -135,9 +113,9 @@ class ExploreLayerService extends FoxImplicits {
         }
     }
 
-  private def rescaleLayersByCommonVoxelSize(
-      layersWithVoxelSizes: List[(DataLayer, Vec3Double)],
-      preferredVoxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[(List[DataLayer], Vec3Double)] = {
+  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, Vec3Double)],
+                                             preferredVoxelSize: Option[Vec3Double])(
+      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], Vec3Double)] = {
     val allVoxelSizes = layersWithVoxelSizes
       .flatMap(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
@@ -159,33 +137,7 @@ class ExploreLayerService extends FoxImplicits {
         val layer = layerWithVoxelSize._1
         val layerVoxelSize = layerWithVoxelSize._2
         val magFactors = (layerVoxelSize / baseVoxelSize).toVec3Int
-        layer match {
-          case l: ZarrDataLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: ZarrSegmentationLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: N5DataLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: N5SegmentationLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: PrecomputedDataLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: PrecomputedSegmentationLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: Zarr3DataLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case l: Zarr3SegmentationLayer =>
-            l.copy(mags = l.mags.map(mag => mag.copy(mag = mag.mag * magFactors)),
-                   boundingBox = l.boundingBox * magFactors)
-          case _ => throw new Exception("Encountered unsupported layer format during explore remote")
-        }
+        layer.mapped(boundingBoxMapping = _ * magFactors, magMapping = mag => mag.copy(mag = mag.mag * magFactors))
       })
     } yield (rescaledLayers, baseVoxelSize)
   }

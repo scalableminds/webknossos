@@ -388,8 +388,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       return null;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'title' implicitly has an 'any' type.
-    function showJSONModal(title, object) {
+    function showJSONModal(title: string, object: any) {
       Modal.info({
         title,
         width: 800,
@@ -816,7 +815,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         <ExclamationCircleOutlined
           style={{
             marginLeft: 4,
-            color: "var(--ant-error)",
+            color: "var(--ant-color-error)",
           }}
         />
       </Tooltip>

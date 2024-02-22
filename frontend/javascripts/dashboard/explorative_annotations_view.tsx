@@ -272,7 +272,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${id}`}>
-            <PlayCircleOutlined />
+            <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
           <br />
@@ -282,7 +282,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
               return downloadAnnotation(id, typ, hasVolumeTracing);
             }}
-            icon={<DownloadOutlined key="download" />}
+            icon={<DownloadOutlined key="download" className="icon-margin-right" />}
           >
             Download
           </AsyncLink>
@@ -291,7 +291,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <AsyncLink
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
-              icon={<InboxOutlined key="inbox" />}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
             >
               Archive
             </AsyncLink>
@@ -305,7 +305,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", tracing)}
-            icon={<FolderOpenOutlined key="folder" />}
+            icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
           </AsyncLink>
@@ -491,11 +491,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    return Utils.filterWithSearchQueryAND(
+    const filteredTracings = Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
       ["id", "name", "modified", "tags", "owner"],
-      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+      this.state.searchQuery,
     );
+
+    if (this.state.tags.length === 0) {
+      // This check is not strictly necessary, but serves
+      // as an early-out to save some computations.
+      return filteredTracings;
+    }
+
+    return filteredTracings.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
   }
 
   renderIdAndCopyButton(tracing: APIAnnotationInfo) {
@@ -509,7 +517,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Tooltip title="Copy long ID" placement="bottom">
           <Button
             onClick={copyIdToClipboard}
-            icon={<CopyOutlined className="without-icon-margin" />}
+            icon={<CopyOutlined />}
             style={{
               boxShadow: "none",
               backgroundColor: "transparent",

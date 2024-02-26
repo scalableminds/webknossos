@@ -1,26 +1,34 @@
 import Toast from "libs/toast";
 import React from "react";
 
-import { Button, Modal, Spin, Typography } from "antd";
+import { Button, Modal, Progress, Spin, Typography } from "antd";
 const { Text } = Typography;
 
-export function showAdGetSkeletonQuickSelectInfoComponents(): ReturnType<typeof Modal.info> {
+export function getSkeletonQuickSelectModalContent(progressPercentage: number): React.ReactNode {
+  return (
+    <div>
+      WEBKNOSSOS now performs an ML-based automatic quick selection for each slice that contains
+      nodes of the selected skeleton. This may take a while. Therefore, please wait until the
+      prediction is completed. <br /> <br />
+      After the quick selection is finished, you have the possibility to make corrections for each
+      slice. To quickly navigate between the nodes and correct the corresponding annotations, use
+      the keyboard shortcuts <Text code>ctrl + ./,</Text>. Once you have completed your corrections,
+      you can perform a volume interpolation to label the slices without quick selections. To do
+      this, use the button at the bottom of the sticky toast in the top right-hand corner. The toast
+      is displayed as soon as the quick selection is completed. To ignore the interpolation, simply
+      close the toast.
+      <Progress
+        percent={progressPercentage}
+        format={(percent?: number) => `${Math.round(percent || 0)}%`}
+      />
+    </div>
+  );
+}
+
+export function showAndGetSkeletonQuickSelectInfoComponents(): ReturnType<typeof Modal.info> {
   return Modal.info({
     title: "Quick Select via Skeleton",
-    content: (
-      <div>
-        WEBKNOSSOS now performs an ML-based automatic quick selection for each slice that contains
-        nodes of the selected skeleton. This may take a while. Therefore, please wait until the
-        prediction is completed. <br /> <br />
-        After the quick selection is finished, you have the possibility to make corrections for each
-        slice. To quickly navigate between the nodes and correct the corresponding annotations, use
-        the keyboard shortcuts <Text code>ctrl + ./,</Text>. Once you have completed your
-        corrections, you can perform a volume interpolation to label the slices without quick
-        selections. To do this, use the button at the bottom of the sticky toast in the top
-        right-hand corner. The toast is displayed as soon as the quick selection is completed. To
-        ignore the interpolation, simply close the toast.
-      </div>
-    ),
+    content: getSkeletonQuickSelectModalContent(0),
     closable: false,
     okButtonProps: { disabled: true },
     width: 700,

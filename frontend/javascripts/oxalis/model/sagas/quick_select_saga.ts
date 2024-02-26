@@ -27,8 +27,9 @@ import performQuickSelectML, {
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
 import {
-  showAdGetSkeletonQuickSelectInfoComponents,
+  showAndGetSkeletonQuickSelectInfoComponents,
   showFollowupInterpolationToast,
+  getSkeletonQuickSelectModalContent,
 } from "./skeleton_quick_select_info_components";
 import { performVolumeInterpolation } from "./volume/volume_interpolation_saga";
 
@@ -37,12 +38,12 @@ function* shouldUseHeuristic() {
   return useHeuristic || !features().segmentAnythingEnabled;
 }
 
-type SkeletonSamPrediction = {
-  saga: Saga<void>;
-  bounds: BoundingBoxType;
-};
-
-function prepareSkeletonSAMInput(nodes: Node[], dimensions: Vector3, activeViewport: OrthoView) {
+function prepareSkeletonSAMInput(
+  nodes: Node[],
+  dimensions: Vector3,
+  activeViewport: OrthoView,
+  predictionFinishedCallback: () => void,
+): SAMNodeSelect {
   const [firstDim, secondDim, thirdDim] = dimensions;
   const nodePositions = nodes.map((node) => node.position);
   const sum = nodePositions.reduce((currentSum: Vector3, position: Vector3) => {
@@ -64,6 +65,7 @@ function prepareSkeletonSAMInput(nodes: Node[], dimensions: Vector3, activeViewp
     nodePositions,
     bounds: prefetchBounds,
     viewport: activeViewport,
+    predictionFinishedCallback,
   };
   return nodeSelect;
 }
@@ -115,6 +117,7 @@ type QuickSelectPreparationParameter = {
   thirdDim: number;
   volumeTracing: VolumeTracing;
   activeViewport: OrthoView;
+  predictionFinishedCallback: () => void;
 };
 
 function prepareSkeletonSAMPredictions(
@@ -132,12 +135,14 @@ function prepareSkeletonSAMPredictions(
     firstDim,
     secondDim,
     thirdDim,
+    predictionFinishedCallback,
   } = options;
   for (const nodesOfASingleSlice of Object.values(nodePositionsGroupedBySlice) as Node[][]) {
     const nodeQuickSelectInput = prepareSkeletonSAMInput(
       nodesOfASingleSlice,
       [firstDim, secondDim, thirdDim],
       activeViewport,
+      predictionFinishedCallback,
     );
     const currentPredictionSaga = call(performQuickSelectML, nodeQuickSelectInput);
     samPredictions.push(currentPredictionSaga);
@@ -164,6 +169,20 @@ function prepareSkeletonSAMPredictions(
     previousPredictionBounds = currentPredictionBounds;
   }
   return { samPredictions, interpolationSagas };
+}
+
+function getPredictionFinishedCallback() {
+  let counter = 0;
+  let maximum = 1;
+  let updateModal = (_a: React.ReactNode) => {};
+  const setUpdateModal = (update: typeof updateModal) => (updateModal = update);
+  const setPredictionCount = (count: number) => (maximum = count);
+  const predictionFinishedCallback = () => {
+    counter++;
+    const newModalContent = getSkeletonQuickSelectModalContent((counter / maximum) * 100);
+    updateModal(newModalContent);
+  };
+  return { predictionFinishedCallback, setPredictionCount, setUpdateModal };
 }
 
 function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
@@ -193,6 +212,9 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
     _.sortBy([...tree.nodes.values()], getNodesThirdDimSlice),
     getNodesThirdDimSlice,
   ) as Record<number, Node[]>;
+
+  const { predictionFinishedCallback, setPredictionCount, setUpdateModal } =
+    getPredictionFinishedCallback();
   const options = {
     labeledZoomStep,
     labeledResolution,
@@ -201,12 +223,16 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
     thirdDim,
     volumeTracing,
     activeViewport,
+    predictionFinishedCallback,
   };
+
   const { samPredictions, interpolationSagas } = prepareSkeletonSAMPredictions(
     nodePositionsGroupedBySlice,
     options,
   );
-  const modal = showAdGetSkeletonQuickSelectInfoComponents();
+  setPredictionCount(samPredictions.length);
+  const modal = showAndGetSkeletonQuickSelectInfoComponents();
+  setUpdateModal((newContent: React.ReactNode) => modal.update({ content: newContent }));
 
   yield* all(samPredictions);
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));

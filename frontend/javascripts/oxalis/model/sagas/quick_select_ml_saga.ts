@@ -30,6 +30,7 @@ export type SAMNodeSelect = {
   nodePositions: Vector3[];
   bounds: BoundingBoxType;
   viewport: OrthoView;
+  predictionFinishedCallback: () => void;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -214,7 +215,6 @@ async function inferFromEmbedding(
       : [size[2], size[0], size[0] * size[1] * size[2]];
 
   let mask = ndarray(maskData, size, stride);
-  debugger;
   mask = mask
     // a.lo(x,y) => a[x:, y:]
     .lo(topLeft[firstDim], topLeft[secondDim], 0)
@@ -310,6 +310,8 @@ export default function* performQuickSelect(
   const nodePositions = "nodePositions" in action ? action.nodePositions : null;
   const isSamNodeSelect = "nodePositions" in action;
   const closeVolumeUndoBatchAfterPrediction = !isSamNodeSelect;
+  const predictionFinishedCallback =
+    "predictionFinishedCallback" in action ? action.predictionFinishedCallback : () => {};
 
   // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
@@ -379,6 +381,8 @@ export default function* performQuickSelect(
   );
 
   sendAnalyticsEvent("used_quick_select_with_ai");
+  predictionFinishedCallback();
+  // TODO: Bug: The progress bar is not updated properly!
   yield* finalizeQuickSelect(
     quickSelectGeometry,
     volumeTracing,

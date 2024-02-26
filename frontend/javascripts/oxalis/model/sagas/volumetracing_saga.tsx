@@ -448,7 +448,13 @@ export function* floodFill(): Saga<void> {
     }
     // As the flood fill will be applied to the volume layer,
     // the potentially existing mapping should be locked to ensure a consistent state.
-    yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+    const { isMappingLockedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsLocked,
+      volumeTracing,
+    );
+    if (!isMappingLockedIfNeeded) {
+      continue;
+    }
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     const progressCallback = createProgressCallback({

@@ -120,7 +120,7 @@ function _getDisabledInfoForProofreadTool(
   hasSkeleton: boolean,
   agglomerateState: AgglomerateState,
   isProofReadingToolAllowed: boolean,
-  isUneditableMappingPinned: boolean,
+  isUneditableMappingLocked: boolean,
   activeOrganization: APIOrganization | null,
   activeUser: APIUser | null | undefined,
 ) {
@@ -138,9 +138,9 @@ function _getDisabledInfoForProofreadTool(
     !hasSkeleton ||
     !agglomerateState.value ||
     !isProofReadingToolAllowed ||
-    isUneditableMappingPinned;
+    isUneditableMappingLocked;
   let explanation = "Proofreading actions are not supported after modifying the segmentation.";
-  if (!isUneditableMappingPinned) {
+  if (!isUneditableMappingLocked) {
     if (!agglomerateState.value) {
       explanation = agglomerateState.reason;
     } else if (!isProofReadingToolAllowed) {
@@ -170,7 +170,7 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
-  isUneditableMappingPinned: boolean,
+  isUneditableMappingLocked: boolean,
   agglomerateState: AgglomerateState,
   genericDisabledExplanation: string,
   activeOrganization: APIOrganization | null,
@@ -226,7 +226,7 @@ function _getDisabledInfoFromArgs(
       hasSkeleton,
       agglomerateState,
       isProofReadingToolAllowed,
-      isUneditableMappingPinned,
+      isUneditableMappingLocked,
       activeOrganization,
       activeUser,
     ),
@@ -287,7 +287,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isSegmentationTracingTransformed,
     isJSONMappingActive,
   );
-  const isUneditableMappingPinned =
+  const isUneditableMappingLocked =
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.mappingIsEditable) ??
     false;
 
@@ -317,7 +317,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.BRUSH, state),
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.FILL_CELL, state),
-    isUneditableMappingPinned,
+    isUneditableMappingLocked,
     agglomerateState,
     genericDisabledExplanation,
     state.activeOrganization,

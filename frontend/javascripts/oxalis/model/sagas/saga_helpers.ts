@@ -47,7 +47,7 @@ export function* takeEveryUnlessBusy(
 }
 
 type EnsureMappingIsLockedReturnType = {
-  isMappingPinnedIfNeeded: boolean;
+  isMappingLockedIfNeeded: boolean;
   reason?: string;
 };
 
@@ -66,10 +66,10 @@ export function askUserForLockingActiveMapping(
           const message = messages["tracing.locked_mapping_confirmed"](activeMapping.mappingName);
           Toast.info(message, { timeout: 10000 });
           console.log(message);
-          resolve({ isMappingPinnedIfNeeded: true, reason: "User confirmed." });
+          resolve({ isMappingLockedIfNeeded: true, reason: "User confirmed." });
         } else {
           // Having an active mapping without a name should be impossible. Therefore, no further error handling is done.
-          reject({ isMappingPinnedIfNeeded: false, reason: "No mapping name." });
+          reject({ isMappingLockedIfNeeded: false, reason: "No mapping name." });
         }
       };
       Modal.confirm({
@@ -80,7 +80,7 @@ export function askUserForLockingActiveMapping(
         width: 600,
         onOk: pinMapping,
         onCancel: async () => {
-          reject({ isMappingPinnedIfNeeded: false, reason: "User aborted." });
+          reject({ isMappingLockedIfNeeded: false, reason: "User aborted." });
         },
       });
     }
@@ -91,7 +91,7 @@ export function* ensureMaybeActiveMappingIsLocked(
   volumeTracing: VolumeTracing,
 ): Saga<EnsureMappingIsLockedReturnType> {
   if (volumeTracing.mappingIsLocked) {
-    return { isMappingPinnedIfNeeded: true, reason: "Mapping is already locked." };
+    return { isMappingLockedIfNeeded: true, reason: "Mapping is already locked." };
   }
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
@@ -110,7 +110,7 @@ export function* ensureMaybeActiveMappingIsLocked(
     }
   } else {
     yield* put(setMappingIsLockedAction());
-    return { isMappingPinnedIfNeeded: true, reason: "Locked that no mapping is active." };
+    return { isMappingLockedIfNeeded: true, reason: "Locked that no mapping is active." };
   }
 }
 

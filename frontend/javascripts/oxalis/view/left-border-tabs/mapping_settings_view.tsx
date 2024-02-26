@@ -25,7 +25,7 @@ import * as Utils from "libs/utils";
 import {
   getEditableMappingForVolumeTracingId,
   hasEditableMapping,
-  isMappingPinned,
+  isMappingLocked,
 } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Option, OptGroup } = Select;
@@ -44,7 +44,7 @@ type StateProps = {
   mappingType: MappingType;
   mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
-  isMappingPinned: boolean;
+  isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
@@ -175,7 +175,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
-    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingPinned;
+    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingLocked;
     const disabledMessage = this.props.isEditableMappingActive
       ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
       : this.props.mapping
@@ -274,7 +274,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     allowUpdate: state.tracing.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
-    isMappingPinned: isMappingPinned(state, ownProps.layerName),
+    isMappingLocked: isMappingLocked(state, ownProps.layerName),
   };
 }
 

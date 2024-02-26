@@ -555,7 +555,7 @@ export function hasEditableMapping(
   return !!volumeTracing.mappingIsEditable;
 }
 
-export function isMappingPinned(
+export function isMappingLocked(
   state: OxalisState,
   layerName?: string | null | undefined,
 ): boolean {
@@ -572,9 +572,9 @@ export function isMappingActivationAllowed(
   layerName?: string | null | undefined,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
-  const isActiveMappingPinned = isMappingPinned(state, layerName);
+  const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive && !isActiveMappingPinned) return true;
+  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 

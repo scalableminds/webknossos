@@ -435,8 +435,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
   // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-  const { isMappingPinnedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
-  if (!isMappingPinnedIfNeeded) {
+  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+  if (!isMappingLockedIfNeeded) {
     return;
   }
 

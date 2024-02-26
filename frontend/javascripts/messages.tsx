@@ -255,7 +255,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.invalid_json_url_hash":
     "Cannot parse JSON URL hash. More information was printed to the browser's console.",
   "tracing.locked_mapping_info":
-    "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked (and can no longer be changed or disabled). This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
+    "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
   "tracing.locked_mapping_confirmed": (mappingName: string) =>
     `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
   "layouting.missing_custom_layout_info":

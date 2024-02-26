@@ -113,7 +113,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_MAPPING_ENABLED",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_MAPPING_IS_EDITABLE",
-  "SET_MAPPING_IS_PINNED",
+  "SET_MAPPING_IS_LOCKED",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -362,7 +362,7 @@ export const setMappingIsEditableAction = () =>
 
 export const setMappingIsLockedAction = () =>
   ({
-    type: "SET_MAPPING_IS_PINNED",
+    type: "SET_MAPPING_IS_LOCKED",
   } as const);
 
 export const computeQuickSelectForRectAction = (

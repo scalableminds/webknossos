@@ -129,7 +129,7 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingType: "HDF5",
 };
 
-const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingPinnedIfNeeded: true };
+const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };
 
 const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);

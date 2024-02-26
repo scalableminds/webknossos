@@ -408,7 +408,7 @@ function VolumeTracingReducer(
         mappingIsLocked: true,
       });
     }
-    case "SET_MAPPING_IS_PINNED": {
+    case "SET_MAPPING_IS_LOCKED": {
       if (volumeTracing.mappingIsLocked) return state;
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {

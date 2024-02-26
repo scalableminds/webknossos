@@ -11,6 +11,7 @@ import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
 import generatePicker from "antd/es/date-picker/generatePicker";
 import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
+import { APIProject } from "types/api_flow_types";
 
 const { Column } = Table;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -26,12 +27,32 @@ export enum typeFilters {
 type TimeEntry = {
   user: {
     id: string;
-    entries;
     firstName: string;
     lastName: string;
     email: string;
   };
   timeMillis: number;
+};
+
+export const getTaskFilterOptions = (allProjects: APIProject[]) => {
+  const additionalProjectFilters = {
+    label: "Filter types",
+    options: [
+      { label: "Tasks & Annotations", value: typeFilters.TASKS_AND_ANNOTATIONS_KEY },
+      { label: "Annotations", value: typeFilters.ONLY_ANNOTATIONS_KEY },
+      { label: "Tasks", value: typeFilters.ONLY_TASKS_KEY },
+    ],
+  };
+  const mappedProjects = allProjects.map((project) => {
+    return {
+      label: project.name,
+      value: project.id,
+    };
+  });
+  return [
+    additionalProjectFilters,
+    { label: "Filter projects (only tasks)", options: mappedProjects },
+  ];
 };
 
 function TimeTrackingOverview() {
@@ -128,27 +149,6 @@ function TimeTrackingOverview() {
       type: "text/plain;charset=utf-8",
     });
     saveAs(blob, filename);
-  };
-
-  const getTaskFilterOptions = () => {
-    const additionalProjectFilters = {
-      label: "Filter types",
-      options: [
-        { label: "Tasks & Annotations", value: typeFilters.TASKS_AND_ANNOTATIONS_KEY },
-        { label: "Annotations", value: typeFilters.ONLY_ANNOTATIONS_KEY },
-        { label: "Tasks", value: typeFilters.ONLY_TASKS_KEY },
-      ],
-    };
-    const mappedProjects = allProjects.map((project) => {
-      return {
-        label: project.name,
-        value: project.id,
-      };
-    });
-    return [
-      additionalProjectFilters,
-      { label: "Filter projects (only tasks)", options: mappedProjects },
-    ];
   };
 
   //TODO make new after proper request for annotations only

@@ -24,7 +24,7 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { typeFilters } from "admin/statistic/time_tracking_overview";
+import { typeFilters, getTaskFilterOptions } from "admin/statistic/time_tracking_overview";
 
 const FormItem = Form.Item;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -54,7 +54,7 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  includeAllAnnotations: boolean;
+  includeOnlyTasks: boolean;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -106,7 +106,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    includeAllAnnotations: false,
+    includeOnlyTasks: false,
   };
 
   parseQueryParams() {
@@ -158,7 +158,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchTimeTrackingData() {
-    debugger;
     this.setState({
       isLoading: true,
     });
@@ -170,7 +169,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.dateRange[0],
           this.state.dateRange[1],
           this.state.selectedProjectIds,
-          !this.state.includeAllAnnotations,
+          this.state.includeOnlyTasks,
         ),
       );
       this.setState(
@@ -239,27 +238,39 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.fetchTimeTrackingData();
   };
 
+  // TODO this for class component
   handleSelectedProjectsChange = (projectId: string) => {
     const prevSelectedProjectIds = this.state.selectedProjectIds;
     let selectedProjectIds: string[] = [];
-    let includeAllAnnotations = false;
-    if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
-      selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
-      includeAllAnnotations = true;
-    } else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+    let includeOnlyTasks = false;
+    if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
+      selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
+      includeOnlyTasks = false;
+    } // set all projects and true
+    else if (projectId == typeFilters.ONLY_TASKS_KEY) {
       selectedProjectIds = [typeFilters.ONLY_TASKS_KEY];
+      includeOnlyTasks = true;
+    } else if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
+      selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
+      includeOnlyTasks = false;
     } else {
-      let prevSelectedIds = prevSelectedProjectIds;
-      if (
-        prevSelectedProjectIds.find(
-          (id) => id === typeFilters.ONLY_ANNOTATIONS_KEY || id === typeFilters.ONLY_TASKS_KEY,
-        ) != null
-      )
-        prevSelectedIds = [];
+      const prevSelectedIds = prevSelectedProjectIds.filter(
+        (id) => !(Object.values(typeFilters) as string[]).includes(id),
+      );
       selectedProjectIds = [...prevSelectedIds, projectId];
     }
-    console.log(selectedProjectIds, includeAllAnnotations);
-    this.setState({ selectedProjectIds, includeAllAnnotations });
+    this.setState({ selectedProjectIds, includeOnlyTasks });
+    this.fetchTimeTrackingData();
+  };
+
+  onDeselect = (removedKey: string) => {
+    let selectedProjectIds: string[] = [];
+    if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
+      selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
+    } else {
+      selectedProjectIds = selectedProjectIds.filter((projectId) => projectId !== removedKey);
+    }
+    this.setState({ selectedProjectIds });
     this.fetchTimeTrackingData();
   };
 
@@ -442,12 +453,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   mode="multiple"
                   placeholder="Filter type or projects"
                   defaultValue={[]}
-                  options={this.state.allProjects.map((project) => {
-                    return {
-                      label: project.name,
-                      value: project.id,
-                    };
-                  })}
+                  options={getTaskFilterOptions(this.state.allProjects)}
                   value={this.state.selectedProjectIds}
                   onDeselect={() => console.log("TODO") /*TODO*/}
                   onSelect={(projectId: string) => this.handleSelectedProjectsChange(projectId)}

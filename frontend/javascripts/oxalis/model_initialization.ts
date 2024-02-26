@@ -625,7 +625,7 @@ function determineDefaultState(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName, mappingIsLocked: mappingIsLocked } = volumeTracing;
+    const { id: layerName, mappingName, mappingIsLocked } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};

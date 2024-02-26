@@ -421,7 +421,7 @@ test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) =
   );
 });
 
-test("VolumeTracingSaga should pin an active mapping upon first volume annotation", (t) => {
+test("VolumeTracingSaga should lock an active mapping upon first volume annotation", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
   saga.next();
@@ -447,7 +447,7 @@ test("VolumeTracingSaga should pin an active mapping upon first volume annotatio
   );
 });
 
-test("ensureMaybeActiveMappingIsLocked should pin an existing mapping to the annotation", (t) => {
+test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the annotation", (t) => {
   const activeMappingByLayer = { [volumeTracing.tracingId]: dummyActiveMapping };
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
@@ -459,14 +459,14 @@ test("ensureMaybeActiveMappingIsLocked should pin an existing mapping to the ann
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case no mapping is active.", (t) => {
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
   expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case a mapping is active but disabled.", (t) => {
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mapping is active but disabled.", (t) => {
   const jsonDummyMapping = { ...dummyActiveMapping, mappingStatus: MappingStatusEnum.DISABLED };
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
@@ -478,7 +478,7 @@ test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case a mapping
   t.true(saga.next().done);
 });
 
-test("ensureMaybeActiveMappingIsLocked should pin 'no mapping' in case a JSON mapping is active.", (t) => {
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON mapping is active.", (t) => {
   const jsonDummyMapping = { ...dummyActiveMapping, mappingType: "JSON" };
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();

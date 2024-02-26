@@ -57,7 +57,7 @@ export function askUserForLockingActiveMapping(
 ): Promise<EnsureMappingIsLockedReturnType> {
   return new Promise((resolve, reject) => {
     if (!volumeTracing.mappingIsLocked) {
-      const pinMapping = async () => {
+      const lockMapping = async () => {
         // A mapping that is active and is being annotated needs to be locked to ensure a consistent state in the future.
         // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
         const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
@@ -78,7 +78,7 @@ export function askUserForLockingActiveMapping(
         okText: "Lock Mapping",
         cancelText: "Abort Annotation Action",
         width: 600,
-        onOk: pinMapping,
+        onOk: lockMapping,
         onCancel: async () => {
           reject({ isMappingLockedIfNeeded: false, reason: "User aborted." });
         },

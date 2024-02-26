@@ -491,11 +491,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    return Utils.filterWithSearchQueryAND(
+    const filteredTracings = Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
       ["id", "name", "modified", "tags", "owner"],
-      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+      this.state.searchQuery,
     );
+
+    if (this.state.tags.length === 0) {
+      // This check is not strictly necessary, but serves
+      // as an early-out to save some computations.
+      return filteredTracings;
+    }
+
+    return filteredTracings.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
   }
 
   renderIdAndCopyButton(tracing: APIAnnotationInfo) {

@@ -214,6 +214,7 @@ async function inferFromEmbedding(
       : [size[2], size[0], size[0] * size[1] * size[2]];
 
   let mask = ndarray(maskData, size, stride);
+  debugger;
   mask = mask
     // a.lo(x,y) => a[x:, y:]
     .lo(topLeft[firstDim], topLeft[secondDim], 0)

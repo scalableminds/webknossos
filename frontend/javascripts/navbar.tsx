@@ -255,14 +255,6 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
       { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       { key: "/timetracking", label: <Link to="/timetracking">Time Tracking Overview</Link> },
       {
-        key: "/reports/timetracking",
-        label: (
-          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Power}>
-            <Link to="/reports/timetracking">Time Tracking</Link>
-          </PricingEnforcedSpan>
-        ),
-      },
-      {
         key: "/reports/projectProgress",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>

@@ -5,24 +5,28 @@ import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import React, { useState } from "react";
 import dayjs from "dayjs";
-import { DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
 import generatePicker from "antd/es/date-picker/generatePicker";
+import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
 
 const { Column } = Table;
 const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export const ALL_ANNOTATIONS_KEY = "ALL_ANNOTATIONS";
-export const ALL_TASKS_KEY = "ALL_TASKS";
+export enum typeFilters {
+  ONLY_ANNOTATIONS_KEY = "ONLY_ANNOTATIONS",
+  ONLY_TASKS_KEY = "ONLY_TASKS",
+  TASKS_AND_ANNOTATIONS_KEY = "TASKS_AND_ANNOTATIONS",
+}
 
 type TimeEntry = {
   user: {
     id: string;
+    entries;
     firstName: string;
     lastName: string;
     email: string;
@@ -39,13 +43,13 @@ function TimeTrackingOverview() {
   ) => {
     // omit project parameter in request if annotation data is requested
     const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-    return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=${!includeAllAnnotations}&teamIds=${teamIds.join(
+    return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=${onlyTasks}&teamIds=${teamIds.join(
       ",",
     )}${projectsParam}`;
   };
 
   const currentTime = dayjs();
-  const [startDate, setStartDate] = useState(currentTime.startOf("d").subtract(6, "d"));
+  const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   // TODO make sure this is resolved
   const [allTeams, allProjects, allTimeEntries] = useFetch(
@@ -64,22 +68,27 @@ function TimeTrackingOverview() {
     [],
   );
 
-  const [selectedProjectIds, setSelectedProjectIds] = useState(allProjects.map((p) => p.id));
+  const [selectedProjectIds, setSelectedProjectIds] = useState([
+    typeFilters.TASKS_AND_ANNOTATIONS_KEY as string,
+  ]);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
-  const [includeAllAnnotations, setIncludeAllAnnotations] = useState(false);
+  const [onlyTasks, setOnlyTasks] = useState(false);
 
   const filteredTimeEntries = useFetch(
     async () => {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       let filteredProjects =
-        selectedProjectIds.length === 0 || selectedProjectIds.includes(ALL_TASKS_KEY)
+        selectedProjectIds.length === 0 || selectedProjectIds.includes(typeFilters.ONLY_TASKS_KEY)
           ? allProjects.map((project) => project.id)
           : selectedProjectIds;
-      const selectAnnotations = selectedProjectIds.includes(ALL_ANNOTATIONS_KEY);
-      if (selectAnnotations) filteredProjects = [];
-      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !selectAnnotations))
+      const selectAll = selectedProjectIds.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY);
+      if (selectAll) filteredProjects = [];
+      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !selectAll)) return [];
+      if (selectedProjectIds.includes(typeFilters.ONLY_ANNOTATIONS_KEY)) {
+        console.log("Not yet implemented");
         return [];
+      }
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
         endDate.valueOf(),
@@ -122,38 +131,59 @@ function TimeTrackingOverview() {
   };
 
   const getTaskFilterOptions = () => {
-    const additionalProjectFilters = [
-      { label: "All Annotations", value: ALL_ANNOTATIONS_KEY },
-      { label: "All Tasks", value: ALL_TASKS_KEY },
-    ];
+    const additionalProjectFilters = {
+      label: "Filter types",
+      options: [
+        { label: "Tasks & Annotations", value: typeFilters.TASKS_AND_ANNOTATIONS_KEY },
+        { label: "Annotations", value: typeFilters.ONLY_ANNOTATIONS_KEY },
+        { label: "Tasks", value: typeFilters.ONLY_TASKS_KEY },
+      ],
+    };
     const mappedProjects = allProjects.map((project) => {
       return {
         label: project.name,
         value: project.id,
       };
     });
-    return mappedProjects.concat(additionalProjectFilters);
+    return [
+      additionalProjectFilters,
+      { label: "Filter projects (only tasks)", options: mappedProjects },
+    ];
   };
 
-  //TODO
+  //TODO make new after proper request for annotations only
   const setSelectedProjects = (selectedProjectIds: string[], projectId: string) => {
-    if (projectId == ALL_ANNOTATIONS_KEY) {
-      setSelectedProjectIds([ALL_ANNOTATIONS_KEY]);
-      setIncludeAllAnnotations(true);
+    if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
+      setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
+      setOnlyTasks(false);
     } // set all projects and true
-    else if (projectId == ALL_TASKS_KEY) {
-      setSelectedProjectIds([ALL_TASKS_KEY]);
-      setIncludeAllAnnotations(false);
+    else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+      setSelectedProjectIds([typeFilters.ONLY_TASKS_KEY]);
+      setOnlyTasks(true);
+    } else if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
+      setSelectedProjectIds([typeFilters.ONLY_ANNOTATIONS_KEY]);
+      setOnlyTasks(false);
     } else {
-      let prevSelectedIds = selectedProjectIds;
-      if (
-        selectedProjectIds.find((id) => id === ALL_ANNOTATIONS_KEY || id === ALL_TASKS_KEY) != null
-      )
-        prevSelectedIds = [];
-      if (includeAllAnnotations) setIncludeAllAnnotations(false);
+      const prevSelectedIds = selectedProjectIds.filter(
+        (id) => !(Object.values(typeFilters) as string[]).includes(id),
+      );
       setSelectedProjectIds([...prevSelectedIds, projectId]);
     }
   };
+
+  const onDeselect = (removedKey: string) => {
+    if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
+      setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
+    } else {
+      setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
+    }
+  };
+
+  // TODO fix range preselects
+  const rangePresets = [
+    { label: "Last 7 Days", value: [dayjs().subtract(7, "d"), dayjs()] },
+    { label: "Last 30 Days", value: [dayjs().subtract(30, "d"), dayjs()] },
+  ];
 
   return (
     <Card
@@ -163,6 +193,16 @@ function TimeTrackingOverview() {
         marginBottom: 30,
       }}
     >
+      <FilterOutlined />
+      <Select
+        mode="multiple"
+        placeholder="Filter type or projects"
+        style={{ width: selectWidth, ...filterStyle }}
+        options={getTaskFilterOptions()}
+        value={selectedProjectIds}
+        onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
+        onSelect={(projectId: string) => setSelectedProjects(selectedProjectIds, projectId)}
+      />
       <Select
         mode="multiple"
         placeholder="Filter teams"
@@ -176,34 +216,21 @@ function TimeTrackingOverview() {
         })}
         value={selectedTeams}
         onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
-        onDeselect={(removedTeamId: string) =>
-          setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId))
-        }
-      />
-      <Select
-        mode="multiple"
-        placeholder="Filter type or projects"
-        defaultValue={[]}
-        style={{ width: selectWidth, ...filterStyle }}
-        options={getTaskFilterOptions()}
-        value={selectedProjectIds}
-        onDeselect={(removedProjectId: string) =>
-          setSelectedProjectIds(
-            selectedProjectIds.filter((projectId) => projectId !== removedProjectId),
-          )
-        }
-        onSelect={(projectId: string) => setSelectedProjects(selectedProjectIds, projectId)}
+        onDeselect={(removedTeamId: string) => {
+          setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
+        }}
       />
       <RangePicker
         style={filterStyle}
         value={[startDate, endDate]}
+        presets={rangePresets}
         onChange={(dates, _dateStrings) => {
           if (dates == null) return;
           setStartDate(dates[0]);
           setEndeDate(dates[1]);
         }}
       />
-      <Spin spinning={allTimeEntries.length < 1} size="large">
+      <Spin spinning={false} size="large">
         {/* fix me */}
         <Table
           dataSource={filteredTimeEntries}

@@ -24,7 +24,7 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { ALL_ANNOTATIONS_KEY, ALL_TASKS_KEY } from "admin/statistic/time_tracking_overview";
+import { typeFilters } from "admin/statistic/time_tracking_overview";
 
 const FormItem = Form.Item;
 const DatePicker = generatePicker(dayjsGenerateConfig);
@@ -243,16 +243,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const prevSelectedProjectIds = this.state.selectedProjectIds;
     let selectedProjectIds: string[] = [];
     let includeAllAnnotations = false;
-    if (projectId == ALL_ANNOTATIONS_KEY) {
-      selectedProjectIds = [ALL_ANNOTATIONS_KEY];
+    if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
+      selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
       includeAllAnnotations = true;
-    } else if (projectId == ALL_TASKS_KEY) {
-      selectedProjectIds = [ALL_TASKS_KEY];
+    } else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+      selectedProjectIds = [typeFilters.ONLY_TASKS_KEY];
     } else {
       let prevSelectedIds = prevSelectedProjectIds;
       if (
-        prevSelectedProjectIds.find((id) => id === ALL_ANNOTATIONS_KEY || id === ALL_TASKS_KEY) !=
-        null
+        prevSelectedProjectIds.find(
+          (id) => id === typeFilters.ONLY_ANNOTATIONS_KEY || id === typeFilters.ONLY_TASKS_KEY,
+        ) != null
       )
         prevSelectedIds = [];
       selectedProjectIds = [...prevSelectedIds, projectId];

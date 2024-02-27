@@ -25,7 +25,7 @@ import {
   setTreeVisibilityAction,
   setTreeGroupAction,
   setTreeGroupsAction,
-  setTreeEdgeVisibilityAction as setTreeEdgeVisibilityAction,
+  setTreeEdgeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,

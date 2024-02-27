@@ -291,7 +291,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    let organization = await getOrganization(this.props.dataset.owningOrganization);
+    const organization = await getOrganization(this.props.dataset.owningOrganization);
     this.setState({
       owningOrganizationDisplayName: organization.displayName,
     });

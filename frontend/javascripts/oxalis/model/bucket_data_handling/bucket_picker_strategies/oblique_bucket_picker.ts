@@ -86,7 +86,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
     let extent: Vector2;
     let enlargedExtent: Vector2;
     let enlargedHalfExtent: Vector2;
-    let queryMatrix = [...matrix] as Matrix4x4;
+    const queryMatrix = [...matrix] as Matrix4x4;
 
     if (viewMode === "orthogonal") {
       extent = [rects[planeId].width, rects[planeId].height];

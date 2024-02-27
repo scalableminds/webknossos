@@ -1246,7 +1246,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let areGroupOrSelectedSegmentMeshesVisible: boolean =
+    const areGroupOrSelectedSegmentMeshesVisible: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
@@ -1357,7 +1357,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
-    let segmentsWithoutPosition: number[] = relevantSegments
+    const segmentsWithoutPosition: number[] = relevantSegments
       .filter((segment) => segment.somePosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
@@ -1380,7 +1380,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
-    let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {

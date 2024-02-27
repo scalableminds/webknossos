@@ -686,7 +686,7 @@ function _getOriginalTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer,
 ): Transform | null {
-  let coordinateTransformations = layer.coordinateTransformations;
+  const coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
@@ -703,7 +703,7 @@ function _getOriginalTransformsForLayerOrNull(
     const nestedMatrix = transformation.matrix;
     return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
   } else if (type === "thin_plate_spline") {
-    let { source, target } = transformation.correspondences;
+    const { source, target } = transformation.correspondences;
 
     return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
   }

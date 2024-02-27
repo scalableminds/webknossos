@@ -69,7 +69,7 @@ type MeshChunkDataRequestV3 = {
 };
 
 type MeshChunkDataRequestV3List = {
-  meshFile: String;
+  meshFile: string;
   requests: MeshChunkDataRequestV3[];
 };
 

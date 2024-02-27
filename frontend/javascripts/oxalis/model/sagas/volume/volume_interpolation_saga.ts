@@ -161,10 +161,10 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });

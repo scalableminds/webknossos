@@ -626,7 +626,7 @@ function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
 
   const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
   const presetBrushSizes = useSelector(

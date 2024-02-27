@@ -318,7 +318,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     return;
   }
 
-  let mask = yield* call(
+  const mask = yield* call(
     inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,

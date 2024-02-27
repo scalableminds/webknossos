@@ -225,7 +225,7 @@ function* handleSetMapping(
     );
 
     const mappingProperties = {
-      mapping: agglomerateMapping,
+      mapping: Object.fromEntries(agglomerateMapping.map((value, index) => [index, value])),
       mappingKeys: _.range(agglomerateMapping.length),
     };
     yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));

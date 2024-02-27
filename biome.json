@@ -24,24 +24,18 @@
         "useSingleVarDeclarator": "off",
         "noShoutyConstants": "off",
         "noUselessElse": "off",
-        "noParameterAssign": "off",
-        "useConst": "off",
+        "noParameterAssign": "warn",
         "noInferrableTypes": "off",
         "useExponentiationOperator": "off",
-        "useDefaultParameterLast": "off",
-        "useAsConstAssertion": "off",
         "noNonNullAssertion": "off"
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",
         "noForEach": "off",
-        "noBannedTypes": "off",
-        "noUselessFragments": "off",
-        "useLiteralKeys": "off",
+        "noBannedTypes": "warn",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",
         "noUselessSwitchCase": "off",
-        "noUselessRename": "off",
         "noThisInStatic": "off"
       },
       "a11y": {
@@ -55,23 +49,13 @@
       },
       "correctness": {
         "noUnusedVariables": "off",
-        "noRenderReturnValue": "off",
-        "useExhaustiveDependencies": "off",
-        "noVoidTypeReturn": "off",
-        "useYield": "off"
+        "noRenderReturnValue": "off"
       },
       "suspicious": {
         "noExplicitAny": "off",
         "noAsyncPromiseExecutor": "off",
         "noShadowRestrictedNames": "off",
-        "noImplicitAnyLet": "off",
-        "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off",
-        "noArrayIndexKey": "off",
-        "noConstEnum": "off",
-        "noRedeclare": "off",
-        "noFallthroughSwitchClause": "off",
-        "noAssignInExpressions": "off"
+        "noFallthroughSwitchClause": "off"
       }
     }
   },

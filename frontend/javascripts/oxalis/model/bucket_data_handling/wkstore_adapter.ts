@@ -171,13 +171,13 @@ export async function requestFromStore(
     state.temporaryConfiguration.activeMappingByLayer,
     layerInfo.name,
   );
-  const applyAgglomerates =
-    isSegmentation &&
-    activeMapping != null && // Start to request mapped data during mapping activation phase already
-    activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-    activeMapping.mappingType === "HDF5"
-      ? activeMapping.mappingName
-      : null;
+  const applyAgglomerates = null;
+  // isSegmentation &&
+  // activeMapping != null && // Start to request mapped data during mapping activation phase already
+  // activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
+  // activeMapping.mappingType === "HDF5"
+  //   ? activeMapping.mappingName
+  //   : null;
   const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null

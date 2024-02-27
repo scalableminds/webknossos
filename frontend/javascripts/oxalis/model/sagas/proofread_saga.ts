@@ -293,6 +293,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
     volumeTracingLayer,
+    layerName,
     getDataValue,
     sourceNodePosition,
     targetNodePosition,
@@ -528,6 +529,7 @@ function* handleProofreadMergeOrMinCut(
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
     volumeTracingLayer,
+    layerName,
     getDataValue,
     sourcePosition,
     targetPosition,
@@ -602,7 +604,6 @@ function* handleProofreadMergeOrMinCut(
     call(getDataValue, targetPosition),
   ]);
 
-  /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
 
   yield* put(setBusyBlockingInfoAction(false));
@@ -673,6 +674,7 @@ function* prepareSplitOrMerge(
 
 function* getPartnerAgglomerateIds(
   volumeTracingLayer: APISegmentationLayer,
+  layerName: string,
   getDataValue: (position: Vector3) => Promise<number>,
   sourcePosition: Vector3,
   targetPosition: Vector3,
@@ -683,18 +685,22 @@ function* getPartnerAgglomerateIds(
   unmappedSourceId: number;
   unmappedTargetId: number;
 } | null> {
-  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracingLayer);
-  if (!getUnmappedDataValue) {
+  const [unmappedSourceId, unmappedTargetId] = yield* all([
+    call(getDataValue, sourcePosition),
+    call(getDataValue, targetPosition),
+  ]);
+  const mapping = yield* select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName).mapping,
+  );
+
+  if (mapping == null) {
+    Toast.warning("Mapping is not available, cannot proofread.");
+    yield* put(setBusyBlockingInfoAction(false));
     return null;
   }
-  const [sourceAgglomerateId, targetAgglomerateId, unmappedSourceId, unmappedTargetId] = yield* all(
-    [
-      call(getDataValue, sourcePosition),
-      call(getDataValue, targetPosition),
-      call(getUnmappedDataValue, sourcePosition),
-      call(getUnmappedDataValue, targetPosition),
-    ],
-  );
+
+  const sourceAgglomerateId = mapping[unmappedSourceId];
+  const targetAgglomerateId = mapping[unmappedTargetId];
 
   const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),
@@ -757,32 +763,4 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
       );
     }
   }
-}
-
-function* createGetUnmappedDataValueFn(
-  volumeTracingLayer: APISegmentationLayer,
-): Saga<((nodePosition: Vector3) => Promise<number>) | null> {
-  if (volumeTracingLayer.tracingId == null) return null;
-  const layerName = volumeTracingLayer.tracingId;
-
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const mag = resolutionInfo.getFinestResolution();
-
-  const fallbackLayerName = volumeTracingLayer.fallbackLayer;
-  if (fallbackLayerName == null) return null;
-  const TypedArrayClass = yield* select((state) => {
-    const { elementClass } = getLayerByName(state.dataset, layerName);
-    return getConstructorForElementClass(elementClass)[0];
-  });
-
-  return async (nodePosition: Vector3) => {
-    const buffer = await api.data.getRawDataCuboid(
-      fallbackLayerName,
-      nodePosition,
-      V3.add(nodePosition, mag),
-      mag,
-    );
-
-    return Number(new TypedArrayClass(buffer)[0]);
-  };
 }

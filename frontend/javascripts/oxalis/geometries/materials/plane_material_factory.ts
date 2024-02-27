@@ -213,6 +213,12 @@ class PlaneMaterialFactory {
       hoveredSegmentIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      hoveredUnmappedSegmentIdHigh: {
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      hoveredUnmappedSegmentIdLow: {
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
       // The same is done for the active cell id.
       activeCellIdHigh: {
         value: new THREE.Vector4(0, 0, 0, 0),
@@ -736,6 +742,17 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
+          (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
+          (hoveredUnmappedSegmentId) => {
+            const [high, low] = Utils.convertNumberTo64Bit(hoveredUnmappedSegmentId);
+
+            this.uniforms.hoveredUnmappedSegmentIdLow.value.set(...low);
+            this.uniforms.hoveredUnmappedSegmentIdHigh.value.set(...high);
+          },
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
           (storeState) =>
             Utils.maybe(getActiveCellId)(getActiveSegmentationTracing(storeState)).getOrElse(0),
           () => this.updateActiveCellId(),
@@ -758,9 +775,7 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) =>
-            getMappingInfoForSupportedLayer(storeState).mappingStatus ===
-              MappingStatusEnum.ENABLED && // The shader should only know about the mapping when a JSON mapping exists
-            getMappingInfoForSupportedLayer(storeState).mappingType === "JSON",
+            getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
           (isEnabled) => {
             this.uniforms.isMappingEnabled.value = isEnabled;
           },
@@ -840,9 +855,7 @@ class PlaneMaterialFactory {
       return;
     }
 
-    const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
-
-    const [high, low] = Utils.convertNumberTo64Bit(mappedActiveCellId);
+    const [high, low] = Utils.convertNumberTo64Bit(activeCellId);
 
     this.uniforms.activeCellIdLow.value.set(...low);
     this.uniforms.activeCellIdHigh.value.set(...high);

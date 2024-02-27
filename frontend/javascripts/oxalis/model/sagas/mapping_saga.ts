@@ -13,6 +13,7 @@ import {
   fetchMapping,
   getMappingsForDatasetLayer,
   getAgglomeratesForDatasetLayer,
+  getAgglomerateMapping,
 } from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
 import {
@@ -52,7 +53,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   const mappingChangeActionChannel = yield* actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
-  yield* takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
+  // yield* takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -205,10 +206,29 @@ function* handleSetMapping(
 
   // Call maybeReloadData only after it was checked whether the activated mapping is valid, otherwise there would
   // be a race between the maybeReloadData and handleSetMapping sagas
-  yield* fork(maybeReloadData, oldActiveMappingByLayer, action);
+  // yield* fork(maybeReloadData, oldActiveMappingByLayer, action);
 
   if (mappingType !== "JSON") {
-    // Only JSON mappings need to be fetched, HDF5 mappings are applied by the server
+    const dataset = yield* select((state) => state.dataset);
+    const layerInfo = getLayerByName(dataset, layerName);
+    // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+    const mappingLayerName =
+      "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+        ? layerInfo.fallbackLayer
+        : layerName;
+    const agglomerateMapping = yield* call(
+      getAgglomerateMapping,
+      dataset.dataStore.url,
+      dataset,
+      mappingLayerName,
+      mappingName,
+    );
+
+    const mappingProperties = {
+      mapping: agglomerateMapping,
+      mappingKeys: _.range(agglomerateMapping.length),
+    };
+    yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
     return;
   }
 

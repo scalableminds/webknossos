@@ -1,10 +1,11 @@
 import _ from "lodash";
 import React, { useRef, useState, useEffect } from "react";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { InputNumber, Switch } from "antd";
+import { InputNumber, Slider, Spin, Switch } from "antd";
 import { AsyncButton } from "./async_clickables";
 import Deferred from "libs/async/deferred";
 import memoizeOne from "memoize-one";
+import { useDebounce } from "libs/react_hooks";
 
 const SCALE = 0.4;
 const TILE_EXTENT = [1536, 1024];
@@ -27,17 +28,54 @@ function _getFullImagesForMatch(tilePairIndex: number) {
 
 const getFullImagesForMatch = memoizeOne(_getFullImagesForMatch);
 
+const ImageWithSpinner = ({ src, ...props }: { src: string }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const imgElement = imgRef.current;
+
+    const handleLoad = () => {
+      setIsLoading(false);
+    };
+
+    if (imgElement && imgElement.complete) {
+      setIsLoading(false);
+    } else if (imgElement) {
+      setIsLoading(true);
+      imgElement.addEventListener("load", handleLoad);
+    }
+
+    return () => {
+      if (imgElement) {
+        imgElement.removeEventListener("load", handleLoad);
+      }
+    };
+  }, [src]);
+
+  return (
+    <>
+      <Spin spinning={isLoading}>
+        <img ref={imgRef} src={src} {...props} />
+      </Spin>
+    </>
+  );
+};
+
 export function MatchViewer() {
   const canvasRef = useRef<any>(null);
   const width = CANVAS_EXTENT[0];
   const height = CANVAS_EXTENT[1];
 
+  const [maxDistance, setMaxDistance] = useState(100);
   const [hoveredMatchIndex, setHoveredMatchIndex] = useState(0);
   const [info_refresher, set_info_refresher] = useState(0);
   const refetch_info = () => set_info_refresher(info_refresher + 1);
   const [partnerIndex, setPartnerIndex] = useState(0);
   const [tilePairIndex, setTilePairIndex] = useState(0);
+  const [showOriginalMatches, setShowOriginalMatches] = useState(true);
   const [useFlann, setUseFlann] = useState(false);
+  const debouncedMaxDistance = useDebounce(maxDistance, 1000);
   const onChangeTilePairIndex = (value: number | null) => {
     if (value != null) {
       setTilePairIndex(value);
@@ -45,8 +83,15 @@ export function MatchViewer() {
     setUseFlann(false);
   };
 
+  const params = new URLSearchParams();
+  params.append("tile_pair_index", `${tilePairIndex}`);
+  params.append("use_flann", useFlann ? "true" : "false");
+  params.append("show_original_matches", showOriginalMatches ? "true" : "false");
+  params.append("max_distance", `${debouncedMaxDistance}`);
+  const paramStr = `${params}`;
+
   const rematch = async () => {
-    await fetch(`http://localhost:8000/rematch?tile_pair_index=${tilePairIndex}`);
+    await fetch(`http://localhost:8000/rematch?${paramStr}`);
     setUseFlann(true);
     refetch_info();
   };
@@ -57,14 +102,10 @@ export function MatchViewer() {
 
   const info = useFetch(
     async () => {
-      return fetch(
-        `http://localhost:8000/info?tile_pair_index=${tilePairIndex}&use_flann=${
-          useFlann ? "True" : "False"
-        }`,
-      ).then((res) => res.json());
+      return fetch(`http://localhost:8000/info?${paramStr}`).then((res) => res.json());
     },
     null,
-    [tilePairIndex, info_refresher, useFlann],
+    [paramStr, info_refresher],
   );
 
   useEffect(() => {
@@ -158,12 +199,15 @@ export function MatchViewer() {
       const dst = info.keypoints[1][matchIdx];
       return (
         <div key={matchIdx} style={{ textAlign: "center" }}>
-          <img
+          {/*<img
             style={{ border: `1px ${matchIdx === hoveredMatchIndex ? "blue" : "white"} solid` }}
             onMouseEnter={() => setHoveredMatchIndex(matchIdx)}
-            src={`http://localhost:8000/match_image?tile_pair_index=${tilePairIndex}&feature_index=${matchIdx}&partner_index=${partnerIndex}&use_flann=${
-              useFlann ? "True" : "False"
-            }`}
+            src={`http://localhost:8000/match_image?${paramStr}&feature_index=${matchIdx}&partner_index=${partnerIndex}`}
+          />*/}
+          <ImageWithSpinner
+            src={`http://localhost:8000/match_image?${paramStr}&feature_index=${matchIdx}&partner_index=${partnerIndex}`}
+            style={{ border: `1px ${matchIdx === hoveredMatchIndex ? "blue" : "white"} solid` }}
+            onMouseEnter={() => setHoveredMatchIndex(matchIdx)}
           />
           <div>Score: {Math.round(feature_distances[matchIdx])}</div>
           <div>
@@ -175,26 +219,38 @@ export function MatchViewer() {
 
   return (
     <div>
-      <Switch checked={useFlann} onChange={(bool) => setUseFlann(bool)} />
-      <AsyncButton onClick={() => rematch()}>Rematch</AsyncButton>
+      <Switch checked={showOriginalMatches} onChange={(bool) => setShowOriginalMatches(bool)} />{" "}
+      Original Matches
+      {!showOriginalMatches && (
+        <span>
+          <Switch
+            style={{ marginLeft: 8 }}
+            checked={useFlann}
+            onChange={(bool) => setUseFlann(bool)}
+          />{" "}
+          FLANN
+        </span>
+      )}
+      {!showOriginalMatches && !useFlann && (
+        <div style={{ display: "flex" }}>
+          Max Distance:{" "}
+          <Slider
+            step={10}
+            value={maxDistance}
+            onChange={setMaxDistance}
+            style={{ width: "50%" }}
+            max={500}
+          />
+          <div>{maxDistance}</div>
+        </div>
+      )}
+      {/*<AsyncButton onClick={() => rematch()}>Rematch</AsyncButton>*/}
       <div style={{ textAlign: "center" }}>
         <canvas ref={canvasRef} width={CANVAS_EXTENT[0]} height={CANVAS_EXTENT[1]} />
         <div style={{ marginBottom: 12 }}>
           <InputNumber value={tilePairIndex} min={0} max={100} onChange={onChangeTilePairIndex} />
           {info.tiles[0].indices.join("-")} vs {info.tiles[1].indices.join("-")}
         </div>
-        {/*<div style={{ display: "flex", justifyContent: "center" }}>
-          <img
-            id={`full-image-1`}
-            style={{ border: "1px white solid", width: `${SCALED_TILE_EXTENT[0]}px` }}
-            src={`http://localhost:8000/full_image?tile_pair_index=${tilePairIndex}&partner_index=0`}
-          />
-          <img
-            id={`full-image-2`}
-            style={{ border: "1px white solid", width: `${SCALED_TILE_EXTENT[0]}px` }}
-            src={`http://localhost:8000/full_image?tile_pair_index=${tilePairIndex}&partner_index=1`}
-          />
-        </div>*/}
       </div>
       <div
         style={{

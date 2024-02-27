@@ -269,13 +269,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
   }
 
-  def agglomerateIdsForAllSegmentIds(agglomerateFileKey: AgglomerateFileKey): Box[Seq[Long]] = {
+  def agglomerateIdsForAllSegmentIds(agglomerateFileKey: AgglomerateFileKey): Box[Array[Long]] = {
     val file = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
     logger.info(f"file: $file exists: ${file.exists()}")
     tryo {
       val reader = HDF5FactoryProvider.get.openForReading(file)
-      val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, 3)
       val agglomerateIds: Array[Long] = reader.uint64().readArray("/segment_to_agglomerate")
       agglomerateIds
     }

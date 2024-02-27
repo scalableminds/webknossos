@@ -342,7 +342,7 @@ class DataSourceController @Inject()(
                                       urlOrHeaderToken(token, request)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateIds: Seq[Long] <- agglomerateService
+        agglomerateIds: Array[Long] <- agglomerateService
           .agglomerateIdsForAllSegmentIds(
             AgglomerateFileKey(
               organizationName,

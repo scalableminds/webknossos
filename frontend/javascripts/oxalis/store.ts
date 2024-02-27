@@ -403,6 +403,7 @@ export type TemporaryConfiguration = {
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
   readonly hoveredSegmentId: number | null;
+  readonly hoveredUnmappedSegmentId: number | null;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {

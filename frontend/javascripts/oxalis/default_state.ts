@@ -99,6 +99,7 @@ const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     hoveredSegmentId: 0,
+    hoveredUnmappedSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {

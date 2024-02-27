@@ -799,12 +799,19 @@ function* updateHoveredSegmentId(): Saga<void> {
     globalMousePosition,
   );
   const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+  const unmappedId = hoveredCellInfo != null ? hoveredCellInfo.unmappedId : 0;
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
+  );
+  const oldHoveredUnmappedSegmentId = yield* select(
+    (store) => store.temporaryConfiguration.hoveredUnmappedSegmentId,
   );
 
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+  if (oldHoveredUnmappedSegmentId !== id) {
+    yield* put(updateTemporarySettingAction("hoveredUnmappedSegmentId", unmappedId));
   }
 }
 

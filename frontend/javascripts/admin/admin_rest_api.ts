@@ -2286,6 +2286,19 @@ export function getAgglomerateSkeleton(
   );
 }
 
+export function getAgglomerateMapping(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+): Promise<Array<number>> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForAllSegments?token=${token}`,
+    ),
+  );
+}
+
 export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,

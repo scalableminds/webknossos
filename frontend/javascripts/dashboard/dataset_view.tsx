@@ -115,7 +115,7 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-  }, []);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;

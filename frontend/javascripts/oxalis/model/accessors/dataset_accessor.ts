@@ -204,7 +204,7 @@ export function getDefaultValueRangeOfLayer(
   layerName: string,
 ): [number, number] {
   const maxFloatValue = 3.40282347e38;
-  // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
+  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
 

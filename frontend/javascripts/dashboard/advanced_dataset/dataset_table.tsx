@@ -917,7 +917,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
       <Tag style={{ marginTop: "5px" }}>
-        <FolderOpenOutlined />
+        <FolderOpenOutlined className="icon-margin-right" />
         {formatPath(parts)}
       </Tag>
     </Tooltip>

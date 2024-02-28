@@ -85,7 +85,11 @@ import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -2295,6 +2299,45 @@ export function getAgglomerateMapping(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForAllSegments?token=${token}`,
+    ),
+  );
+}
+
+export async function getAgglomeratesForSegmentsFromDatastore(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  segmentIds: number[],
+): Promise<Record<number, number>> {
+  const segmentIdBuffer = serializeProtoListOfLong({ items: segmentIds });
+  const listArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+
+  return _.zipObject(segmentIds, parseProtoListOfLong(listArrayBuffer).items);
+}
+
+export function getAgglomeratesForSegmentsFromTracingstore(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: number[],
+): Promise<Record<number, number>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        data: segmentIds,
+      },
     ),
   );
 }

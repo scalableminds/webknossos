@@ -14,6 +14,8 @@ import {
   getMappingsForDatasetLayer,
   getAgglomeratesForDatasetLayer,
   getAgglomerateMapping,
+  getAgglomeratesForSegmentsFromDatastore,
+  getAgglomeratesForSegmentsFromTracingstore,
 } from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
 import {
@@ -28,12 +30,17 @@ import {
 import type { ActiveMappingInfo, Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
-import { api } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import { MappingStatusEnum } from "oxalis/constants";
-import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  isMappingActivationAllowed,
+  hasEditableMapping,
+  getEditableMappingForVolumeTracingId,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
+import { sleep } from "libs/utils";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -167,6 +174,7 @@ function* handleSetMapping(
   }
 
   const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
 
   // Make sure the available mappings are persisted in the store if they are not already
@@ -216,18 +224,51 @@ function* handleSetMapping(
       "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
         ? layerInfo.fallbackLayer
         : layerName;
-    const agglomerateMapping = yield* call(
-      getAgglomerateMapping,
-      dataset.dataStore.url,
-      dataset,
-      mappingLayerName,
-      mappingName,
+
+    yield* call(sleep, 5000);
+
+    const isEditableMappingActive = yield* select((state) => hasEditableMapping(state, layerName));
+    const editableMapping = yield* select((state) =>
+      getEditableMappingForVolumeTracingId(state, layerName),
     );
+    const cube = Model.getCubeByLayerName(layerName);
+    const uniqueSegmentIds = Array.from(cube.getValueSetForAllBuckets()).sort((a, b) => a - b);
+
+    const mapping = isEditableMappingActive
+      ? yield* call(
+          getAgglomeratesForSegmentsFromTracingstore,
+          annotation.tracingStore.url,
+          editableMapping.tracingId,
+          uniqueSegmentIds,
+        )
+      : yield* call(
+          getAgglomeratesForSegmentsFromDatastore,
+          dataset.dataStore.url,
+          dataset,
+          mappingLayerName,
+          mappingName,
+          uniqueSegmentIds,
+        );
 
     const mappingProperties = {
-      mapping: Object.fromEntries(agglomerateMapping.map((value, index) => [index, value])),
-      mappingKeys: _.range(agglomerateMapping.length),
+      mapping,
+      mappingKeys: uniqueSegmentIds,
     };
+
+    // // Load Full Mapping
+    // const agglomerateMapping = yield* call(
+    //   getAgglomerateMapping,
+    //   dataset.dataStore.url,
+    //   dataset,
+    //   mappingLayerName,
+    //   mappingName,
+    // );
+
+    // const mappingProperties = {
+    //   mapping: Object.fromEntries(agglomerateMapping.map((value, index) => [index, value])),
+    //   mappingKeys: _.range(agglomerateMapping.length),
+    // };
+
     yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
     return;
   }

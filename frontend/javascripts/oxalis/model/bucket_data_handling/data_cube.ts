@@ -373,6 +373,12 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
+  getValueSetForAllBuckets(): Set<number | BigInt> {
+    return this.buckets
+      .filter((bucket) => bucket.state === "LOADED")
+      .reduce((fullValueSet, bucket) => fullValueSet.union(bucket.getValueSet()), new Set());
+  }
+
   collectBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);

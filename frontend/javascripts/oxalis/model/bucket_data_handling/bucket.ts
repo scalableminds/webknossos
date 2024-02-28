@@ -640,6 +640,13 @@ export class DataBucket {
     return this.cachedValueSet!.has(value);
   }
 
+  getValueSet(): Set<number | BigInt> {
+    if (this.cachedValueSet == null) {
+      this.recomputeValueSet();
+    }
+    return this.cachedValueSet;
+  }
+
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:

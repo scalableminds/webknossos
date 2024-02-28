@@ -358,11 +358,11 @@ class EditableMappingService @Inject()(
     )
 
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
-                                           agglomerateId: Long,
+                                           chunkId: Long,
                                            version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
+        .get(segmentToAgglomerateKey(editableMappingId, chunkId), version, mayBeEmpty = Some(true))(
           fromProtoBytes[SegmentToAgglomerateProto])
       valueProto = keyValuePair.value
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)

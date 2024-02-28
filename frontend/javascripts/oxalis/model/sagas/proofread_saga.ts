@@ -49,7 +49,7 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
-import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
   loadAdHocMeshAction,
@@ -547,12 +547,32 @@ function* handleProofreadMergeOrMinCut(
   const items: UpdateAction[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
+    const activeMapping = yield* select(
+      (store) => store.temporaryConfiguration.activeMappingByLayer[layerName],
+    );
     if (sourceAgglomerateId === targetAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
-    items.push(
+    // Source ID is ID of active agglomerate, this ID is kept.
+    if (activeMapping.mapping == null) {
+      Toast.error("Mapping is not available, cannot proofread.");
+      yield* put(setBusyBlockingInfoAction(false));
+      return;
+    }
+    const mergedMapping = Object.fromEntries(
+      Object.entries(activeMapping.mapping).map(([key, value]) =>
+        value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
+      ),
+    );
+    yield* put(
+      setMappingAction(layerName, activeMapping.mappingName, activeMapping.mappingType, {
+        mappingKeys: activeMapping.mappingKeys || undefined,
+        mapping: mergedMapping,
+      }),
+    );
+    /* items.push(
       mergeAgglomerate(
         sourceAgglomerateId,
         targetAgglomerateId,
@@ -560,7 +580,7 @@ function* handleProofreadMergeOrMinCut(
         targetPosition,
         agglomerateFileMag,
       ),
-    );
+    ); */ // TODO fix me
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
     if (partnerInfos.unmappedSourceId === partnerInfos.unmappedTargetId) {
       Toast.error(

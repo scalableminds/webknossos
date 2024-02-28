@@ -167,7 +167,7 @@ jobs:
                     echo "PR is a draft, not installing dev deployment"
                 else
                     curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
-                    echo "Installed to $NORMALIZED:BRANCH.webknossos.xyz"
+                    echo "\nInstalled to $NORMALIZED_BRANCH.webknossos.xyz"
                 fi
             fi
       - run:

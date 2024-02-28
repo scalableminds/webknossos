@@ -1,12 +1,15 @@
 import _ from "lodash";
 import React, { useRef, useState, useEffect } from "react";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { InputNumber, Slider, Spin, Switch } from "antd";
+import { Button, InputNumber, Slider, Spin, Switch } from "antd";
 import { AsyncButton } from "./async_clickables";
 import Deferred from "libs/async/deferred";
 import memoizeOne from "memoize-one";
 import { useDebounce } from "libs/react_hooks";
+import Request from "libs/request";
 
+const GREEN = "rgb(129, 200, 149)";
+const BLUE = "rgb(75, 101, 254)";
 const SCALE = 0.4;
 const TILE_EXTENT = [1536, 1024];
 const SCALED_TILE_EXTENT = [SCALE * TILE_EXTENT[0], SCALE * TILE_EXTENT[1]];
@@ -62,10 +65,24 @@ const ImageWithSpinner = ({ src, ...props }: { src: string }) => {
   );
 };
 
+function useDictionary(initialState: Record<string, any>) {
+  const [dictionary, setDictionary] = useState(initialState);
+
+  const setValue = (key: string, value: any) => {
+    setDictionary((prevDictionary) => ({
+      ...prevDictionary,
+      [key]: value,
+    }));
+  };
+
+  return [dictionary, setValue];
+}
+
 export function MatchViewer() {
   const canvasRef = useRef<any>(null);
   const width = CANVAS_EXTENT[0];
   const height = CANVAS_EXTENT[1];
+  const [matchStore, setInMatchStore] = useDictionary({});
 
   const [maxDistance, setMaxDistance] = useState(100);
   const [hoveredMatchIndex, setHoveredMatchIndex] = useState(0);
@@ -89,6 +106,10 @@ export function MatchViewer() {
   params.append("show_original_matches", showOriginalMatches ? "true" : "false");
   params.append("max_distance", `${debouncedMaxDistance}`);
   const paramStr = `${params}`;
+
+  const onExit = () => {
+    fetch(`http://localhost:8000/exit`);
+  };
 
   const rematch = async () => {
     await fetch(`http://localhost:8000/rematch?${paramStr}`);
@@ -149,30 +170,33 @@ export function MatchViewer() {
       );
 
       // const dst = info.keypoints[1][0]
-      context.strokeStyle = "blue";
 
+      function drawRect(point, xPosition, color) {
+        context.strokeStyle = color;
+        const CUTOUT_SIZE = SCALE * 100;
+        context.beginPath();
+        console.log("draw rect");
+        context.rect(
+          xPosition * SCALED_TILE_EXTENT[0] + SCALE * point[0] - CUTOUT_SIZE / 2,
+          SCALE * point[1] - CUTOUT_SIZE / 2,
+          CUTOUT_SIZE,
+          CUTOUT_SIZE,
+        );
+        context.stroke();
+      }
       const src = info.keypoints[0][hoveredMatchIndex];
-      const CUTOUT_SIZE = SCALE * 100;
-      context.beginPath();
-      console.log("draw rect");
-      context.rect(
-        SCALE * src[0] - CUTOUT_SIZE / 2,
-        SCALE * src[1] - CUTOUT_SIZE / 2,
-        CUTOUT_SIZE,
-        CUTOUT_SIZE,
-      );
-      context.stroke();
-
-      context.beginPath();
       const dst = info.keypoints[1][hoveredMatchIndex];
-      console.log("draw rect");
-      context.rect(
-        SCALED_TILE_EXTENT[0] + SCALE * dst[0] - CUTOUT_SIZE / 2,
-        SCALE * dst[1] - CUTOUT_SIZE / 2,
-        CUTOUT_SIZE,
-        CUTOUT_SIZE,
-      );
-      context.stroke();
+      drawRect(src, 0, BLUE);
+      drawRect(dst, 1, BLUE);
+
+      for (const key of Object.keys(matchStore)) {
+        const match = matchStore[key];
+        const { src, dst, tilePairIndex: tilePairIndexOfMatch } = match;
+        if (tilePairIndex === tilePairIndexOfMatch) {
+          drawRect(src, 0, GREEN);
+          drawRect(dst, 1, GREEN);
+        }
+      }
     });
   }, [info, tilePairIndex, info_refresher, hoveredMatchIndex]);
 
@@ -197,17 +221,40 @@ export function MatchViewer() {
       const matchIdx = sortedIndices[idx];
       const src = info.keypoints[0][matchIdx];
       const dst = info.keypoints[1][matchIdx];
+      const matchKey = `${paramStr}-${matchIdx}`;
       return (
         <div key={matchIdx} style={{ textAlign: "center" }}>
-          {/*<img
-            style={{ border: `1px ${matchIdx === hoveredMatchIndex ? "blue" : "white"} solid` }}
-            onMouseEnter={() => setHoveredMatchIndex(matchIdx)}
-            src={`http://localhost:8000/match_image?${paramStr}&feature_index=${matchIdx}&partner_index=${partnerIndex}`}
-          />*/}
           <ImageWithSpinner
             src={`http://localhost:8000/match_image?${paramStr}&feature_index=${matchIdx}&partner_index=${partnerIndex}`}
-            style={{ border: `1px ${matchIdx === hoveredMatchIndex ? "blue" : "white"} solid` }}
+            style={{
+              border: `2px ${
+                matchStore[matchKey] != null
+                  ? GREEN
+                  : matchIdx === hoveredMatchIndex
+                  ? BLUE
+                  : "white"
+              } solid`,
+            }}
             onMouseEnter={() => setHoveredMatchIndex(matchIdx)}
+            onClick={() => {
+              const z_a = info.tiles[0].indices[0];
+              const z_b = info.tiles[1].indices[0];
+
+              setInMatchStore(matchKey, {
+                src,
+                dst,
+                tilePairIndex,
+              });
+
+              Request.sendJSONReceiveJSON(`http://localhost:8000/add_match`, {
+                data: {
+                  src: [...src, z_a],
+                  dst: [...dst, z_b],
+                },
+              });
+
+              console.log(`Create match at (${z_a}, ${src})<=>(${z_b}, ${dst})`);
+            }}
           />
           <div>Score: {Math.round(feature_distances[matchIdx])}</div>
           <div>
@@ -245,10 +292,11 @@ export function MatchViewer() {
         </div>
       )}
       {/*<AsyncButton onClick={() => rematch()}>Rematch</AsyncButton>*/}
+      <Button onClick={onExit}>Exit</Button>
       <div style={{ textAlign: "center" }}>
         <canvas ref={canvasRef} width={CANVAS_EXTENT[0]} height={CANVAS_EXTENT[1]} />
         <div style={{ marginBottom: 12 }}>
-          <InputNumber value={tilePairIndex} min={0} max={100} onChange={onChangeTilePairIndex} />
+          <InputNumber value={tilePairIndex} min={0} max={100} onChange={onChangeTilePairIndex} />{" "}
           {info.tiles[0].indices.join("-")} vs {info.tiles[1].indices.join("-")}
         </div>
       </div>

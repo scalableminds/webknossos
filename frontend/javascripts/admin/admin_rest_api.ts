@@ -2470,6 +2470,22 @@ export async function getEdgesForAgglomerateMinCut(
   );
 }
 
+export async function getAgglomeratesForSegments(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: number[],
+) {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        data: segmentIds,
+        method: "POST",
+      },
+    ),
+  );
+}
+
 // ### Smart Select
 
 export async function getSamEmbedding(

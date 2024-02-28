@@ -29,7 +29,89 @@ jobs:
           command: |
             docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
             DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
+      - run:
+          name: Prepare dependency folders
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
+      - restore_cache:
+          name: Restore target cache
+          keys:
+            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - target-cache-{{ checksum ".circleci/cache_version" }}-master
+      - restore_cache:
+          name: Restore sbt cache
+          keys:
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
+      - restore_cache:
+          name: Restore yarn cache
+          keys:
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+      - run:
+          name: Install frontend dependencies
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+      - run:
+          name: Assert unique evolution numbers
+          command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - restore_cache:
+          name: Restore webpack cache
+          keys:
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
+      - run:
+          name: Assert schema.sql and evolutions are equal
+          command: |
+            docker-compose up -d postgres
+            sleep 3
+            docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
+      - run:
+          name: Build frontend documentation
+          command: docker-compose run base yarn run docs
+      - run:
+          name: Build webknossos (webpack)
+          command: |
+            docker-compose run base yarn build
+      - run:
+          name: Build webknossos (sbt)
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker-compose run compile sbt -no-colors clean compile stage
+            else
+              docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
+            fi
+      - run:
+          name: Build webknossos-datastore (sbt)
+          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
 
+      - run:
+          name: Build webknossos-tracingstore (sbt)
+          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+
+      - save_cache:
+          name: Save target cache
+          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - "project/target"
+            - "target"
+
+      - save_cache:
+          name: Save sbt cache
+          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+          paths:
+            - "~/.ivy2"
+            - "~/.cache/coursier"
+
+      - save_cache:
+          name: Save yarn cache
+          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+          paths:
+            - "~/.cache/yarn"
+
+      - save_cache:
+          name: Save webpack cache
+          key: webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - "node_modules/.cache/webpack"
       - run:
           name: Build webknossos docker image
           command: docker-compose build --pull webknossos

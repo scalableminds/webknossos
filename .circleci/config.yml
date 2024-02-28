@@ -162,7 +162,7 @@ jobs:
             if [ "${CIRCLE_BRANCH}" != "master" ]; then
               PR_URL="$CIRCLE_PULL_REQUEST"
               PR_NUMBER=$(echo $PR_URL | awk -F'/' '{print $NF}')
-              IS_DRAFT=curl "https://api.github.com/repos/scalableminds/webknossos/pulls/$PR_NUMBER" | jq '.draft'
+              IS_DRAFT=$(curl "https://api.github.com/repos/scalableminds/webknossos/pulls/${PR_NUMBER}" | jq '.draft')
                 if [ "$IS_DRAFT" == "true" ]; then
                     echo "PR is a draft, not installing dev deployment"
                 else

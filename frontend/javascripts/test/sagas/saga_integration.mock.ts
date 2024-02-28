@@ -1,6 +1,6 @@
-import mockRequire from "mock-require";
 import * as antd from "antd";
 import _ from "lodash";
+import mockRequire from "mock-require";
 import "test/mocks/lz4";
 
 const REQUEST_ID = "dummyRequestId";

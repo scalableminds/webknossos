@@ -1,12 +1,12 @@
 import { CloseOutlined } from "@ant-design/icons";
+import { InviteUsersModal } from "admin/onboarding";
 import { Button, Tooltip } from "antd";
-import * as React from "react";
-import { Link } from "react-router-dom";
-import { isUserAdminOrTeamManager, isUserAdminOrDatasetManager } from "libs/utils";
-import type { APIUser } from "types/api_flow_types";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
-import { InviteUsersModal } from "admin/onboarding";
+import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
+import * as React from "react";
+import { Link } from "react-router-dom";
+import type { APIUser } from "types/api_flow_types";
 type WhatsNextActionProps = {
   title: string;
   description: string;

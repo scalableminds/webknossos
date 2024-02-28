@@ -1,19 +1,19 @@
-import { Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
-import { useSelector, useDispatch } from "react-redux";
-import React, { useState } from "react";
+import { Tooltip, Typography } from "antd";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
+import { BoundingBoxType, ControlModeEnum, Vector3, Vector6 } from "oxalis/constants";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
-  changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
+  changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
+import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import DownloadModalView from "../action-bar/download_modal_view";
 
 export default function BoundingBoxTab() {

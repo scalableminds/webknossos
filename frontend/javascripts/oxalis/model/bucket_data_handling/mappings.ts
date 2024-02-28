@@ -1,14 +1,14 @@
-import * as THREE from "three";
 import { message } from "antd";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import { getMappings, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getRenderer } from "oxalis/controller/renderer";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import type { Mapping } from "oxalis/store";
-import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
+import { getRenderer } from "oxalis/controller/renderer";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { getMappingInfo, getMappings } from "oxalis/model/accessors/dataset_accessor";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { Mapping } from "oxalis/store";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_MESSAGE_KEY = "mappings";

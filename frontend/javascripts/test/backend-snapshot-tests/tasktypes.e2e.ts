@@ -1,11 +1,11 @@
-import {
-  tokenUserA,
-  setCurrToken,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+import {
+  resetDatabase,
+  setCurrToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/enzyme/e2e-setup";
 import { APIAllowedMode } from "types/api_flow_types";
 test.before("Change token", async () => {
   resetDatabase();

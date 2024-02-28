@@ -1,27 +1,27 @@
-import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
-import { PropTypes } from "@scalableminds/prop-types";
-import { confirmAsync } from "dashboard/dataset/helper_components";
-import { Link } from "react-router-dom";
-import { Table, Spin, Input, Tooltip, Typography } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
-  CloseCircleTwoTone,
   CloseCircleOutlined,
+  CloseCircleTwoTone,
   DownOutlined,
   EyeOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  InfoCircleOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import { APIJob, APIJobType } from "types/api_flow_types";
-import { getJobs, cancelJob } from "admin/admin_rest_api";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
+import { PropTypes } from "@scalableminds/prop-types";
+import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { Input, Spin, Table, Tooltip, Typography } from "antd";
+import { AsyncLink } from "components/async_clickables";
+import FormattedDate from "components/formatted_date";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
-import FormattedDate from "components/formatted_date";
-import { AsyncLink } from "components/async_clickables";
+import _ from "lodash";
+import * as React from "react";
+import { Link } from "react-router-dom";
+import { APIJob, APIJobType } from "types/api_flow_types";
 import { EmptyObject } from "types/globals";
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.

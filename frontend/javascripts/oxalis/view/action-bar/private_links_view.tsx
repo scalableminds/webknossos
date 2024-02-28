@@ -1,18 +1,24 @@
-import React from "react";
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  DownOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import {
+  useIsFetching,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createPrivateLink,
   deletePrivateLink,
   getPrivateLinksByAnnotation,
   updatePrivateLink,
 } from "admin/admin_rest_api";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  useIsFetching,
-  useIsMutating,
-} from "@tanstack/react-query";
-import Toast from "libs/toast";
 import {
   Button,
   DatePicker,
@@ -27,24 +33,18 @@ import {
   Table,
   Tooltip,
 } from "antd";
-import {
-  CopyOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  EditOutlined,
-  InfoCircleOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import { ZarrPrivateLink } from "types/api_flow_types";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import dayjs from "dayjs";
-import FormattedDate from "components/formatted_date";
 import { ColumnsType } from "antd/lib/table";
+import { AsyncButton, AsyncIconButton } from "components/async_clickables";
+import FormattedDate from "components/formatted_date";
+import dayjs from "dayjs";
 import { makeComponentLazy } from "libs/react_helpers";
-import { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
+import Toast from "libs/toast";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import { OxalisState } from "oxalis/store";
+import React from "react";
+import { useSelector } from "react-redux";
+import { ZarrPrivateLink } from "types/api_flow_types";
 
 function useLinksQuery(annotationId: string) {
   return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
@@ -310,7 +310,9 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.endOf("day").to(expirationDate.endOf("day"));
+        now
+          .endOf("day")
+          .to(expirationDate.endOf("day"));
   return (
     <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
   );

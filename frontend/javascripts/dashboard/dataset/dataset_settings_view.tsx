@@ -1,61 +1,61 @@
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { defaultContext } from "@tanstack/react-query";
 import {
-  Button,
-  Spin,
+  getDataset,
+  getDatasetDatasource,
+  getDatasetDefaultConfiguration,
+  sendAnalyticsEvent,
+  updateDatasetDatasource,
+  updateDatasetDefaultConfiguration,
+  updateDatasetPartial,
+  updateDatasetTeams,
+} from "admin/admin_rest_api";
+import {
   Alert,
-  Form,
+  AlertProps,
+  Button,
   Card,
+  Form,
+  FormInstance,
+  Input,
+  Modal,
+  Spin,
   Tabs,
   Tooltip,
-  Modal,
-  Input,
-  FormInstance,
-  AlertProps,
 } from "antd";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
+import LinkButton from "components/link_button";
 import dayjs from "dayjs";
+import features from "features";
+import { Action as HistoryAction, Location as HistoryLocation, UnregisterCallback } from "history";
+import { handleGenericError } from "libs/error_handling";
+import Toast from "libs/toast";
+import { diffObjects, jsonStringify } from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { Unicode, Vector3 } from "oxalis/constants";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import * as React from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
-import { withRouter, Link } from "react-router-dom";
-import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
+import { Link, withRouter } from "react-router-dom";
 import type {
   APIDataSource,
   APIDataset,
-  MutableAPIDataset,
-  MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
   APIUnimportedDatasource,
+  MutableAPIDataSource,
+  MutableAPIDataset,
 } from "types/api_flow_types";
-import { Unicode, Vector3 } from "oxalis/constants";
-import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import LinkButton from "components/link_button";
-import { diffObjects, jsonStringify } from "libs/utils";
-import {
-  getDataset,
-  getDatasetDefaultConfiguration,
-  updateDatasetDefaultConfiguration,
-  getDatasetDatasource,
-  updateDatasetDatasource,
-  updateDatasetTeams,
-  sendAnalyticsEvent,
-  updateDatasetPartial,
-} from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import Toast from "libs/toast";
-import messages from "messages";
-import features from "features";
-import { isDatasourceJSONValid } from "types/validation";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
-import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import { isDatasourceJSONValid } from "types/validation";
+import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
-import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
-import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
-import { defaultContext } from "@tanstack/react-query";
+import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";

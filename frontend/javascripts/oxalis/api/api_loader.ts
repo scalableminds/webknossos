@@ -1,6 +1,6 @@
+import app from "app";
 // only relative imports are followed by documentationjs
 import type { OxalisModel } from "oxalis/model";
-import app from "app";
 import createApiLatest from "./api_latest";
 import createApiV2 from "./api_v2";
 const latestVersion = 3;

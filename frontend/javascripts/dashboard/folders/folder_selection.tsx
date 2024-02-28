@@ -1,5 +1,5 @@
-import _ from "lodash";
 import { TreeSelect } from "antd";
+import _ from "lodash";
 import React, { useState, useEffect } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";

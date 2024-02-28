@@ -1,36 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import {
-  Row,
-  Col,
-  Divider,
-  Form,
-  Select,
-  Button,
-  Card,
-  Radio,
-  Upload,
-  InputNumber,
-  Input,
-  Spin,
-  RadioChangeEvent,
-  Tooltip,
-  Modal,
-} from "antd";
-import { FormInstance } from "antd/lib/form";
-import Toast from "libs/toast";
-import React from "react";
 import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import {
-  type TaskCreationResponse,
-  type TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
-import { normFile, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
-import { Vector3Input, Vector6Input } from "libs/vector_input";
-import type { Vector6 } from "oxalis/constants";
 import {
   createTaskFromNML,
   createTasks,
@@ -42,12 +10,44 @@ import {
   getTaskTypes,
   updateTask,
 } from "admin/admin_rest_api";
-import { coalesce, tryToAwaitPromise } from "libs/utils";
-import SelectExperienceDomain from "components/select_experience_domain";
-import messages from "messages";
-import { saveAs } from "file-saver";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import {
+  type TaskCreationResponse,
+  type TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
+import { NUM_TASKS_PER_BATCH, normFile } from "admin/task/task_create_bulk_view";
+import {
+  Button,
+  Card,
+  Col,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Radio,
+  RadioChangeEvent,
+  Row,
+  Select,
+  Spin,
+  Tooltip,
+  Upload,
+} from "antd";
+import { FormInstance } from "antd/lib/form";
 import { AsyncButton } from "components/async_clickables";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
+import SelectExperienceDomain from "components/select_experience_domain";
+import { saveAs } from "file-saver";
+import Toast from "libs/toast";
+import { coalesce, tryToAwaitPromise } from "libs/utils";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector6 } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
+import React from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_flow_types";
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 const fullWidth = {

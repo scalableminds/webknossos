@@ -1,12 +1,12 @@
-import { Form, Input, Button, Row, Col, Checkbox } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
-import React, { useRef, memo } from "react";
+import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { loginUser } from "admin/admin_rest_api";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
-import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/throttled_store";
+import React, { useRef, memo } from "react";
 
 const FormItem = Form.Item;
 const { Password } = Input;

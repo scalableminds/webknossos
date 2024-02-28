@@ -1,24 +1,24 @@
-import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
-import { syncValidator } from "types/validation";
-import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import React from "react";
-import _ from "lodash";
-import messages from "messages";
-import type { APITeam } from "types/api_flow_types";
 import {
-  getEditableTeams,
   createTaskType,
-  updateTaskType,
+  getEditableTeams,
   getTaskType,
+  updateTaskType,
 } from "admin/admin_rest_api";
-import { jsonStringify } from "libs/utils";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
+import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
+import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
+import { jsonStringify } from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import React from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APITeam } from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 const RadioGroup = Radio.Group;
 const FormItem = Form.Item;
 const { TextArea } = Input;

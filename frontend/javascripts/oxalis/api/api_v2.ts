@@ -1,63 +1,63 @@
-import _ from "lodash";
+import { finishAnnotation, requestTask } from "admin/admin_rest_api";
+import update from "immutability-helper";
 import { InputKeyboardNoLoop } from "libs/input";
-import { Model } from "oxalis/singletons";
-import type { OxalisModel } from "oxalis/model";
-import Store from "oxalis/store";
+import Toast from "libs/toast";
+import type { ToastStyle } from "libs/toast";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type { AnnotationTool, ControlMode, Vector3 } from "oxalis/constants";
 import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
+  AnnotationToolEnum,
+  ControlModeEnum,
+  OrthoViews,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import UrlManager from "oxalis/controller/url_manager";
+import type { OxalisModel } from "oxalis/model";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  findTreeByNodeId,
+  getActiveNode,
+  getActiveTree,
+  getNodeAndTree,
+  getTree,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import {
   setMappingAction,
+  updateDatasetSettingAction,
+  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
-  setActiveNodeAction,
   createCommentAction,
   deleteNodeAction,
+  setActiveNodeAction,
   setNodeRadiusAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  findTreeByNodeId,
-  getNodeAndTree,
-  getActiveNode,
-  getActiveTree,
-  getTree,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
-import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
-import Toast from "libs/toast";
-import { location } from "libs/window";
-import * as Utils from "libs/utils";
-import {
-  ControlModeEnum,
-  OrthoViews,
-  AnnotationToolEnum,
-  TDViewDisplayModeEnum,
-} from "oxalis/constants";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import dimensions from "oxalis/model/dimensions";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import { Model } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type { DatasetConfiguration, Mapping, Node, TreeMap, UserConfiguration } from "oxalis/store";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
-import UrlManager from "oxalis/controller/url_manager";
-import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
-import dimensions from "oxalis/model/dimensions";
-import { finishAnnotation, requestTask } from "admin/admin_rest_api";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
-import messages from "messages";
-import type { ToastStyle } from "libs/toast";
-import update from "immutability-helper";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
-import { coalesce } from "libs/utils";
 
-import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {

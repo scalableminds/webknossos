@@ -1,7 +1,16 @@
+import {
+  PricingPlanEnum,
+  getFeatureNotAvailableInPlanMessage,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import { AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import {
+  getTransformsPerLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
   AgglomerateState,
   getActiveSegmentationTracing,
@@ -9,17 +18,8 @@ import {
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getTransformsPerLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import type { OxalisState } from "oxalis/store";
 import { APIOrganization, APIUser } from "types/api_flow_types";
-import {
-  getFeatureNotAvailableInPlanMessage,
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";

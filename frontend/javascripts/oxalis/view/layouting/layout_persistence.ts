@@ -1,11 +1,11 @@
-import { createNanoEvents } from "nanoevents";
-import _ from "lodash";
-import { getIsInIframe } from "libs/utils";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
-import Store from "oxalis/store";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
+import { getIsInIframe } from "libs/utils";
+import _ from "lodash";
+import { createNanoEvents } from "nanoevents";
+import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/store";
 import type { LayoutKeys } from "./default_layout_configs";
 import getDefaultLayouts, {
   currentLayoutVersion,

@@ -1,9 +1,9 @@
-import { Root } from "protobufjs/light";
-import type { ServerTracing } from "types/api_flow_types";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'SkeletonTracing.proto' or its ... Remove this comment to see the full error message
 import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
+import { Root } from "protobufjs/light";
+import type { ServerTracing } from "types/api_flow_types";
 const PROTO_FILES = {
   skeleton: SkeletonTracingProto,
   volume: VolumeTracingProto,

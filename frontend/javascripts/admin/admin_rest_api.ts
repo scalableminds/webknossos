@@ -1,6 +1,31 @@
-import ResumableJS from "resumablejs";
-import _ from "lodash";
+import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
+import type { QueryObject } from "admin/task/task_search_form";
 import dayjs from "dayjs";
+import { V3 } from "libs/mjs";
+import type { RequestOptions } from "libs/request";
+import Request from "libs/request";
+import type { Message } from "libs/toast";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import type {
+  DatasetConfiguration,
+  MappingType,
+  PartialDatasetConfiguration,
+  TraceOrViewCommand,
+  Tracing,
+  UserConfiguration,
+  VolumeTracing,
+} from "oxalis/store";
+import type { Versions } from "oxalis/view/version_view";
+import ResumableJS from "resumablejs";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -8,12 +33,15 @@ import type {
   APIAnnotationType,
   APIAnnotationVisibility,
   APIAnnotationWithTask,
+  APIAvailableTasksReport,
   APIBuildInfo,
+  APICompoundType,
   APIConnectomeFile,
   APIDataSource,
   APIDataSourceWithMessages,
   APIDataStore,
   APIDataset,
+  APIDatasetCompact,
   APIDatasetId,
   APIFeatureToggles,
   APIHistogramData,
@@ -24,8 +52,8 @@ import type {
   APIMapping,
   APIMaybeUnimportedDataset,
   APIMeshFile,
-  APIAvailableTasksReport,
   APIOrganization,
+  APIPricingPlanStatus,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
@@ -44,60 +72,32 @@ import type {
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
+  APIUserCompact,
   APIUserLoggedTime,
   APIUserTheme,
+  AdditionalCoordinate,
   AnnotationLayerDescriptor,
   AnnotationViewConfiguration,
   EditableLayerProperties,
   ExperienceDomainList,
-  ServerTracing,
-  TracingType,
-  ServerEditableMapping,
-  APICompoundType,
-  ZarrPrivateLink,
-  VoxelyticsWorkflowReport,
-  VoxelyticsChunkStatistics,
-  ShortLink,
-  VoxelyticsWorkflowListing,
-  APIPricingPlanStatus,
-  VoxelyticsLogLine,
-  APIUserCompact,
-  APIDatasetCompact,
-  MaintenanceInfo,
-  AdditionalCoordinate,
-  RenderAnimationOptions,
   LayerLink,
+  MaintenanceInfo,
+  RenderAnimationOptions,
+  ServerEditableMapping,
+  ServerTracing,
+  ShortLink,
+  TracingType,
+  VoxelyticsChunkStatistics,
+  VoxelyticsLogLine,
+  VoxelyticsWorkflowListing,
+  VoxelyticsWorkflowReport,
+  ZarrPrivateLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  PartialDatasetConfiguration,
-  Tracing,
-  TraceOrViewCommand,
-  MappingType,
-  VolumeTracing,
-  UserConfiguration,
-} from "oxalis/store";
-import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
-import type { QueryObject } from "admin/task/task_search_form";
-import { V3 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
+import { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import type { RequestOptions } from "libs/request";
-import Request from "libs/request";
-import type { Message } from "libs/toast";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import window, { location } from "libs/window";
-import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { ArbitraryObject } from "types/globals";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 

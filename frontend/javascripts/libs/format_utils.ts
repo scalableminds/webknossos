@@ -1,20 +1,20 @@
 import { presetPalettes } from "@ant-design/colors";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import { Unicode } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import _ from "lodash";
 import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
-import updateLocale from "dayjs/plugin/updateLocale";
-import relativeTime from "dayjs/plugin/relativeTime";
-import localizedFormat from "dayjs/plugin/localizedFormat";
 import calendar from "dayjs/plugin/calendar";
+import duration from "dayjs/plugin/duration";
+import localeData from "dayjs/plugin/localeData";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+import relativeTime from "dayjs/plugin/relativeTime";
+import updateLocale from "dayjs/plugin/updateLocale";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
-import localeData from "dayjs/plugin/localeData";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import { Unicode } from "oxalis/constants";
 
-import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
+import type { BoundingBoxObject } from "oxalis/store";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);

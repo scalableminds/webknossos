@@ -1,14 +1,14 @@
-import { Button, Alert, Tabs, TabsProps } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import * as React from "react";
+import { Alert, Button, Tabs, TabsProps } from "antd";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState, Tracing } from "oxalis/store";
-import { TracingType, TracingTypeEnum } from "types/api_flow_types";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
+import * as React from "react";
+import { connect } from "react-redux";
+import { TracingType, TracingTypeEnum } from "types/api_flow_types";
 
 export type Versions = {
   skeleton?: number | null | undefined;

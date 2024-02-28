@@ -1,9 +1,9 @@
-import { MenuOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { List, Collapse, Tooltip, CollapseProps } from "antd";
+import { InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
+import { Collapse, CollapseProps, List, Tooltip } from "antd";
+import { settings, settingsTooltips } from "messages";
 import React from "react";
 import { SortEnd } from "react-sortable-hoc";
 import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
-import { settings, settingsTooltips } from "messages";
 
 // Example taken and modified from https://4x.ant.design/components/table/#components-table-demo-drag-sorting-handler.
 

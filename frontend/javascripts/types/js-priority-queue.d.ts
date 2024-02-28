@@ -6,7 +6,7 @@ declare module "js-priority-queue" {
         comparator: (arg0: T, arg1: T) => number;
         initialValues: Array<T>;
       }>,
-    ): PriorityQueue<T>;
+    );
     queue(value: T): void;
     peek(): T;
     dequeue(): T;

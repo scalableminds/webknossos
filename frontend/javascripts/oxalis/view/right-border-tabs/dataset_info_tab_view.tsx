@@ -1,36 +1,36 @@
-import type { Dispatch } from "redux";
-import { Tooltip, Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
-import React, { CSSProperties, ChangeEvent } from "react";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
+import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { Tag, Tooltip, Typography } from "antd";
 import { formatScale } from "libs/format_utils";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { ControlModeEnum } from "oxalis/constants";
+import {
+  type CombinedTracingStats,
+  getCombinedStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getCombinedStats,
-  type CombinedTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
-import {
-  setAnnotationNameAction,
   setAnnotationDescriptionAction,
+  setAnnotationNameAction,
 } from "oxalis/model/actions/annotation_actions";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import React, { CSSProperties, ChangeEvent } from "react";
+import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
+import Markdown from "react-remarkable";
+import { Link } from "react-router-dom";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset, pluralize } from "libs/utils";
-import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
+import { mayUserEditDataset, pluralize } from "libs/utils";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -244,10 +244,7 @@ export function AnnotationStats({
           {"segmentCount" in stats ? (
             <Tooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize(
-                "Segment",
-                stats.segmentCount,
-              )} – Only segments that were manually registered (either brushed or
+              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
                                       interacted with) are counted in this statistic. Segmentation layers
                                       created from automated workflows (also known as fallback layers) are not
                                       considered currently.`}

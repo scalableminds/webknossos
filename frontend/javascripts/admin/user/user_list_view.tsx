@@ -1,9 +1,3 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
-import { Key } from "antd/lib/table/interface";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -16,34 +10,40 @@ import {
   UserDeleteOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React from "react";
-import _ from "lodash";
-import dayjs from "dayjs";
-import { location } from "libs/window";
-import type {
-  APIUser,
-  APITeamMembership,
-  ExperienceMap,
-  APIOrganization,
-} from "types/api_flow_types";
-import { InviteUsersModal } from "admin/onboarding";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import LinkButton from "components/link_button";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
+import { PropTypes } from "@scalableminds/prop-types";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import ExperienceModalView from "admin/user/experience_modal_view";
-import Persistence from "libs/persistence";
-import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
+import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
+import ExperienceModalView from "admin/user/experience_modal_view";
+import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { Alert, Button, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Key } from "antd/lib/table/interface";
+import LinkButton from "components/link_button";
+import dayjs from "dayjs";
+import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
+import _ from "lodash";
 import messages from "messages";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import React from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { Link } from "react-router-dom";
+import type {
+  APIOrganization,
+  APITeamMembership,
+  APIUser,
+  ExperienceMap,
+} from "types/api_flow_types";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 
 const { Column } = Table;
 const { Search } = Input;

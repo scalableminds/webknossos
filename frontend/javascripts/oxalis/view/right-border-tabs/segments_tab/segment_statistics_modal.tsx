@@ -3,21 +3,21 @@ import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
+import { pluralize } from "libs/utils";
 import { Vector3 } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { OxalisState, Segment } from "oxalis/store";
-import React from "react";
-import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
-import { api } from "oxalis/singletons";
-import { APISegmentationLayer } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
-import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { useSelector } from "react-redux";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
-import { pluralize } from "libs/utils";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
+import { OxalisState, Segment } from "oxalis/store";
+import React from "react";
+import { useSelector } from "react-redux";
+import { APISegmentationLayer } from "types/api_flow_types";
+import { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_view_helper";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";

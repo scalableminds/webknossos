@@ -1,8 +1,8 @@
-import * as React from "react";
 import { Button, Tooltip } from "antd";
-import { connect } from "react-redux";
-import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 import { V2 } from "libs/mjs";
+import type { BorderOpenStatus, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
 type OwnProps = {
   onClick: () => void;
   side: "left" | "right";

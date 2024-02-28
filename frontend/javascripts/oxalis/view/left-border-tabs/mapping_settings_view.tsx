@@ -1,31 +1,31 @@
 import { Select } from "antd";
-import { connect } from "react-redux";
-import React from "react";
-import debounceRender from "react-debounce-render";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import * as Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
+import {
+  getMappingInfo,
+  getSegmentationLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getSegmentationLayerByName,
-  getMappingInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+  getEditableMappingForVolumeTracingId,
+  hasEditableMapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   ensureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "oxalis/model/actions/dataset_actions";
 import {
-  setMappingEnabledAction,
   setHideUnmappedIdsAction,
   setMappingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
+import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
-import * as Utils from "libs/utils";
-import {
-  getEditableMappingForVolumeTracingId,
-  hasEditableMapping,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import React from "react";
+import debounceRender from "react-debounce-render";
+import { connect } from "react-redux";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 const { Option, OptGroup } = Select;
 

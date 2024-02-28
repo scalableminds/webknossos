@@ -1,22 +1,22 @@
+import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
 import {
-  Row,
   Col,
-  Slider,
-  InputNumber,
-  Switch,
-  Tooltip,
   Input,
-  Select,
+  InputNumber,
   Popover,
   PopoverProps,
+  Row,
+  Select,
+  Slider,
+  Switch,
+  Tooltip,
 } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import * as Utils from "libs/utils";
 import features from "features";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import * as React from "react";
 
 const ROW_GUTTER = 1;
 

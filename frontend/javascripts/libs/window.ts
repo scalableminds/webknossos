@@ -1,5 +1,6 @@
 // This module should be used to access the window object, so it can be mocked in the unit tests
 
+import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import { ArbitraryFunction, ArbitraryObject } from "types/globals";
 
 // mockRequire("libs/window", myFakeWindow);
@@ -67,7 +68,13 @@ type Olvy =
     }
   | undefined;
 
-const _window: Window & typeof globalThis & { Olvy?: Olvy; OlvyConfig?: ArbitraryObject | null } =
+const _window: Window &
+  typeof globalThis & {
+    Olvy?: Olvy;
+    OlvyConfig?: ArbitraryObject | null;
+    managers?: Array<TextureBucketManager>;
+    materials?: Record<string, THREE.ShaderMaterial>;
+  } =
   typeof window === "undefined"
     ? ({
         alert: console.log.bind(console),

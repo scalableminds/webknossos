@@ -1,4 +1,4 @@
-import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+import type { APIAnnotation, ServerSkeletonTracing } from "types/api_flow_types";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   id: "47e37793-d0be-4240-a371-87ce68561a13",

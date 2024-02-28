@@ -1,7 +1,7 @@
-import * as React from "react";
-import { Modal, Button, Spin, Tooltip, Alert } from "antd";
-import { useSelector } from "react-redux";
+import { Alert, Button, Modal, Spin, Tooltip } from "antd";
 import { hasVisibleUint64Segmentation } from "oxalis/model/accessors/dataset_accessor";
+import * as React from "react";
+import { useSelector } from "react-redux";
 type Props = {
   isCloseable: boolean;
   onClose: () => void;

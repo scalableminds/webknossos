@@ -1,104 +1,104 @@
 import {
-  Alert,
-  Button,
-  Dropdown,
-  Empty,
-  Spin,
-  Modal,
-  Tooltip,
-  notification,
-  MenuProps,
-  Space,
-} from "antd";
-import type { Dispatch } from "redux";
-import {
-  DownloadOutlined,
   DownOutlined,
+  DownloadOutlined,
   ExclamationCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { batchActions } from "redux-batched-actions";
-import { connect } from "react-redux";
+import { BlobReader, BlobWriter, Entry, ZipReader } from "@zip.js/zip.js";
+import { clearCache, getBuildInfo, importVolumeTracing } from "admin/admin_rest_api";
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Empty,
+  MenuProps,
+  Modal,
+  Space,
+  Spin,
+  Tooltip,
+  notification,
+} from "antd";
 import { saveAs } from "file-saver";
-import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
-import * as React from "react";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { Action } from "oxalis/model/actions/actions";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import messages from "messages";
 import {
-  createGroupToTreesMap,
-  callDeep,
-  MISSING_GROUP_ID,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import {
+  enforceSkeletonTracing,
   getActiveTree,
   getActiveTreeGroup,
   getTree,
-  enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  BatchableUpdateTreeAction,
+  addTreesAndGroupsAction,
+  batchUpdateGroupsAndTreesAction,
+  createTreeAction,
+  deleteTreeAction,
+  deleteTreeAsUserAction,
+  deselectActiveTreeAction,
+  deselectActiveTreeGroupAction,
+  selectNextTreeAction,
+  setActiveTreeAction,
+  setActiveTreeGroupAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  shuffleAllTreeColorsAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
-  serializeToNml,
+  NmlParseError,
   getNmlName,
   parseNml,
+  serializeToNml,
   wrapInNewGroup,
-  NmlParseError,
 } from "oxalis/model/helpers/nml_helpers";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import {
-  setTreeNameAction,
-  createTreeAction,
-  deleteTreeAction,
-  deleteTreeAsUserAction,
-  shuffleAllTreeColorsAction,
-  selectNextTreeAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
-  setActiveTreeAction,
-  deselectActiveTreeAction,
-  deselectActiveTreeGroupAction,
-  setActiveTreeGroupAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-  addTreesAndGroupsAction,
-  BatchableUpdateTreeAction,
-  batchUpdateGroupsAndTreesAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import InputComponent from "oxalis/view/components/input_component";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import type {
+  MutableTreeMap,
   OxalisState,
   SkeletonTracing,
   Tracing,
   Tree,
-  TreeMap,
   TreeGroup,
-  UserConfiguration,
-  MutableTreeMap,
+  TreeMap,
   UserBoundingBox,
+  UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
+import ButtonComponent from "oxalis/view/components/button_component";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import InputComponent from "oxalis/view/components/input_component";
 import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import messages from "messages";
+import {
+  MISSING_GROUP_ID,
+  callDeep,
+  createGroupToTreesMap,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import { batchActions } from "redux-batched-actions";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
 

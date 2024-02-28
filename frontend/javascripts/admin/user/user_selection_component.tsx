@@ -1,9 +1,9 @@
-import { Spin, Select } from "antd";
-import * as React from "react";
-import _ from "lodash";
-import type { APIUser } from "types/api_flow_types";
 import { getUsers } from "admin/admin_rest_api";
+import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
+import _ from "lodash";
+import * as React from "react";
+import type { APIUser } from "types/api_flow_types";
 type Props = {
   handleSelection: (arg0: string) => void;
 };

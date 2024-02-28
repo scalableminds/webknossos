@@ -1,27 +1,17 @@
-import * as THREE from "three";
+import { V3 } from "libs/mjs";
+import { enforce, values } from "libs/utils";
+import _ from "lodash";
 import type {
   OrthoView,
   OrthoViewMap,
   Point2,
-  Vector3,
   ShowContextMenuFunction,
+  Vector3,
 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
-import { V3 } from "libs/mjs";
-import _ from "lodash";
-import { enforce, values } from "libs/utils";
-import {
-  enforceSkeletonTracing,
-  getSkeletonTracing,
-  getActiveNode,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getInputCatcherRect,
-  calculateGlobalPos,
-  calculateMaybeGlobalPos,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getPosition,
@@ -29,26 +19,36 @@ import {
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  setActiveNodeAction,
-  deleteEdgeAction,
-  createTreeAction,
-  createNodeAction,
+  enforceSkeletonTracing,
+  getActiveNode,
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  calculateGlobalPos,
+  calculateMaybeGlobalPos,
+  getInputCatcherRect,
+} from "oxalis/model/accessors/view_mode_accessor";
+import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import {
   createBranchPointAction,
+  createNodeAction,
+  createTreeAction,
+  deleteEdgeAction,
   mergeTreesAction,
+  setActiveNodeAction,
   setNodePositionAction,
   updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
-import type PlaneView from "oxalis/view/plane_view";
-import Store from "oxalis/store";
-import type { Edge, Tree, Node } from "oxalis/store";
-import { api } from "oxalis/singletons";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { renderToTexture } from "oxalis/view/rendering_utils";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
-import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type { Edge, Node, Tree } from "oxalis/store";
+import type PlaneView from "oxalis/view/plane_view";
+import { renderToTexture } from "oxalis/view/rendering_utils";
+import * as THREE from "three";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,

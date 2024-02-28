@@ -26,14 +26,15 @@ import Constants, {
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
+import messages from "messages";
 import {
   getDatasetBoundingBox,
   getMaximumSegmentIdForLayer,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getPosition,
   getActiveMagIndexForLayer,
+  getPosition,
   getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -64,9 +65,9 @@ import {
 import { setBusyBlockingInfoAction, setToolAction } from "oxalis/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
-  SetActiveCellAction,
   CreateCellAction,
   DeleteSegmentDataAction,
+  SetActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
@@ -83,33 +84,32 @@ import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import {
-  deleteSegmentDataVolumeAction,
   UpdateAction,
+  deleteSegmentDataVolumeAction,
   updateSegmentGroups,
 } from "oxalis/model/sagas/update_actions";
 import {
   createSegmentVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
+  updateMappingName,
   updateSegmentVolumeAction,
   updateUserBoundingBoxes,
   updateVolumeTracing,
-  updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
 import {
+  BooleanBox,
   applyLabeledVoxelMapToAllMissingResolutions,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
-  BooleanBox,
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-import messages from "messages";
-import { pushSaveQueueTransaction } from "../actions/save_actions";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 

@@ -1,5 +1,5 @@
-import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
+import * as THREE from "three";
 
 function channelCountToFormat(channelCount: number, type: THREE.TextureDataType) {
   switch (channelCount) {

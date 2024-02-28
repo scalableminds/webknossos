@@ -1,38 +1,38 @@
+import ErrorHandling from "libs/error_handling";
+import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import MultiKeyMap from "libs/multi_key_map";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import messages from "messages";
+import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import type {
-  AdditionalAxis,
+  ActiveMappingInfo,
+  BoundingBoxObject,
+  DataLayerType,
+  DatasetConfiguration,
+  OxalisState,
+  Settings,
+} from "oxalis/store";
+import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  AdditionalAxis,
   ElementClass,
 } from "types/api_flow_types";
-import type {
-  Settings,
-  DataLayerType,
-  DatasetConfiguration,
-  BoundingBoxObject,
-  OxalisState,
-  ActiveMappingInfo,
-} from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
-import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
-import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
-import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
-import MultiKeyMap from "libs/multi_key_map";
+import { ResolutionInfo, convertToDenseResolution } from "../helpers/resolution_info";
 import {
+  Transform,
   chainTransforms,
   createThinPlateSplineTransform,
   invertTransform,
-  Transform,
 } from "../helpers/transformation_helpers";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {

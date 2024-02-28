@@ -1,5 +1,5 @@
-import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
+import { Collapse, notification } from "antd";
 import React from "react";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";

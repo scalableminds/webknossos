@@ -1,9 +1,17 @@
-import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
+import { Button, Card, Tooltip } from "antd";
+import classNames from "classnames";
+import { formatScale } from "libs/format_utils";
+import { compareBy } from "libs/utils";
+import {
+  getDatasetExtentAsString,
+  getSegmentationThumbnailURL,
+  getThumbnailURL,
+  hasSegmentation,
+} from "oxalis/model/accessors/dataset_accessor";
+import React, { useState } from "react";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React, { useState } from "react";
-import classNames from "classnames";
 import { Link } from "react-router-dom";
 import type {
   APIDataset,
@@ -11,14 +19,6 @@ import type {
   APIPublication,
   APIPublicationAnnotation,
 } from "types/api_flow_types";
-import { formatScale } from "libs/format_utils";
-import {
-  getThumbnailURL,
-  hasSegmentation,
-  getSegmentationThumbnailURL,
-  getDatasetExtentAsString,
-} from "oxalis/model/accessors/dataset_accessor";
-import { compareBy } from "libs/utils";
 type ExtendedDatasetDetails = APIDatasetDetails & {
   name: string;
   scale: string;
@@ -184,7 +184,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
   const sortedItems: Array<PublicationItem> = [
     ...publication.datasets
       .filter((dataset) => dataset.isActive)
-      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
       .filter((annotation) => annotation.dataSet.isActive)
       .map(
@@ -193,7 +193,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             type: PublicationItemType.ANNOTATION,
             annotation,
             dataset: annotation.dataSet,
-          } as PublicationItem),
+          }) as PublicationItem,
       ),
   ];
   sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));

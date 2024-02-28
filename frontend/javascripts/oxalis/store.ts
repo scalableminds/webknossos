@@ -1,4 +1,45 @@
-import { createStore, applyMiddleware } from "redux";
+import DiffableMap from "libs/diffable_map";
+import type { Matrix4x4 } from "libs/mjs";
+import type {
+  AnnotationTool,
+  BoundingBoxType,
+  ContourMode,
+  ControlMode,
+  FillMode,
+  InterpolationMode,
+  MappingStatus,
+  OrthoView,
+  OrthoViewWithoutTD,
+  OverwriteMode,
+  Rect,
+  TDViewDisplayMode,
+  TreeType,
+  Vector2,
+  Vector3,
+  ViewMode,
+} from "oxalis/constants";
+import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
+import defaultState from "oxalis/default_state";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import EdgeCollection from "oxalis/model/edge_collection";
+import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
+import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import SaveReducer from "oxalis/model/reducers/save_reducer";
+import SettingsReducer from "oxalis/model/reducers/settings_reducer";
+import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import TaskReducer from "oxalis/model/reducers/task_reducer";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
+import UserReducer from "oxalis/model/reducers/user_reducer";
+import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { applyMiddleware, createStore } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { Saga } from "redux-saga";
 import type {
@@ -11,6 +52,8 @@ import type {
   APIDataset,
   APIDatasetId,
   APIHistogramData,
+  APIMeshFile,
+  APIOrganization,
   APIRestrictions,
   APIScript,
   APISettings,
@@ -18,56 +61,13 @@ import type {
   APITracingStore,
   APIUser,
   APIUserBase,
-  AnnotationLayerDescriptor,
-  TracingType,
-  APIMeshFile,
-  ServerEditableMapping,
-  APIOrganization,
   APIUserCompact,
-  AdditionalCoordinate,
   AdditionalAxis,
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
+  ServerEditableMapping,
+  TracingType,
 } from "types/api_flow_types";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import type { Action } from "oxalis/model/actions/actions";
-import type {
-  BoundingBoxType,
-  ContourMode,
-  OverwriteMode,
-  FillMode,
-  ControlMode,
-  TDViewDisplayMode,
-  ViewMode,
-  OrthoView,
-  Rect,
-  Vector2,
-  Vector3,
-  AnnotationTool,
-  MappingStatus,
-  OrthoViewWithoutTD,
-  InterpolationMode,
-  TreeType,
-} from "oxalis/constants";
-import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
-import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
-import SaveReducer from "oxalis/model/reducers/save_reducer";
-import SettingsReducer from "oxalis/model/reducers/settings_reducer";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import TaskReducer from "oxalis/model/reducers/task_reducer";
-import UiReducer from "oxalis/model/reducers/ui_reducer";
-import UserReducer from "oxalis/model/reducers/user_reducer";
-import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
-import defaultState from "oxalis/default_state";
-import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";

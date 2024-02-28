@@ -1,11 +1,13 @@
-import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
+import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
 
-import { sleep } from "libs/utils";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 import messages from "messages";
+import { Identity4x4 } from "oxalis/constants";
 import {
   getEnabledLayers,
   getResolutionInfo,
@@ -15,8 +17,6 @@ import {
 } from "../accessors/dataset_accessor";
 import { getCurrentResolution } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
-import { Identity4x4 } from "oxalis/constants";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {

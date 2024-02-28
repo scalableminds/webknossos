@@ -1,33 +1,33 @@
-import _ from "lodash";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
+  Alert,
+  Checkbox,
+  Col,
+  Divider,
   Form,
   Input,
-  Checkbox,
-  Alert,
   InputNumber,
-  Col,
   Row,
-  Tooltip,
-  Table,
   Select,
   Slider,
-  Divider,
+  Table,
+  Tooltip,
 } from "antd";
-import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
-import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
-import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import _ from "lodash";
 import {
   RecommendedConfiguration,
   layerViewConfigurations,
   settings,
   settingsTooltips,
 } from "messages";
-import type { DatasetLayerConfiguration } from "oxalis/store";
-import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
+import type { DatasetLayerConfiguration } from "oxalis/store";
+import * as React from "react";
+import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 

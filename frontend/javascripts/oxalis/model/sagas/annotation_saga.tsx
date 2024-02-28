@@ -1,46 +1,46 @@
-import React from "react";
+import type { EditableAnnotation } from "admin/admin_rest_api";
+import {
+  acquireAnnotationMutex,
+  editAnnotation,
+  updateAnnotationLayer,
+} from "admin/admin_rest_api";
+import { Button } from "antd";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import _ from "lodash";
+import messages from "messages";
+import constants, { MappingStatusEnum } from "oxalis/constants";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import {
   EditAnnotationLayerAction,
+  type SetOthersMayEditForAnnotationAction,
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
-  type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import {
-  editAnnotation,
-  updateAnnotationLayer,
-  acquireAnnotationMutex,
-} from "admin/admin_rest_api";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  takeLatest,
-  take,
-  retry,
-  delay,
-  call,
-  put,
-  fork,
-  takeEvery,
-  cancel,
-  cancelled,
-} from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import constants, { MappingStatusEnum } from "oxalis/constants";
-import messages from "messages";
+import React from "react";
+import {
+  call,
+  cancel,
+  cancelled,
+  delay,
+  fork,
+  put,
+  retry,
+  take,
+  takeEvery,
+  takeLatest,
+} from "typed-redux-saga";
 import { APIUserCompact } from "types/api_flow_types";
-import { Button } from "antd";
-import ErrorHandling from "libs/error_handling";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 
 /* Note that this must stay in sync with the back-end constant

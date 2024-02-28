@@ -1,21 +1,21 @@
-import { Select, Card, Form, Row, Col, Spin, DatePicker } from "antd";
+import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
+import { Card, Col, DatePicker, Form, Row, Select, Spin } from "antd";
+import FormattedDate from "components/formatted_date";
+import dayjs from "dayjs";
+import { formatDurationToMinutesAndSeconds, formatMilliseconds } from "libs/format_utils";
+import Toast from "libs/toast";
+import { isUserAdminOrTeamManager } from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
-import _ from "lodash";
-import dayjs from "dayjs";
-import FormattedDate from "components/formatted_date";
-import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
-import { isUserAdminOrTeamManager } from "libs/utils";
-import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import TimeTrackingChart from "./time_line_chart_view";
 
-import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
+import type { APITimeTracking, APIUser } from "types/api_flow_types";
+import type { ColumnDefinition, DateRange, RowContent } from "./time_line_chart_view";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;

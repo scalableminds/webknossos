@@ -1,45 +1,45 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
+import ColorGenerator from "libs/color_generator";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getSkeletonTracing,
+  getTree,
+  getTreesWithType,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
+  addTreesAndGroups,
   createBranchPoint,
-  deleteBranchPoint,
+  createComment,
   createNode,
   createTree,
-  deleteTree,
-  deleteNode,
-  deleteEdge,
-  shuffleTreeColor,
-  setTreeColorIndex,
-  createComment,
+  createTreeMapFromTreeArray,
+  deleteBranchPoint,
   deleteComment,
+  deleteEdge,
+  deleteNode,
+  deleteTree,
+  ensureTreeNames,
+  getOrCreateTree,
   mergeTrees,
+  removeMissingGroupsFromTrees,
+  setTreeColorIndex,
+  shuffleTreeColor,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
-  addTreesAndGroups,
-  createTreeMapFromTreeArray,
-  removeMissingGroupsFromTrees,
-  getOrCreateTree,
-  ensureTreeNames,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  getSkeletonTracing,
-  findTreeByNodeId,
-  getTree,
-  getTreesWithType,
-  getNodeAndTree,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import ColorGenerator from "libs/color_generator";
-import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {

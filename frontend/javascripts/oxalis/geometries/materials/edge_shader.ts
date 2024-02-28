@@ -1,10 +1,10 @@
-import * as THREE from "three";
+import _ from "lodash";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { Store } from "oxalis/singletons";
-import _ from "lodash";
+import * as THREE from "three";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;

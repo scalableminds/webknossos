@@ -1,13 +1,13 @@
-import _ from "lodash";
-import dayjs from "dayjs";
-import {
-  tokenUserA,
-  setCurrToken,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+import dayjs from "dayjs";
+import _ from "lodash";
+import {
+  resetDatabase,
+  setCurrToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/enzyme/e2e-setup";
 import { APITeam, APIUser } from "types/api_flow_types";
 
 let activeUser: APIUser;

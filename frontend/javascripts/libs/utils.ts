@@ -1,19 +1,19 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
+import window, { document, location } from "libs/window";
+import _ from "lodash";
 import type {
+  BoundingBoxType,
+  ColorObject,
+  Point3,
+  TypedArray,
   Vector3,
   Vector4,
   Vector6,
-  BoundingBoxType,
-  Point3,
-  ColorObject,
-  TypedArray,
 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
+import type { BoundingBoxObject } from "oxalis/store";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ArbitraryObject } from "types/globals";
 
 export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;

@@ -1,6 +1,3 @@
-import { AutoSizer, List } from "react-virtualized";
-import type { Dispatch } from "redux";
-import { Dropdown, Tooltip, Space } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -9,34 +6,37 @@ import {
   SearchOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { Dropdown, Space, Tooltip } from "antd";
 import Maybe from "data.maybe";
-import * as React from "react";
+import update from "immutability-helper";
+import { InputKeyboard } from "libs/input";
+import { Comparator, compareBy, localeCompareBy, toNullable, zipMaybe } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import update from "immutability-helper";
-import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { Comparator, toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
-import { InputKeyboard } from "libs/input";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
-import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+import messages from "messages";
+import { getActiveNode, getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  setActiveNodeAction,
   createCommentAction,
   deleteCommentAction,
+  setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
+import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
-import Store from "oxalis/store";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
-import messages from "messages";
-import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
+import * as React from "react";
+import { connect } from "react-redux";
+import { AutoSizer, List } from "react-virtualized";
+import type { Dispatch } from "redux";
+import AdvancedSearchPopover from "../advanced_search_popover";
 
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;

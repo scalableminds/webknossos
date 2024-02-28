@@ -1,10 +1,10 @@
-import { Chart } from "react-google-charts";
-import { Row, Col, Spin, Table, Card } from "antd";
-import * as React from "react";
-import _ from "lodash";
+import { Card, Col, Row, Spin, Table } from "antd";
 import dayjs from "dayjs";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import * as React from "react";
+import { Chart } from "react-google-charts";
 import { APIUser } from "types/api_flow_types";
 import { EmptyObject } from "types/globals";
 

@@ -1,4 +1,4 @@
-import { Model, Actions, TabSetNode } from "flexlayout-react";
+import { Actions, Model, TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
 
 export function getMaximizedItemId(model: Model): string | null | undefined {

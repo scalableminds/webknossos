@@ -1,6 +1,6 @@
-import * as THREE from "three";
 import { document } from "libs/window";
 import { Store } from "oxalis/singletons";
+import * as THREE from "three";
 let renderer: THREE.WebGLRenderer | null = null;
 
 function getRenderer(): THREE.WebGLRenderer {

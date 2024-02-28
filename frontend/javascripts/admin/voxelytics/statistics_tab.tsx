@@ -1,19 +1,19 @@
-import React, { useState } from "react";
-import { Button, Tooltip } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
-import { usePolling } from "libs/react_hooks";
+import { Button, Tooltip } from "antd";
+import dayjs from "dayjs";
 import {
-  formatCountToDataAmountUnit,
   formatCPU,
+  formatCountToDataAmountUnit,
   formatDistanceStrict,
   formatDurationStrict,
   formatNumber,
 } from "libs/format_utils";
+import { usePolling } from "libs/react_hooks";
+import { pluralize } from "libs/utils";
+import React, { useState } from "react";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result } from "./utils";
-import dayjs from "dayjs";
-import { pluralize } from "libs/utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 

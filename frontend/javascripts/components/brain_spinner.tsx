@@ -1,11 +1,11 @@
-import * as React from "react";
-import { APIOrganization } from "types/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
 import { switchToOrganization } from "admin/admin_rest_api";
-import messages from "messages";
-import { Link } from "react-router-dom";
-import { Button, Col, Row } from "antd";
 import LoginForm from "admin/auth/login_form";
+import { Button, Col, Row } from "antd";
+import { AsyncButton } from "components/async_clickables";
+import messages from "messages";
+import * as React from "react";
+import { Link } from "react-router-dom";
+import { APIOrganization } from "types/api_flow_types";
 
 type Props = {
   message?: React.ReactNode;

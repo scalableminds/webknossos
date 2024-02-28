@@ -1,11 +1,11 @@
-import * as THREE from "three";
 import _ from "lodash";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
-import Store from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import Store from "oxalis/store";
+import * as THREE from "three";
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
 // are drawn.

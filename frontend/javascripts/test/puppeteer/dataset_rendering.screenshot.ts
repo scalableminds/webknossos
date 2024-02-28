@@ -1,9 +1,9 @@
-import "test/mocks/lz4";
-import type { PartialDatasetConfiguration } from "oxalis/store";
 import path from "path";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import type { PartialDatasetConfiguration } from "oxalis/store";
+import "test/mocks/lz4";
 import {
-  test,
+  WK_AUTH_TOKEN,
+  checkBrowserstackCredentials,
   getNewPage,
   screenshotAnnotation,
   screenshotDataset,
@@ -11,10 +11,10 @@ import {
   screenshotDatasetWithMappingLink,
   screenshotSandboxWithMappingLink,
   setupBeforeEachAndAfterEach,
+  test,
   withRetry,
-  WK_AUTH_TOKEN,
-  checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");

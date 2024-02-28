@@ -1,15 +1,16 @@
-import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, MenuProps, Modal, Tooltip, notification } from "antd";
 import {
+  ArrowRightOutlined,
   DeleteOutlined,
+  ExpandAltOutlined,
   PlusOutlined,
   ShrinkOutlined,
-  ExpandAltOutlined,
-  ArrowRightOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import { batchActions } from "redux-batched-actions";
+import { Checkbox, Dropdown, MenuProps, Modal, Tooltip, notification } from "antd";
+import _ from "lodash";
+import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
+import type { Action } from "oxalis/model/actions/actions";
 import React from "react";
+import { connect } from "react-redux";
 import {
   ExtendedNodeData,
   FullTree,
@@ -18,48 +19,47 @@ import {
   OnMovePreviousAndNextLocation,
   SortableTreeWithoutDndContext as SortableTree,
 } from "react-sortable-tree";
-import _ from "lodash";
+import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
-import type { Action } from "oxalis/model/actions/actions";
-import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
+import { batchActions } from "redux-batched-actions";
 
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import messages from "messages";
 import {
-  getGroupByIdWithSubgroups,
-  TreeNode,
-  MISSING_GROUP_ID,
-  TYPE_GROUP,
-  TYPE_TREE,
-  callDeep,
-  createGroupToTreesMap,
-  insertTreesAndTransform,
-  makeBasicGroupObject,
-  removeTreesAndTransform,
-  forEachTreeNode,
-  findTreeNode,
-  anySatisfyDeep,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { TreeMap, TreeGroup } from "oxalis/store";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
+  deleteTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
   setTreeColorAction,
+  setTreeEdgeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeTypeAction,
+  shuffleAllTreeColorsAction,
+  shuffleTreeColorAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
   toggleTreeAction,
   toggleTreeGroupAction,
-  toggleAllTreesAction,
-  setTreeGroupsAction,
-  shuffleTreeColorAction,
-  setTreeGroupAction,
-  deleteTreeAction,
-  toggleInactiveTreesAction,
-  shuffleAllTreeColorsAction,
-  setTreeEdgeVisibilityAction,
-  setTreeTypeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import messages from "messages";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { api } from "oxalis/singletons";
-import { ChangeColorMenuItemContent } from "components/color_picker";
+import type { TreeGroup, TreeMap } from "oxalis/store";
+import {
+  MISSING_GROUP_ID,
+  TYPE_GROUP,
+  TYPE_TREE,
+  TreeNode,
+  anySatisfyDeep,
+  callDeep,
+  createGroupToTreesMap,
+  findTreeNode,
+  forEachTreeNode,
+  getGroupByIdWithSubgroups,
+  insertTreesAndTransform,
+  makeBasicGroupObject,
+  removeTreesAndTransform,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };

@@ -1,6 +1,6 @@
-import _ from "lodash";
 import Request from "libs/request";
 import Toast from "libs/toast";
+import _ from "lodash";
 import messages from "messages";
 // https://developer.github.com/v3/gists/#get-a-single-gist
 type GithubGist = {

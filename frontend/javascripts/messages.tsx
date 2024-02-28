@@ -1,11 +1,11 @@
-import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
 import {
   type DatasetConfiguration,
-  type UserConfiguration,
   type DatasetLayerConfiguration,
+  type UserConfiguration,
 } from "oxalis/store";
+import React from "react";
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

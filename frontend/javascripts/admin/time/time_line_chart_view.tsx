@@ -1,7 +1,7 @@
-import { Chart } from "react-google-charts";
-import * as React from "react";
-import { getWindowBounds } from "libs/utils";
 import dayjs from "dayjs";
+import { getWindowBounds } from "libs/utils";
+import * as React from "react";
+import { Chart } from "react-google-charts";
 
 export type ColumnDefinition = {
   id?: string;

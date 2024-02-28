@@ -1,10 +1,10 @@
 import type { Action } from "oxalis/model/actions/actions";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 // @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
 import type { Pattern } from "redux-saga";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { call, put, takeEvery } from "typed-redux-saga";
 
 export function* takeEveryUnlessBusy(
   actionDescriptor: Pattern,

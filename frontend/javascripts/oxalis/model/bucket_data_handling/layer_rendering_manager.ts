@@ -1,37 +1,37 @@
-import * as THREE from "three";
+import app from "app";
+import UpdatableTexture from "libs/UpdatableTexture";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
+import DiffableMap from "libs/diffable_map";
+import { M4x4, Matrix4x4 } from "libs/mjs";
+import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4 } from "libs/mjs";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { map3 } from "libs/utils";
+import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import {
   getByteCount,
   getElementClass,
-  isLayerVisible,
   getLayerByName,
   getResolutionInfo,
-  invertAndTranspose,
   getTransformsForLayer,
+  invertAndTranspose,
+  isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
-import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store, { PlaneRects, SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
-import UpdatableTexture from "libs/UpdatableTexture";
-import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import DiffableMap from "libs/diffable_map";
-import { CuckooTable } from "./cuckoo_table";
+import Store, { PlaneRects, SegmentMap } from "oxalis/store";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import * as THREE from "three";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getViewportRects } from "../accessors/view_mode_accessor";
+import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
-import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
-import { getViewportRects } from "../accessors/view_mode_accessor";
+import { CuckooTable } from "./cuckoo_table";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer

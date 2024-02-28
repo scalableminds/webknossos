@@ -1,6 +1,6 @@
+import { document } from "libs/window";
 import React from "react";
 import ReactDOM from "react-dom";
-import { document } from "libs/window";
 import { Provider } from "react-redux";
 import GlobalThemeProvider from "theme";
 

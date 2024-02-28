@@ -1,6 +1,7 @@
+import { Progress, Tabs, TabsProps, Tooltip } from "antd";
+import { formatNumber } from "libs/format_utils";
 import React from "react";
 import { JSONTree } from "react-json-tree";
-import { Progress, Tabs, TabsProps, Tooltip } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import {
@@ -14,7 +15,6 @@ import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
 import { runStateToStatus, useTheme } from "./utils";
-import { formatNumber } from "libs/format_utils";
 function labelRenderer(_keyPath: Array<string | number>) {
   const keyPath = _keyPath.slice().reverse();
   const divWithId = <div id={`label-${keyPath.join(".")}`}>{keyPath.slice(-1)[0]}</div>;

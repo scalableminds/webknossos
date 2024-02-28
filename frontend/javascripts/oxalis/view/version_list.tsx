@@ -1,32 +1,32 @@
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { downloadAnnotation, getUpdateActionLog } from "admin/admin_rest_api";
 import { Button, List } from "antd";
-import React, { useState, useEffect } from "react";
-import _ from "lodash";
 import dayjs from "dayjs";
-import type { APIUpdateActionBatch } from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
-import { chunkIntoTimeWindows } from "libs/utils";
-import { getUpdateActionLog, downloadAnnotation } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { chunkIntoTimeWindows } from "libs/utils";
+import _ from "lodash";
+import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import {
-  pushSaveQueueTransaction,
   SaveQueueType,
+  pushSaveQueueTransaction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
+  type ServerUpdateAction,
   revertToVersion,
   serverCreateTracing,
-  type ServerUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import type { EditableMapping, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
-import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import type { Versions } from "oxalis/view/version_view";
+import React, { useState, useEffect } from "react";
+import type { APIUpdateActionBatch } from "types/api_flow_types";
 
 const ENTRIES_PER_PAGE = 5000;
 

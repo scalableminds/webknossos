@@ -1,26 +1,31 @@
 import {
   DeleteOutlined,
+  EllipsisOutlined,
   LoadingOutlined,
   ReloadOutlined,
   VerticalAlignBottomOutlined,
-  EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, MenuProps, App } from "antd";
-import { useDispatch, useSelector } from "react-redux";
+import { App, Dropdown, List, MenuProps, Tooltip } from "antd";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 
+import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import classnames from "classnames";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import { V4 } from "libs/mjs";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  refreshMeshAction,
+  removeMeshAction,
   triggerMeshDownloadAction,
   updateMeshVisibilityAction,
-  removeMeshAction,
-  refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import type {
   ActiveMappingInfo,
   MeshInformation,
@@ -29,15 +34,10 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
-import Toast from "libs/toast";
-import { hslaToCSS } from "oxalis/shaders/utils.glsl";
-import { V4 } from "libs/mjs";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
-import { withMappingActivationConfirmation } from "./segments_view_helper";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 

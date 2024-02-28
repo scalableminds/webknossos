@@ -1,8 +1,8 @@
-import { Alert, Modal, Button, Row, Col } from "antd";
+import { Alert, Button, Col, Modal, Row } from "antd";
+import TextArea from "antd/lib/input/TextArea";
+import * as React from "react";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import * as React from "react";
-import TextArea from "antd/lib/input/TextArea";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");

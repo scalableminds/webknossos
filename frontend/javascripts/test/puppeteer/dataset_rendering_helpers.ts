@@ -1,20 +1,20 @@
-/* eslint no-await-in-loop: 0 */
-import urljoin from "url-join";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { Browser } from "puppeteer";
 import type { TestInterface } from "ava";
 import anyTest from "ava";
-import type { PartialDatasetConfiguration } from "oxalis/store";
-import type { Page } from "puppeteer";
-import mergeImg from "merge-img";
-import pixelmatch from "pixelmatch";
 import { RequestOptions } from "libs/request";
-import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import type { APIDatasetId } from "../../types/api_flow_types";
-import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";
+import mergeImg from "merge-img";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import type { PartialDatasetConfiguration } from "oxalis/store";
+import pixelmatch from "pixelmatch";
+import type { Browser } from "puppeteer";
+import type { Page } from "puppeteer";
+import puppeteer from "puppeteer";
+/* eslint no-await-in-loop: 0 */
+import urljoin from "url-join";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import type { APIDatasetId } from "../../types/api_flow_types";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 
 export const { WK_AUTH_TOKEN } = process.env;
 

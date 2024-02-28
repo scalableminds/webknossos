@@ -1,53 +1,53 @@
-import React from "react";
-import type { APIJob, APIDataLayer } from "types/api_flow_types";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  Modal,
-  Select,
-  Button,
-  Form,
-  Input,
-  Slider,
-  Row,
-  Space,
-  Radio,
-  Card,
-  Tooltip,
-  Alert,
-} from "antd";
-import {
-  startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
   startNeuronInferralJob,
+  startNucleiInferralJob,
 } from "admin/admin_rest_api";
-import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import {
-  getColorLayers,
-  getSegmentationLayers,
-  getDataLayers,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  getReadableNameByVolumeTracingId,
-  getActiveSegmentationTracingLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Slider,
+  Space,
+  Tooltip,
+} from "antd";
+import features from "features";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
-import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
-import { Model, Store } from "oxalis/singletons";
 import {
   clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
 } from "libs/utils";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { V3 } from "libs/mjs";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { isBoundingBoxExportable } from "./download_modal_view";
-import features from "features";
+import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
+import {
+  getColorLayers,
+  getDataLayers,
+  getSegmentationLayers,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getActiveSegmentationTracingLayer,
+  getReadableNameByVolumeTracingId,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { Model, Store } from "oxalis/singletons";
+import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React from "react";
+import { useSelector } from "react-redux";
+import type { APIDataLayer, APIJob } from "types/api_flow_types";
+import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 

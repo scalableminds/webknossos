@@ -1,26 +1,113 @@
-import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch, Tooltip } from "antd";
-import type { Dispatch } from "redux";
 import {
   EditOutlined,
-  InfoCircleOutlined,
-  ReloadOutlined,
-  ScanOutlined,
-  WarningOutlined,
-  PlusOutlined,
-  VerticalAlignMiddleOutlined,
-  LockOutlined,
-  UnlockOutlined,
   EllipsisOutlined,
-  SaveOutlined,
+  InfoCircleOutlined,
+  LockOutlined,
   MenuOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  ScanOutlined,
+  UnlockOutlined,
+  VerticalAlignMiddleOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
-import ErrorHandling from "libs/error_handling";
-import { connect, useDispatch, useSelector } from "react-redux";
-import React from "react";
-import _ from "lodash";
+import {
+  clearCache,
+  convertToHybridTracing,
+  deleteAnnotationLayer,
+  findDataPositionForLayer,
+  findDataPositionForVolumeTracing,
+  startComputeSegmentIndexFileJob,
+  updateDatasetDefaultConfiguration,
+} from "admin/admin_rest_api";
+import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch, Tooltip } from "antd";
 import classnames from "classnames";
+import { HoverIconButton } from "components/hover_icon_button";
+import LinkButton from "components/link_button";
 import update from "immutability-helper";
+import ErrorHandling from "libs/error_handling";
+import { M4x4, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import {
+  RecommendedConfiguration,
+  layerViewConfigurationTooltips,
+  layerViewConfigurations,
+  settings,
+  settingsTooltips,
+} from "messages";
+import type { ControlMode, Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import {
+  getDefaultValueRangeOfLayer,
+  getElementClass,
+  getLayerBoundingBox,
+  getLayerByName,
+  getResolutionInfo,
+  getTransformsForLayer,
+  getTransformsForLayerOrNull,
+  getWidestResolutions,
+  hasDatasetTransforms,
+  isColorLayer as getIsColorLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getAllReadableLayerNames,
+  getReadableNameByVolumeTracingId,
+  getVolumeDescriptorById,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import {
+  dispatchClipHistogramAsync,
+  reloadHistogramAction,
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  setNodeRadiusAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
+import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
+import type {
+  DatasetConfiguration,
+  DatasetLayerConfiguration,
+  HistogramDataForAllLayers,
+  OxalisState,
+  Task,
+  Tracing,
+  UserConfiguration,
+  VolumeTracing,
+} from "oxalis/store";
+import Store from "oxalis/store";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import {
+  ColorSetting,
+  LogSliderSetting,
+  NumberSliderSetting,
+  SETTING_LEFT_SPAN,
+  SETTING_MIDDLE_SPAN,
+  SETTING_VALUE_SPAN,
+  SwitchSetting,
+} from "oxalis/view/components/setting_input_views";
+import React from "react";
+import { connect, useDispatch, useSelector } from "react-redux";
 import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
+import type { Dispatch } from "redux";
 import {
   APIAnnotationTypeEnum,
   APIDataLayer,
@@ -28,99 +115,12 @@ import {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
-import { HoverIconButton } from "components/hover_icon_button";
-import {
-  SwitchSetting,
-  NumberSliderSetting,
-  LogSliderSetting,
-  ColorSetting,
-  SETTING_LEFT_SPAN,
-  SETTING_MIDDLE_SPAN,
-  SETTING_VALUE_SPAN,
-} from "oxalis/view/components/setting_input_views";
-import { M4x4, V3 } from "libs/mjs";
-import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  findDataPositionForLayer,
-  clearCache,
-  findDataPositionForVolumeTracing,
-  convertToHybridTracing,
-  deleteAnnotationLayer,
-  updateDatasetDefaultConfiguration,
-  startComputeSegmentIndexFileJob,
-} from "admin/admin_rest_api";
-import {
-  getDefaultValueRangeOfLayer,
-  getElementClass,
-  isColorLayer as getIsColorLayer,
-  getLayerByName,
-  getResolutionInfo,
-  getTransformsForLayerOrNull,
-  getWidestResolutions,
-  getLayerBoundingBox,
-  getTransformsForLayer,
-  hasDatasetTransforms,
-} from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getAllReadableLayerNames,
-  getReadableNameByVolumeTracingId,
-  getVolumeDescriptorById,
-  getVolumeTracingById,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  setNodeRadiusAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
-  dispatchClipHistogramAsync,
-  reloadHistogramAction,
-} from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import LinkButton from "components/link_button";
-import { Model } from "oxalis/singletons";
-import type {
-  VolumeTracing,
-  DatasetConfiguration,
-  DatasetLayerConfiguration,
-  OxalisState,
-  UserConfiguration,
-  HistogramDataForAllLayers,
-  Tracing,
-  Task,
-} from "oxalis/store";
-import Store from "oxalis/store";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import {
-  layerViewConfigurations,
-  layerViewConfigurationTooltips,
-  RecommendedConfiguration,
-  settings,
-  settingsTooltips,
-} from "messages";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
-import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
-import DownsampleVolumeModal from "./modals/downsample_volume_modal";
+import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
-import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import {
-  invertTransform,
-  transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
+import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
+import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;

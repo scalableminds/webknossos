@@ -1,25 +1,23 @@
 import {
+  ArrowRightOutlined,
+  CloseOutlined,
   DeleteOutlined,
   DownOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  ExclamationCircleOutlined,
-  ArrowRightOutlined,
-  DownloadOutlined,
   SearchOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  CloseOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api, Model } from "oxalis/singletons";
 import {
+  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
   Button,
@@ -34,8 +32,12 @@ import {
   Tooltip,
   Tree,
 } from "antd";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
+import { DataNode } from "antd/lib/tree";
+import { ChangeColorMenuItemContent } from "components/color_picker";
 import features from "features";
 import Toast from "libs/toast";
+import { pluralize } from "libs/utils";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
@@ -77,13 +79,14 @@ import {
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
-  removeSegmentAction,
   deleteSegmentDataAction,
+  removeSegmentAction,
   setActiveCellAction,
-  updateSegmentAction,
   setSelectedSegmentsOrGroupAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { Model, api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   Flycam,
@@ -95,33 +98,30 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import {
   SegmentHierarchyNode,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
+import type RcTree from "rc-tree";
 import React, { Key } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import {
+  MISSING_GROUP_ID,
   createGroupToSegmentsMap,
   findParentIdForGroupId,
   getGroupByIdWithSubgroups,
-  MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
-import { pluralize } from "libs/utils";
-import AdvancedSearchPopover from "../advanced_search_popover";
-import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { DataNode } from "antd/lib/tree";
 
 const { confirm } = Modal;
 const { Option } = Select;

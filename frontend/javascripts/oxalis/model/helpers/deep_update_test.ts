@@ -5,8 +5,8 @@
 // - perform multiple invalid calls which TS should catch (--> ts-expect-error)
 // - perform one valid call
 
-import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2, updateKey3, updateKey4 } from "oxalis/model/helpers/deep_update";
+import type { OxalisState } from "oxalis/store";
 
 export function test1(state: OxalisState) {
   // @ts-expect-error

@@ -1,9 +1,9 @@
 import { Card, Col, Row } from "antd";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import React from "react";
 import * as Utils from "libs/utils";
 import window from "libs/window";
+import React from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import LoginForm from "./login_form";
 
 type Props = {

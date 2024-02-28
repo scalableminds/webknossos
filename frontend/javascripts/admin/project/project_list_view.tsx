@@ -1,7 +1,3 @@
-import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
 import {
   DeleteOutlined,
   DownloadOutlined,
@@ -14,31 +10,35 @@ import {
   ScheduleOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import * as React from "react";
-import _ from "lodash";
-import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithStatus, APIProject, APIUser, APIUserBase } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
+import { PropTypes } from "@scalableminds/prop-types";
 import {
-  getProjectsWithStatus,
-  getProjectsForTaskType,
-  increaseProjectTaskInstances,
   deleteProject,
+  downloadAnnotation,
+  getProjectsForTaskType,
+  getProjectsWithStatus,
+  getTaskType,
+  getTasks,
+  increaseProjectTaskInstances,
   pauseProject,
   resumeProject,
-  downloadAnnotation,
-  getTasks,
-  getTaskType,
 } from "admin/admin_rest_api";
-import Toast from "libs/toast";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+import { Button, Input, Modal, Spin, Table, Tooltip } from "antd";
+import { AsyncLink } from "components/async_clickables";
+import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
-import FormattedDate from "components/formatted_date";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
+import type { APIProject, APIProjectWithStatus, APIUser, APIUserBase } from "types/api_flow_types";
 const { Column } = Table;
 const { Search } = Input;
 type OwnProps = {

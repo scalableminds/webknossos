@@ -1,5 +1,46 @@
 import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
+import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
+import {
+  getMappingInfo,
+  getMaximumSegmentIdForLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getRequestedOrVisibleSegmentationLayer,
+  getSegmentationLayerForTracing,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  SetMappingAction,
+  SetMappingEnabledAction,
+  SetMappingNameAction,
+} from "oxalis/model/actions/settings_actions";
+import type {
+  RemoveSegmentAction,
+  SetSegmentsAction,
+  UpdateSegmentAction,
+  VolumeTracingAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
+import {
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerBoundingBoxToFrontend,
+  convertUserBoundingBoxesFromServerToFrontend,
+} from "oxalis/model/reducers/reducer_helpers";
+import {
+  addToLayerReducer,
+  createCellReducer,
+  hideBrushReducer,
+  removeMissingGroupsFromSegments,
+  resetContourReducer,
+  setActiveCellReducer,
+  setContourTracingModeReducer,
+  setLargestSegmentIdReducer,
+  setMappingNameReducer,
+  updateDirectionReducer,
+  updateVolumeTracing,
+} from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import type {
   EditableMapping,
   OxalisState,
@@ -8,48 +49,7 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import type {
-  VolumeTracingAction,
-  UpdateSegmentAction,
-  SetSegmentsAction,
-  RemoveSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
-  convertServerAdditionalAxesToFrontEnd,
-  convertServerBoundingBoxToFrontend,
-  convertUserBoundingBoxesFromServerToFrontend,
-} from "oxalis/model/reducers/reducer_helpers";
-import {
-  getRequestedOrVisibleSegmentationLayer,
-  getSegmentationLayerForTracing,
-  getVolumeTracingById,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  setActiveCellReducer,
-  createCellReducer,
-  updateDirectionReducer,
-  addToLayerReducer,
-  resetContourReducer,
-  hideBrushReducer,
-  setContourTracingModeReducer,
-  setLargestSegmentIdReducer,
-  updateVolumeTracing,
-  setMappingNameReducer,
-  removeMissingGroupsFromSegments,
-} from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import DiffableMap from "libs/diffable_map";
-import * as Utils from "libs/utils";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
-import {
-  SetMappingAction,
-  SetMappingEnabledAction,
-  SetMappingNameAction,
-} from "oxalis/model/actions/settings_actions";
-import {
-  getMappingInfo,
-  getMaximumSegmentIdForLayer,
-} from "oxalis/model/accessors/dataset_accessor";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";

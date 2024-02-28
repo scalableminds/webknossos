@@ -1,10 +1,10 @@
 import { Notifier } from "@airbrake/browser";
+import Toast from "libs/toast";
+import window, { document, location } from "libs/window";
 import _ from "lodash";
+import messages from "messages";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import type { APIUser } from "types/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
-import window, { document, location } from "libs/window";
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;

@@ -1,8 +1,8 @@
-import { Modal, Input, Form } from "antd";
 import { TagOutlined } from "@ant-design/icons";
-import * as React from "react";
 import { createTeam } from "admin/admin_rest_api";
+import { Form, Input, Modal } from "antd";
 import Shortcut from "libs/shortcut_component";
+import * as React from "react";
 const FormItem = Form.Item;
 type Props = {
   onOk: (...args: Array<any>) => any;

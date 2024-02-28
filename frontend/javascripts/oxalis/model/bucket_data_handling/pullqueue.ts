@@ -1,11 +1,11 @@
 import PriorityQueue from "js-priority-queue";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "oxalis/constants";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
-import { asAbortable, sleep } from "libs/utils";
 
 export type PullQueueItem = {
   priority: number;

@@ -1,21 +1,21 @@
-import { connect } from "react-redux";
-import React from "react";
-import _ from "lodash";
-import Store, { SaveState } from "oxalis/store";
-import type { OxalisState, IsBusyInfo } from "oxalis/store";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { Model } from "oxalis/singletons";
-import window from "libs/window";
-import { Tooltip } from "antd";
 import {
   CheckOutlined,
   ExclamationCircleOutlined,
   HourglassOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { Tooltip } from "antd";
 import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { isBusy } from "oxalis/model/accessors/save_accessor";
+import { Model } from "oxalis/singletons";
+import Store, { SaveState } from "oxalis/store";
+import type { IsBusyInfo, OxalisState } from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
+import React from "react";
+import { connect } from "react-redux";
 type OwnProps = {
   onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
   className?: string;
@@ -144,8 +144,8 @@ class SaveButton extends React.PureComponent<Props, State> {
             outstandingBucketDownloadCount > 0
               ? `${outstandingBucketDownloadCount} items remaining to download...`
               : totalBucketsToCompress > 0
-              ? `${totalBucketsToCompress} items remaining to compress...`
-              : null
+                ? `${totalBucketsToCompress} items remaining to compress...`
+                : null
           }
         >
           {this.shouldShowProgress() ? (

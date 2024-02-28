@@ -1,6 +1,7 @@
+import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
-import ops from "ndarray-ops";
 import moments from "ndarray-moments";
+import ops from "ndarray-ops";
 import {
   ContourModeEnum,
   OrthoView,
@@ -10,12 +11,14 @@ import {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import PriorityQueue from "js-priority-queue";
 
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, race, take } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { clamp, map3, take2 } from "libs/utils";
+import ndarray from "ndarray";
+import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import {
   getActiveSegmentationTracing,
   getSegmentationLayerForTracing,
@@ -25,29 +28,23 @@ import {
   ComputeQuickSelectForRectAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
-  finishAnnotationStrokeAction,
   MaybePrefetchEmbeddingAction,
+  finishAnnotationStrokeAction,
   registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { api } from "oxalis/singletons";
-import ndarray from "ndarray";
-import morphology from "ball-morphology";
-import Toast from "libs/toast";
 import {
   DatasetLayerConfiguration,
   OxalisState,
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
-import { clamp, map3, take2 } from "libs/utils";
+import { call, put, race, take } from "typed-redux-saga";
 import { APIDataLayer, APIDataset } from "types/api_flow_types";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
@@ -55,9 +52,12 @@ import {
   getResolutionInfo,
   getTransformsForLayer,
 } from "../accessors/dataset_accessor";
-import Dimensions, { DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
+import Dimensions, { DimensionIndices } from "../dimensions";
+import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { copyNdArray } from "./volume/volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 

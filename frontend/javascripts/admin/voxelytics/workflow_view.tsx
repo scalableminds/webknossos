@@ -1,7 +1,13 @@
+import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
+import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
+import { usePolling, useSearchParams } from "libs/react_hooks";
+import Toast from "libs/toast";
 import _ from "lodash";
+import { OxalisState } from "oxalis/store";
+import TabTitle from "oxalis/view/components/tab_title_component";
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 import {
   APIOrganization,
   VoxelyticsRunInfo,
@@ -15,12 +21,6 @@ import {
   VoxelyticsWorkflowDagNode,
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import { useSearchParams, usePolling } from "libs/react_hooks";
-import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
-import TabTitle from "oxalis/view/components/tab_title_component";
-import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
-import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
 
@@ -129,7 +129,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
         beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
         endTime: t.endTime != null ? new Date(t.endTime) : null,
         state: t.state,
-      } as VoxelyticsTaskInfo),
+      }) as VoxelyticsTaskInfo,
   );
   const dag = parseDag(report.config.tasks, tasks);
   return {
@@ -145,7 +145,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
           ...run,
           beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
           endTime: run.endTime != null ? new Date(run.endTime) : null,
-        } as VoxelyticsRunInfo),
+        }) as VoxelyticsRunInfo,
     ),
     tasks,
   };

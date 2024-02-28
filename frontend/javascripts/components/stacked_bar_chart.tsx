@@ -1,5 +1,5 @@
-import * as React from "react";
 import _ from "lodash";
+import * as React from "react";
 export const colors = {
   finished: "#52c41a",
   active: "#1890ff",

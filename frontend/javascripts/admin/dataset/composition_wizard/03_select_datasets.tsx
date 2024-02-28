@@ -3,9 +3,9 @@ import { AsyncButton } from "components/async_clickables";
 import DatasetSelectionComponent, {
   DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
-import React, { useState } from "react";
-import { tryToFetchDatasetsByName, WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import React, { useState } from "react";
+import { WizardComponentProps, tryToFetchDatasetsByName } from "./common";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
   const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);

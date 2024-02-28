@@ -1,25 +1,4 @@
-import {
-  Divider,
-  Modal,
-  Checkbox,
-  Row,
-  Col,
-  Tabs,
-  Typography,
-  Button,
-  Radio,
-  Alert,
-  Tooltip,
-  TabsProps,
-} from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
-import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
-import { Model } from "oxalis/singletons";
-import features from "features";
 import {
   doWithToken,
   downloadAnnotation,
@@ -27,33 +6,54 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
-  LayerSelection,
-  BoundingBoxSelection,
-  getReadableNameOfVolumeLayer,
-  MagSlider,
-} from "oxalis/view/action-bar/starting_job_modals";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  Radio,
+  Row,
+  Tabs,
+  TabsProps,
+  Tooltip,
+  Typography,
+} from "antd";
+import features from "features";
+import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
+import { makeComponentLazy, useFetch } from "libs/react_helpers";
+import Toast from "libs/toast";
 import {
-  getVolumeTracingById,
-  hasVolumeTracings,
-} from "oxalis/model/accessors/volumetracing_accessor";
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  computeShapeFromBoundingBox,
+} from "libs/utils";
+import messages from "messages";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import {
   getByteCountFromLayer,
   getDataLayers,
   getLayerByName,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { useSelector } from "react-redux";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getVolumeTracingById,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { Model } from "oxalis/singletons";
 import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
 import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromBoundingBoxObject,
-  computeShapeFromBoundingBox,
-} from "libs/utils";
-import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+  BoundingBoxSelection,
+  LayerSelection,
+  MagSlider,
+  getReadableNameOfVolumeLayer,
+} from "oxalis/view/action-bar/starting_job_modals";
+import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import type { APIDataLayer, APIDataset, AdditionalAxis } from "types/api_flow_types";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";

@@ -1,16 +1,16 @@
+import { updateDatasetConfiguration, updateUserConfiguration } from "admin/admin_rest_api";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import messages from "messages";
+import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import { type Saga, select, take } from "oxalis/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import { type Saga, take, select } from "oxalis/model/sagas/effect-generators";
-import { all, takeEvery, throttle, call, retry } from "typed-redux-saga";
-import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
-import ErrorHandling from "libs/error_handling";
-import Toast from "libs/toast";
-import messages from "messages";
 import { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import { all, call, retry, takeEvery, throttle } from "typed-redux-saga";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);

@@ -1,35 +1,35 @@
-import { Dropdown, MenuProps, Modal, Tooltip } from "antd";
 import {
-  EyeOutlined,
-  PlayCircleOutlined,
   CheckCircleOutlined,
-  TeamOutlined,
-  RollbackOutlined,
-  DeleteOutlined,
-  FolderOpenOutlined,
-  DownloadOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
   DownOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  FolderOpenOutlined,
+  PlayCircleOutlined,
+  RollbackOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React from "react";
-import type { APIUser, APITask, APIAnnotation } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { formatSeconds } from "libs/format_utils";
-import { AsyncLink } from "components/async_clickables";
 import {
-  getAnnotationsForTask,
-  reOpenAnnotation,
-  finishAnnotation,
-  resetAnnotation,
   deleteAnnotation,
   downloadAnnotation,
+  finishAnnotation,
+  getAnnotationsForTask,
+  reOpenAnnotation,
+  resetAnnotation,
 } from "admin/admin_rest_api";
+import { Dropdown, MenuProps, Modal, Tooltip } from "antd";
+import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
-import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
+import { formatSeconds } from "libs/format_utils";
+import Toast from "libs/toast";
 import messages from "messages";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OxalisState } from "oxalis/store";
+import React from "react";
+import { connect } from "react-redux";
+import type { APIAnnotation, APITask, APIUser } from "types/api_flow_types";
 const { confirm } = Modal;
 type OwnProps = {
   task: APITask;

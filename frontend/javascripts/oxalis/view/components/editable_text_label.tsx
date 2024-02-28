@@ -1,10 +1,10 @@
-import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
+import { Input, InputProps, Tooltip } from "antd";
+import Toast from "libs/toast";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import * as React from "react";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import * as React from "react";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
-import Toast from "libs/toast";
 import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
 type Rule = {
   message?: string;

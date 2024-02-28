@@ -1,19 +1,3 @@
-import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
-import * as React from "react";
-import _ from "lodash";
-import { AsyncLink } from "components/async_clickables";
-import type { APITaskType } from "types/api_flow_types";
-import { getTaskTypes, deleteTaskType, downloadAnnotation } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import LinkButton from "components/link_button";
-import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import messages from "messages";
 import {
   DeleteOutlined,
   DownloadOutlined,
@@ -22,6 +6,22 @@ import {
   PlusOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
+import { PropTypes } from "@scalableminds/prop-types";
+import { deleteTaskType, downloadAnnotation, getTaskTypes } from "admin/admin_rest_api";
+import { Button, Input, Modal, Spin, Table, Tag } from "antd";
+import { AsyncLink } from "components/async_clickables";
+import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
+import Persistence from "libs/persistence";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import * as React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
+import Markdown from "react-remarkable";
+import { Link } from "react-router-dom";
+import type { APITaskType } from "types/api_flow_types";
 const { Column } = Table;
 const { Search } = Input;
 type Props = {

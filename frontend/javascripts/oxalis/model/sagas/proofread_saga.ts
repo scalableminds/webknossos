@@ -1,27 +1,14 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery, put, call, all } from "typed-redux-saga";
-import { select, take } from "oxalis/model/sagas/effect-generators";
-import { AnnotationToolEnum, MappingStatusEnum, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
+import _ from "lodash";
+import { AnnotationToolEnum, MappingStatusEnum, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
-  type CreateNodeAction,
-  type DeleteNodeAction,
-  deleteEdgeAction,
-  type DeleteEdgeAction,
-  type MergeTreesAction,
-  setTreeNameAction,
-  type SetNodePositionAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  initializeEditableMappingAction,
-  setMappingIsEditableAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import type {
-  MinCutAgglomerateAction,
-  MinCutAgglomerateWithPositionAction,
-  ProofreadAtPositionAction,
-  ProofreadMergeAction,
-} from "oxalis/model/actions/proofread_actions";
+  getLayerByName,
+  getMappingInfo,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -29,39 +16,52 @@ import {
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
+  getActiveSegmentationTracing,
+  getActiveSegmentationTracingLayer,
+  getSegmentsForLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
+import type {
+  MinCutAgglomerateAction,
+  MinCutAgglomerateWithPositionAction,
+  ProofreadAtPositionAction,
+  ProofreadMergeAction,
+} from "oxalis/model/actions/proofread_actions";
+import {
   pushSaveQueueTransaction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import {
-  splitAgglomerate,
-  mergeAgglomerate,
-  UpdateAction,
-} from "oxalis/model/sagas/update_actions";
-import { Model, api, Store } from "oxalis/singletons";
-import {
-  getActiveSegmentationTracingLayer,
-  getActiveSegmentationTracing,
-  getSegmentsForLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getLayerByName,
-  getMappingInfo,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
-import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
-import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
-import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { V3 } from "libs/mjs";
-import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { Tree, VolumeTracing } from "oxalis/store";
-import { APISegmentationLayer } from "types/api_flow_types";
+import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import {
+  type CreateNodeAction,
+  type DeleteEdgeAction,
+  type DeleteNodeAction,
+  type MergeTreesAction,
+  type SetNodePositionAction,
+  deleteEdgeAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
-import _ from "lodash";
+import {
+  initializeEditableMappingAction,
+  setMappingIsEditableAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select, take } from "oxalis/model/sagas/effect-generators";
+import {
+  UpdateAction,
+  mergeAgglomerate,
+  splitAgglomerate,
+} from "oxalis/model/sagas/update_actions";
+import { Model, Store, api } from "oxalis/singletons";
+import { Tree, VolumeTracing } from "oxalis/store";
+import { all, call, put, takeEvery } from "typed-redux-saga";
+import { APISegmentationLayer } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
 export default function* proofreadRootSaga(): Saga<void> {

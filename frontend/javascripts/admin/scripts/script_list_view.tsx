@@ -1,17 +1,17 @@
-import { Link } from "react-router-dom";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Modal } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { APIScript, APIUser } from "types/api_flow_types";
-import { getScripts, deleteScript } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
+import { deleteScript, getScripts } from "admin/admin_rest_api";
+import { Button, Input, Modal, Spin, Table } from "antd";
 import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
+import * as React from "react";
+import { Link } from "react-router-dom";
+import type { APIScript, APIUser } from "types/api_flow_types";
 import { EmptyObject } from "types/globals";
 const { Column } = Table;
 const { Search } = Input;

@@ -1,8 +1,8 @@
-import type { Dispatch } from "redux";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { getUid } from "libs/uid_generator";
-import Date from "libs/date";
 import Deferred from "libs/async/deferred";
+import Date from "libs/date";
+import { getUid } from "libs/uid_generator";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { Dispatch } from "redux";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = ReturnType<typeof pushSaveQueueTransaction>;
@@ -40,12 +40,12 @@ export const pushSaveQueueTransaction = (
     saveQueueType,
     tracingId,
     transactionId,
-  } as const);
+  }) as const;
 
 export const saveNowAction = () =>
   ({
     type: "SAVE_NOW",
-  } as const);
+  }) as const;
 
 export const shiftSaveQueueAction = (
   count: number,
@@ -57,19 +57,19 @@ export const shiftSaveQueueAction = (
     count,
     saveQueueType,
     tracingId,
-  } as const);
+  }) as const;
 
 export const discardSaveQueuesAction = () =>
   ({
     type: "DISCARD_SAVE_QUEUES",
-  } as const);
+  }) as const;
 
 export const setSaveBusyAction = (isBusy: boolean, saveQueueType: SaveQueueType) =>
   ({
     type: "SET_SAVE_BUSY",
     isBusy,
     saveQueueType,
-  } as const);
+  }) as const;
 
 export const setLastSaveTimestampAction = (saveQueueType: SaveQueueType, tracingId: string) =>
   ({
@@ -77,7 +77,7 @@ export const setLastSaveTimestampAction = (saveQueueType: SaveQueueType, tracing
     timestamp: Date.now(),
     saveQueueType,
     tracingId,
-  } as const);
+  }) as const;
 
 export const setVersionNumberAction = (
   version: number,
@@ -89,24 +89,24 @@ export const setVersionNumberAction = (
     version,
     saveQueueType,
     tracingId,
-  } as const);
+  }) as const;
 
 export const undoAction = (callback?: () => void) =>
   ({
     type: "UNDO",
     callback,
-  } as const);
+  }) as const;
 
 export const redoAction = (callback?: () => void) =>
   ({
     type: "REDO",
     callback,
-  } as const);
+  }) as const;
 
 export const disableSavingAction = () =>
   ({
     type: "DISABLE_SAVING",
-  } as const);
+  }) as const;
 
 export const dispatchUndoAsync = async (dispatch: Dispatch<any>): Promise<void> => {
   const readyDeferred = new Deferred();

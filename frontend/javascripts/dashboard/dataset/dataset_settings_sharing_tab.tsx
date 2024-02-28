@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import window from "libs/window";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import { OxalisState } from "oxalis/store";
-import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
-import { FormItemWithInfo } from "./helper_components";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { Button, Checkbox, Collapse, FormInstance, Input, Space, Tooltip } from "antd";
+import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import Toast from "libs/toast";
+import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
+import window from "libs/window";
+import { OxalisState } from "oxalis/store";
+import React, { useState, useEffect } from "react";
+import { connect } from "react-redux";
+import { RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
+import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: FormInstance | null;

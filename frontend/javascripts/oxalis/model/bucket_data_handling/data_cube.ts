@@ -1,34 +1,34 @@
-import _ from "lodash";
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
-import type { ProgressCallback } from "libs/progress_callback";
-import { V3 } from "libs/mjs";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { DimensionMap } from "oxalis/model/dimensions";
-import Dimensions from "oxalis/model/dimensions";
 import ErrorHandling from "libs/error_handling";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import type { Mapping } from "oxalis/store";
-import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import { V3 } from "libs/mjs";
+import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import _ from "lodash";
 import type {
-  Vector3,
   BoundingBoxType,
-  LabelMasksByBucketAndW,
   BucketAddress,
+  LabelMasksByBucketAndW,
+  Vector3,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import { ResolutionInfo } from "../helpers/resolution_info";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import type { DimensionMap } from "oxalis/model/dimensions";
+import Dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import type { Mapping } from "oxalis/store";
+import Store from "oxalis/store";
+import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { ResolutionInfo } from "../helpers/resolution_info";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

@@ -1,6 +1,6 @@
-import * as React from "react";
-import { Modal, Button } from "antd";
+import { Button, Modal } from "antd";
 import messages from "messages";
+import * as React from "react";
 
 type Props = {
   onJustDeleteGroup: () => void;

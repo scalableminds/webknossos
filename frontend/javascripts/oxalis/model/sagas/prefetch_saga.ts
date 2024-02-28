@@ -1,26 +1,26 @@
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { OxalisState } from "oxalis/store";
-import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
-import {
-  PrefetchStrategySkeleton,
-  PrefetchStrategyVolume,
-  ContentTypes as PrefetchContentTypes,
-} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { throttle, call, take } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getAreasFromState,
-} from "oxalis/model/accessors/flycam_accessor";
-import { isLayerVisible, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import DataLayer from "oxalis/model/data_layer";
-import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
+import { getResolutionInfo, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getAreasFromState,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
+import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
+import {
+  ContentTypes as PrefetchContentTypes,
+  PrefetchStrategySkeleton,
+  PrefetchStrategyVolume,
+} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
+import DataLayer from "oxalis/model/data_layer";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { Model } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import { call, take, throttle } from "typed-redux-saga";
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];

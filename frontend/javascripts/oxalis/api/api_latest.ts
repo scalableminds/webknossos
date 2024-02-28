@@ -1,63 +1,67 @@
-import PriorityQueue from "js-priority-queue";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import _ from "lodash";
-import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
-import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
-import {
-  addTreesAndGroupsAction,
-  setActiveNodeAction,
-  createCommentAction,
-  deleteNodeAction,
-  centerActiveNodeAction,
-  deleteTreeAction,
-  resetSkeletonTracingAction,
-  setNodeRadiusAction,
-  setTreeNameAction,
-  setActiveTreeAction,
-  setActiveTreeGroupAction,
-  setActiveTreeByNameAction,
-  setTreeColorIndexAction,
-  setTreeVisibilityAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-  setTreeEdgeVisibilityAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  globalPositionToBucketPosition,
-  scaleGlobalPositionWithResolution,
-  zoomedAddressToZoomedPosition,
-} from "oxalis/model/helpers/position_converter";
-import {
-  callDeep,
-  createGroupToSegmentsMap,
-  MISSING_GROUP_ID,
-  moveGroupsHelper,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
+  downsampleSegmentation,
   finishAnnotation,
   getMappingsForDatasetLayer,
   requestTask,
-  downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
+import PriorityQueue from "js-priority-queue";
+import { InputKeyboardNoLoop } from "libs/input";
+import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
+import Request from "libs/request";
+import type { ToastStyle } from "libs/toast";
+import Toast from "libs/toast";
+import UserLocalStorage from "libs/user_local_storage";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type {
+  AnnotationTool,
+  BoundingBoxType,
+  BucketAddress,
+  ControlMode,
+  OrthoView,
+  TypedArray,
+  Vector3,
+  Vector4,
+} from "oxalis/constants";
+import Constants, {
+  ControlModeEnum,
+  OrthoViews,
+  AnnotationToolEnum,
+  TDViewDisplayModeEnum,
+  MappingStatusEnum,
+  EMPTY_OBJECT,
+} from "oxalis/constants";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
+import UrlManager from "oxalis/controller/url_manager";
+import type { OxalisModel } from "oxalis/model";
+import {
+  flatToNestedMatrix,
+  getLayerBoundingBox,
+  getLayerByName,
+  getMappingInfo,
+  getResolutionInfo,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getPosition,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
   getActiveTreeGroup,
-  getTree,
   getFlatTreeGroups,
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
+  getTree,
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -75,28 +79,49 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import {
-  getLayerBoundingBox,
-  getLayerByName,
-  getResolutionInfo,
-  getVisibleSegmentationLayer,
-  getMappingInfo,
-  flatToNestedMatrix,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getRotation,
-} from "oxalis/model/accessors/flycam_accessor";
+  dispatchMaybeFetchMeshFilesAsync,
+  refreshMeshesAction,
+  removeMeshAction,
+  updateCurrentMeshFileAction,
+  updateMeshVisibilityAction,
+} from "oxalis/model/actions/annotation_actions";
+import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import {
+  setMappingAction,
+  setMappingEnabledAction,
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  addTreesAndGroupsAction,
+  centerActiveNodeAction,
+  createCommentAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  resetSkeletonTracingAction,
+  setActiveNodeAction,
+  setActiveTreeAction,
+  setActiveTreeByNameAction,
+  setActiveTreeGroupAction,
+  setNodeRadiusAction,
+  setTreeColorIndexAction,
+  setTreeEdgeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  setTreeVisibilityAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import {
   BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
@@ -106,74 +131,49 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import {
-  updateCurrentMeshFileAction,
-  refreshMeshesAction,
-  updateMeshVisibilityAction,
-  removeMeshAction,
-  dispatchMaybeFetchMeshFilesAsync,
-} from "oxalis/model/actions/annotation_actions";
-import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
-  setMappingAction,
-  setMappingEnabledAction,
-} from "oxalis/model/actions/settings_actions";
-import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
-import type {
-  BoundingBoxType,
-  ControlMode,
-  OrthoView,
-  Vector3,
-  Vector4,
-  AnnotationTool,
-  TypedArray,
-  BucketAddress,
-} from "oxalis/constants";
-import Constants, {
-  ControlModeEnum,
-  OrthoViews,
-  AnnotationToolEnum,
-  TDViewDisplayModeEnum,
-  MappingStatusEnum,
-  EMPTY_OBJECT,
-} from "oxalis/constants";
+import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import DataLayer from "oxalis/model/data_layer";
-import type { OxalisModel } from "oxalis/model";
+import dimensions from "oxalis/model/dimensions";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBucketPosition,
+  scaleGlobalPositionWithResolution,
+  zoomedAddressToZoomedPosition,
+} from "oxalis/model/helpers/position_converter";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import { Model } from "oxalis/singletons";
-import Request from "libs/request";
 import type {
-  MappingType,
   DatasetConfiguration,
   Mapping,
+  MappingType,
   Node,
+  OxalisState,
+  Segment,
+  SegmentGroup,
   SkeletonTracing,
   Tracing,
   TreeGroupTypeFlat,
   TreeMap,
   UserConfiguration,
   VolumeTracing,
-  OxalisState,
-  SegmentGroup,
-  Segment,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { ToastStyle } from "libs/toast";
-import Toast from "libs/toast";
-import UrlManager from "oxalis/controller/url_manager";
-import UserLocalStorage from "libs/user_local_storage";
-import * as Utils from "libs/utils";
-import dimensions from "oxalis/model/dimensions";
-import messages from "messages";
-import window, { location } from "libs/window";
-import { coalesce } from "libs/utils";
-import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import {
+  MISSING_GROUP_ID,
+  callDeep,
+  createGroupToSegmentsMap,
+  moveGroupsHelper,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { Versions } from "oxalis/view/version_view";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
+import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -2370,9 +2370,22 @@ class DataApi {
           makeTranslation(pos[0], pos[1], pos[2]),
           // prettier-ignore
           new Float32Array([
-            Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
-            -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
-            0, 0, 1, 0, 0, 0, 0, 1,
+            Math.cos(thetaInRad),
+            Math.sin(thetaInRad),
+            0,
+            0,
+            -Math.sin(thetaInRad),
+            Math.cos(thetaInRad),
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
           ]),
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),

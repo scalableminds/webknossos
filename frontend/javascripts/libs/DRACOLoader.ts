@@ -8,8 +8,8 @@ import {
   BufferGeometry,
   Color,
   FileLoader,
-  Loader,
   LinearSRGBColorSpace,
+  Loader,
   SRGBColorSpace,
 } from "three";
 

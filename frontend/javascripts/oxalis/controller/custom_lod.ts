@@ -1,6 +1,6 @@
-import * as THREE from "three";
-import Store from "oxalis/store";
 import { getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 export default class CustomLOD extends THREE.LOD {
   noLODGroup: THREE.Group;

@@ -1,35 +1,44 @@
-import React, { useEffect, useState, useMemo } from "react";
 import {
-  Collapse,
-  Input,
-  Row,
-  Col,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  FieldTimeOutlined,
+  LeftOutlined,
+  MinusCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+import {
+  App,
   Button,
+  Col,
+  Collapse,
+  CollapseProps,
   Dropdown,
-  notification,
-  message,
+  Input,
+  MenuProps,
+  Row,
+  Select,
   Tag,
   Tooltip,
-  Select,
-  MenuProps,
-  App,
-  CollapseProps,
+  message,
+  notification,
 } from "antd";
-import {
-  ClockCircleOutlined,
-  MinusCircleOutlined,
-  CloseCircleOutlined,
-  SyncOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  LeftOutlined,
-  FieldTimeOutlined,
-} from "@ant-design/icons";
 import MiniSearch from "minisearch";
+import React, { useEffect, useState, useMemo } from "react";
 
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import dayjs from "dayjs";
+import {
+  formatDateMedium,
+  formatDistance,
+  formatDistanceStrict,
+  formatDurationStrict,
+} from "libs/format_utils";
 import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
+import { ArrayElement, notEmpty } from "libs/utils";
+import { LOG_LEVELS } from "oxalis/constants";
+import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
@@ -38,20 +47,11 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import {
-  formatDateMedium,
-  formatDistance,
-  formatDistanceStrict,
-  formatDurationStrict,
-} from "libs/format_utils";
-import DAGView, { colorHasher } from "./dag_view";
-import TaskView from "./task_view";
-import { formatLog } from "./log_tab";
-import { addAfterPadding, addBeforePadding } from "./utils";
-import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
-import { ArrayElement, notEmpty } from "libs/utils";
+import DAGView, { colorHasher } from "./dag_view";
+import { formatLog } from "./log_tab";
+import TaskView from "./task_view";
+import { addAfterPadding, addBeforePadding } from "./utils";
 
 const { Search } = Input;
 

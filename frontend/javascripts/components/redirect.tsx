@@ -1,6 +1,6 @@
+import React from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import React from "react";
 
 type Props = {
   redirectTo: () => Promise<string>;

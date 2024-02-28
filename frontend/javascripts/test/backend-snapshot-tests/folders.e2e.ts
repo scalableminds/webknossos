@@ -1,15 +1,15 @@
-import _ from "lodash";
-import Request from "libs/request";
-import {
-  tokenUserA,
-  tokenUserC,
-  setCurrToken,
-  resetDatabase,
-  replaceVolatileValues,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
+import Request from "libs/request";
+import _ from "lodash";
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setCurrToken,
+  tokenUserA,
+  tokenUserC,
+  writeTypeCheckingFile,
+} from "test/enzyme/e2e-setup";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);

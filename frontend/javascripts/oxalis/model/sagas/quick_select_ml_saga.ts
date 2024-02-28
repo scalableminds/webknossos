@@ -1,22 +1,22 @@
-import _ from "lodash";
-import { OrthoView, Vector2, Vector3 } from "oxalis/constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { map3 } from "libs/utils";
+import _ from "lodash";
+import ndarray from "ndarray";
+import type { InferenceSession } from "onnxruntime-web";
+import { OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import {
   ComputeQuickSelectForRectAction,
   MaybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import ndarray from "ndarray";
-import Toast from "libs/toast";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { OxalisState } from "oxalis/store";
-import { map3 } from "libs/utils";
-import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
-import { getSamEmbedding, sendAnalyticsEvent } from "admin/admin_rest_api";
+import { call } from "typed-redux-saga";
+import { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
 import Dimensions from "../dimensions";
-import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;

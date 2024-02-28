@@ -1,34 +1,34 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
-import Saxophone from "saxophone";
+import Date from "libs/date";
+import DiffableMap from "libs/diffable_map";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
-import type { APIBuildInfo } from "types/api_flow_types";
+import messages from "messages";
+import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import EdgeCollection from "oxalis/model/edge_collection";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import Date from "libs/date";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
 import type {
-  UserBoundingBox,
+  BoundingBoxObject,
+  MutableTree,
+  MutableTreeMap,
   NodeMap,
   OxalisState,
   SkeletonTracing,
-  MutableTreeMap,
   Tracing,
   Tree,
-  MutableTree,
   TreeGroup,
-  BoundingBoxObject,
+  UserBoundingBox,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import messages from "messages";
-import * as Utils from "libs/utils";
-import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
-import Constants from "oxalis/constants";
-import { location } from "libs/window";
-import { coalesce } from "libs/utils";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
+import Saxophone from "saxophone";
+import type { APIBuildInfo } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
 // NML Defaults

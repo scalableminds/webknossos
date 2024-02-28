@@ -1,10 +1,10 @@
+import { MailOutlined } from "@ant-design/icons";
+import { Button, Card, Col, Form, Input, Row } from "antd";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import messages from "messages";
 import React from "react";
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Input, Button, Col, Row, Card } from "antd";
-import { MailOutlined } from "@ant-design/icons";
-import Request from "libs/request";
-import messages from "messages";
-import Toast from "libs/toast";
 const FormItem = Form.Item;
 type Props = {
   history: RouteComponentProps["history"];

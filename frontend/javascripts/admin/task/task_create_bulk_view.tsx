@@ -1,14 +1,14 @@
-import { Form, Input, Button, Card, Upload, Spin, Progress, Divider } from "antd";
-import React, { useState } from "react";
 import { InboxOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APITask } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
 import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
-import Messages from "messages";
+import { Button, Card, Divider, Form, Input, Progress, Spin, Upload } from "antd";
 import Toast from "libs/toast";
+import _ from "lodash";
+import Messages from "messages";
+import type { Vector3 } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
+import React, { useState } from "react";
+import type { APITask } from "types/api_flow_types";
 const FormItem = Form.Item;
 const { TextArea } = Input;
 export const NUM_TASKS_PER_BATCH = 100;
@@ -259,8 +259,8 @@ function TaskCreateBulkView() {
             <br />
             <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
-            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>
-            , baseAnnotationId]
+            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
+            baseAnnotationId]
             <br />
             If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,

@@ -1,12 +1,12 @@
-import React from "react";
 import { Table } from "antd";
 import _ from "lodash";
+import React from "react";
 
-import { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_flow_types";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { ColumnsType } from "antd/lib/table";
-import { renderArtifactPath } from "./artifacts_view";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { localeCompareBy } from "libs/utils";
+import { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_flow_types";
+import { renderArtifactPath } from "./artifacts_view";
 
 type ArtifactTableEntry = {
   artifactName: string;

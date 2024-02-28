@@ -1,9 +1,9 @@
-/* eslint no-await-in-loop: 0 */
-import type { Store as StoreType } from "redux";
 import Deferred from "libs/async/deferred";
+import * as Utils from "libs/utils";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
+/* eslint no-await-in-loop: 0 */
+import type { Store as StoreType } from "redux";
 const MAXIMUM_STORE_UPDATE_DELAY = 10000;
 const listeners: Array<() => void> = [];
 let waitForUpdate = new Deferred();

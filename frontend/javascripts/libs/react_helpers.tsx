@@ -1,6 +1,6 @@
+import type { OxalisState } from "oxalis/store";
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
-import type { OxalisState } from "oxalis/store";
 import { ArbitraryFunction } from "types/globals";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/

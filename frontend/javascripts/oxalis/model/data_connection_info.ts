@@ -1,5 +1,5 @@
-import _ from "lodash";
 import window from "libs/window";
+import _ from "lodash";
 
 const CONSIDERED_TIMESPAN_IN_STATS = 5000;
 

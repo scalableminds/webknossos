@@ -1,7 +1,7 @@
-import _ from "lodash";
-import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";
+import Request from "libs/request";
 import Toast from "libs/toast";
+import _ from "lodash";
 import messages from "messages";
 
 // Create a throttled function which depends on its arguments.

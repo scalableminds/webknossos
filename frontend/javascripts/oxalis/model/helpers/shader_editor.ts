@@ -1,16 +1,17 @@
 // @ts-nocheck
-import window, { document } from "libs/window";
 import app from "app";
+import window, { document } from "libs/window";
+import TextureBucketManager from "../bucket_data_handling/texture_bucket_manager";
 
 export default {
-  addBucketManagers(textureBucketManager) {
+  addBucketManagers(textureBucketManager: TextureBucketManager) {
     window.managers = window.managers || [];
     window.managers.push(textureBucketManager);
   },
 
   addMaterial(identifier, material) {
-    window.materials = window.materials || [];
-    window.materials[identifier] = material;
+    window.materials = window.materials || {};
+    window.materials[identifier] = material; // Philipp help needed here
   },
 };
 

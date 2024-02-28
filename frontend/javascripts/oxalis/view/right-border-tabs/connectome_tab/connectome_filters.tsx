@@ -1,14 +1,14 @@
-import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
-import React from "react";
+import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import _ from "lodash";
+import ButtonComponent from "oxalis/view/components/button_component";
 import type {
-  Synapse,
   ConnectomeData,
   DirectionCaptionsKeys,
+  Synapse,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import { directionCaptions } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
-import ButtonComponent from "oxalis/view/components/button_component";
+import React from "react";
 
 type SynapseDirection = "in" | "out";
 

@@ -1,16 +1,16 @@
-import { Modal, Button, Table, Spin } from "antd";
-import * as React from "react";
-import _ from "lodash";
-import type { APIUser, APIProject, APIActiveUser } from "types/api_flow_types";
 import {
   getUsers,
   getUsersWithActiveTasks,
   transferActiveTasksOfProject,
 } from "admin/admin_rest_api";
+import UserSelectionComponent from "admin/user/user_selection_component";
+import { Button, Modal, Spin, Table } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import UserSelectionComponent from "admin/user/user_selection_component";
+import _ from "lodash";
 import messages from "messages";
+import * as React from "react";
+import type { APIActiveUser, APIProject, APIUser } from "types/api_flow_types";
 type Props = {
   project: APIProject | null | undefined;
   onCancel: () => void;

@@ -1,6 +1,6 @@
 import { Input, InputProps, InputRef, Tooltip } from "antd";
-import * as React from "react";
 import _ from "lodash";
+import * as React from "react";
 
 type InputComponentState = {
   currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | bigint;

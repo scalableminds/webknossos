@@ -1,62 +1,62 @@
 import type { ModifierKeys } from "libs/input";
-import * as THREE from "three";
+import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import type {
+  AnnotationTool,
   OrthoView,
   Point2,
   ShowContextMenuFunction,
-  AnnotationTool,
   Vector3,
 } from "oxalis/constants";
-import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import {
-  enforceActiveVolumeTracing,
-  getActiveSegmentationTracing,
-  getContourTracingMode,
-  getSegmentColorAsHSLA,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  handleAgglomerateSkeletonAtClick,
-  handleClickSegment,
-} from "oxalis/controller/combinations/segmentation_handlers";
-import {
-  computeQuickSelectForRectAction,
-  confirmQuickSelectAction,
-  hideBrushAction,
-  maybePrefetchEmbeddingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import PlaneView from "oxalis/view/plane_view";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import {
-  createBoundingBoxAndGetEdges,
   SelectedEdge,
+  createBoundingBoxAndGetEdges,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import {
+  handleAgglomerateSkeletonAtClick,
+  handleClickSegment,
+} from "oxalis/controller/combinations/segmentation_handlers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import { document } from "libs/window";
-import { api } from "oxalis/singletons";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
+  getContourTracingMode,
+  getSegmentColorAsHSLA,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
 import {
   hideMeasurementTooltipAction,
-  setQuickSelectStateAction,
-  setLastMeasuredPositionAction,
   setIsMeasuringAction,
+  setLastMeasuredPositionAction,
+  setQuickSelectStateAction,
 } from "oxalis/model/actions/ui_actions";
+import {
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
+  hideBrushAction,
+  maybePrefetchEmbeddingAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import PlaneView from "oxalis/view/plane_view";
+import * as THREE from "three";
 
 export type ActionDescriptor = {
   leftClick?: string;

@@ -1,5 +1,6 @@
 import { WarningFilled } from "@ant-design/icons";
 import { Alert, Layout, Tooltip } from "antd";
+import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -18,6 +19,7 @@ import { Store } from "oxalis/singletons";
 import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ContextMenuContainer from "oxalis/view/context_menu";
+import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
@@ -41,12 +43,10 @@ import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { APICompoundType } from "types/api_flow_types";
-import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
-import app from "app";
 
 const { Sider } = Layout;
 

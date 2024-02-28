@@ -1,13 +1,13 @@
 import { Modal } from "antd";
-import type { APIDataLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo, Segment } from "oxalis/store";
-import Store from "oxalis/store";
-import { MappingStatusEnum } from "oxalis/constants";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getEditableMappingForVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import type { ActiveMappingInfo, Segment } from "oxalis/store";
+import Store from "oxalis/store";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import type { APIDataLayer } from "types/api_flow_types";
 
 const { confirm } = Modal;
 

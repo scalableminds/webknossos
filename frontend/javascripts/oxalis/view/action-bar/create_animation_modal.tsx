@@ -1,38 +1,38 @@
 import { Alert, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
-import { useSelector } from "react-redux";
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
 import Store, { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
 
+import { InfoCircleOutlined } from "@ant-design/icons";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import {
+  computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
+} from "libs/utils";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import {
   getColorLayers,
   getEffectiveIntensityRange,
   getLayerByName,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  computeBoundingBoxFromBoundingBoxObject,
-  computeBoundingBoxObjectFromBoundingBox,
-} from "libs/utils";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import {
-  CAMERA_POSITIONS,
-  RenderAnimationOptions,
-  MOVIE_RESOLUTIONS,
-  APIDataLayer,
-} from "types/api_flow_types";
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { Model } from "oxalis/singletons";
+import {
+  APIDataLayer,
+  CAMERA_POSITIONS,
+  MOVIE_RESOLUTIONS,
+  RenderAnimationOptions,
+} from "types/api_flow_types";
 import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
 
 type Props = {

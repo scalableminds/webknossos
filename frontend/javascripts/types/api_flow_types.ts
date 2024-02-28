@@ -1,27 +1,27 @@
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type {
-  BoundingBoxObject,
-  Edge,
-  CommentType,
-  TreeGroup,
-  RecommendedConfiguration,
-  SegmentGroup,
-} from "oxalis/store";
-import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+  ColorObject,
+  LOG_LEVELS,
+  Point3,
+  TreeType,
+  Vector3,
+  Vector4,
+  Vector6,
+} from "oxalis/constants";
 import type {
   SkeletonTracingStats,
   TracingStats,
 } from "oxalis/model/accessors/annotation_accessor";
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
-  Vector3,
-  Vector6,
-  Point3,
-  ColorObject,
-  LOG_LEVELS,
-  Vector4,
-  TreeType,
-} from "oxalis/constants";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+  BoundingBoxObject,
+  CommentType,
+  Edge,
+  RecommendedConfiguration,
+  SegmentGroup,
+  TreeGroup,
+} from "oxalis/store";
 import { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
@@ -635,15 +635,15 @@ export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | 
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
-  "CONVERT_TO_WKW" = "convert_to_wkw",
-  "EXPORT_TIFF" = "export_tiff",
-  "RENDER_ANIMATION" = "render_animation",
-  "COMPUTE_MESH_FILE" = "compute_mesh_file",
-  "COMPUTE_SEGMENT_INDEX_FILE" = "compute_segment_index_file",
-  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
-  "INFER_NUCLEI" = "infer_nuclei",
-  "INFER_NEURONS" = "infer_neurons",
-  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+  CONVERT_TO_WKW = "convert_to_wkw",
+  EXPORT_TIFF = "export_tiff",
+  RENDER_ANIMATION = "render_animation",
+  COMPUTE_MESH_FILE = "compute_mesh_file",
+  COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
+  FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
+  INFER_NUCLEI = "infer_nuclei",
+  INFER_NEURONS = "infer_neurons",
+  MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
 }
 
 export type APIJob = {

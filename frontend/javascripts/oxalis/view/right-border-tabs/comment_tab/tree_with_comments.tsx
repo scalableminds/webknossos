@@ -1,6 +1,6 @@
-import * as React from "react";
 import classNames from "classnames";
 import type { Tree } from "oxalis/store";
+import * as React from "react";
 type Props = {
   tree: Tree;
   collapsed: boolean;

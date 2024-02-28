@@ -1,7 +1,7 @@
 import { Button, ButtonProps, Tooltip } from "antd";
-import * as React from "react";
-import _ from "lodash";
 import { TooltipPlacement } from "antd/lib/tooltip";
+import _ from "lodash";
+import * as React from "react";
 type ButtonComponentProp = ButtonProps & {
   faIcon?: string;
   tooltipPlacement?: TooltipPlacement | undefined;

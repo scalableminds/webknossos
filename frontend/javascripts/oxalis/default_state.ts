@@ -1,5 +1,3 @@
-import type { OxalisState } from "oxalis/store";
-import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -8,9 +6,11 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
 } from "oxalis/constants";
-import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 import constants from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
+import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 
 const defaultViewportRect = {
   top: 0,

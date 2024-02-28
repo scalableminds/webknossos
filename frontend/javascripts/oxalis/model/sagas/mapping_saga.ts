@@ -1,37 +1,37 @@
-import _ from "lodash";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { all, call, takeEvery, takeLatest, take, put, fork, actionChannel } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+import {
+  fetchMapping,
+  getAgglomeratesForDatasetLayer,
+  getMappingsForDatasetLayer,
+} from "admin/admin_rest_api";
 import { message } from "antd";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import _ from "lodash";
+import { MappingStatusEnum } from "oxalis/constants";
+import {
+  getLayerByName,
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  EnsureLayerMappingsAreLoadedAction,
+  setLayerMappingsAction,
+} from "oxalis/model/actions/dataset_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
   SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import {
-  fetchMapping,
-  getMappingsForDatasetLayer,
-  getAgglomeratesForDatasetLayer,
-} from "admin/admin_rest_api";
-import type { APIMapping } from "types/api_flow_types";
-import {
-  EnsureLayerMappingsAreLoadedAction,
-  setLayerMappingsAction,
-} from "oxalis/model/actions/dataset_actions";
-import {
-  getLayerByName,
-  getMappingInfo,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import type { ActiveMappingInfo, Mapping } from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
-import { api } from "oxalis/singletons";
-import { MappingStatusEnum } from "oxalis/constants";
-import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
-import Toast from "libs/toast";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
+import { api } from "oxalis/singletons";
+import type { ActiveMappingInfo, Mapping } from "oxalis/store";
+import { actionChannel, all, call, fork, put, take, takeEvery, takeLatest } from "typed-redux-saga";
+import type { APIMapping } from "types/api_flow_types";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 type APIMappings = Record<string, APIMapping>;
 

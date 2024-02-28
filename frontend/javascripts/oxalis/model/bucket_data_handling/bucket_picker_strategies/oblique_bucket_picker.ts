@@ -1,13 +1,13 @@
-import _ from "lodash";
-import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import ThreeDMap from "libs/ThreeDMap";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import { chunk2 } from "oxalis/model/helpers/chunk";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import ThreeDMap from "libs/ThreeDMap";
+import _ from "lodash";
 import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import { chunk2 } from "oxalis/model/helpers/chunk";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
@@ -20,17 +20,41 @@ const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition
 const ALPHA = Math.PI / 2;
 // prettier-ignore
 const YZ_ROTATION = [
-    Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
-    0, 1, 0, 0,
-    -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
-    0, 0, 0, 1,
+  Math.cos(ALPHA),
+  0,
+  Math.sin(ALPHA),
+  0,
+  0,
+  1,
+  0,
+  0,
+  -Math.sin(ALPHA),
+  0,
+  Math.cos(ALPHA),
+  0,
+  0,
+  0,
+  0,
+  1,
 ] as Matrix4x4;
 // prettier-ignore
 const XZ_ROTATION = [
-  1, 0, 0, 0,
-  0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
-  0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
-  0, 0, 0, 1,
+  1,
+  0,
+  0,
+  0,
+  0,
+  Math.cos(ALPHA),
+  -Math.sin(ALPHA),
+  0,
+  0,
+  Math.sin(ALPHA),
+  Math.cos(ALPHA),
+  0,
+  0,
+  0,
+  0,
+  1,
 ] as Matrix4x4;
 
 export default function determineBucketsForOblique(

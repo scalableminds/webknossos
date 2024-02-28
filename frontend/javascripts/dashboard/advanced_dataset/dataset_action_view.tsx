@@ -8,15 +8,15 @@ import {
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import window from "libs/window";
-import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
-import * as React from "react";
-import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, getDataset } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { MenuProps, Modal } from "antd";
+import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import Toast from "libs/toast";
+import window from "libs/window";
+import messages from "messages";
+import * as React from "react";
+import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataset, APIDatasetCompact, APIDatasetId } from "types/api_flow_types";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",

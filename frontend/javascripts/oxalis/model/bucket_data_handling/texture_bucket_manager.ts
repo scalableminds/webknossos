@@ -1,20 +1,20 @@
-import * as THREE from "three";
+import app from "app";
+import UpdatableTexture from "libs/UpdatableTexture";
+import { waitForCondition } from "libs/utils";
+import window from "libs/window";
 import _ from "lodash";
-import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
+import constants from "oxalis/constants";
+import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
-  getPackingDegree,
   getChannelCount,
+  getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getRenderer } from "oxalis/controller/renderer";
-import { waitForCondition } from "libs/utils";
-import UpdatableTexture from "libs/UpdatableTexture";
-import constants from "oxalis/constants";
-import window from "libs/window";
+import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTableVec5 } from "./cuckoo_table_vec5";
-import app from "app";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.

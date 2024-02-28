@@ -1,13 +1,13 @@
-import { Modal, Button, Radio, Col, Row, Checkbox, Divider, RadioChangeEvent } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import update from "immutability-helper";
-import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
-import { updateUser, getEditableTeams } from "admin/admin_rest_api";
-import messages from "messages";
-import * as Utils from "libs/utils";
+import { getEditableTeams, updateUser } from "admin/admin_rest_api";
+import { Button, Checkbox, Col, Divider, Modal, Radio, RadioChangeEvent, Row } from "antd";
 import { Key } from "antd/lib/table/interface";
+import update from "immutability-helper";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import * as React from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 

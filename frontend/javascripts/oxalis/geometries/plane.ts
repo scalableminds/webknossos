@@ -1,9 +1,4 @@
-import * as THREE from "three";
 import _ from "lodash";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import Dimensions from "oxalis/model/dimensions";
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
-import Store from "oxalis/store";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
   OrthoViewColors,
@@ -11,6 +6,11 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -76,10 +76,18 @@ class Plane {
 
       // prettier-ignore
       const crosshairVertices = new Float32Array([
-        (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
-        -25 * i, -25 * (1 - i), 0,
-        25 * i, 25 * (1 - i), 0,
-        (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
+        (-pWidth / 2) * i,
+        (-pWidth / 2) * (1 - i),
+        0,
+        -25 * i,
+        -25 * (1 - i),
+        0,
+        25 * i,
+        25 * (1 - i),
+        0,
+        (pWidth / 2) * i,
+        (pWidth / 2) * (1 - i),
+        0,
       ]);
 
       crosshairGeometries[i].setAttribute(

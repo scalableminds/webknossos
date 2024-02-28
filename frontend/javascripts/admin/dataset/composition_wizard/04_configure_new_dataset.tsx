@@ -9,6 +9,7 @@ import { Button, Col, Form, FormInstance, Input, List, Row, Tooltip } from "antd
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -21,7 +22,6 @@ import { useSelector } from "react-redux";
 import { APIDataLayer, APIDataset, APIDatasetId, APITeam, LayerLink } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const FormItem = Form.Item;
 

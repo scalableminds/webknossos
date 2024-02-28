@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
+import type { Segment, SegmentGroup, SegmentMap, Tree, TreeGroup, TreeMap } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";

@@ -1,87 +1,87 @@
 import { saveAs } from "file-saver";
-import _ from "lodash";
-import { V3 } from "libs/mjs";
-import { chunkDynamically, sleep } from "libs/utils";
-import ErrorHandling from "libs/error_handling";
-import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
+import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
+import { chunkDynamically, sleep } from "libs/utils";
+import _ from "lodash";
+import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 
-import Store from "oxalis/store";
-import {
-  getResolutionInfo,
-  getMappingInfo,
-  getVisibleSegmentationLayer,
-  getSegmentationLayerByName,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  LoadAdHocMeshAction,
-  LoadPrecomputedMeshAction,
-  AdHocMeshInfo,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
-import type { Action } from "oxalis/model/actions/actions";
-import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
-import {
-  UpdateMeshVisibilityAction,
-  RemoveMeshAction,
-  RefreshMeshAction,
-  TriggerMeshDownloadAction,
-  MaybeFetchMeshFilesAction,
-  updateMeshFileListAction,
-  updateCurrentMeshFileAction,
-  dispatchMaybeFetchMeshFilesAsync,
-  removeMeshAction,
-  addAdHocMeshAction,
-  addPrecomputedMeshAction,
-  finishedLoadingMeshAction,
-  startedLoadingMeshAction,
-  TriggerMeshesDownloadAction,
-  updateMeshVisibilityAction,
-} from "oxalis/model/actions/annotation_actions";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { actionChannel, takeEvery, call, take, race, put, all } from "typed-redux-saga";
-import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeAdHocMesh,
-  sendAnalyticsEvent,
+  getBucketPositionsForAdHocMesh,
+  getMeshfilesForDatasetLayer,
   meshV0,
   meshV3,
-  getMeshfilesForDatasetLayer,
-  getBucketPositionsForAdHocMesh,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
-import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
-import DataLayer from "oxalis/model/data_layer";
-import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
-import exportToStl from "libs/stl_exporter";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import processTaskWithPool from "libs/async/task_pool";
+import { getDracoLoader } from "libs/draco";
 import parseStlBuffer from "libs/parse_stl_buffer";
+import exportToStl from "libs/stl_exporter";
+import Toast from "libs/toast";
 import window from "libs/window";
+import Zip from "libs/zipjs_wrapper";
+import messages from "messages";
+import type { Vector3 } from "oxalis/constants";
+import { MappingStatusEnum } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import {
+  getMappingInfo,
+  getResolutionInfo,
+  getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveSegmentationTracing,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
   getTracingForSegmentationLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import {
+  MaybeFetchMeshFilesAction,
+  RefreshMeshAction,
+  RemoveMeshAction,
+  TriggerMeshDownloadAction,
+  TriggerMeshesDownloadAction,
+  UpdateMeshVisibilityAction,
+  addAdHocMeshAction,
+  addPrecomputedMeshAction,
+  dispatchMaybeFetchMeshFilesAsync,
+  finishedLoadingMeshAction,
+  removeMeshAction,
+  startedLoadingMeshAction,
+  updateCurrentMeshFileAction,
+  updateMeshFileListAction,
+  updateMeshVisibilityAction,
+} from "oxalis/model/actions/annotation_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import Toast from "libs/toast";
-import { getDracoLoader } from "libs/draco";
-import messages from "messages";
-import processTaskWithPool from "libs/async/task_pool";
+import {
+  AdHocMeshInfo,
+  LoadAdHocMeshAction,
+  LoadPrecomputedMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import DataLayer from "oxalis/model/data_layer";
+import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { Model } from "oxalis/singletons";
+import Store from "oxalis/store";
+import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { actionChannel, all, call, put, race, take, takeEvery } from "typed-redux-saga";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { FlycamAction } from "../actions/flycam_actions";
 import {
   BatchUpdateGroupsAndSegmentsAction,
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../actions/volumetracing_actions";
 import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import Zip from "libs/zipjs_wrapper";
-import { FlycamAction } from "../actions/flycam_actions";
-import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;

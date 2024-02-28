@@ -1,14 +1,93 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
-import { connect } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useState } from "react";
-import type {
-  APIConnectomeFile,
-  APIDataset,
-  APIDataLayer,
-  APIMeshFile,
-} from "types/api_flow_types";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { Dropdown, Empty, Input, MenuProps, Modal, Popover, Tooltip, notification } from "antd";
+import {
+  ItemType,
+  MenuItemGroupType,
+  MenuItemType,
+  SubMenuType,
+} from "antd/lib/menu/hooks/useItems";
+import { AsyncIconButton } from "components/async_clickables";
+import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { useFetch } from "libs/react_helpers";
+import Shortcut from "libs/shortcut_component";
+import Toast from "libs/toast";
+import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
+import messages from "messages";
+import {
+  AnnotationTool,
+  AnnotationToolEnum,
+  OrthoView,
+  Vector3,
+  VolumeTools,
+} from "oxalis/constants";
+import {
+  loadAgglomerateSkeletonAtPosition,
+  loadSynapsesOfAgglomerateAtPosition,
+} from "oxalis/controller/combinations/segmentation_handlers";
+import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import {
+  getSegmentIdForPosition,
+  getSegmentIdForPositionAsync,
+  handleFloodFillFromGlobalPosition,
+} from "oxalis/controller/combinations/volume_handlers";
+import {
+  getMappingInfo,
+  getResolutionInfo,
+  getVisibleSegmentationLayer,
+  hasFallbackLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { findTreeByNodeId, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getSegmentsForLayer,
+  hasAgglomerateMapping,
+  hasConnectomeFile,
+  hasEditableMapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  addUserBoundingBoxAction,
+  changeUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
+  maybeFetchMeshFilesAction,
+  refreshMeshAction,
+  removeMeshAction,
+  updateMeshVisibilityAction,
+} from "oxalis/model/actions/annotation_actions";
+import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  minCutAgglomerateAction,
+  minCutAgglomerateWithPositionAction,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import {
+  addTreesAndGroupsAction,
+  createBranchPointAction,
+  createTreeAction,
+  deleteBranchpointByIdAction,
+  deleteEdgeAction,
+  deleteNodeAsUserAction,
+  mergeTreesAction,
+  setActiveNodeAction,
+  setTreeVisibilityAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  clickSegmentAction,
+  performMinCutAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MutableNode,
@@ -20,97 +99,18 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  AnnotationTool,
-  Vector3,
-  OrthoView,
-  AnnotationToolEnum,
-  VolumeTools,
-} from "oxalis/constants";
-import { V3 } from "libs/mjs";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
-import {
-  addUserBoundingBoxAction,
-  deleteUserBoundingBoxAction,
-  changeUserBoundingBoxAction,
-  maybeFetchMeshFilesAction,
-  removeMeshAction,
-  updateMeshVisibilityAction,
-  refreshMeshAction,
-} from "oxalis/model/actions/annotation_actions";
-import {
-  deleteEdgeAction,
-  mergeTreesAction,
-  deleteNodeAsUserAction,
-  setActiveNodeAction,
-  createTreeAction,
-  setTreeVisibilityAction,
-  createBranchPointAction,
-  deleteBranchpointByIdAction,
-  addTreesAndGroupsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
-import {
-  getActiveSegmentationTracing,
-  getSegmentsForLayer,
-  hasAgglomerateMapping,
-  hasConnectomeFile,
-  hasEditableMapping,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
-  handleFloodFillFromGlobalPosition,
-} from "oxalis/controller/combinations/volume_handlers";
-import {
-  getVisibleSegmentationLayer,
-  getMappingInfo,
-  getResolutionInfo,
-  hasFallbackLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  loadAgglomerateSkeletonAtPosition,
-  loadSynapsesOfAgglomerateAtPosition,
-} from "oxalis/controller/combinations/segmentation_handlers";
-import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
-import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  clickSegmentAction,
-  performMinCutAction,
-  setActiveCellAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
-import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import Shortcut from "libs/shortcut_component";
-import Toast from "libs/toast";
-import { api } from "oxalis/singletons";
-import messages from "messages";
-import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
-import {
-  minCutAgglomerateAction,
-  minCutAgglomerateWithPositionAction,
-  proofreadMerge,
-} from "oxalis/model/actions/proofread_actions";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
-  ItemType,
-  MenuItemGroupType,
-  MenuItemType,
-  SubMenuType,
-} from "antd/lib/menu/hooks/useItems";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
-import { useFetch } from "libs/react_helpers";
-import { AsyncIconButton } from "components/async_clickables";
+import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React, { createContext, MouseEvent, useContext, useState } from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import type {
+  APIConnectomeFile,
+  APIDataLayer,
+  APIDataset,
+  APIMeshFile,
+} from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
-import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

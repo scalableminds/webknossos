@@ -1,23 +1,23 @@
-import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
+import _ from "lodash";
 
-import { Saga, select } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
+import features from "features";
+import Toast from "libs/toast";
 import {
   ComputeQuickSelectForRectAction,
   MaybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import Toast from "libs/toast";
-import features from "features";
+import { Saga, select } from "oxalis/model/sagas/effect-generators";
+import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 
+import { AnnotationToolEnum } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
 import performQuickSelectML, {
   getInferenceSession,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
-import { AnnotationToolEnum } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);

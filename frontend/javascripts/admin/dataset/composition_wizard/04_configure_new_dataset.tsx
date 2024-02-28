@@ -80,7 +80,6 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     form.setFieldsValue({ layers: newLinks });
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Execute only once at the beginning.
   useEffectOnlyOnce(() => {
     handleTransformImport(wizardContext.sourcePoints, wizardContext.targetPoints);
   });

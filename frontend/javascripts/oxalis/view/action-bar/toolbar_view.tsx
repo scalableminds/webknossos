@@ -254,6 +254,7 @@ function OverwriteModeSwitch({
   const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
     // There are four possible states:
     // (1) no modifier is pressed
@@ -366,7 +367,7 @@ function VolumeInterpolationButton() {
       </Tooltip>,
       rightButton,
     ],
-    [tooltipTitle],
+    [tooltipTitle, isDisabled],
   );
 
   return (
@@ -632,6 +633,7 @@ function ChangeBrushSizePopover() {
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes ist needed as dependency.
   useEffect(() => {
     if (presetBrushSizes == null) {
       handleUpdatePresetBrushSizes(defaultBrushSizes);
@@ -874,6 +876,7 @@ export default function ToolbarView() {
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);

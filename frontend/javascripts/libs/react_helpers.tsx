@@ -40,6 +40,7 @@ export function useFetch<T>(
     setValue(fetchedValue);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   useEffect(() => {
     fetchValue();
   }, dependencies);
@@ -75,6 +76,7 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
   return function LazyModalWrapper(props: T) {
     const [hasBeenInitialized, setHasBeenInitialized] = useState(false);
     const isOpen = props.isOpen;
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Only initialize once open state changes.
     useEffect(() => {
       setHasBeenInitialized(hasBeenInitialized || isOpen);
     }, [isOpen]);

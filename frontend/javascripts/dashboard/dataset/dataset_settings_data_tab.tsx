@@ -298,6 +298,7 @@ function SimpleLayerForm({
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Always revalidate in case the user changes the data layers in the form.
   React.useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
     // names all relevant fields are properly validated.

@@ -241,6 +241,10 @@ jobs:
           name: Report coverage
           command: .circleci/not-on-master.sh docker-compose run base yarn coverage || true
       - run:
+          name: Install dev deployment
+          command: |
+            .circleci/not-on-master.sh curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
+      - run:
           name: Send Slack notification (master only)
           command: .circleci/slack-notification.sh
 

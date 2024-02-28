@@ -159,7 +159,7 @@ jobs:
       - run:
           name: Install dev deployment
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+            if [ "${CIRCLE_BRANCH}" != "master" ]; then
               PR_URL="$CIRCLE_PULL_REQUEST"
               PR_NUMBER=$(echo $PR_URL | awk -F'/' '{print $NF}')
               IS_DRAFT=curl "https://api.github.com/repos/scalableminds/webknossos/pulls/$PR_NUMBER" | jq '.draft'

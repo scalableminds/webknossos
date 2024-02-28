@@ -225,7 +225,7 @@ function* handleSetMapping(
         ? layerInfo.fallbackLayer
         : layerName;
 
-    yield* call(sleep, 5000);
+    yield* call(sleep, 1000);
 
     const isEditableMappingActive = yield* select((state) => hasEditableMapping(state, layerName));
     const editableMapping = yield* select((state) =>

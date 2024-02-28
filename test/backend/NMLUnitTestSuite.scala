@@ -1,7 +1,5 @@
 package backend
 
-import com.scalableminds.util.tools.Fox
-
 import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
@@ -9,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
@@ -48,7 +46,12 @@ class NMLUnitTestSuite extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true, remoteDataStoreClient = None)
+    NmlParser.parse("",
+                    new ByteArrayInputStream(array),
+                    None,
+                    isTaskUpload = true,
+                    None,
+                    (a: String, b: String) => None)
   }
 
   def isParseSuccessful(

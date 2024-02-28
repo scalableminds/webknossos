@@ -1,16 +1,22 @@
 package models.annotation
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import files.TempFileService
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
+import models.dataset.{DatasetDAO, DatasetService, WKRemoteDataStoreClient}
+import models.organization.OrganizationDAO
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
@@ -22,7 +28,12 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
     otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService) extends LazyLogging {
+class AnnotationUploadService @Inject()(tempFileService: TempFileService,
+                                        datasetService: DatasetService,
+                                        datasetDAO: DatasetDAO,
+                                        organizationDAO: OrganizationDAO,
+                                        rpc: RPC)
+    extends LazyLogging {
 
   private def extractFromNmlFile(
       file: File,
@@ -43,7 +54,12 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       overwritingDatasetName: Option[String],
       isTaskUpload: Boolean,
       basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDatasetName, isTaskUpload, basePath, None) match {
+    NmlParser.parse(name,
+                    inputStream,
+                    overwritingDatasetName,
+                    isTaskUpload,
+                    basePath,
+                    (a, b) => getRemoteDatastoreClientForDatasetNameAndOrg(a, b)) match {
       case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
@@ -176,5 +192,16 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
       val parseResult = extractFromNmlFile(file, fileName, overwritingDatasetName, isTaskUpload)
       MultiNmlParseResult(List(parseResult), Map.empty)
     }
+
+  def getRemoteDatastoreClientForDatasetNameAndOrg(datasetName: String, organizationName: String)(
+      implicit ec: ExecutionContext): Option[WKRemoteDataStoreClient] = {
+    val fox = for {
+      _ <- Fox.successful(())
+      organizationObjectId <- organizationDAO.findIdByName(organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationObjectId)(GlobalAccessContext)
+      dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
+    } yield new WKRemoteDataStoreClient(dataStore, rpc)
+    fox.await("No fox context in AnnotationUploadService, see #7551").toOption
+  }
 
 }

@@ -46,7 +46,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             overwritingDatasetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None,
-            remoteDataStoreClient: Option[WKRemoteDataStoreClient])(
+            getRemoteDataStoreClient: (String, String) => Option[WKRemoteDataStoreClient])(
       implicit m: MessagesProvider,
       ec: ExecutionContext): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
     try {
@@ -67,12 +67,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
         organizationName = if (overwritingDatasetName.isDefined) None
         else parseOrganizationName(parameters \ "experiment")
+        remoteDataStoreClientOpt = getRemoteDataStoreClient(datasetName, organizationName.getOrElse(""))
         canHaveSegmentIndexOpts <- Fox
           .combined(
             volumes
               .map(
                 v =>
-                  canHaveSegmentIndexOpt(remoteDataStoreClient,
+                  canHaveSegmentIndexOpt(remoteDataStoreClientOpt,
                                          organizationName.getOrElse(""),
                                          datasetName,
                                          v.fallbackLayerName))

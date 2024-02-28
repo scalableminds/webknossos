@@ -80,6 +80,7 @@ export type UpdateAction =
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
+  // biome-ignore lint/complexity/noBannedTypes: <explanation>
   value: {};
 };
 // This update action is only created by the backend
@@ -91,6 +92,7 @@ type ImportVolumeTracingUpdateAction = {
 }; // This update action is only created by the backend
 type AddSegmentIndexUpdateAction = {
   name: "addSegmentIndex";
+  // biome-ignore lint/complexity/noBannedTypes: <explanation>
   value: {};
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {

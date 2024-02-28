@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+import { ArbitraryFunction } from "types/globals";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
-  callback: Function,
+  callback: ArbitraryFunction,
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<Function>();
+  const savedCallback = useRef<ArbitraryFunction>();
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;

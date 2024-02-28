@@ -22,6 +22,7 @@ import type {
   TreeType,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -436,7 +437,7 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
-  stats: TracingStats | {};
+  stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
@@ -451,7 +452,7 @@ export type APIAnnotationInfo = {
   readonly name: string;
   // Not used by the front-end anymore, but the
   // backend still serves this for backward-compatibility reasons.
-  readonly stats?: SkeletonTracingStats | {};
+  readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
@@ -920,7 +921,7 @@ export type VoxelyticsTaskInfo = {
 
 export type VoxelyticsWorkflowReport = {
   config: {
-    config: {} | null;
+    config: EmptyObject | null;
     git_hash: string | null;
     global_parameters:
       | {
@@ -929,7 +930,7 @@ export type VoxelyticsWorkflowReport = {
           artifacts_path: string | null;
           skip_checksums: boolean;
         }
-      | {};
+      | EmptyObject;
     paths: Array<string>;
     schema_version: number;
     tasks: Record<string, VoxelyticsTaskConfig>;

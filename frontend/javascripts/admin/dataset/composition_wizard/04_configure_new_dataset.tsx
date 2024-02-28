@@ -16,11 +16,12 @@ import messages from "messages";
 import { Vector3 } from "oxalis/constants";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState } from "oxalis/store";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { APIDataLayer, APIDataset, APIDatasetId, APITeam, LayerLink } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const FormItem = Form.Item;
 
@@ -79,9 +80,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     form.setFieldsValue({ layers: newLinks });
   };
 
-  useEffect(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Execute only once at the beginning.
+  useEffectOnlyOnce(() => {
     handleTransformImport(wizardContext.sourcePoints, wizardContext.targetPoints);
-  }, []);
+  });
 
   const handleSubmit = async () => {
     if (activeUser == null) {
@@ -211,13 +213,14 @@ function LinkedLayerForm({
 }) {
   const layers = Form.useWatch(["layers"]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: See comment below
   React.useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
     // names all relevant fields are properly validated.
     // This is a workaround, since shouldUpdate=true on a
     // FormItemWithInfo doesn't work for some reason.
     form.validateFields();
-  }, [layers]);
+  }, [layers, form]);
 
   return (
     <div

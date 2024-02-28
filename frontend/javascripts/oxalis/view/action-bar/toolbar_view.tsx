@@ -192,19 +192,19 @@ function RadioButtonWithTooltip({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
-  onClick?: Function;
+  onClick?: (event: React.MouseEvent) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
     <Tooltip title={disabled ? disabledTitle : title} onOpenChange={onOpenChange}>
       <Radio.Button
         disabled={disabled}
-        onClick={(evt) => {
+        onClick={(event: React.MouseEvent) => {
           if (document.activeElement) {
             (document.activeElement as HTMLElement).blur();
           }
           if (onClick) {
-            onClick(evt);
+            onClick(event);
           }
         }}
         {...props}
@@ -227,7 +227,7 @@ function ToolRadioButton({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
-  onClick?: Function;
+  onClick?: (event: React.MouseEvent) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
   return (

@@ -48,7 +48,11 @@ import {
   getMappingInfo,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getEdgesForAgglomerateMinCut, makeMappingEditable } from "admin/admin_rest_api";
+import {
+  getEdgesForAgglomerateMinCut,
+  getAgglomeratesForSegments,
+  makeMappingEditable,
+} from "admin/admin_rest_api";
 import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -546,21 +550,32 @@ function* handleProofreadMergeOrMinCut(
 
   const items: UpdateAction[] = [];
 
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[layerName],
+  );
+  // Source ID is ID of active agglomerate, this ID is kept.
+  if (activeMapping.mapping == null) {
+    Toast.error("Mapping is not available, cannot proofread.");
+    yield* put(setBusyBlockingInfoAction(false));
+    return;
+  }
   if (action.type === "PROOFREAD_MERGE") {
-    const activeMapping = yield* select(
-      (store) => store.temporaryConfiguration.activeMappingByLayer[layerName],
-    );
     if (sourceAgglomerateId === targetAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
-    // Source ID is ID of active agglomerate, this ID is kept.
-    if (activeMapping.mapping == null) {
-      Toast.error("Mapping is not available, cannot proofread.");
-      yield* put(setBusyBlockingInfoAction(false));
-      return;
-    }
+
+    items.push(
+      mergeAgglomerate(
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        sourcePosition,
+        targetPosition,
+        agglomerateFileMag,
+      ),
+    );
+
     const mergedMapping = Object.fromEntries(
       Object.entries(activeMapping.mapping).map(([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
@@ -572,15 +587,6 @@ function* handleProofreadMergeOrMinCut(
         mapping: mergedMapping,
       }),
     );
-    /* items.push(
-      mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
-        sourcePosition,
-        targetPosition,
-        agglomerateFileMag,
-      ),
-    ); */ // TODO fix me
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
     if (partnerInfos.unmappedSourceId === partnerInfos.unmappedTargetId) {
       Toast.error(
@@ -614,10 +620,43 @@ function* handleProofreadMergeOrMinCut(
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
-  /* Reload the segmentation */
-  yield* call([api.data, api.data.reloadBuckets], layerName, (bucket) =>
-    bucket.containsValue(targetAgglomerateId),
-  );
+  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
+    if (sourceAgglomerateId !== targetAgglomerateId) {
+      Toast.error(
+        "The selected positions are not part of the same agglomerate and cannot be split.",
+      );
+      yield* put(setBusyBlockingInfoAction(false));
+      return;
+    }
+
+    const splitSegmentIds: number[] = Object.entries(activeMapping.mapping)
+      .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
+      .map(([segmentId, _agglomerateId]) => parseInt(segmentId));
+
+    const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+    const dictAfterSplit = yield* call(
+      getAgglomeratesForSegments,
+      tracingStoreHost,
+      volumeTracingId,
+      splitSegmentIds,
+    );
+
+    const splitMapping = Object.fromEntries(
+      Object.entries(activeMapping.mapping).map(([segmentId, agglomerateId]) => {
+        if (segmentId in dictAfterSplit) {
+          return [segmentId, dictAfterSplit[segmentId]];
+        }
+        return [segmentId, agglomerateId];
+      }),
+    );
+
+    yield* put(
+      setMappingAction(layerName, activeMapping.mappingName, activeMapping.mappingType, {
+        mappingKeys: activeMapping.mappingKeys || undefined,
+        mapping: splitMapping,
+      }),
+    );
+  }
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourcePosition),

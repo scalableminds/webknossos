@@ -114,8 +114,10 @@ export async function requestWithFallback(
       ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
       : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = maybeVolumeTracing == null;
-  const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
+  const shouldUseDataStore = true; //maybeVolumeTracing == null;
+  const requestUrl = shouldUseDataStore
+    ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
+    : getTracingStoreUrl();
   const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
   const missingBucketIndices = getNullIndices(bucketBuffers);
 

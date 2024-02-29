@@ -4,6 +4,8 @@ import java.text.SimpleDateFormat
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationType
+import models.annotation.AnnotationType.AnnotationType
 
 import javax.inject.Inject
 import models.user._
@@ -54,7 +56,7 @@ class TimeController @Inject()(userService: UserService,
         start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
         end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
         userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(filteredUsers)(user =>
-          getUserTimeSpansJs(user, start, end, onlyCountTasks = true, projectIdsOpt = None))
+          getUserTimeSpansJs(user, start, end, List(AnnotationType.Task), projectIdsOpt = None))
       } yield Ok(Json.toJson(userTimeSpansJsList))
     }
 
@@ -73,7 +75,7 @@ class TimeController @Inject()(userService: UserService,
         start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
         end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
         userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(user =>
-          getUserTimeSpansJs(user, start, end, onlyCountTasks = true, projectIdsOpt = None))
+          getUserTimeSpansJs(user, start, end, List(AnnotationType.Task), projectIdsOpt = None))
       } yield Ok(Json.toJson(userTimeSpansJsList))
     }
 
@@ -88,19 +90,20 @@ class TimeController @Inject()(userService: UserService,
   def timeSpansOfUser(userId: String,
                       startDate: Long,
                       endDate: Long,
-                      onlyCountTasks: Option[Boolean],
+                      annotationTypes: String,
                       projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
         projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
+        annotationTypesValidated <- parseAnnotationTypes(annotationTypes) ?~> "invalidAnnotationType"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- getUserTimeSpansJs(user,
                                  Instant(startDate),
                                  Instant(endDate),
-                                 onlyCountTasks.getOrElse(true),
+                                 annotationTypesValidated,
                                  projectIdsValidated)
       } yield Ok(js)
     }
@@ -108,11 +111,11 @@ class TimeController @Inject()(userService: UserService,
   private def getUserTimeSpansJs(user: User,
                                  start: Instant,
                                  end: Instant,
-                                 onlyCountTasks: Boolean,
+                                 annotationTypes: List[AnnotationType],
                                  projectIdsOpt: Option[List[ObjectId]]): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
-      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, onlyCountTasks, projectIdsOpt)
+      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, annotationTypes, projectIdsOpt)
     } yield Json.obj("user" -> userJs, "timelogs" -> timeSpansJs)
 
   // Used for graph on statistics page. Always includes explorative annotations
@@ -154,13 +157,17 @@ class TimeController @Inject()(userService: UserService,
 
   def timeSummedUserList(start: Long,
                          end: Long,
-                         onlyCountTasks: Boolean,
+                         annotationTypes: String,
                          teamIds: String,
                          projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
-        teamIdsValidated <- parseObjectIds(teamIds)
+        teamIdsValidated <- parseObjectIds(teamIds) ?~> "invalidTeamId"
+        annotationTypesValidated <- parseAnnotationTypes(annotationTypes) ?~> "invalidAnnotationType"
+        _ <- bool2Fox(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
+        _ <- bool2Fox(annotationTypesValidated.forall(typ =>
+          typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
         _ <- bool2Fox(teamIdsValidated.nonEmpty) ?~> "teamListEmpty"
         projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
         users <- userDAO.findAllByTeams(teamIdsValidated)
@@ -168,11 +175,14 @@ class TimeController @Inject()(userService: UserService,
         usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
                                                          Instant(end),
                                                          notUnlistedUsers.map(_._id),
-                                                         onlyCountTasks,
+                                                         annotationTypesValidated,
                                                          projectIdsValidated)
       } yield Ok(Json.toJson(usersWithTimesJs))
     }
 
   private def parseObjectIds(idsStr: String): Fox[List[ObjectId]] =
     Fox.serialCombined(idsStr.split(",").toList)(id => ObjectId.fromString(id))
+
+  private def parseAnnotationTypes(typesStr: String): Fox[List[AnnotationType]] =
+    Fox.serialCombined(typesStr.split(",").toList)(typ => AnnotationType.fromString(typ))
 }

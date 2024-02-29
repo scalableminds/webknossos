@@ -4,6 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationType
+import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -72,12 +73,13 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByUserWithTask(userId: ObjectId,
                             start: Instant,
                             end: Instant,
-                            onlyCountTasks: Boolean,
-                            projectIdsOpt: Option[List[ObjectId]]): Fox[JsValue] = {
-    val projectQuery = projectIdsFilterQuery(projectIdsOpt)
-    val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"TRUE"
-    for {
-      tuples <- run(q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+                            annotationTypes: List[AnnotationType],
+                            projectIdsOpt: Option[List[ObjectId]]): Fox[JsValue] =
+    if (annotationTypes.isEmpty) Fox.successful(Json.arr())
+    else {
+      val projectQuery = projectIdsFilterQuery(projectIdsOpt)
+      for {
+        tuples <- run(q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         FROM webknossos.timespans_ ts
                         JOIN webknossos.annotations_ a on ts._annotation = a._id
                         LEFT JOIN webknossos.tasks_ t on a._task = t._id
@@ -88,10 +90,10 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         AND ts.created >= $start
                         AND ts.created < $end
                         AND $projectQuery
-                        AND $onlyCountTasksQuery
+                        AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
             """.as[(Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])])
-    } yield formatTimespanTuples(tuples)
-  }
+      } yield formatTimespanTuples(tuples)
+    }
 
   private def formatTimespanTuples(tuples: Vector[
     (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])]) = {
@@ -150,12 +152,11 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def timeSummedSearch(start: Instant,
                        end: Instant,
                        users: List[ObjectId],
-                       onlyCountTasks: Boolean,
+                       annotationTypes: List[AnnotationType],
                        projectIdsOpt: Option[List[ObjectId]]): Fox[List[JsObject]] =
-    if (users.isEmpty) Fox.successful(List.empty)
+    if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
       val projectQuery = projectIdsFilterQuery(projectIdsOpt)
-      val onlyCountTasksQuery = if (onlyCountTasks) q"a.typ = ${AnnotationType.Task}" else q"TRUE"
       val query =
         q"""
           SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time)
@@ -166,7 +167,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           LEFT JOIN webknossos.tasks_ t ON a._task = t._id
           LEFT JOIN webknossos.projects_ p ON t._project = p._id
           WHERE $projectQuery
-          AND $onlyCountTasksQuery
+          AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
           AND ts.time > 0
           AND ts.created >= $start
           AND ts.created < $end

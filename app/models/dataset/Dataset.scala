@@ -165,8 +165,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         )
         OR ( -- user is in a team that is allowed for the dataset
           _id IN (
-            SELECT _dataSet
-            FROM webknossos.dataSet_allowedTeams dt
+            SELECT _dataset
+            FROM webknossos.dataset_allowedTeams dt
             JOIN webknossos.user_team_roles utr ON dt._team = utr._team
             WHERE utr._user = $requestingUserId
           )
@@ -245,8 +245,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                   (u.isAdmin AND u._organization = d._organization) OR
                   u.isDatasetManager OR
                   d._id IN (              -- team manager of team that has access to the dataset
-                    SELECT _dataSet
-                    FROM webknossos.dataSet_allowedTeams dt
+                    SELECT _dataset
+                    FROM webknossos.dataset_allowedTeams dt
                     JOIN webknossos.user_team_roles utr ON dt._team = utr._team
                     WHERE utr._user = u._id AND utr.isTeamManager
                   ) OR
@@ -273,11 +273,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ON o._id = d._organization
             LEFT JOIN webknossos.users_ u
               ON u._id = $requestingUserIdOpt
-            LEFT JOIN webknossos.dataSet_lastUsedTimes lastUsedTimes
-              ON lastUsedTimes._dataSet = d._id AND lastUsedTimes._user = u._id
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'color' GROUP BY _dataset) cl
+            LEFT JOIN webknossos.dataset_lastUsedTimes lastUsedTimes
+              ON lastUsedTimes._dataset = d._id AND lastUsedTimes._user = u._id
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataset_layers WHERE category = 'color' GROUP BY _dataset) cl
               ON d._id = cl._dataset
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataSet_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
+            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataset_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
               ON d._id = sl._dataset
             """
       rows <- run(
@@ -503,7 +503,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
-      _ <- run(q"""update webknossos.dataSets
+      _ <- run(q"""update webknossos.datasets
                    set adminViewConfiguration = ${Json.toJson(configuration)}
                    where _id = $datasetId""".asUpdate)
     } yield ()
@@ -511,7 +511,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updateUploader(datasetId: ObjectId, uploaderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
-      _ <- run(q"""update webknossos.dataSets
+      _ <- run(q"""update webknossos.datasets
                    set _uploader = $uploaderIdOpt
                    where _id = $datasetId""".asUpdate)
     } yield ()
@@ -519,7 +519,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updateFolder(datasetId: ObjectId, folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
-      _ <- run(q"""update webknossos.dataSets
+      _ <- run(q"""update webknossos.datasets
                    set _folder = $folderId
                    where _id = $datasetId""".asUpdate)
     } yield ()
@@ -529,7 +529,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))
     for {
       _ <- run(
-        q"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, _folder, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
+        q"""insert into webknossos.datasets(_id, _dataStore, _organization, _publication, _uploader, _folder, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
                                                          isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, tags, created, isDeleted)
            values(${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
            ${d._uploader}, ${d._folder},
@@ -550,7 +550,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
-      _ <- run(q"""update webknossos.dataSets
+      _ <- run(q"""update webknossos.datasets
                           set _dataStore = $dataStoreName,
                               _organization = ${organization._id},
                               inboxSourceHash = $inboxSourceHash,
@@ -562,18 +562,18 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- datasetLayerDAO.updateLayers(id, source)
     } yield ()
 
-  def deactivateUnreported(existingDataSetIds: List[ObjectId],
+  def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDataSetIds.isEmpty) q"${true}"
-      else q"_id not in ${SqlToken.tupleFromList(existingDataSetIds)}"
+      if (existingDatasetIds.isEmpty) q"${true}"
+      else q"_id not in ${SqlToken.tupleFromList(existingDatasetIds)}"
     val statusNotAlreadyInactive = q"status not in ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteResolutionsQuery =
-      q"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
+      q"""delete from webknossos.dataset_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val deleteLayersQuery =
-      q"""delete from webknossos.dataSet_layers where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
+      q"""delete from webknossos.dataset_layers where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and $inclusionPredicate)""".asUpdate
     val setToUnusableQuery =
       q"""update webknossos.datasets
           set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
@@ -585,14 +585,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteResolutionsQuery =
-      q"DELETE FROM webknossos.dataSet_resolutions WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_resolutions WHERE _dataset = $datasetId".asUpdate
     val deleteCoordinateTransformsQuery =
-      q"DELETE FROM webknossos.dataSet_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
-      q"DELETE FROM webknossos.dataSet_layers WHERE _dataset = $datasetId".asUpdate
-    val deleteAllowedTeamsQuery = q"DELETE FROM webknossos.dataSet_allowedTeams WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layers WHERE _dataset = $datasetId".asUpdate
+    val deleteAllowedTeamsQuery = q"DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".asUpdate
     val deleteAdditionalAxesQuery =
-      q"DELETE FROM webknossos.dataSet_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
         q"UPDATE webknossos.datasets SET status = $deletedByUserStatus, isUsable = false WHERE _id = $datasetId".asUpdate
@@ -630,11 +630,11 @@ class DatasetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield rowsParsed
 
   def updateResolutions(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    val clearQuery = q"delete from webknossos.dataSet_resolutions where _dataSet = $datasetId".asUpdate
+    val clearQuery = q"delete from webknossos.dataset_resolutions where _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.resolutions.map { resolution: Vec3Int =>
         {
-          q"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
+          q"""insert into webknossos.dataset_resolutions(_dataset, dataLayerName, resolution)
                 values($datasetId, ${layer.name}, $resolution)""".asUpdate
         }
       }
@@ -707,7 +707,7 @@ class DatasetLayerDAO @Inject()(
 
   def findAllForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
-      rows <- run(q"""SELECT _dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings,
+      rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
                           defaultViewConfiguration, adminViewConfiguration
                       FROM webknossos.dataset_layers
                       WHERE _dataset = $datasetId
@@ -719,23 +719,23 @@ class DatasetLayerDAO @Inject()(
     layer match {
       case s: AbstractSegmentationLayer =>
         val mappings = s.mappings.getOrElse(Set()).toList
-        q"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
+        q"""insert into webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
                     values($datasetId, ${s.name}, ${s.category}, ${s.elementClass},
                     ${s.boundingBox}, ${s.largestSegmentId}, $mappings,
                     ${s.defaultViewConfiguration.map(Json.toJson(_))},
                     ${s.adminViewConfiguration.map(Json.toJson(_))})
-          on conflict (_dataSet, name) do update
+          on conflict (_dataset, name) do update
                      set category = ${s.category}, elementClass = ${s.elementClass},
                      boundingBox = ${s.boundingBox}, largestSegmentId = ${s.largestSegmentId},
                      mappings = $mappings,
                      defaultViewConfiguration = ${s.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
       case d: AbstractDataLayer =>
-        q"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
+        q"""insert into webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
                     values($datasetId, ${d.name}, ${d.category}, ${d.elementClass},
                     ${d.boundingBox},
                     ${d.defaultViewConfiguration.map(Json.toJson(_))},
                     ${d.adminViewConfiguration.map(Json.toJson(_))})
-          on conflict (_dataSet, name) do update
+          on conflict (_dataset, name) do update
                     set category = ${d.category}, elementClass = ${d.elementClass}, boundingBox = ${d.boundingBox},
                     defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
       case _ => throw new Exception("DataLayer type mismatch")
@@ -743,9 +743,9 @@ class DatasetLayerDAO @Inject()(
 
   def updateLayers(datasetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      q"delete from webknossos.dataset_layers where _dataSet = $datasetId and name not in ${SqlToken.tupleFromList(
+      q"delete from webknossos.dataset_layers where _dataset = $datasetId and name not in ${SqlToken.tupleFromList(
         dataLayers.map(_.name))}".asUpdate
-    val clearQuery = q"delete from webknossos.dataset_layers where _dataSet = $datasetId".asUpdate
+    val clearQuery = q"delete from webknossos.dataset_layers where _dataset = $datasetId".asUpdate
 
     val queries = source.toUsable match {
       case Some(usable) =>
@@ -768,7 +768,7 @@ class DatasetLayerDAO @Inject()(
     for {
       _ <- run(q"""update webknossos.dataset_layers
                    set adminViewConfiguration = ${Json.toJson(adminViewConfiguration)}
-                   where _dataSet = $datasetId and name = $layerName""".asUpdate)
+                   where _dataset = $datasetId and name = $layerName""".asUpdate)
     } yield ()
 }
 
@@ -777,16 +777,16 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
   def findForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Instant] =
     for {
       rList <- run(
-        q"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = $datasetId and _user = $userId"
+        q"select lastUsedTime from webknossos.dataset_lastUsedTimes where _dataset = $datasetId and _user = $userId"
           .as[Instant])
       r <- rList.headOption.toFox
     } yield r
 
   def updateForDatasetAndUser(datasetId: ObjectId, userId: ObjectId): Fox[Unit] = {
     val clearQuery =
-      q"delete from webknossos.dataSet_lastUsedTimes where _dataSet = $datasetId and _user = $userId".asUpdate
+      q"delete from webknossos.dataset_lastUsedTimes where _dataset = $datasetId and _user = $userId".asUpdate
     val insertQuery =
-      q"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values($datasetId, $userId, NOW())".asUpdate
+      q"insert into webknossos.dataset_lastUsedTimes(_dataset, _user, lastUsedTime) values($datasetId, $userId, NOW())".asUpdate
     val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
@@ -833,13 +833,13 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
 
   def updateCoordinateTransformations(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery =
-      q"DELETE FROM webknossos.dataSet_layer_coordinateTransformations WHERE _dataSet = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.coordinateTransformations.getOrElse(List.empty).zipWithIndex.map { tuple =>
         {
           val coordinateTransformation: CoordinateTransformation = tuple._1
           val insertionOrderIndex = tuple._2
-          q"""INSERT INTO webknossos.dataSet_layer_coordinateTransformations(_dataSet, layerName, type, matrix, correspondences, insertionOrderIndex)
+          q"""INSERT INTO webknossos.dataset_layer_coordinateTransformations(_dataset, layerName, type, matrix, correspondences, insertionOrderIndex)
               values(
               $datasetId, ${layer.name}, ${coordinateTransformation.`type`},
               ${Json.toJson(coordinateTransformation.matrix)},
@@ -859,23 +859,23 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
   private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
     AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
 
-  def findAllForDatasetAndDataLayerName(dataSetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
+  def findAllForDatasetAndDataLayerName(datasetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {
       rows <- run(q"""SELECT *
-           FROM webknossos.dataSet_layer_additionalAxes
-           WHERE _dataSet = $dataSetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
+           FROM webknossos.dataset_layer_additionalAxes
+           WHERE _dataset = $datasetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
       additionalAxes = rows.map(parseRow)
     } yield additionalAxes
 
-  def updateAdditionalAxes(dataSetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateAdditionalAxes(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery =
-      q"DELETE FROM webknossos.dataSet_layer_additionalAxes WHERE _dataSet = $dataSetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.additionalAxes.getOrElse(List.empty).map { additionalAxis =>
         {
-          q"""INSERT INTO webknossos.dataSet_layer_additionalAxes(_dataSet, layerName, name, lowerBound, upperBound, index)
+          q"""INSERT INTO webknossos.dataset_layer_additionalAxes(_dataset, layerName, name, lowerBound, upperBound, index)
               values(
-              $dataSetId, ${layer.name}, ${additionalAxis.name}, ${additionalAxis.lowerBound}, ${additionalAxis.upperBound}, ${additionalAxis.index})
+              $datasetId, ${layer.name}, ${additionalAxis.name}, ${additionalAxis.lowerBound}, ${additionalAxis.upperBound}, ${additionalAxis.index})
               """.asUpdate
         }
 

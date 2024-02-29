@@ -63,6 +63,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(request.identity._id),
+          isForOwnDashboard = true,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
@@ -117,9 +118,11 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userIdValidated),
+          isForOwnDashboard = false,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
         jsonList = annotations.map(annotationService.writeCompactInfo)
@@ -170,11 +173,14 @@ class UserController @Inject()(userService: UserService,
       isAdmin: Option[Boolean]
   ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      users <- userDAO.findAllWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
-      js <- Fox.serialCombined(users.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+      (users, userCompactInfos) <- userDAO.findAllCompactWithFilters(isEditable,
+                                                                     isTeamManagerOrAdmin,
+                                                                     isAdmin,
+                                                                     request.identity)
+      zipped = users.zip(userCompactInfos)
+      js <- Fox.serialCombined(zipped.sortBy(_._1.lastName.toLowerCase))(u =>
+        userService.publicWritesCompact(u._1, u._2))
+    } yield Ok(Json.toJson(js))
   }
 
   private val userUpdateReader =

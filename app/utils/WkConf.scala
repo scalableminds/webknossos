@@ -30,6 +30,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
+      val timeTrackingOnlyWithSignificantChanges: Boolean =
+        get[Boolean]("webKnossos.user.timeTrackingOnlyWithSignificantChanges")
       val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
 
@@ -221,7 +223,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val uri: String = get[String]("backendAnalytics.uri")
     val key: String = get[String]("backendAnalytics.key")
     val sessionPause: FiniteDuration = get[FiniteDuration]("backendAnalytics.sessionPause")
+    val saveToDatabaseEnabled: Boolean = get[Boolean]("backendAnalytics.saveToDatabaseEnabled")
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
+    val wellKnownUris: List[String] = getList[String]("backendAnalytics.wellKnownUris")
   }
 
   object Slick {

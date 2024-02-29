@@ -16,6 +16,7 @@ import type {
 import window, { document, location } from "libs/window";
 
 export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
+export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -1177,4 +1178,13 @@ export function getFileExtension(fileName: string): string {
   const filenameParts = fileName.split(".");
   const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
   return fileExtension;
+}
+
+export class SoftError extends Error {}
+
+export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
+  // Strongly typed helper to filter any non empty values from an array
+  // e.g. [1, 2, undefined].filter(notEmpty) => type should be number[]
+  // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
+  return value !== null && value !== undefined;
 }

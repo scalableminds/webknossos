@@ -29,7 +29,7 @@ export default function DownsampleVolumeModal({
       footer={null}
       width={800}
       maskClosable={false}
-      visible
+      open
     >
       <p>
         This annotation does not have volume annotation data in all resolutions. Consequently,
@@ -37,12 +37,10 @@ export default function DownsampleVolumeModal({
         WEBKNOSSOS will use the best resolution of the volume data to create all dependent
         resolutions.
       </p>
-
       <p>
         The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
         {magsToDownsample.map((mag) => mag.join("-")).join(", ")}.
       </p>
-
       <div>
         The cause for the missing resolutions can be one of the following:
         <ul>
@@ -54,7 +52,6 @@ export default function DownsampleVolumeModal({
           <li>The dataset was mutated to have more resolutions.</li>
         </ul>
       </div>
-
       <p
         style={{
           fontWeight: "bold",

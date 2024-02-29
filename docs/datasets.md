@@ -41,8 +41,10 @@ In particular, the following file formats are supported for uploading (and conve
 - [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
 - [Multi Layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
 - [Single-file images](#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
+- [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
+- [N5 datasets](./n5.md)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.
 
 ### Streaming from remote servers and the cloud
 WEBKNOSSOS supports loading and remotely streaming [Zarr](https://zarr.dev), [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) and [N5](https://github.com/saalfeldlab/n5) datasets from a remote source, e.g. Cloud storage (S3) or HTTP server. 
@@ -72,8 +74,6 @@ Any other WEBKNOSSOS feature, e.g., annotations, and access rights, will be stor
 
 Note that data streaming may incur costs and count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If you happen to have any Zarr dataset locally that you would like to view in WEBKNOSSOS, consider running an HTTP server locally to serve the dataset. 
-Then WEBKNOSSOS can easily stream the data.
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the WEBKNOSSOS [Python library](https://docs.webknossos.org/webknossos-py). You can create, manage and upload datasets with the Python lib. 
@@ -125,6 +125,18 @@ For manual conversion, we provide the following software tools and libraries:
 
 - The [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
+
+### Composing Datasets
+New datasets can also be composed from existing ones.
+This feature allows to combine layers from previously added datasets to create a new dataset.
+During compositions, transforms can optionally be defined in case the datasets are not in the same coordinate system.
+There are three different ways to compose a new dataset:
+
+1) Combine datasets by selecting from existing datasets. No transforms between these datasets will be added.
+2) Create landmark annotations (using the skeleton tool) for each dataset. Then, these datasets can be combined while transforming one dataset to match the other.
+3) Similar to (2), two datasets can be combined while respecting landmarks that were generated with BigWarp.
+
+See the "Compose from existing datasets" tab in the "Add Dataset" screen for more details.
 
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 

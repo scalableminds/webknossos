@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
+import com.scalableminds.webknossos.datastore.helpers.DatasetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
@@ -25,7 +25,7 @@ class BinaryDataService(val dataBaseDir: Path,
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with DataSetDeleter
+    with DatasetDeleter
     with LazyLogging {
 
   /* Note that this must stay in sync with the front-end constant
@@ -91,7 +91,7 @@ class BinaryDataService(val dataBaseDir: Path,
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
       val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
-        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
       bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
@@ -214,7 +214,7 @@ class BinaryDataService(val dataBaseDir: Path,
         _ == cubeKey.dataLayerName)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.dataSetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
+      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
         .forall(_ == agglomerateKey.layerName)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =

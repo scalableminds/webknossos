@@ -28,10 +28,12 @@ module.exports = function (env = {}) {
       chunkFilename: "[name].css",
     }),
     new CopyPlugin({
-      // Use copy plugin to copy *.wasm to output folder.
       patterns: [
+        // Use copy plugin to copy *.wasm to output folder.
         { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
         { from: "public/models/*.*", to: "models/[name][ext]" },
+        // For CSP, see https://gildas-lormeau.github.io/zip.js/api/interfaces/Configuration.html#workerScripts
+        { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
       ],
     }),
   ];
@@ -59,9 +61,6 @@ module.exports = function (env = {}) {
     experiments: { asyncWebAssembly: true },
     entry: {
       main: "main.tsx",
-      theme: "theme.tsx",
-      light: "style_light.ts",
-      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {

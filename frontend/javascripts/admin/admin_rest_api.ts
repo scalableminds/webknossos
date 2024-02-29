@@ -66,6 +66,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   RenderAnimationOptions,
+  LayerLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -552,15 +553,6 @@ export function deletePrivateLink(linkId: string): Promise<{
 }
 
 // ### Annotations
-export function getAnnotationInfos(
-  isFinished: boolean,
-  pageNumber: number = 0,
-): Promise<Array<APIAnnotationInfo>> {
-  return Request.receiveJSON(
-    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
-  );
-}
-
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
@@ -916,7 +908,7 @@ export async function getTracingForAnnotationType(
   tracing.typ = typ;
 
   // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
-  delete tracing.dataSetName;
+  delete tracing.datasetName;
   // @ts-ignore
   delete tracing.organizationName;
 
@@ -962,12 +954,14 @@ export function getSegmentVolumes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ): Promise<number[]> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/volume?token=${token}`,
       {
-        data: { mag, segmentIds },
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
       },
     ),
   );
@@ -978,12 +972,14 @@ export function getSegmentBoundingBoxes(
   tracingId: string,
   mag: Vector3,
   segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentStatistics/boundingBox?token=${token}`,
       {
-        data: { mag, segmentIds },
+        data: { additionalCoordinates, mag, segmentIds },
+        method: "POST",
       },
     ),
   );
@@ -1295,12 +1291,17 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    outputSegmentationLayerName,
+    newDatasetName,
+  });
   return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
-      ",",
-    )}&newDatasetName=${newDatasetName}`,
+    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },
@@ -1422,10 +1423,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 export function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+    options,
   );
 }
 
@@ -1503,6 +1506,22 @@ export function updateDatasetDefaultConfiguration(
 export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
+  );
+}
+
+type DatasetCompositionArgs = {
+  newDatasetName: string;
+  targetFolderId: string;
+  organizationName: string;
+  scale: Vector3;
+  layers: LayerLink[];
+};
+
+export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
+      data: payload,
+    }),
   );
 }
 
@@ -1646,17 +1665,13 @@ export async function isDatasetNameValid(
     return "The dataset name must not be empty.";
   }
 
-  try {
-    await Request.receiveJSON(
-      `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-      {
-        showErrorToast: false,
-      },
-    );
+  const response = await Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
+  );
+  if (response.isValid) {
     return null;
-  } catch (ex) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'msg' implicitly has an 'any' type.
-    return ex.messages.map((msg) => Object.values(msg)[0]).join(". ");
+  } else {
+    return response.errors[0];
   }
 }
 
@@ -2212,7 +2227,7 @@ export function computeAdHocMesh(
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
-          additionalCoordinates: additionalCoordinates,
+          additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
@@ -2236,15 +2251,21 @@ export function getBucketPositionsForAdHocMesh(
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.append("token", token);
-    params.append("cubeSize", `${cubeSize.join(",")}`);
-    params.append("mag", `${mag.join("-")}`);
-
-    const positions = await Request.receiveJSON(
+    const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      {
+        data: {
+          cubeSize,
+          mag,
+          additionalCoordinates,
+        },
+        method: "POST",
+      },
     );
     return positions;
   });

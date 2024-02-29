@@ -43,6 +43,9 @@ import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import messages from "messages";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { Store } from "oxalis/singletons";
+import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -363,6 +366,59 @@ export function getVisibleSegments(state: OxalisState): {
   // There aren't any segment groups for view-only layers
   const { segments } = state.localSegmentationData[layer.name];
   return { segments, segmentGroups: [] };
+}
+
+// Next to returning a clean list of selected segments or group, this method returns
+// a callback function that updates the selectedIds in store if segments are stored
+// there that are not visible in the segments view tab.
+// The returned segment and group ids are all visible in the segments view tab.
+export function getSelectedIds(state: OxalisState): [
+  {
+    segments: number[];
+    group: number | null;
+  },
+  (() => void) | null,
+] {
+  // Ensure that the ids of previously selected segments are removed
+  // if these segments aren't visible in the segments tab anymore.
+  const nothingSelectedObject = { segments: [], group: null };
+  let maybeSetSelectedSegmentsOrGroupsAction = null;
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (visibleSegmentationLayer == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
+  const { segments, group } = segmentationLayerData.selectedIds;
+  if (segments.length === 0 && group == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const currentVisibleSegments = getVisibleSegments(state);
+  const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
+  let cleanedSelectedGroup = null;
+  if (group != null) {
+    const availableGroups = currentVisibleSegments.segmentGroups
+      .map((group) => group.groupId)
+      .concat(MISSING_GROUP_ID);
+    cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
+  }
+  const selectedIds = {
+    segments: segments.filter((id) => currentSegmentIds.has(id)),
+    group: cleanedSelectedGroup,
+  };
+  const haveSegmentsOrGroupBeenRemovedFromList =
+    selectedIds.segments.length !== segments.length || selectedIds.group !== group;
+  if (haveSegmentsOrGroupBeenRemovedFromList) {
+    maybeSetSelectedSegmentsOrGroupsAction = () => {
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          selectedIds.segments,
+          selectedIds.group,
+          visibleSegmentationLayer.name,
+        ),
+      );
+    };
+  }
+  return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
 }
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {

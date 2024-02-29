@@ -1,6 +1,6 @@
 package models.job
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Formatter

@@ -255,7 +255,7 @@ class JobListView extends React.PureComponent<Props, State> {
               cancelJob(job.id).then(() => this.fetchData());
             }
           }}
-          icon={<CloseCircleOutlined key="cancel" />}
+          icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
         >
           Cancel
         </AsyncLink>
@@ -268,7 +268,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}
@@ -279,7 +279,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined />
+              <DownOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -290,7 +290,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined />
+              <DownOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -308,7 +308,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Segmentation">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}

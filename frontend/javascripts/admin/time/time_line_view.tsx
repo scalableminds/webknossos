@@ -1,4 +1,4 @@
-import { Select, Card, Form, Row, Col, Spin } from "antd";
+import { Select, Card, Form, Row, Col, Spin, DatePicker } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
@@ -17,8 +17,6 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import TimeTrackingChart from "./time_line_chart_view";
-import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
-import generatePicker from "antd/es/date-picker/generatePicker";
 
 import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -27,7 +25,6 @@ import * as Utils from "libs/utils";
 import { typeFilters, getTaskFilterOptions } from "admin/statistic/time_tracking_overview";
 
 const FormItem = Form.Item;
-const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
 
 const dayFormat = "dd, MMM, YYYY";

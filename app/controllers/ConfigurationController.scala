@@ -33,8 +33,8 @@ class ConfigurationController @Inject()(
     } yield JsonOk(Messages("user.configuration.updated"))
   }
 
-  def readDataSetViewConfiguration(organizationName: String,
-                                   dataSetName: String,
+  def readDatasetViewConfiguration(organizationName: String,
+                                   datasetName: String,
                                    sharingToken: Option[String]): Action[List[String]] =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -42,43 +42,43 @@ class ConfigurationController @Inject()(
         .flatMap(
           user =>
             datasetConfigurationService
-              .getDataSetViewConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName)(
+              .getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetName, organizationName)(
                 GlobalAccessContext))
         .orElse(
           datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body,
-                                                                            dataSetName,
+                                                                            datasetName,
                                                                             organizationName)(ctx)
         )
         .getOrElse(Map.empty)
         .map(configuration => Ok(Json.toJson(configuration)))
     }
 
-  def updateDataSetViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =
+  def updateDatasetViewConfiguration(organizationName: String, datasetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
         datasetConf = conf - "layers"
         layerConf = conf.get("layers")
-        _ <- userService.updateDataSetViewConfiguration(request.identity,
-                                                        dataSetName,
+        _ <- userService.updateDatasetViewConfiguration(request.identity,
+                                                        datasetName,
                                                         organizationName,
                                                         datasetConf,
                                                         layerConf)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))
     }
 
-  def readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[AnyContent] =
+  def readDatasetAdminViewConfiguration(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       datasetConfigurationService
-        .getCompleteAdminViewConfiguration(dataSetName, organizationName)
+        .getCompleteAdminViewConfiguration(datasetName, organizationName)
         .map(configuration => Ok(Json.toJson(configuration)))
     }
 
-  def updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =
+  def updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)

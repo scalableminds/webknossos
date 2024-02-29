@@ -13,9 +13,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   NullCompressor
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
@@ -35,52 +34,53 @@ case class Zarr3ArrayHeader(
 ) extends DatasetHeader
     with BoxImplicits {
 
-  override def datasetShape: Array[Int] = shape
+  override def datasetShape: Option[Array[Int]] = Some(shape)
 
-  override def chunkSize: Array[Int] = getChunkSize
+  override def chunkShape: Array[Int] = getChunkSize
 
   override def dimension_separator: DimensionSeparator = getDimensionSeparator
-
-  override def dataType: String = data_type.left.getOrElse("extension")
 
   override lazy val order: ArrayOrder = getOrder
 
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
-  private def zarr3DataType: Zarr3DataType = Zarr3DataType.fromString(dataType).getOrElse(raw)
+  private def zarr3DataType: Zarr3DataType =
+    Zarr3DataType.fromString(data_type.left.getOrElse("extension")).getOrElse(raw)
 
   override def resolvedDataType: ArrayDataType = Zarr3DataType.toArrayDataType(zarr3DataType)
 
   override def compressorImpl: Compressor = new NullCompressor // Not used, since specific chunk reader is used
 
-  override def voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
+  override def voxelOffset: Array[Int] = Array.fill(rank)(0)
 
   override def isSharded: Boolean =
-    codecs.exists {
-      case _: ShardingCodecConfiguration => true
-      case _                             => false
-    }
+    shardingCodecConfiguration.isDefined
+
+  private def shardingCodecConfiguration = codecs.collectFirst {
+    case s: ShardingCodecConfiguration => s
+  }
 
   def assertValid: Box[Unit] =
     for {
       _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
       _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
+      _ <- shardingCodecConfiguration
+        .map(_.isSupported)
+        .getOrElse(Full(())) ?~! "Sharding codec configuration is not supported"
     } yield ()
 
-  def elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
-
-  def outerChunkSize: Array[Int] = chunk_grid match {
+  def outerChunkShape: Array[Int] = chunk_grid match {
     case Left(chunkGridSpecification) => chunkGridSpecification.configuration.chunk_shape
     case Right(_)                     => ???
   }
 
   private def getChunkSize: Array[Int] = {
     val shardingCodecInnerChunkSize = codecs.flatMap {
-      case ShardingCodecConfiguration(chunk_shape, _, _) => Some(chunk_shape)
-      case _                                             => None
+      case ShardingCodecConfiguration(chunk_shape, _, _, _) => Some(chunk_shape)
+      case _                                                => None
     }.headOption
-    shardingCodecInnerChunkSize.getOrElse(outerChunkSize)
+    shardingCodecInnerChunkSize.getOrElse(outerChunkShape)
   }
 
   // Note: this currently works if only a single transpose codec is present,
@@ -195,7 +195,10 @@ object Zarr3ArrayHeader extends JsonImplicits {
         chunk_shape <- config("chunk_shape").validate[Array[Int]]
         codecs = readCodecs(config("codecs"))
         index_codecs = readCodecs(config("index_codecs"))
-      } yield ShardingCodecConfiguration(chunk_shape, codecs, index_codecs)
+        index_location = (config \ "index_location")
+          .asOpt[IndexLocationSetting.IndexLocationSetting]
+          .getOrElse(IndexLocationSetting.end)
+      } yield ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location)
 
     private def readCodecs(value: JsValue): Seq[CodecConfiguration] = {
       val rawCodecSpecs: Seq[JsValue] = value match {

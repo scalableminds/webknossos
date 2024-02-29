@@ -22,7 +22,7 @@ trait WKWLayer extends DataLayer {
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new WKWBucketProvider(this)
+    new WKWBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def wkwResolutions: List[WKWResolution]
 

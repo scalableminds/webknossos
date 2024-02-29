@@ -1,26 +1,30 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.uploading
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Metadata
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common._
 import net.liftweb.common.Box.tryo
+import net.liftweb.common._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(
@@ -65,13 +69,13 @@ object CancelUploadInformation {
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              exploreLocalLayerService: ExploreLocalLayerService)(implicit ec: ExecutionContext)
-    extends LazyLogging
-    with DataSetDeleter
+                              exploreLocalLayerService: ExploreLocalLayerService,
+                              datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+    extends DatasetDeleter
     with DirectoryConstants
-    with FoxImplicits {
-
-  val dataBaseDir: Path = dataSourceService.dataBaseDir
+    with FoxImplicits
+    with BoxImplicits
+    with LazyLogging {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
@@ -96,6 +100,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___file___${fileName}___chunkSet"
 
   cleanUpOrphanUploads()
+
+  override def dataBaseDir: Path = dataSourceService.dataBaseDir
 
   def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
@@ -218,8 +224,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
       _ <- dataSourceRepository.updateDataSource(dataSource)
-      dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
-    } yield (dataSourceId, dataSetSizeBytes)
+      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
+    } yield (dataSourceId, datasetSizeBytes)
   }
 
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
@@ -233,34 +239,46 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         _ <- Fox.successful(())
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
-          case UploadedDataSourceType.ZARR            => exploreLocalDatasource(unpackToDir, dataSourceId)
-          case UploadedDataSourceType.EXPLORED        => Fox.successful(())
-          case UploadedDataSourceType.ZARR_MULTILAYER => tryExploringMultipleZarrLayers(unpackToDir, dataSourceId)
-          case UploadedDataSourceType.WKW             => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+          case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED |
+              UploadedDataSourceType.N5 =>
+            exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
+          case UploadedDataSourceType.EXPLORED => Fox.successful(())
+          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER |
+              UploadedDataSourceType.N5_MULTILAYER =>
+            tryExploringMultipleLayers(unpackToDir, dataSourceId, uploadedDataSourceType)
+          case UploadedDataSourceType.WKW => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+        _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
 
-  private def exploreLocalDatasource(path: Path, dataSourceId: DataSourceId): Fox[Unit] =
+  private def exploreLocalDatasource(path: Path,
+                                     dataSourceId: DataSourceId,
+                                     typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
-      _ <- addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(
+        addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
 
-  private def tryExploringMultipleZarrLayers(path: Path, dataSourceId: DataSourceId): Fox[Option[Path]] =
+  private def tryExploringMultipleLayers(path: Path,
+                                         dataSourceId: DataSourceId,
+                                         typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
-      layerDirs <- getZarrLayerDirectories(path)
+      layerDirs <- typ match {
+        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path)
+        case UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
+          PathUtils.listDirectories(path, silent = false).toFox
+      }
       dataSources <- Fox.combined(
         layerDirs
           .map(layerDir =>
             for {
               _ <- addLayerAndResolutionDirIfMissing(layerDir).toFox
-              explored: DataSource <- exploreLocalLayerService.exploreLocal(path,
-                                                                            dataSourceId,
-                                                                            layerDir.getFileName.toString)
+              explored: DataSourceWithMagLocators <- exploreLocalLayerService
+                .exploreLocal(path, dataSourceId, layerDir.getFileName.toString)
             } yield explored)
           .toList)
       combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
@@ -271,17 +289,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
-                                  dataSetNeedsConversion: Boolean,
+                                  datasetNeedsConversion: Boolean,
                                   label: String): Fox[Unit] =
     result match {
       case Full(_) =>
         Fox.successful(())
       case Empty =>
-        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         logger.warn(s"Error while $label: $msg, $e")
-        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
         for {
           _ <- result ?~> f"Error while $label"
@@ -314,23 +332,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
   }
-
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
-    Fox
-      .serialCombined(layersToLink) { layerToLink =>
-        val layerPath = layerToLink.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
-        for {
-          _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
-          _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
-          _ <- tryo {
-            Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
-          } ?~> s"Failed to create symlink at $newLayerPath."
-        } yield ()
-      }
-      .map { _ =>
-        ()
-      }
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationName: String,
@@ -369,27 +370,51 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       UploadedDataSourceType.EXPLORED
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).openOr(false)) {
+      UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).openOr(false)) {
+      UploadedDataSourceType.NEUROGLANCER_MULTILAYER
+    } else if (looksLikeN5Multilayer(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.N5_MULTILAYER
+    } else if (looksLikeN5Layer(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.N5
     } else {
       UploadedDataSourceType.WKW
     }
 
-  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+  private def containsMatchingFile(fileNames: List[String], dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     for {
-      listing: Seq[Path] <- PathUtils.listFilesRecursive(
-        dataSourceDir,
-        maxDepth = maxDepth,
-        silent = false,
-        filters = p => p.getFileName.toString == FILENAME_DOT_ZARRAY || p.getFileName.toString == FILENAME_DOT_ZATTRS)
+      listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
+                                                         maxDepth = maxDepth,
+                                                         silent = false,
+                                                         filters = p => fileNames.contains(p.getFileName.toString))
     } yield listing.nonEmpty
 
-  private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
+  private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    containsMatchingFile(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
+
+  private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    containsMatchingFile(List(FILENAME_INFO), dataSourceDir, maxDepth)
+
+  private def looksLikeN5Layer(dataSourceDir: Path): Box[Boolean] =
     for {
-      listing: Seq[Path] <- PathUtils.listFilesRecursive(
-        dataSourceDir,
-        maxDepth = 1,
-        silent = false,
-        filters = p => p.getFileName.toString == FILENAME_DATASOURCE_PROPERTIES_JSON)
-    } yield listing.nonEmpty
+      attributesFiles <- PathUtils.listFilesRecursive(dataSourceDir,
+                                                      silent = false,
+                                                      maxDepth = 1,
+                                                      filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
+      _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata]
+    } yield true
+
+  private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
+    for {
+      _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
+      detectedLayerBoxes = directories.map(looksLikeN5Layer)
+      _ <- bool2Box(detectedLayerBoxes.forall(_.openOr(false)))
+    } yield true
+
+  private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
+    containsMatchingFile(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
 
   private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
     for {
@@ -516,5 +541,5 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW = Value
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER, N5, N5_MULTILAYER = Value
 }

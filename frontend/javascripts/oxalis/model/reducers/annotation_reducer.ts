@@ -419,6 +419,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_SELECTED_SEGMENTS_OR_GROUP": {
+      const { selectedSegments, selectedGroup, layerName } = action;
+      return updateKey2(state, "localSegmentationData", layerName, {
+        selectedIds: { segments: selectedSegments, group: selectedGroup },
+      });
+    }
+
     case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
       return updateKey(state, "tracing", {
         othersMayEdit: action.othersMayEdit,

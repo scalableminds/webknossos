@@ -1,13 +1,17 @@
 package controllers
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -221,18 +225,18 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(organizationName: String, datasetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
-          dataSetName) ~> NOT_FOUND
+          datasetName) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
-          dataSet._id,
+          dataset._id,
           request.body
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
@@ -242,7 +246,7 @@ class AnnotationController @Inject()(
     }
 
   def getSandbox(organizationName: String,
-                 dataSetName: String,
+                 datasetName: String,
                  typ: String,
                  sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -251,21 +255,22 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx) ?~> Messages(
           "dataset.notFound",
-          dataSetName) ~> NOT_FOUND
+          datasetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(
           ObjectId.dummyId,
-          dataSet._id,
+          dataset._id,
           None,
           ObjectId.dummyId,
           ObjectId.dummyId,
           List(
             AnnotationLayer(TracingIds.dummyTracingId,
                             AnnotationLayerType.Skeleton,
-                            AnnotationLayer.defaultSkeletonLayerName))
+                            AnnotationLayer.defaultSkeletonLayerName,
+                            AnnotationLayerStatistics.unknown))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
@@ -532,9 +537,11 @@ class AnnotationController @Inject()(
         annotationInfos <- annotationDAO.findAllListableExplorationals(
           isFinished,
           None,
+          isForOwnDashboard = true,
           AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
         annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
@@ -586,12 +593,12 @@ class AnnotationController @Inject()(
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataSet <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
-      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataset.notImported", dataSet.name)
+      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       dataSource <- if (annotation._task.isDefined)
-        datasetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+        datasetService.dataSourceFor(dataset).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>
         duplicateAnnotationLayer(annotationLayer,
                                  annotation._task.isDefined,
@@ -599,7 +606,7 @@ class AnnotationController @Inject()(
                                  tracingStoreClient)
       }
       clonedAnnotation <- annotationService.createFrom(user,
-                                                       dataSet,
+                                                       dataset,
                                                        newAnnotationLayers,
                                                        AnnotationType.Explorational,
                                                        None,
@@ -608,14 +615,14 @@ class AnnotationController @Inject()(
 
   private def duplicateAnnotationLayer(annotationLayer: AnnotationLayer,
                                        isFromTask: Boolean,
-                                       dataSetBoundingBox: Option[BoundingBox],
+                                       datasetBoundingBox: Option[BoundingBox],
                                        tracingStoreClient: WKRemoteTracingStoreClient): Fox[AnnotationLayer] =
     for {
 
       newTracingId <- if (annotationLayer.typ == AnnotationLayerType.Skeleton) {
         tracingStoreClient.duplicateSkeletonTracing(annotationLayer.tracingId, None, isFromTask) ?~> "Failed to duplicate skeleton tracing."
       } else {
-        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, dataSetBoundingBox) ?~> "Failed to duplicate volume tracing."
+        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, datasetBoundingBox) ?~> "Failed to duplicate volume tracing."
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
 

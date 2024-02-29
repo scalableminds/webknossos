@@ -96,7 +96,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataSet.name.alreadyTaken"
+      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
       _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
@@ -107,7 +107,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       credentialIdentifier: Option[String],
       credentialSecret: Option[String],
       reportMutable: ListBuffer[String],
-      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     for {
       uri <- tryo(new URI(exploreLayerService.removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
@@ -142,11 +142,11 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist"
     } else Fox.successful(())
 
-  private def exploreRemoteLayersForRemotePath(
-      remotePath: VaultPath,
-      credentialId: Option[String],
-      reportMutable: ListBuffer[String],
-      explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreRemoteLayersForRemotePath(remotePath: VaultPath,
+                                               credentialId: Option[String],
+                                               reportMutable: ListBuffer[String],
+                                               explorers: List[RemoteLayerExplorer])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>

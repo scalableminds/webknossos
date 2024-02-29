@@ -55,9 +55,9 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
-  def findPositionWithData(organizationName: String, dataSet: Dataset, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(organizationName: String, dataset: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 

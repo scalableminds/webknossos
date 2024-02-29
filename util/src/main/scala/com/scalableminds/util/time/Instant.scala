@@ -69,7 +69,13 @@ object Instant extends FoxImplicits {
   def since(before: Instant): FiniteDuration = now - before
 
   private def fromStringSync(instantLiteral: String): Option[Instant] =
+    fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))
+
+  private def fromIsoString(instantLiteral: String): Option[Instant] =
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
+
+  private def fromEpochMillisString(instantLiteral: String): Option[Instant] =
+    tryo(instantLiteral.toLong).map(timestamp => Instant(timestamp))
 
   implicit object InstantFormat extends Format[Instant] {
     override def reads(json: JsValue): JsResult[Instant] =

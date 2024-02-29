@@ -33,6 +33,10 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             activeAgglomerateIds: [],
             skeleton: null,
           },
+          selectedIds: {
+            segments: [],
+            group: null,
+          },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

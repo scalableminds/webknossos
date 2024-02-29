@@ -52,6 +52,8 @@ import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_acces
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { SearchProps } from "antd/lib/input";
+import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
+import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -270,7 +272,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${id}`}>
-            <PlayCircleOutlined />
+            <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
           <br />
@@ -280,7 +282,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
               return downloadAnnotation(id, typ, hasVolumeTracing);
             }}
-            icon={<DownloadOutlined key="download" />}
+            icon={<DownloadOutlined key="download" className="icon-margin-right" />}
           >
             Download
           </AsyncLink>
@@ -289,7 +291,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <AsyncLink
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
-              icon={<InboxOutlined key="inbox" />}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
             >
               Archive
             </AsyncLink>
@@ -303,7 +305,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", tracing)}
-            icon={<FolderOpenOutlined key="folder" />}
+            icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
           </AsyncLink>
@@ -489,11 +491,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    return Utils.filterWithSearchQueryAND(
+    const filteredTracings = Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
       ["id", "name", "modified", "tags", "owner"],
-      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+      this.state.searchQuery,
     );
+
+    if (this.state.tags.length === 0) {
+      // This check is not strictly necessary, but serves
+      // as an early-out to save some computations.
+      return filteredTracings;
+    }
+
+    return filteredTracings.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
   }
 
   renderIdAndCopyButton(tracing: APIAnnotationInfo) {
@@ -507,7 +517,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Tooltip title="Copy long ID" placement="bottom">
           <Button
             onClick={copyIdToClipboard}
-            icon={<CopyOutlined className="without-icon-margin" />}
+            icon={<CopyOutlined />}
             style={{
               boxShadow: "none",
               backgroundColor: "transparent",
@@ -680,46 +690,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           width={150}
-          render={(__, annotation: APIAnnotationInfo) =>
-            "treeCount" in annotation.stats &&
-            "nodeCount" in annotation.stats &&
-            "edgeCount" in annotation.stats ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "30% auto",
-                }}
-              >
-                <span
-                  title="Trees"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-sitemap" />
-                </span>
-                <span>{annotation.stats.treeCount}</span>
-                <span
-                  title="Nodes"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-circle fa-sm" />
-                </span>
-                <span>{annotation.stats.nodeCount}</span>
-                <span
-                  title="Edges"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-arrows-alt-h" />
-                </span>
-                <span>{annotation.stats.edgeCount}</span>
-              </div>
-            ) : null
-          }
+          render={(__, annotation: APIAnnotationInfo) => (
+            <AnnotationStats
+              stats={getCombinedStatsFromServerAnnotation(annotation)}
+              asInfoBlock={false}
+            />
+          )}
         />
         <Column
           title="Tags"

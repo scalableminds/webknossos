@@ -5,11 +5,8 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{
-  DataStoreStatus,
-  LinkedLayerIdentifier,
-  ReserveUploadInformation
-}
+import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
 
@@ -58,7 +55,7 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def reserveDataSetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
+  def reserveDatasetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body
@@ -77,10 +74,10 @@ class WKRemoteDataStoreController @Inject()(
           folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          dataSet <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
-          _ <- datasetDAO.updateFolder(dataSet._id, folderId)(GlobalAccessContext)
-          _ <- datasetService.addInitialTeams(dataSet, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
-          _ <- datasetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
+          dataset <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
+          _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
+          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
+          _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
         } yield Ok
       }
     }
@@ -91,29 +88,29 @@ class WKRemoteDataStoreController @Inject()(
       organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.organizationName) ~> NOT_FOUND
-      dataSet <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+      dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
-      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataSet._organization)
-      _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataSet.isPublic) ?~> "dataset.upload.linkRestricted"
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
+      _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
     } yield ()
 
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          dataSetName: String,
-                          dataSetSizeBytes: Long,
+                          datasetName: String,
+                          datasetSizeBytes: Long,
                           needsConversion: Boolean,
                           viaAddRoute: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataSet <- datasetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
-            dataSetName) ~> NOT_FOUND
-          _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataSet))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataSetName, viaAddRoute))
-          _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
+            datasetName) ~> NOT_FOUND
+          _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, datasetName, viaAddRoute))
+          _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok
       }

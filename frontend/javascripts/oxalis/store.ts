@@ -27,6 +27,7 @@ import type {
   AdditionalCoordinate,
   AdditionalAxis,
 } from "types/api_flow_types";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
   BoundingBoxType,
@@ -48,7 +49,6 @@ import type {
 } from "oxalis/constants";
 import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
@@ -429,7 +429,7 @@ export type SaveQueueEntry = {
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;
-  stats: SkeletonTracingStats | null | undefined;
+  stats: TracingStats | null | undefined;
   info: string;
 };
 export type ProgressInfo = {
@@ -582,6 +582,9 @@ export type OxalisState = {
       // The `segments` here should only be used for non-annotation volume
       // layers.
       readonly segments: SegmentMap;
+      // Note that segments that are not in the segment tab could be stored as selected.
+      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+      readonly selectedIds: { segments: number[]; group: number | null };
       readonly connectomeData: ConnectomeData;
     }
   >;

@@ -305,7 +305,7 @@ function useManagedUrlParams(
       setActiveFolderId(folderId);
     }
     const recursive = params.get("recursive");
-    setSearchRecursively(!!recursive);
+    if (recursive != null) setSearchRecursively(recursive === "true");
 
     const folderSpecifier = _.last(location.pathname.split("/"));
 
@@ -352,7 +352,7 @@ function useManagedUrlParams(
         if (searchRecursively) {
           params.set("recursive", "true");
         } else {
-          params.delete("recursive");
+          params.set("recursive", "false");
         }
       } else {
         params.delete("folderId");

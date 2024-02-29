@@ -48,6 +48,9 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   return new Matrix(affineMatrix);
 }
 
-export function estimateAffineMatrix4x4(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+export function estimateAffineMatrix4x4(
+  sourcePoints: Vector3[],
+  targetPoints: Vector3[],
+): Matrix4x4 {
   return estimateAffine(sourcePoints, targetPoints).to1DArray() as any as Matrix4x4;
 }

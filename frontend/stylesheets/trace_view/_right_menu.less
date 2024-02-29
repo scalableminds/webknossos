@@ -2,7 +2,7 @@
 // Currently tabs for comments / trees etc
 
 .flexlayout__tab_border_right {
-  font-size: @font-size-base;
+  font-size: var(--ant-font-size);
 }
 
 #abstract-tree-canvas {
@@ -40,11 +40,11 @@
     display: none;
   }
   &.is-selected-cell {
-    background-color: @blue-3;
+    background-color: var(--ant-blue-3);
   }
 
   &:hover {
-    background-color: @blue-1;
+    background-color: var(--ant-blue-1);
     .anticon-edit,
     .anticon-ellipsis {
       display: inline-block;
@@ -53,7 +53,7 @@
   // If a cell is hovered in the data viewports,
   // it should also be highlighted in the list.
   &.is-hovered-cell {
-    background-color: @blue-1;
+    background-color: var(--ant-blue-1);
   }
 }
 
@@ -64,11 +64,11 @@
     line-height: 24px;
     cursor: pointer;
     &:hover {
-      background-color: @blue-1;
+      background-color: var(--ant-blue-1);
     }
   }
   .comment-active {
-    background-color: @blue-3;
+    background-color: var(--ant-blue-3);
   }
 }
 
@@ -95,7 +95,8 @@
     margin-left: 5px;
   }
 
-  .ant-input-group {
+  .ant-space-compact {
+    // Spacing between skeleton tab buttons and name input
     margin: 0 0 10px 0;
   }
 
@@ -109,7 +110,7 @@
   }
 
   .selected-tree-node {
-    background-color: @blue-zircon;
+    background-color: var(--color-blue-zircon);
   }
 
   .rst__rowLabel {
@@ -119,9 +120,9 @@
     }
   }
   .rst__rowSearchMatch .rst__rowLabel {
-    background-color: @blue-3;
+    background-color: var(--ant-blue-3);
     &:hover {
-      background-color: @blue-1;
+      background-color: var(--ant-blue-1);
     }
   }
 }
@@ -142,7 +143,7 @@
   h5 {
     font-size: 16px;
     margin-bottom: 0;
-    color: @text-color;
+    color: var(--ant-color-text);
   }
   max-height: 24px;
   overflow: hidden;
@@ -197,17 +198,26 @@
 .annotation-stats-table {
   margin-left: 4px;
 
-  td { 
+  td {
     padding-bottom: 10px;
-    
+
     &:first-of-type {
       padding-right: 20px;
     }
   }
 }
 
-.info-tab-block {
+.annotation-stats-table-slim {
+  width: auto !important;
 
+  td {
+    &:first-of-type {
+      padding-right: 10px;
+    }
+  }
+}
+
+.info-tab-block {
   margin-bottom: 14px;
 
   .info-tab-icon {

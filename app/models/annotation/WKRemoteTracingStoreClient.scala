@@ -24,10 +24,10 @@ import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, rpc: RPC)(implicit ec: ExecutionContext)
+class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataset: Dataset, rpc: RPC)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def baseInfo = s" Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"
+  def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
   def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
@@ -93,7 +93,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
 
   def duplicateVolumeTracing(volumeTracingId: String,
                              isFromTask: Boolean = false,
-                             dataSetBoundingBox: Option[BoundingBox] = None,
+                             datasetBoundingBox: Option[BoundingBox] = None,
                              resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
                              downsample: Boolean = false,
                              editPosition: Option[Vec3Int] = None,
@@ -109,7 +109,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: Dataset, r
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryString("downsample" -> downsample.toString)
-      .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
+      .postJsonWithJsonResponse[Option[BoundingBox], String](datasetBoundingBox)
   }
 
   def addSegmentIndex(volumeTracingId: String, dryRun: Boolean): Fox[Unit] =

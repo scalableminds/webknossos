@@ -817,10 +817,16 @@ function Navbar({
       <MaintenanceBanner />
       <input
         type="tel"
-        size="5"
-        tabindex="-1"
-        readonly
-        style="position:fixed;-webkit-appearance：none;box-shadow:none;border:none;background:none;cursor:default;"
+        tabIndex={-1}
+        readOnly
+        style={{
+          position: "fixed",
+          appearance: "none",
+          boxShadow: "none",
+          border: "none",
+          background: "none",
+          cursor: "default",
+        }}
       />
       <Menu
         mode="horizontal"

@@ -55,6 +55,12 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
       });
     }
 
+    if (this.inputRef.current && document.activeElement != this.inputRef.current.input) {
+      // Don't mutate the selection if the element is not active. Otherwise,
+      // the on-screen keyboard opens on iOS when moving through the dataset.
+      return;
+    }
+
     // Restore the remembered selection when necessary
     try {
       // @ts-ignore

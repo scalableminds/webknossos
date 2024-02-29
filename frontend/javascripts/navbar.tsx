@@ -815,6 +815,13 @@ function Navbar({
       })}
     >
       <MaintenanceBanner />
+      <input
+        type="tel"
+        size="5"
+        tabindex="-1"
+        readonly
+        style="position:fixed;-webkit-appearance：none;box-shadow:none;border:none;background:none;cursor:default;"
+      />
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

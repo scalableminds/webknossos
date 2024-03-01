@@ -11,7 +11,9 @@
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",
       "*.d.ts",
-      "*.spec.ts"
+      "*.spec.ts",
+      "*.e2e.ts",
+      "e2e-setup.ts"
     ]
   },
   "linter": {

@@ -1,13 +1,13 @@
-import * as api from "admin/admin_rest_api";
-import test from "ava";
 import _ from "lodash";
 import {
-  resetDatabase,
-  setCurrToken,
   tokenUserA,
+  setCurrToken,
+  resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import type { APIDataset } from "types/api_flow_types";
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasetsOfMyOrganization();

@@ -1,12 +1,12 @@
-import * as api from "admin/admin_rest_api";
-import test from "ava";
 import _ from "lodash";
 import {
-  resetDatabase,
-  setCurrToken,
   tokenUserA,
+  setCurrToken,
+  resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);

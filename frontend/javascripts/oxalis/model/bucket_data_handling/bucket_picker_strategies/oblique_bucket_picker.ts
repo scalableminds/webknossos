@@ -20,17 +20,41 @@ const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition
 const ALPHA = Math.PI / 2;
 // prettier-ignore
 const YZ_ROTATION = [
-    Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
-    0, 1, 0, 0,
-    -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
-    0, 0, 0, 1,
+  Math.cos(ALPHA),
+  0,
+  Math.sin(ALPHA),
+  0,
+  0,
+  1,
+  0,
+  0,
+  -Math.sin(ALPHA),
+  0,
+  Math.cos(ALPHA),
+  0,
+  0,
+  0,
+  0,
+  1,
 ] as Matrix4x4;
 // prettier-ignore
 const XZ_ROTATION = [
-  1, 0, 0, 0,
-  0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
-  0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
-  0, 0, 0, 1,
+  1,
+  0,
+  0,
+  0,
+  0,
+  Math.cos(ALPHA),
+  -Math.sin(ALPHA),
+  0,
+  0,
+  Math.sin(ALPHA),
+  Math.cos(ALPHA),
+  0,
+  0,
+  0,
+  0,
+  1,
 ] as Matrix4x4;
 
 export default function determineBucketsForOblique(

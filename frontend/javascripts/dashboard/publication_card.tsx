@@ -184,7 +184,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
   const sortedItems: Array<PublicationItem> = [
     ...publication.datasets
       .filter((dataset) => dataset.isActive)
-      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
       .filter((annotation) => annotation.dataSet.isActive)
       .map(
@@ -193,7 +193,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             type: PublicationItemType.ANNOTATION,
             annotation,
             dataset: annotation.dataSet,
-          } as PublicationItem),
+          }) as PublicationItem,
       ),
   ];
   sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));

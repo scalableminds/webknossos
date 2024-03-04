@@ -395,8 +395,8 @@ function GlobalSearchHeader({
             activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
-              ? "folder-with-subfolders"
-              : "folder"
+                ? "folder-with-subfolders"
+                : "folder"
           }
         />
       </div>

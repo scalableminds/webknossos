@@ -76,10 +76,18 @@ class Plane {
 
       // prettier-ignore
       const crosshairVertices = new Float32Array([
-        (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
-        -25 * i, -25 * (1 - i), 0,
-        25 * i, 25 * (1 - i), 0,
-        (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
+        (-pWidth / 2) * i,
+        (-pWidth / 2) * (1 - i),
+        0,
+        -25 * i,
+        -25 * (1 - i),
+        0,
+        25 * i,
+        25 * (1 - i),
+        0,
+        (pWidth / 2) * i,
+        (pWidth / 2) * (1 - i),
+        0,
       ]);
 
       crosshairGeometries[i].setAttribute(

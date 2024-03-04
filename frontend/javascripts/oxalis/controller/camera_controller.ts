@@ -36,7 +36,24 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   const right = V3.normalize(V3.cross(up, forward));
   const rotationMatrix = new THREE.Matrix4();
   // prettier-ignore
-  rotationMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
+  rotationMatrix.set(
+    right[0],
+    up[0],
+    forward[0],
+    0,
+    right[1],
+    up[1],
+    forward[1],
+    0,
+    right[2],
+    up[2],
+    forward[2],
+    0,
+    0,
+    0,
+    0,
+    1,
+  );
   const quat = new THREE.Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
   return quat;

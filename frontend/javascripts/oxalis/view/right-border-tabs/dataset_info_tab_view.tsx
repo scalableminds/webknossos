@@ -244,10 +244,7 @@ export function AnnotationStats({
           {"segmentCount" in stats ? (
             <Tooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize(
-                "Segment",
-                stats.segmentCount,
-              )} – Only segments that were manually registered (either brushed or
+              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
                                       interacted with) are counted in this statistic. Segmentation layers
                                       created from automated workflows (also known as fallback layers) are not
                                       considered currently.`}

@@ -261,7 +261,7 @@ class EditableMappingService @Inject()(
             remoteDatastoreClient,
             this,
             tracingDataStore,
-            relyOnAgglomerateIds = true
+            relyOnAgglomerateIds = pendingUpdates.length <= 1
           )
 
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)

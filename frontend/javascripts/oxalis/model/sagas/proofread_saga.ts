@@ -191,13 +191,19 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
-function* createEditableMapping(): Saga<void> {
+function* createEditableMapping(): Saga<string> {
+  /*
+   * Returns the name of the editable mapping. This is not identical to the
+   * name of the HDF5 mapping for which the editable mapping is about to be created.
+   */
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   // Save before making the mapping editable to make sure the correct mapping is activated in the backend
   yield* call([Model, Model.ensureSavedState]);
   // Get volume tracing again to make sure the version is up to date
   const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (upToDateVolumeTracing == null) return;
+  if (upToDateVolumeTracing == null) {
+    throw new Error("No active segmentation tracing layer. Cannot create editble mapping.");
+  }
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
   const layerName = volumeTracingId;
@@ -207,6 +213,7 @@ function* createEditableMapping(): Saga<void> {
   yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));
   yield* put(setMappingIsEditableAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
+  return serverEditableMapping.mappingName;
 }
 
 function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
@@ -628,8 +635,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 }
 
 function* handleProofreadCutNeighbors(action: Action) {
-  // Actually, action is ProofreadMergeAction | MinCutAgglomerateWithPositionAction | CutAgglomerateFromNeighborsAction
-  // but the takeEveryUnlessBusy wrapper does not understand this.
+  // Actually, action is CutAgglomerateFromNeighborsAction but the
+  // takeEveryUnlessBusy wrapper does not understand this.
   if (action.type !== "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
     return;
   }
@@ -726,7 +733,7 @@ function* prepareSplitOrMerge(): Saga<{
   if (volumeTracingLayer == null || volumeTracing == null) {
     return null;
   }
-  const { mappingName } = volumeTracing;
+  let { mappingName } = volumeTracing;
   if (mappingName == null) {
     return null;
   }
@@ -738,7 +745,7 @@ function* prepareSplitOrMerge(): Saga<{
 
   if (!volumeTracing.mappingIsEditable) {
     try {
-      yield* call(createEditableMapping);
+      mappingName = yield* call(createEditableMapping);
     } catch (e) {
       console.error(e);
       return null;

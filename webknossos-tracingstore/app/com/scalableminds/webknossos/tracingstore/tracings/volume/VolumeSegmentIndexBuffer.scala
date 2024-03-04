@@ -130,9 +130,13 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   ): (List[(Long, Seq[Vec3Int])], List[Long]) = {
-    val hits = segmentIds.map(id => {
+    val hits = segmentIds.flatMap(id => {
       val key = segmentIndexKey(tracingId, id, mag, additionalCoordinates, additionalAxes)
-      (id, segmentIndexBuffer.get(key).map(_.values.map(vec3IntFromProto)).getOrElse(Seq()))
+      val values = segmentIndexBuffer.get(key).map(_.values.map(vec3IntFromProto))
+      values match {
+        case Some(positions) => Some(id, positions)
+        case None            => None
+      }
     })
     val misses = segmentIds.filterNot(id => hits.exists(_._1 == id))
     (hits, misses)

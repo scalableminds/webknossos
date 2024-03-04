@@ -75,6 +75,7 @@ import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { APIJobType } from "types/api_flow_types";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -397,6 +398,7 @@ function AdditionalSkeletonModesButtons() {
   const isNewNodeNewTreeModeOn = useSelector(
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
+  const dataset = useSelector((state: OxalisState) => state.dataset);
 
   const segmentationTracingLayer = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
@@ -416,6 +418,12 @@ function AdditionalSkeletonModesButtons() {
     ? ACTIVE_BUTTON_STYLE
     : NARROW_BUTTON_STYLE;
   const mergerModeButtonStyle = isMergerModeEnabled ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+
+  const isMaterializeVolumeAnnotationEnabled =
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+      APIJobType.MATERIALIZE_VOLUME_ANNOTATION,
+    );
+
   return (
     <React.Fragment>
       <ButtonComponent
@@ -444,7 +452,7 @@ function AdditionalSkeletonModesButtons() {
           alt="Merger Mode"
         />
       </ButtonComponent>
-      {features().jobsEnabled && isMergerModeEnabled && (
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
@@ -453,7 +461,7 @@ function AdditionalSkeletonModesButtons() {
           <ExportOutlined />
         </ButtonComponent>
       )}
-      {features().jobsEnabled && showMaterializeVolumeAnnotationModal && (
+      {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
         />

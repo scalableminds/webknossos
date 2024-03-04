@@ -23,6 +23,7 @@ import {
   RenderAnimationOptions,
   MOVIE_RESOLUTIONS,
   APIDataLayer,
+  APIJobType,
 } from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -237,6 +238,11 @@ function CreateAnimationModal(props: Props) {
     onClose(evt);
   };
 
+  const isFeatureDisabled = !(
+    dataset.dataStore.jobsEnabled &&
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.RENDER_ANIMATION)
+  );
+
   return (
     <Modal
       title="Create Animation"
@@ -244,7 +250,8 @@ function CreateAnimationModal(props: Props) {
       width={700}
       onOk={submitJob}
       onCancel={onClose}
-      okText="Start Animation"
+      okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
+      okButtonProps={{ disabled: isFeatureDisabled }}
     >
       <React.Fragment>
         <Row gutter={8}>

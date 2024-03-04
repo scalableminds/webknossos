@@ -1,13 +1,17 @@
-import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
-import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
-import type { Dispatch } from "redux";
-import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { ContourMode, OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
+import type {
+  BucketDataArray,
+  ServerEditableMapping,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -313,20 +317,10 @@ export const setContourTracingModeAction = (mode: ContourMode) =>
     mode,
   } as const);
 
-export const addBucketToUndoAction = (
-  zoomedBucketAddress: BucketAddress,
-  bucketData: BucketDataArray,
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
-  pendingOperations: Array<(arg0: BucketDataArray) => void>,
-  tracingId: string,
-) =>
+export const addBucketToUndoAction = (bucketSnapshot: BucketSnapshot) =>
   ({
     type: "ADD_BUCKET_TO_UNDO",
-    zoomedBucketAddress,
-    bucketData,
-    maybeUnmergedBucketLoadedPromise,
-    pendingOperations: pendingOperations.slice(),
-    tracingId,
+    bucketSnapshot,
   } as const);
 
 export const importVolumeTracingAction = () =>

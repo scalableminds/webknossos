@@ -1,7 +1,7 @@
 import { createNanoEvents, Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
@@ -16,6 +16,8 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { uint8ToTypedBuffer } from "../helpers/bucket_compression";
+import BucketSnapshot, { PendingOperation } from "./bucket_snapshot";
 
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -24,12 +26,7 @@ export const enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-export type BucketDataArray =
-  | Uint8Array
-  | Uint16Array
-  | Uint32Array
-  | Float32Array
-  | BigUint64Array;
+
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
   visualizeBucketsOnGPU: false,
@@ -58,7 +55,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type: "null" = "null";
+  readonly type: "null" = "null";
 
   hasData(): boolean {
     return false;
@@ -127,8 +124,9 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type: "data" = "data";
-  elementClass: ElementClass;
+  readonly type: "data" = "data";
+  readonly elementClass: ElementClass;
+  readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -141,12 +139,11 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
-  pendingOperations: Array<(arg0: BucketDataArray) => void> = [];
+  pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
   accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
@@ -323,7 +320,7 @@ export class DataBucket {
     return dataClone;
   }
 
-  async label_DEPRECATED(labelFunc: (arg0: BucketDataArray) => void): Promise<void> {
+  async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
     /*
      * It's not recommended to use this method (repeatedly), as it can be
      * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
@@ -349,6 +346,17 @@ export class DataBucket {
     }
 
     bucketsAlreadyInUndoState.add(this);
+
+    Store.dispatch(
+      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
+      // this bucket could be added to multiple undo batches while it's fetched. All entries
+      // need to have the corresponding promise for the undo to work correctly.
+      addBucketToUndoAction(this.getSnapshot()),
+    );
+  }
+
+  getSnapshot(): BucketSnapshot {
+    // todop: this potentially creates data via getOrCreateData. do we want this?
     const dataClone = this.getCopyOfData();
 
     if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
@@ -361,18 +369,20 @@ export class DataBucket {
       });
     }
 
-    Store.dispatch(
-      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-      // this bucket could be added to multiple undo batches while it's fetched. All entries
-      // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(
-        this.zoomedAddress,
-        dataClone,
-        this.maybeUnmergedBucketLoadedPromise,
-        this.pendingOperations,
-        this.getTracingId(),
-      ),
+    return new BucketSnapshot(
+      this.zoomedAddress,
+      dataClone,
+      this.maybeUnmergedBucketLoadedPromise,
+      this.pendingOperations.slice(),
+      this.getTracingId(),
+      this.elementClass,
     );
+  }
+
+  async restoreToSnapshot(snapshot: BucketSnapshot): Promise<void> {
+    const { newData, newPendingOperations } = await snapshot.getDataForRestore();
+    // Set the new bucket data. This will add the bucket directly to the pushqueue, too.
+    this.setData(newData, newPendingOperations);
   }
 
   hasData(): boolean {
@@ -389,23 +399,12 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
+  setData(newData: BucketDataArray, newPendingOperations: Array<PendingOperation>) {
     this.data = newData;
     this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-  }
-
-  uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    return arrayBuffer != null
-      ? new TypedArrayClass(
-          arrayBuffer.buffer,
-          arrayBuffer.byteOffset,
-          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        )
-      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {
@@ -581,7 +580,7 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: Uint8Array | null | undefined): void {
-    const data = this.uint8ToTypedBuffer(arrayBuffer);
+    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {

@@ -51,11 +51,13 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
-      verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
+      voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId, token) ?~> "voxelSize.failedToFetch"
+      verticesForChunks <- if (false) // (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(token,
                                           tracing,
                                           tracingId,
                                           mag,
+                                          voxelSize,
                                           fullMeshRequest,
                                           VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag))
       else
@@ -63,6 +65,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                            tracing,
                                            tracingId,
                                            mag,
+                                           voxelSize,
                                            fullMeshRequest,
                                            VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
                                            adHocChunkSize)
@@ -75,13 +78,16 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       tracingId: String,
       mag: Vec3Int,
+      voxelSize: Vec3Double,
       fullMeshRequest: FullMeshRequest,
-      topLeft: VoxelPosition)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] = ???
+      topLeft: VoxelPosition)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
+    Fox.failure("getAllAdHocChunksWithSegmentIndex not implemented")
 
   private def getAllAdHocChunksWithNeighborLogic(token: Option[String],
                                                  tracing: VolumeTracing,
                                                  tracingId: String,
                                                  mag: Vec3Int,
+                                                 voxelSize: Vec3Double,
                                                  fullMeshRequest: FullMeshRequest,
                                                  topLeft: VoxelPosition,
                                                  chunkSize: Vec3Int,
@@ -93,7 +99,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       mag = mag,
       cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       fullMeshRequest.segmentId,
-      Vec3Double(1, 2, 3),
+      voxelSize,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
       fullMeshRequest.additionalCoordinates
@@ -108,6 +114,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                            tracing,
                                            tracingId,
                                            mag,
+                                           voxelSize,
                                            fullMeshRequest,
                                            position,
                                            chunkSize,

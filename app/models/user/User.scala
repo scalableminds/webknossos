@@ -258,6 +258,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         """
       r <- run(q"""
           WITH
+          -- agg_experiences and agg_user_team_roles are extracted to avoid left-join fanout.
           agg_experiences AS (
             SELECT
               u._id AS _user,

@@ -179,6 +179,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         currentFormRef.setFieldsValue({
           datastoreUrl: uploadableDatastores[0].url,
         });
+        this.setState({ datastoreUrl: uploadableDatastores[0].url });
       }
     }
   }
@@ -655,6 +656,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
           <Form
             onFinish={this.handleSubmit}
+            onValuesChange={(_, { datastoreUrl }) => this.setState({ datastoreUrl })}
             layout="vertical"
             ref={this.formRef}
             initialValues={{

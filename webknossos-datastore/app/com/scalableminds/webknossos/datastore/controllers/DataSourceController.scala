@@ -149,19 +149,15 @@ class DataSourceController @Inject()(
         for {
           dataSourceId <- uploadService
             .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
-          result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
-                                                      urlOrHeaderToken(token, request)) {
-            for {
-              (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(
-                dataSourceId,
-                datasetSizeBytes,
-                request.body.needsConversion.getOrElse(false),
-                viaAddRoute = false,
-                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-            } yield Ok
-          }
-        } yield result
+          (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
+          _ <- remoteWebKnossosClient.reportUpload(
+            dataSourceId,
+            datasetSizeBytes,
+            request.body.needsConversion.getOrElse(false),
+            viaAddRoute = false,
+            userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+        } yield Ok
+
       }
   }
 

@@ -60,7 +60,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: var(--ant-color-error-bg) !important;
+    background-color: var(--ant-color-error) !important;
   }
 }
 
@@ -166,13 +166,8 @@ body {
 }
 
 
-
-// Buttons with just an icon, e.g. on annotation dashboard 
-.ant-btn-icon-only .anticon {
-  margin-right: 0;
-}
-
 button.narrow {
+  // undo/redo + toolbar buttons
   padding: 0 10px;
   i {
     margin-right: 0 !important;
@@ -329,8 +324,8 @@ button.narrow {
   top: 100px;
   width: 400px;
   height: 250px;
-  background: var(--ant-modal-content-bg);
-  border-radius: 4px;
+  background: var(--ant-color-bg-container);
+  border-radius: var(--ant-border-radius);
   margin: 0 auto;
 }
 .dataset-upload-dropzone {
@@ -374,38 +369,35 @@ button.narrow {
 }
 
 .webknossos-welcome-toast {
-  background-color: var(--ant-color-primary);
-  color: white;
+  // small notification in the bottom right corner when you are viewing a dataset and you are not logged in
+  background-color: var(--color-wk-blue);
 
   .logo {
     background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
     filter: brightness(4);
     width: 74px;
-    height: 50px;
-    background-size: 50px 50px;
+    height: 45px;
+    background-size: 45px 45px;
     display: inline-block;
   }
 
-  .ant-notification-notice-content {
-    position: relative;
-  }
   .ant-notification-notice-message {
     padding-left: 40px;
     margin-top: 20px;
-    margin-bottom: 30px;
-    color: white;
+    margin-bottom: 30px !important;
+    color: white !important;
     font-size: 24px;
   }
 
   .ant-notification-notice-description {
     font-size: 16px;
     line-height: 21px;
-    color: white;
-    margin-left: 24px;
+    color: white !important;
+    margin-inline-start: 24px !important;
 
     p {
       margin-bottom: 30px;
-      margin-right: 60px;
+      margin-inline-end: 60px;
     }
 
     .drawing-welcome-guy {
@@ -416,7 +408,7 @@ button.narrow {
         height: 100px;
         display: block;
         position: absolute;
-        top: 0px;
+        top: -5px;
         right: 0px;
         content: " ";
         transform: translate(15%, -104%);
@@ -424,6 +416,11 @@ button.narrow {
         background-repeat: no-repeat;
         background-size: cover;
       }
+    }
+
+    .ant-btn-background-ghost:hover {
+      color: #bbb;
+      border-color: #bbb;
     }
   }
 

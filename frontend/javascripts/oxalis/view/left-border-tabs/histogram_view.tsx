@@ -303,6 +303,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
@@ -337,6 +338,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);

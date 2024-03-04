@@ -288,10 +288,10 @@ async function screenshotTracingView(page: Page): Promise<Screenshot> {
   console.log("Screenshot annotation view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
-    "#inputcatcher_TDView",
-    "#inputcatcher_PLANE_XY",
-    "#inputcatcher_PLANE_YZ",
-    "#inputcatcher_PLANE_XZ",
+    "#screenshot_target_inputcatcher_TDView",
+    "#screenshot_target_inputcatcher_PLANE_XY",
+    "#screenshot_target_inputcatcher_PLANE_YZ",
+    "#screenshot_target_inputcatcher_PLANE_XZ",
   ];
   const screenshots = [];
 

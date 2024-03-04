@@ -55,7 +55,8 @@
       },
       "correctness": {
         "noUnusedVariables": "error",
-        "noRenderReturnValue": "off"
+        "noRenderReturnValue": "off",
+        "useHookAtTopLevel": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",

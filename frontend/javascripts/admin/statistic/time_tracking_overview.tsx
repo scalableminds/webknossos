@@ -1,24 +1,22 @@
 import { getProjects, getTeams } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, Button } from "antd";
+import { Card, Select, Spin, Table, Button, DatePicker, TimeRangePickerProps } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import React, { useState } from "react";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import generatePicker from "antd/es/date-picker/generatePicker";
-import dayjsGenerateConfig from "rc-picker/lib/generate/dayjs";
 import { APIProject } from "types/api_flow_types";
 
 const { Column } = Table;
-const DatePicker = generatePicker(dayjsGenerateConfig);
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export enum typeFilters {
+export enum typeFilters { // TODO maybe map to annotationtype
   ONLY_ANNOTATIONS_KEY = "ONLY_ANNOTATIONS",
   ONLY_TASKS_KEY = "ONLY_TASKS",
   TASKS_AND_ANNOTATIONS_KEY = "TASKS_AND_ANNOTATIONS",
@@ -64,7 +62,7 @@ function TimeTrackingOverview() {
   ) => {
     // omit project parameter in request if annotation data is requested
     const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-    return `api/time/summed/userList?start=${startMs}&end=${endMs}&onlyCountTasks=${onlyTasks}&teamIds=${teamIds.join(
+    return `api/time/summed/userList?start=${startMs}&end=${endMs}&annotationTypes=${annotationTypes}&teamIds=${teamIds.join(
       ",",
     )}${projectsParam}`;
   };
@@ -93,23 +91,23 @@ function TimeTrackingOverview() {
     typeFilters.TASKS_AND_ANNOTATIONS_KEY as string,
   ]);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
-  const [onlyTasks, setOnlyTasks] = useState(false);
-
+  const [annotationTypes, setAnnotationTypes] = useState("Task,Explorational");
   const filteredTimeEntries = useFetch(
     async () => {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
-      let filteredProjects =
-        selectedProjectIds.length === 0 || selectedProjectIds.includes(typeFilters.ONLY_TASKS_KEY)
-          ? allProjects.map((project) => project.id)
-          : selectedProjectIds;
-      const selectAll = selectedProjectIds.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY);
-      if (selectAll) filteredProjects = [];
-      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !selectAll)) return [];
-      if (selectedProjectIds.includes(typeFilters.ONLY_ANNOTATIONS_KEY)) {
-        console.log("Not yet implemented");
+      const noProjectFilterNeeded =
+        selectedProjectIds.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY) ||
+        selectedProjectIds.includes(typeFilters.ONLY_ANNOTATIONS_KEY);
+      let filteredProjects = selectedProjectIds;
+      if (
+        selectedProjectIds.length === 0 ||
+        selectedProjectIds.includes(typeFilters.ONLY_TASKS_KEY)
+      ) {
+        filteredProjects = allProjects.map((project) => project.id);
+      } else if (noProjectFilterNeeded) filteredProjects = [];
+      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !noProjectFilterNeeded))
         return [];
-      }
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
         endDate.valueOf(),
@@ -155,19 +153,20 @@ function TimeTrackingOverview() {
   const setSelectedProjects = (selectedProjectIds: string[], projectId: string) => {
     if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
       setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
-      setOnlyTasks(false);
+      setAnnotationTypes("Task,Explorational");
     } // set all projects and true
-    else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+    else if (projectId === typeFilters.ONLY_TASKS_KEY) {
       setSelectedProjectIds([typeFilters.ONLY_TASKS_KEY]);
-      setOnlyTasks(true);
-    } else if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
+      setAnnotationTypes("Task");
+    } else if (projectId === typeFilters.ONLY_ANNOTATIONS_KEY) {
       setSelectedProjectIds([typeFilters.ONLY_ANNOTATIONS_KEY]);
-      setOnlyTasks(false);
+      setAnnotationTypes("Explorational");
     } else {
       const prevSelectedIds = selectedProjectIds.filter(
-        (id) => !(Object.values(typeFilters) as string[]).includes(id),
+        (id) => !(Object.values(typeFilters) as string[]).includes(id), //TODO omit cast
       );
       setSelectedProjectIds([...prevSelectedIds, projectId]);
+      setAnnotationTypes("Task");
     }
   };
 
@@ -180,7 +179,7 @@ function TimeTrackingOverview() {
   };
 
   // TODO fix range preselects
-  const rangePresets = [
+  const rangePresets: TimeRangePickerProps["presets"] = [
     { label: "Last 7 Days", value: [dayjs().subtract(7, "d"), dayjs()] },
     { label: "Last 30 Days", value: [dayjs().subtract(30, "d"), dayjs()] },
   ];
@@ -198,7 +197,7 @@ function TimeTrackingOverview() {
         mode="multiple"
         placeholder="Filter type or projects"
         style={{ width: selectWidth, ...filterStyle }}
-        options={getTaskFilterOptions()}
+        options={getTaskFilterOptions(allProjects)}
         value={selectedProjectIds}
         onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
         onSelect={(projectId: string) => setSelectedProjects(selectedProjectIds, projectId)}
@@ -224,10 +223,11 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         presets={rangePresets}
-        onChange={(dates, _dateStrings) => {
+        // TODO fix type error. see time_line_view: type error is commented out.
+        onChange={(dates: null | (Dayjs | null)[]) => {
           if (dates == null) return;
-          setStartDate(dates[0]);
-          setEndeDate(dates[1]);
+          dates[0] != null && setStartDate(dates[0]);
+          dates[1] != null && setEndeDate(dates[1]);
         }}
       />
       <Spin spinning={false} size="large">

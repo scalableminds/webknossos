@@ -1962,13 +1962,12 @@ export async function getTimeTrackingForUser(
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   projectIds?: string[] | null,
-  onlyCountTasks?: boolean,
+  annotationTypes?: "Explorational" | "Task" | "Task,Explorational",
 ): Promise<Array<APITimeTracking>> {
   const params = new URLSearchParams();
   params.append("startDate", startDate.valueOf().toString());
   params.append("endDate", endDate.valueOf().toString());
-  onlyCountTasks;
-  if (onlyCountTasks != null) params.append("onlyCountTasks", onlyCountTasks ? "true" : "false");
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
   const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);

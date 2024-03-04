@@ -31,6 +31,8 @@ const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 const hourFormatPrecise = "HH:mm:ss";
 
+export type AnnotationType = "Explorational" | "Task" | "Task,Explorational";
+
 type TimeTrackingStats = {
   totalTime: number;
   numberTasks: number;
@@ -51,7 +53,7 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  includeOnlyTasks: boolean;
+  annotationTypes: AnnotationType;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -103,7 +105,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    includeOnlyTasks: false,
+    annotationTypes: "Task,Explorational",
   };
 
   parseQueryParams() {
@@ -166,7 +168,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.dateRange[0],
           this.state.dateRange[1],
           this.state.selectedProjectIds,
-          this.state.includeOnlyTasks,
+          this.state.annotationTypes,
         ),
       );
       this.setState(
@@ -239,24 +241,23 @@ class TimeLineView extends React.PureComponent<Props, State> {
   handleSelectedProjectsChange = (projectId: string) => {
     const prevSelectedProjectIds = this.state.selectedProjectIds;
     let selectedProjectIds: string[] = [];
-    let includeOnlyTasks = false;
+    let annotationTypes: AnnotationType = "Task";
     if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
       selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
-      includeOnlyTasks = false;
-    } // set all projects and true
-    else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+      annotationTypes = "Task,Explorational";
+    } else if (projectId == typeFilters.ONLY_TASKS_KEY) {
       selectedProjectIds = [typeFilters.ONLY_TASKS_KEY];
-      includeOnlyTasks = true;
+      annotationTypes = "Task";
     } else if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
       selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
-      includeOnlyTasks = false;
+      annotationTypes = "Explorational";
     } else {
       const prevSelectedIds = prevSelectedProjectIds.filter(
         (id) => !(Object.values(typeFilters) as string[]).includes(id),
       );
       selectedProjectIds = [...prevSelectedIds, projectId];
     }
-    this.setState({ selectedProjectIds, includeOnlyTasks });
+    this.setState({ selectedProjectIds, annotationTypes });
     this.fetchTimeTrackingData();
   };
 

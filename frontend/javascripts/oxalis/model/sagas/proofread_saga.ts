@@ -619,7 +619,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     call(getDataValue, targetPosition),
   ]);
 
-  /* Reload agglomerate skeleton */
+  /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
@@ -703,7 +703,7 @@ function* handleProofreadCutNeighbors(action: Action) {
     ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
   ]);
 
-  /* Reload agglomerate skeleton */
+  /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,

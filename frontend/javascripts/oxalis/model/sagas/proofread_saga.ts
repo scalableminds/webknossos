@@ -652,8 +652,7 @@ function* handleProofreadCutNeighbors(action: Action) {
     return;
   }
   const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
-  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
-  if (activeCellId === 0) return;
+  const { tracingId: volumeTracingId } = volumeTracing;
 
   const targetPosition = V3.floor(action.position);
 

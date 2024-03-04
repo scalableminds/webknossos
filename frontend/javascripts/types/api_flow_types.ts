@@ -122,6 +122,8 @@ export type APIDataStore = {
   readonly url: string;
   readonly isScratch: boolean;
   readonly allowsUpload: boolean;
+  readonly jobsEnabled: boolean;
+  readonly jobsSupportedByAvailableWorkers: APIJobType[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -159,6 +161,7 @@ export type APIDatasetDetails = {
   readonly brainRegion?: string;
   readonly acquisition?: string;
 };
+
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
   folderId: string;
@@ -173,7 +176,6 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
   publication: null | undefined;

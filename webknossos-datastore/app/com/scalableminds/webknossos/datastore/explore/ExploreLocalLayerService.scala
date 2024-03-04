@@ -95,7 +95,9 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         )
         .getOrElse(path)
       explored <- exploreLocalLayer(
-        layers => layers.map(l => l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toString))))), // TODO: Uri is used here, needs to be relativized
+        layers =>
+          layers.map(l =>
+            l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toAbsolutePath.toUri.toString))))),
         new N5ArrayExplorer
       )(layerPath, dataSourceId, "")
     } yield explored

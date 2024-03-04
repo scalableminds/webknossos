@@ -6,7 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.3...HEAD)
 - WKW datasets can now only be read if they have a `header.wkw` file in their mag directories. If specific datasets can no longer be loaded, consider adding such a file. Backend logging should show according error message. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
 - Content Security Policy (CSP) settings are now relaxed by default. To keep stricter CSP rules, add them to your specific `application.conf`. [#7589](https://github.com/scalableminds/webknossos/pull/7589)
 - The way the segment index is stored for nd-annotations has been changed ([#7411](https://github.com/scalableminds/webknossos/pull/7411)). Annotations with old segment indices should be

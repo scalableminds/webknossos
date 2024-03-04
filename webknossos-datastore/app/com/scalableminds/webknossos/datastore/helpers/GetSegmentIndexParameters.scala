@@ -26,6 +26,7 @@ object GetMultipleSegmentIndexParameters {
   implicit val format: Format[GetMultipleSegmentIndexParameters] = Json.format[GetMultipleSegmentIndexParameters]
 }
 
+// positions = List of indices of buckets directly in a requested mag
 case class SegmentIndexData(segmentId: Long, positions: Seq[Vec3Int])
 
 object SegmentIndexData {

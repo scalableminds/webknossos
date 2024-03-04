@@ -47,6 +47,20 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       file <- files.headOption
     } yield file
 
+  /**
+    * Read the segment index file and return the bucket positions for the given segment id.
+    * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
+    * @param organizationName
+    * @param datasetName
+    * @param dataLayerName
+    * @param segmentId
+    * @param mag
+    * @param cubeSize
+    * @param additionalCoordinates
+    * @param mappingName
+    * @param m
+    * @return (bucketPositions, fileMag)
+    */
   def readSegmentIndex(organizationName: String,
                        datasetName: String,
                        dataLayerName: String,

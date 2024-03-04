@@ -570,14 +570,19 @@ class DataSourceController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         val segmentIndexFileOpt =
           segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName).toOption
-        segmentIndexFileOpt match {
-          case Some(_) =>
-            Future.successful(Ok(Json.toJson(true)))
-          case None => Future.successful(Ok(Json.toJson(false)))
-        }
+        Future.successful(Ok(Json.toJson(segmentIndexFileOpt.isDefined)))
       }
     }
 
+  /**
+    * Query the segment index file for a single segment
+    * @param token
+    * @param organizationName
+    * @param datasetName
+    * @param dataLayerName
+    * @param segmentId
+    * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
+    */
   def getSegmentIndex(token: Option[String],
                       organizationName: String,
                       datasetName: String,
@@ -601,6 +606,14 @@ class DataSourceController @Inject()(
       }
     }
 
+  /**
+    * Query the segment index file for multiple segments
+    * @param token
+    * @param organizationName
+    * @param datasetName
+    * @param dataLayerName
+    * @return List of bucketPositions as indices of 32³ buckets
+    */
   def querySegmentIndex(token: Option[String],
                         organizationName: String,
                         datasetName: String,

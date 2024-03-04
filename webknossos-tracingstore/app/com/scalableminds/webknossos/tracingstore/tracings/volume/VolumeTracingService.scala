@@ -232,7 +232,7 @@ class VolumeTracingService @Inject()(
               tracingId,
               a.id,
               mag,
-              None, //TODO: ???
+              None,
               volumeTracing.mappingName,
               additionalCoordinates,
               dataLayer.additionalAxes,

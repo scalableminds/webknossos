@@ -175,7 +175,7 @@ class AnnotationIOController @Inject()(
       for {
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
-          Some(dataSource),
+          dataSource,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
           persistTracing = true
         )

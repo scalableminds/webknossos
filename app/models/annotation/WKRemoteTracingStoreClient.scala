@@ -150,7 +150,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def mergeVolumeTracingsByContents(tracings: VolumeTracings,
-                                    dataSource: Option[DataSourceLike],
+                                    dataSource: DataSourceLike,
                                     initialData: List[Option[File]],
                                     persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
@@ -160,7 +160,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = dataSource.map(d => tracingDataSourceTemporaryStore.store(tracingId, d))
+      _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .post(packedVolumeDataZips)
@@ -179,7 +179,7 @@ class WKRemoteTracingStoreClient(
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
-      _ = dataSource.map(d => tracingDataSourceTemporaryStore.store(tracingId, d))
+      _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(tracingId, d))
       _ <- initialData match {
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout

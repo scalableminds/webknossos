@@ -68,15 +68,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         organizationName = if (overwritingDatasetName.isDefined) None
         else parseOrganizationName(parameters \ "experiment")
         remoteDataStoreClientOpt = getRemoteDataStoreClient(datasetName, organizationName.getOrElse(""))
-        canHaveSegmentIndexOpts <- Fox
+        canHaveSegmentIndexBools <- Fox
           .combined(
             volumes
               .map(
                 v =>
-                  canHaveSegmentIndexOpt(remoteDataStoreClientOpt,
-                                         organizationName.getOrElse(""),
-                                         datasetName,
-                                         v.fallbackLayerName))
+                  canHaveSegmentIndex(remoteDataStoreClientOpt,
+                                      organizationName.getOrElse(""),
+                                      datasetName,
+                                      v.fallbackLayerName))
               .toList)
           .await("NMLParser/parse was changed to return Fox in #7437. Removing this await is tracked in #7551",
                  5 seconds)
@@ -99,8 +99,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         val volumeLayers: List[UploadedVolumeLayer] =
-          volumes.zip(canHaveSegmentIndexOpts).toList.map {
-            case (v, canHaveSegmentIndexOpt) =>
+          volumes.zip(canHaveSegmentIndexBools).toList.map {
+            case (v, canHaveSegmentIndexBool) =>
               UploadedVolumeLayer(
                 VolumeTracing(
                   None,
@@ -119,7 +119,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                   organizationName,
                   segments = v.segments,
                   segmentGroups = v.segmentGroups,
-                  hasSegmentIndex = canHaveSegmentIndexOpt,
+                  hasSegmentIndex = Some(canHaveSegmentIndexBool),
                   editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
                   additionalAxes = additionalAxisProtos
                 ),
@@ -550,10 +550,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     }.toSeq
   }
 
-  private def canHaveSegmentIndexOpt(remoteDatastoreClient: Option[WKRemoteDataStoreClient],
-                                     organizationName: String,
-                                     datasetName: String,
-                                     fallbackLayerName: Option[String])(implicit ec: ExecutionContext) =
+  private def canHaveSegmentIndex(remoteDatastoreClient: Option[WKRemoteDataStoreClient],
+                                  organizationName: String,
+                                  datasetName: String,
+                                  fallbackLayerName: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] =
     for {
       canHaveSegmentIndex <- fallbackLayerName match {
         case Some(layerName) =>
@@ -563,6 +563,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           }
         case None => Fox.successful(true)
       }
-    } yield Some(canHaveSegmentIndex)
+    } yield canHaveSegmentIndex
 
 }

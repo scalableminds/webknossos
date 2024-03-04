@@ -22,6 +22,7 @@ import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
@@ -201,7 +202,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService,
       dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationObjectId)(GlobalAccessContext)
       dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
     } yield new WKRemoteDataStoreClient(dataStore, rpc)
-    fox.await("No fox context in AnnotationUploadService, see #7551").toOption
+    fox.await("No fox context in AnnotationUploadService, see #7551", 1 minute).toOption
   }
 
 }

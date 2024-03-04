@@ -957,7 +957,7 @@ export function hasSegmentIndexInDataStore(
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/segmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }

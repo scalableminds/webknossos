@@ -149,10 +149,10 @@ class VolumeSegmentIndexBuffer(tracingId: String,
 
       (bufferHits, bufferMisses) = getSegmentsFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
       (mutableIndexHits, mutableIndexMisses) <- getSegmentsFromFossilDBNoteMisses(tracingId,
-                                                                                   mag,
-                                                                                   additionalCoordinates,
-                                                                                   additionalAxes,
-                                                                                   bufferMisses)
+                                                                                  mag,
+                                                                                  additionalCoordinates,
+                                                                                  additionalAxes,
+                                                                                  bufferMisses)
       missesSoFar = bufferMisses ++ mutableIndexMisses
       fileBucketPositions <- fallbackLayer match {
         case Some(layer) =>

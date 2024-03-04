@@ -2,7 +2,6 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
@@ -57,7 +56,7 @@ object DataStore {
     fromForm(name, url, publicUrl, "", isScratch, allowsUpload)
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with Results {
 

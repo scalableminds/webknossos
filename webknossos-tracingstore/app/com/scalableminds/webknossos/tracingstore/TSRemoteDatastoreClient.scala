@@ -135,12 +135,13 @@ class TSRemoteDatastoreClient @Inject()(
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
         .addQueryStringOptional("token", userToken)
-//        .silent
-        .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](
-          GetSegmentIndexParameters(mag,
-                                    cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here
-                                    additionalCoordinates = None,
-                                    mappingName = mappingName))
+        .silent
+        .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](GetSegmentIndexParameters(
+          mag,
+          cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here (since we want to calculate indices later anyway)
+          additionalCoordinates = None,
+          mappingName = mappingName
+        ))
 
       indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
     } yield indices

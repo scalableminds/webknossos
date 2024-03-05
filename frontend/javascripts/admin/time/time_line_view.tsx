@@ -124,11 +124,13 @@ class TimeLineView extends React.PureComponent<Props, State> {
     } else if (hasStart && hasEnd) {
       dateRange = [dayjs(+params.start), dayjs(+params.end)];
     }
-    this.setState({
-      initialUserId: _.has(params, "user") ? params.user : null,
-      dateRange,
-    });
-    this.handleDateChange(dateRange);
+    this.setState(
+      {
+        initialUserId: _.has(params, "user") ? params.user : null,
+        dateRange,
+      },
+      () => this.handleDateChange(dateRange),
+    );
   }
 
   async componentDidMount() {
@@ -137,7 +139,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     if (isAdminOrTeamManger) {
       await this.fetchData();
     } else {
-      this.fetchDataFromLoggedInUser(); //TODO maybe await too?
+      this.fetchDataFromLoggedInUser();
     }
   }
 
@@ -167,7 +169,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
-          this.state.selectedProjectIds,
+          this.state.selectedProjectIds.filter(
+            (id) => !(Object.values(typeFilters) as string[]).includes(id),
+          ),
           this.state.annotationTypes,
         ),
       );
@@ -206,18 +210,22 @@ class TimeLineView extends React.PureComponent<Props, State> {
     });
   }
 
-  fetchDataFromLoggedInUser = async () => {
-    await this.setState({
-      user: this.props.activeUser,
-    });
-    this.fetchTimeTrackingData();
+  fetchDataFromLoggedInUser = () => {
+    this.setState(
+      {
+        user: this.props.activeUser,
+      },
+      this.fetchTimeTrackingData,
+    );
   };
 
-  handleUserChange = async (userId: string) => {
-    await this.setState((prevState) => ({
-      user: prevState.users.find((u) => u.id === userId),
-    }));
-    this.fetchTimeTrackingData();
+  handleUserChange = (userId: string) => {
+    this.setState(
+      (prevState) => ({
+        user: prevState.users.find((u) => u.id === userId),
+      }),
+      this.fetchTimeTrackingData,
+    );
   };
 
   handleDateChange = async (dates: DateRange) => {
@@ -231,34 +239,34 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
-    this.setState({
-      dateRange,
-    });
-    this.fetchTimeTrackingData();
+    this.setState(
+      {
+        dateRange,
+      },
+      this.fetchTimeTrackingData,
+    );
   };
 
-  // TODO this for class component
-  handleSelectedProjectsChange = (projectId: string) => {
-    const prevSelectedProjectIds = this.state.selectedProjectIds;
+  handleSelectedProjectsChange = async (projectId: string) => {
     let selectedProjectIds: string[] = [];
     let annotationTypes: AnnotationType = "Task";
-    if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
+    if (projectId === typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
       selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
       annotationTypes = "Task,Explorational";
-    } else if (projectId == typeFilters.ONLY_TASKS_KEY) {
+    } else if (projectId === typeFilters.ONLY_TASKS_KEY) {
       selectedProjectIds = [typeFilters.ONLY_TASKS_KEY];
       annotationTypes = "Task";
-    } else if (projectId == typeFilters.ONLY_ANNOTATIONS_KEY) {
+    } else if (projectId === typeFilters.ONLY_ANNOTATIONS_KEY) {
       selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
       annotationTypes = "Explorational";
     } else {
+      const prevSelectedProjectIds = this.state.selectedProjectIds;
       const prevSelectedIds = prevSelectedProjectIds.filter(
         (id) => !(Object.values(typeFilters) as string[]).includes(id),
       );
       selectedProjectIds = [...prevSelectedIds, projectId];
     }
-    this.setState({ selectedProjectIds, annotationTypes });
-    this.fetchTimeTrackingData();
+    this.setState({ selectedProjectIds, annotationTypes }, this.fetchTimeTrackingData); // state may not be updated immediately
   };
 
   onDeselect = (removedKey: string) => {
@@ -268,8 +276,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     } else {
       selectedProjectIds = selectedProjectIds.filter((projectId) => projectId !== removedKey);
     }
-    this.setState({ selectedProjectIds });
-    this.fetchTimeTrackingData();
+    this.setState({ selectedProjectIds }, this.fetchTimeTrackingData);
   };
 
   getTooltipForEntry(taskId: string, start: Date, end: Date) {
@@ -454,7 +461,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   options={getTaskFilterOptions(this.state.allProjects)}
                   value={this.state.selectedProjectIds}
                   onDeselect={() => console.log("TODO") /*TODO*/}
-                  onSelect={(projectId: string) => this.handleSelectedProjectsChange(projectId)}
+                  onSelect={async (projectId: string) =>
+                    this.handleSelectedProjectsChange(projectId)
+                  }
                 />
               </FormItem>
             </Col>

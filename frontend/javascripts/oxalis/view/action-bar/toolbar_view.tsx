@@ -411,8 +411,8 @@ function AdditionalSkeletonModesButtons() {
   const mergerModeTooltipText = isEditableMappingActive
     ? "Merger mode cannot be enabled while an editable mapping is active."
     : isMappingLocked
-    ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
-    : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
+      ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
+      : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
 
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));

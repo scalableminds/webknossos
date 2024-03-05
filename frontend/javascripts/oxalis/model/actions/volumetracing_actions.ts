@@ -363,7 +363,7 @@ export const setMappingIsEditableAction = () =>
 export const setMappingIsLockedAction = () =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
-  } as const);
+  }) as const;
 
 export const computeQuickSelectForRectAction = (
   startPosition: Vector3,

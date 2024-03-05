@@ -492,6 +492,11 @@ function* performCutFromNeighbors(
     segmentId2: agglomerateId,
   }));
 
+  if (edgesToRemove.length === 0) {
+    Toast.info("No neighbors found.");
+    return { didCancel: true };
+  }
+
   for (const edge of edgesToRemove) {
     if (sourceTree) {
       const result = getDeleteEdgeActionForEdgePositions(sourceTree, edge);

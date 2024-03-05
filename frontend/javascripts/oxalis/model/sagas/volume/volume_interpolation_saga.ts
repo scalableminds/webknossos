@@ -162,10 +162,11 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });
@@ -207,6 +208,7 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
+  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
@@ -217,7 +219,7 @@ export function copyNdArray(
   arr: ndarray.NdArray,
 ): ndarray.NdArray {
   const { shape } = arr;
-  let stride;
+  let stride: number[];
 
   if (arr.shape.length === 3) {
     stride = [1, shape[0], shape[0] * shape[1]];
@@ -387,8 +389,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
-  let firstSlice;
-  let lastSlice;
+  let firstSlice: NdArray<TypedArrayWithoutBigInt>;
+  let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
   const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {

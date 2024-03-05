@@ -33,7 +33,7 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 
 const setActiveBucketsAndWait = (
   tbm: typeof TextureBucketManager,
-  activeBuckets: typeof DataBucket[],
+  activeBuckets: (typeof DataBucket)[],
 ) => {
   tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case

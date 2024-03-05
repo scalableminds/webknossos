@@ -201,7 +201,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
-    type: "volume" as "volume",
+    type: "volume" as const,
     segments: new DiffableMap(
       tracing.segments.map((segment) => [
         segment.segmentId,

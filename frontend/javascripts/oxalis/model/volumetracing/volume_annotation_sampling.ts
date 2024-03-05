@@ -255,9 +255,8 @@ function downsampleVoxelMap(
               const secondDimInGoalBucket =
                 Math.floor(secondDim * scaleToGoal[dimensionIndices[1]]) +
                 voxelOffset[dimensionIndices[1]];
-              goalVoxelMap[
-                firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket
-              ] = 1;
+              goalVoxelMap[firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket] =
+                1;
               foundVoxel = true;
             }
           }

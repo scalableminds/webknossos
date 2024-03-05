@@ -711,7 +711,7 @@ export function hasConnectomeFile(state: OxalisState) {
   return CONNECTOME_STATES.YES;
 }
 
-export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = getVisibleSegmentationLayer(state);

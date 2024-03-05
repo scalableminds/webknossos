@@ -140,12 +140,11 @@ class Plane {
   };
 
   setScale(xFactor: number, yFactor: number): void {
-    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
-      this.lastScaleFactors[0] = xFactor;
-      this.lastScaleFactors[1] = yFactor;
-    } else {
+    if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
+    this.lastScaleFactors[0] = xFactor;
+    this.lastScaleFactors[1] = yFactor;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),

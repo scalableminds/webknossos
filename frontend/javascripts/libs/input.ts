@@ -676,6 +676,8 @@ export class InputMouse {
       width: 0,
       height: 0,
     };
+    // Don't use {...boundingRect, }, because boundingRect is a DOMRect
+    // which isn't compatible with the spreading, apparently.
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

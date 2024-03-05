@@ -103,6 +103,7 @@ export function RestrictResolutionSlider({
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
   const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setResolutionIndices should also be added to the dependencies. Consider fixing this.
   useEffect(() => {
     setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
   }, [lowestResolutionIndex, highestResolutionIndex]);

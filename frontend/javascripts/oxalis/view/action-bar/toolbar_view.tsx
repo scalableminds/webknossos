@@ -75,6 +75,7 @@ import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { APIJobType } from "types/api_flow_types";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -192,19 +193,19 @@ function RadioButtonWithTooltip({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
-  onClick?: Function;
+  onClick?: (event: React.MouseEvent) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
     <Tooltip title={disabled ? disabledTitle : title} onOpenChange={onOpenChange}>
       <Radio.Button
         disabled={disabled}
-        onClick={(evt) => {
+        onClick={(event: React.MouseEvent) => {
           if (document.activeElement) {
             (document.activeElement as HTMLElement).blur();
           }
           if (onClick) {
-            onClick(evt);
+            onClick(event);
           }
         }}
         {...props}
@@ -227,7 +228,7 @@ function ToolRadioButton({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
-  onClick?: Function;
+  onClick?: (event: React.MouseEvent) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
@@ -254,6 +255,7 @@ function OverwriteModeSwitch({
   const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
     // There are four possible states:
     // (1) no modifier is pressed
@@ -366,7 +368,7 @@ function VolumeInterpolationButton() {
       </Tooltip>,
       rightButton,
     ],
-    [tooltipTitle],
+    [tooltipTitle, isDisabled],
   );
 
   return (
@@ -396,6 +398,7 @@ function AdditionalSkeletonModesButtons() {
   const isNewNodeNewTreeModeOn = useSelector(
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
+  const dataset = useSelector((state: OxalisState) => state.dataset);
 
   const segmentationTracingLayer = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
@@ -415,6 +418,12 @@ function AdditionalSkeletonModesButtons() {
     ? ACTIVE_BUTTON_STYLE
     : NARROW_BUTTON_STYLE;
   const mergerModeButtonStyle = isMergerModeEnabled ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+
+  const isMaterializeVolumeAnnotationEnabled =
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+      APIJobType.MATERIALIZE_VOLUME_ANNOTATION,
+    );
+
   return (
     <React.Fragment>
       <ButtonComponent
@@ -443,7 +452,7 @@ function AdditionalSkeletonModesButtons() {
           alt="Merger Mode"
         />
       </ButtonComponent>
-      {features().jobsEnabled && isMergerModeEnabled && (
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
@@ -452,7 +461,7 @@ function AdditionalSkeletonModesButtons() {
           <ExportOutlined />
         </ButtonComponent>
       )}
-      {features().jobsEnabled && showMaterializeVolumeAnnotationModal && (
+      {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
         />
@@ -626,12 +635,13 @@ function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
   const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  let maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
 
   const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes is needed as dependency.
   useEffect(() => {
     if (presetBrushSizes == null) {
       handleUpdatePresetBrushSizes(defaultBrushSizes);
@@ -874,6 +884,7 @@ export default function ToolbarView() {
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Adding disabledInfosForTools[lastForcefulDisabledTool].isDisabled as dependency requires another null-check which makes the dependency itself quite tedious.
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);

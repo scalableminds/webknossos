@@ -651,7 +651,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
         (colorLayerOrder) => {
-          let changedLayerOrder =
+          const changedLayerOrder =
             colorLayerOrder.length !== oldLayerOrder.length ||
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {

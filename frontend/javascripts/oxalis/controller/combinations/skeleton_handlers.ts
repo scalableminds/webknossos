@@ -6,7 +6,7 @@ import type {
   Vector3,
   ShowContextMenuFunction,
 } from "oxalis/constants";
-import { OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
 import { enforce, values } from "libs/utils";
@@ -350,9 +350,7 @@ export function maybeGetNodeIdFromPosition(
   height = Math.round(height);
   const buffer = renderToTexture(plane, pickingScene, camera, true);
   // Beware of the fact that new browsers yield float numbers for the mouse position
-  // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
-  const borderWidth = OUTER_CSS_BORDER;
-  const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
+  const [x, y] = [Math.round(position.x), Math.round(position.y)];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because WebGL has its origin bottom-left :/
   const index = (x + (height - y) * width) * 4;

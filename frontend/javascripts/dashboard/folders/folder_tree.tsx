@@ -35,6 +35,7 @@ export function FolderTreeSidebar({
 
   const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
     const itemById = folderHierarchy?.itemById || {};
@@ -57,6 +58,7 @@ export function FolderTreeSidebar({
     setExpandedKeys(newExpandedKeys);
   }, [folderHierarchy]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation on what dependencies are needed.
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
       // No search is active and no folder is selected. For example, this can happen

@@ -67,10 +67,11 @@ import {
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
+import { EmptyObject } from "types/globals";
 
 const { Content } = Layout;
 
-function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
+function loadable(loader: () => Promise<{ default: React.ComponentType<EmptyObject> }>) {
   const InternalComponent = lazy(loader);
   return function AsyncComponent() {
     return (

@@ -6,6 +6,15 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.02.3](https://github.com/scalableminds/webknossos/releases/tag/24.02.3) - 2024-02-22
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...24.02.3)
+
+## [24.02.2](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.1...24.02.2)
+
+## [24.02.1](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.0...24.02.1)
+
 ## [24.02.0](https://github.com/scalableminds/webknossos/releases/tag/24.02.0) - 2024-01-26
 [Commits](https://github.com/scalableminds/webknossos/compare/23.12.0...24.02.0)
 - The config `setting play.http.secret.key` (secret random string) now requires a minimum length of 32 bytes.

@@ -323,6 +323,24 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       typQuery = q"a.typ = $typ"
 
       query = q"""
+          WITH
+          -- teams_agg is extracted to avoid left-join fanout.
+          -- Note that only one of the joins in it has 1:n, so they can happen together
+          teams_agg AS (
+            SELECT
+            a._id as _annotation,
+            ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+            ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+            ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids
+            FROM webknossos.annotations a
+            LEFT JOIN webknossos.annotation_sharedteams ast
+                ON ast._annotation = a._id
+            LEFT JOIN webknossos.teams_ t
+                ON ast._team = t._id
+            LEFT JOIN webknossos.organizations_ o
+                ON t._organization = o._id
+            GROUP BY a._id
+          )
           SELECT
           a._id,
           a.name,
@@ -331,9 +349,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           u.firstname,
           u.lastname,
           a.othersmayedit,
-          ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
-          ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-          ARRAY_REMOVE(ARRAY_AGG(t._organization), null) AS team_orgs,
+          teams_agg.team_ids,
+          teams_agg.team_names,
+          teams_agg.team_organization_ids,
           a.modified,
           a.tags,
           a.state,
@@ -346,21 +364,25 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
           ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
           ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
-      FROM webknossos.annotations as a
-               LEFT JOIN webknossos.users_ u
-                         ON u._id = a._user
-               LEFT JOIN webknossos.annotation_sharedteams ast
-                         ON ast._annotation = a._id
-               LEFT JOIN webknossos.teams_ t
-                         ON ast._team = t._id
-               LEFT JOIN webknossos.datasets_ d
-                         ON d._id = a._dataset
-               LEFT JOIN webknossos.organizations_ as o
-                         ON o._id = d._organization
-               LEFT JOIN webknossos.annotation_layers as al
-                         ON al._annotation = a._id
+      FROM
+        webknossos.annotations_ as a
+        JOIN webknossos.users_ u
+                 ON u._id = a._user
+        JOIN teams_agg
+                 ON teams_agg._annotation = a._id
+        JOIN webknossos.datasets_ d
+                 ON d._id = a._dataset
+        JOIN webknossos.organizations_ as o
+                 ON o._id = d._organization
+        JOIN webknossos.annotation_layers as al
+                 ON al._annotation = a._id
       WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
-      GROUP BY a._id, u.firstname, u.lastname, d.name, o.name
+      GROUP BY
+        a._id, a.name, a.description, a._user, a.othersmayedit, a.modified, a.tags, a.state, a.typ, a.visibility, a.tracingtime,
+        u.firstname, u.lastname,
+        teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
+        d.name,
+        o.name
         ORDER BY a._id DESC LIMIT $limit OFFSET ${pageNumber * limit}
          """
       rows <- run(

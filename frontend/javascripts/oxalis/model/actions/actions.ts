@@ -40,20 +40,20 @@ export type Action =
 export const wkReadyAction = () =>
   ({
     type: "WK_READY",
-  } as const);
+  }) as const;
 
 export const sceneControllerReadyAction = () =>
   ({
     type: "SCENE_CONTROLLER_READY",
-  } as const);
+  }) as const;
 
 export const restartSagaAction = () =>
   ({
     type: "RESTART_SAGA",
-  } as const);
+  }) as const;
 
 export const escalateErrorAction = (error: unknown) =>
   ({
     type: "ESCALATE_ERROR",
     error,
-  } as const);
+  }) as const;

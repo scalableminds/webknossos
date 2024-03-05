@@ -8,7 +8,7 @@ import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
-import constants, { Unicode, OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
+import constants, { Unicode, OrthoViews } from "oxalis/constants";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 type OwnProps = {
   viewportID: OrthoView;
@@ -76,11 +76,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           position: "absolute",
           bottom: constants.SCALEBAR_OFFSET,
           right: constants.SCALEBAR_OFFSET,
-          width: collapseScalebar
-            ? 16
-            : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
-                ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
-              )}% + ${2 * padding}px)`,
+          width: collapseScalebar ? 16 : `${scaleBarWidthFactor * 100}%`,
           height: constants.SCALEBAR_HEIGHT - padding * 2,
           background: "rgba(0, 0, 0, .3)",
           color: "white",

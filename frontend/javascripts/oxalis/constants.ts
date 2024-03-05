@@ -222,7 +222,7 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
-export const enum ContourModeEnum {
+export enum ContourModeEnum {
   DRAW = "DRAW",
   DELETE = "DELETE",
 }
@@ -251,7 +251,7 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const enum MappingStatusEnum {
+export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
@@ -264,10 +264,6 @@ export enum TreeTypeEnum {
 export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
-// The plane in orthogonal mode is a little smaller than the viewport
-// There is an outer yellow CSS border and an inner (red/green/blue) border
-// that is a result of the plane being smaller than the renderer viewport
-export const OUTER_CSS_BORDER = 2;
 const VIEWPORT_WIDTH = 376;
 export const ensureSmallerEdge = false;
 export const Unicode = {

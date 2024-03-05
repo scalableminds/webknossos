@@ -207,7 +207,7 @@ export function getDefaultValueRangeOfLayer(
   layerName: string,
 ): [number, number] {
   const maxFloatValue = 3.40282347e38;
-  // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
+  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
 
@@ -689,7 +689,7 @@ function _getOriginalTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer,
 ): Transform | null {
-  let coordinateTransformations = layer.coordinateTransformations;
+  const coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
@@ -706,7 +706,7 @@ function _getOriginalTransformsForLayerOrNull(
     const nestedMatrix = transformation.matrix;
     return createAffineTransformFromMatrix(nestedMatrix);
   } else if (type === "thin_plate_spline") {
-    let { source, target } = transformation.correspondences;
+    const { source, target } = transformation.correspondences;
 
     return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
   }

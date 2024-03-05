@@ -815,9 +815,8 @@ test("NML Parser should split up disconnected trees", async (t) => {
     BUILD_INFO,
     false,
   );
-  const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
-    nmlWithDisconnectedTree,
-  );
+  const { trees: parsedTrees, treeGroups: parsedTreeGroups } =
+    await parseNml(nmlWithDisconnectedTree);
   // Check that the tree was split up into its three components
   t.is(_.size(parsedTrees), 4);
   t.true(parsedTrees[3].nodes.has(0));

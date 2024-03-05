@@ -248,7 +248,7 @@ export function createBoundingBoxAndGetEdges(
   const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
 
   const indices = Dimension.getIndices(plane);
-  let newestBoundingBox =
+  const newestBoundingBox =
     userBoundingBoxes.length > 0 ? userBoundingBoxes[userBoundingBoxes.length - 1] : null;
 
   if (newestBoundingBox == null) {

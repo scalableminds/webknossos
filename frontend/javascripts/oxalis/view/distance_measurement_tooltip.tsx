@@ -70,7 +70,7 @@ export default function DistanceMeasurementTooltip() {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }
-  }, [currentPosition]);
+  }, [currentPosition[thirdDim]]);
   if (position == null || !MeasurementTools.includes(activeTool)) {
     return null;
   }

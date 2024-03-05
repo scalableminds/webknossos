@@ -9,8 +9,8 @@ import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { waitForCondition } from "libs/utils";
-import { useKeyPress } from "libs/react_hooks";
-import { useEffect, useRef } from "react";
+import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import { useRef } from "react";
 import { useSelector } from "react-redux";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 
@@ -121,7 +121,7 @@ function InputCatcher({
   busyBlockingInfo: BusyBlockingInfo;
 }) {
   const domElementRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     if (domElementRef.current) {
       renderedInputCatchers.set(viewportID, domElementRef.current);
     }
@@ -130,7 +130,7 @@ function InputCatcher({
         renderedInputCatchers.delete(viewportID);
       }
     };
-  }, []);
+  });
 
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 

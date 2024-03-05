@@ -8,4 +8,4 @@ export const setTaskAction = (task: Task | null | undefined) =>
   ({
     type: "SET_TASK",
     task,
-  } as const);
+  }) as const;

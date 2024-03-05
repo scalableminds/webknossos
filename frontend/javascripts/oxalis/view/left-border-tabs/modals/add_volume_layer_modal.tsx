@@ -104,6 +104,7 @@ export default function AddVolumeLayerModal({
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether to add more dependencies.
   const initialNewLayerName = useMemo(() => {
     if (preselectedLayerName) {
       return preselectedLayerName;

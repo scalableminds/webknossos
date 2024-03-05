@@ -29,35 +29,35 @@ export const proofreadAtPosition = (
     type: "PROOFREAD_AT_POSITION",
     position,
     additionalCoordinates,
-  } as const);
+  }) as const;
 
 export const clearProofreadingByProducts = () =>
   ({
     type: "CLEAR_PROOFREADING_BY_PRODUCTS",
-  } as const);
+  }) as const;
 
 export const proofreadMerge = (position: Vector3) =>
   ({
     type: "PROOFREAD_MERGE",
     position,
-  } as const);
+  }) as const;
 
 export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: number) =>
   ({
     type: "MIN_CUT_AGGLOMERATE",
     sourceNodeId,
     targetNodeId,
-  } as const);
+  }) as const;
 
 export const minCutAgglomerateWithPositionAction = (position: Vector3) =>
   ({
     type: "MIN_CUT_AGGLOMERATE_WITH_POSITION",
     position,
-  } as const);
+  }) as const;
 
 export const cutAgglomerateFromNeighborsAction = (position: Vector3, tree?: Tree) =>
   ({
     type: "CUT_AGGLOMERATE_FROM_NEIGHBORS",
     position,
     tree,
-  } as const);
+  }) as const;

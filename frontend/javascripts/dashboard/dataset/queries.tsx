@@ -147,6 +147,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
     },
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (queryData.data == null || queryData.data.length === 0) {

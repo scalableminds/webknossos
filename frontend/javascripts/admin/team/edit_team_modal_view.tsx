@@ -3,9 +3,10 @@ import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { Modal, AutoComplete, Input, Spin, Tooltip } from "antd";
 import { DefaultOptionType } from "antd/lib/select";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
 import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -20,9 +21,9 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const [users, setUsers] = useState<APIUser[] | null>(null);
   const [isWaitingForRequest, setIsWaitingForRequest] = useState(false);
   const fetchUsers = async () => setUsers(await getEditableUsers());
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     fetchUsers();
-  }, []);
+  });
 
   if (team === null) return null;
   const updateTeamMembership = async (user: APIUser, newTeams: APITeamMembership[]) => {

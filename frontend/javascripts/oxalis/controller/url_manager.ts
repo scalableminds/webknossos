@@ -406,10 +406,13 @@ export function updateTypeAndId(
 // for better url readability
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
-const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
-  obj[encodeURIComponent(decodedValue)] = decodedValue;
-  return obj;
-}, {} as Record<string, string>);
+const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce(
+  (obj, decodedValue) => {
+    obj[encodeURIComponent(decodedValue)] = decodedValue;
+    return obj;
+  },
+  {} as Record<string, string>,
+);
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 

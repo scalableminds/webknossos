@@ -835,7 +835,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
             {form && (
               <DatasetSettingsDataTab
                 key="SimpleAdvancedDataForm"
-                datasetId={this.props.datasetId}
+                dataset={this.state.dataset}
                 allowRenamingDataset={false}
                 form={form}
                 activeDataSourceEditMode={this.state.activeDataSourceEditMode}

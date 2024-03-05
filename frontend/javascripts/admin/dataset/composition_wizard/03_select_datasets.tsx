@@ -3,8 +3,9 @@ import { AsyncButton } from "components/async_clickables";
 import DatasetSelectionComponent, {
   DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { tryToFetchDatasetsByName, WizardComponentProps } from "./common";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
   const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);
@@ -33,9 +34,9 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
     }));
   };
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
-  }, []);
+  });
 
   // When not using any transforms,
   let isDatasetCountValid = true;

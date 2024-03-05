@@ -9,7 +9,7 @@ import { M4x4 } from "libs/mjs";
 
 test("Estimate affine projection", (t) => {
   const [sourcePoints, targetPoints] = getPointsC555();
-  let affineMatrix = estimateAffine(sourcePoints, targetPoints);
+  const affineMatrix = estimateAffine(sourcePoints, targetPoints);
 
   const transform = (x: number, y: number, z: number) => {
     const vec = new Matrix([[x, y, z, 1]]).transpose();

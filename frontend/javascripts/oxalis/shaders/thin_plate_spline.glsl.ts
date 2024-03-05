@@ -9,7 +9,7 @@ export function generateTpsInitialization(
   const tps = tpsTransformPerLayer[name];
   const ff = formatNumberAsGLSLFloat;
 
-  let weightLines = [];
+  const weightLines = [];
   for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
     weightLines.push(
       `          TPS_W_${name}[${idx}] = vec3(${ff(tps.tpsX.W[idx])}, ${ff(tps.tpsY.W[idx])}, ${ff(
@@ -18,13 +18,13 @@ export function generateTpsInitialization(
     );
   }
 
-  let cpsLines = [];
+  const cpsLines = [];
   for (let idx = 0; idx < tps.tpsX.cps.length; idx++) {
-    let coords = tps.tpsX.cps[idx].map((num) => ff(num)).join(", ");
+    const coords = tps.tpsX.cps[idx].map((num) => ff(num)).join(", ");
     cpsLines.push(`          TPS_cps_${name}[${idx}] = vec3(${coords});`);
   }
 
-  let aLines = [];
+  const aLines = [];
   for (let idx = 0; idx < 4; idx++) {
     aLines.push(
       `          TPS_a_${name}[${idx}] = vec3(${ff(tps.tpsX.a[idx])}, ${ff(tps.tpsY.a[idx])}, ${ff(

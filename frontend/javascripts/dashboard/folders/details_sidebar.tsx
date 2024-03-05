@@ -45,6 +45,7 @@ export function DetailsSidebar({
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder, error } = useFolderQuery(folderId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether context.globalSearchQuery should be added as a dependency.
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&

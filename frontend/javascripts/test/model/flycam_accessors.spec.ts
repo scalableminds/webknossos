@@ -122,7 +122,7 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
-  // prettier-ignore
+  // biome-ignore format: don't format array
   const expectedZoomValues = [
     1.9487171,
     3.4522712143931016,

@@ -14,6 +14,7 @@ export function EditFolderModal({ folderId, onClose }: { folderId: string; onClo
   const context = useDatasetCollectionContext();
   const inputElement = useRef<InputRef>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This is an intentional side effect to focus the input element.
   useEffect(() => {
     if (inputElement.current) {
       inputElement.current.focus();

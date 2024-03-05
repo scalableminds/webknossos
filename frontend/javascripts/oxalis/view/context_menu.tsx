@@ -1098,6 +1098,7 @@ export function GenericContextMenuContainer(props: {
    * to deal with.
    */
   const inputRef: React.MutableRefObject<HTMLElement | null> = React.useRef(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Always focus newest input ref
   React.useEffect(() => {
     if (inputRef.current != null) {
       inputRef.current.focus();

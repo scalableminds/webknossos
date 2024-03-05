@@ -78,6 +78,8 @@ function DatasetFolderViewInner(props: Props) {
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =
     context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;

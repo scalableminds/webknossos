@@ -222,7 +222,7 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
-export const enum ContourModeEnum {
+export enum ContourModeEnum {
   DRAW = "DRAW",
   DELETE = "DELETE",
 }
@@ -251,7 +251,7 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const enum MappingStatusEnum {
+export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",

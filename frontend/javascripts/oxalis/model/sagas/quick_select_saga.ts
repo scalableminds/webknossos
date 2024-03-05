@@ -44,7 +44,7 @@ function prepareSkeletonSAMInput(
   activeViewport: OrthoView,
   predictionFinishedCallback: () => void,
 ): SAMNodeSelect {
-  const [firstDim, secondDim, thirdDim] = dimensions;
+  const [firstDim, secondDim, _thirdDim] = dimensions;
   const nodePositions = nodes.map((node) => node.position);
   const sum = nodePositions.reduce((currentSum: Vector3, position: Vector3) => {
     return currentSum.map((sum, index) => sum + position[index]) as Vector3;

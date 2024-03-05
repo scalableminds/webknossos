@@ -884,7 +884,7 @@ export default function ToolbarView() {
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Adding disabledInfosForTools[lastForcefulDisabledTool].isDisabled as dependency requires another null-check which makes the dependency itself quite tedious.
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);

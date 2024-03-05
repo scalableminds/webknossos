@@ -35,7 +35,7 @@ type TracingStatsHelper = {
   segmentCount?: number;
 };
 
-// biome-ignore lint/complexity/noBannedTypes: <explanation>
+// biome-ignore lint/complexity/noBannedTypes: {} should be avoided actually
 export type CombinedTracingStats = (SkeletonTracingStats | {}) & (VolumeTracingStats | {});
 
 export function getStats(

@@ -641,7 +641,7 @@ function ChangeBrushSizePopover() {
   const presetBrushSizes = useSelector(
     (state: OxalisState) => state.userConfiguration.presetBrushSizes,
   );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes ist needed as dependency.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes is needed as dependency.
   useEffect(() => {
     if (presetBrushSizes == null) {
       handleUpdatePresetBrushSizes(defaultBrushSizes);

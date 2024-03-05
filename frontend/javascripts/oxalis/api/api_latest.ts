@@ -2368,24 +2368,11 @@ class DataApi {
       M4x4.mul(
         M4x4.mul(
           makeTranslation(pos[0], pos[1], pos[2]),
-          // prettier-ignore
+          // biome-ignore format: don't format array
           new Float32Array([
-            Math.cos(thetaInRad),
-            Math.sin(thetaInRad),
-            0,
-            0,
-            -Math.sin(thetaInRad),
-            Math.cos(thetaInRad),
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            1,
+            Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
+            -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
+            0, 0, 1, 0, 0, 0, 0, 1,
           ]),
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),

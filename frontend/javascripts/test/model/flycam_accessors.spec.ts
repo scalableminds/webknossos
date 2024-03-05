@@ -122,11 +122,21 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
-  // prettier-ignore
+  // biome-ignore format: don't format array
   const expectedZoomValues = [
-    1.9487171, 3.4522712143931016, 5.559917313492236, 9.849732675807626, 21.113776745352595,
-    41.144777789250966, 80.1795320536136, 156.24722518287504, 334.9298034955614, 652.6834353714405,
-    1271.8953713950718, 2726.4206856132723, 6428.757360336458,
+    1.9487171,
+    3.4522712143931016,
+    5.559917313492236,
+    9.849732675807626,
+    21.113776745352595,
+    41.144777789250966,
+    80.1795320536136,
+    156.24722518287504,
+    334.9298034955614,
+    652.6834353714405,
+    1271.8953713950718,
+    2726.4206856132723,
+    6428.757360336458,
   ];
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
 });

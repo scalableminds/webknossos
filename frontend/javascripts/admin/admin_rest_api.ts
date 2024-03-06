@@ -2452,13 +2452,44 @@ type MinCutTargetEdge = {
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentsInfo: ArbitraryObject,
+  segmentsInfo: {
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
+    mag: Vector3;
+    agglomerateId: number;
+    editableMappingId: string;
+  },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: segmentsInfo,
+      },
+    ),
+  );
+}
+
+export type NeighborInfo = {
+  segmentId: number;
+  neighbors: Array<{ segmentId: number; position: Vector3 }>;
+};
+
+export async function getNeighborsForAgglomerateNode(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentInfo: {
+    segmentPosition: Vector3;
+    mag: Vector3;
+    agglomerateId: number;
+    editableMappingId: string;
+  },
+): Promise<NeighborInfo> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      {
+        data: segmentInfo,
       },
     ),
   );

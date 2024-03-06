@@ -341,6 +341,7 @@ function serializeTransform(state: OxalisState): string[] {
         "transform",
         {
           type: "thin_plate_spline",
+          positionsAreTransformed: true,
         },
         correspondences.map((pair) =>
           serializeTag("correspondence", {

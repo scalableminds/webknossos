@@ -61,6 +61,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getNodeAndTree,
+  getNodeAndTreeOrNull,
   getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -487,7 +488,7 @@ function getNodeContextMenuOptions({
             disabled: !isProofreadingActive,
             onClick: () =>
               Store.dispatch(
-                cutAgglomerateFromNeighborsAction(clickedNode.position, clickedTree),
+                cutAgglomerateFromNeighborsAction(clickedNode.untransformedPosition, clickedTree),
               ),
             label: (
               <Tooltip

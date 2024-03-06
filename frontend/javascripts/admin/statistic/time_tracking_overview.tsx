@@ -3,7 +3,7 @@ import { Card, Select, Spin, Table, Button, DatePicker, TimeRangePickerProps } f
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
@@ -16,11 +16,12 @@ const { Column } = Table;
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export enum typeFilters { // TODO maybe map to annotationtype
-  ONLY_ANNOTATIONS_KEY = "ONLY_ANNOTATIONS",
-  ONLY_TASKS_KEY = "ONLY_TASKS",
-  TASKS_AND_ANNOTATIONS_KEY = "TASKS_AND_ANNOTATIONS",
+export enum typeFilters {
+  ONLY_ANNOTATIONS_KEY = "Explorational",
+  ONLY_TASKS_KEY = "Task",
+  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
 }
+type TypeFilters = "Explorational" | "Task" | "Task,Explorational";
 
 type TimeEntry = {
   user: {
@@ -62,7 +63,7 @@ function TimeTrackingOverview() {
   ) => {
     // omit project parameter in request if annotation data is requested
     const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-    return `api/time/summed/userList?start=${startMs}&end=${endMs}&annotationTypes=${annotationTypes}&teamIds=${teamIds.join(
+    return `api/time/summed/userList?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
       ",",
     )}${projectsParam}`;
   };
@@ -87,27 +88,23 @@ function TimeTrackingOverview() {
     [],
   );
 
-  const [selectedProjectOrTypeFilters, setSelectedProjectIds] = useState([
-    typeFilters.TASKS_AND_ANNOTATIONS_KEY as string,
-  ]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
+  const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
+  const [selectedProjectOrTypeFilters, setSelectedProjectOrTypeFilters] = useState(Array<string>);
+  useEffect(
+    () => setSelectedProjectOrTypeFilters([...selectedProjectIds, selectedTypes]),
+    [selectedProjectIds, selectedTypes],
+  );
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
-  const [annotationTypes, setAnnotationTypes] = useState("Task,Explorational");
   const filteredTimeEntries = useFetch(
     async () => {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
-      const noProjectFilterNeeded =
-        selectedProjectOrTypeFilters.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY) ||
-        selectedProjectOrTypeFilters.includes(typeFilters.ONLY_ANNOTATIONS_KEY);
-      let filteredProjects = selectedProjectOrTypeFilters;
-      if (
-        selectedProjectOrTypeFilters.length === 0 ||
-        selectedProjectOrTypeFilters.includes(typeFilters.ONLY_TASKS_KEY)
-      ) {
+      const projectFilterNeeded = selectedTypes === typeFilters.ONLY_TASKS_KEY;
+      let filteredProjects = selectedProjectIds;
+      if (projectFilterNeeded && selectedProjectIds.length === 0)
         filteredProjects = allProjects.map((project) => project.id);
-      } else if (noProjectFilterNeeded) filteredProjects = [];
-      if (filteredTeams.length < 1 || (filteredProjects.length < 1 && !noProjectFilterNeeded))
-        return [];
+      //TODO make sure its working for project id list length 0
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
         endDate.valueOf(),
@@ -150,31 +147,21 @@ function TimeTrackingOverview() {
   };
 
   //TODO make new after proper request for annotations only
-  const setSelectedProjects = (selectedProjectIds: string[], projectId: string) => {
-    if (projectId == typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
-      setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
-      setAnnotationTypes("Task,Explorational");
-    } // set all projects and true
-    else if (projectId === typeFilters.ONLY_TASKS_KEY) {
-      setSelectedProjectIds([typeFilters.ONLY_TASKS_KEY]);
-      setAnnotationTypes("Task");
-    } else if (projectId === typeFilters.ONLY_ANNOTATIONS_KEY) {
-      setSelectedProjectIds([typeFilters.ONLY_ANNOTATIONS_KEY]);
-      setAnnotationTypes("Explorational");
+  const setSelectedProjects = (_prevSelection: string[], selectedValue: string) => {
+    if (Object.values<string>(typeFilters).includes(selectedValue)) {
+      setSelectedTypes(selectedValue);
+      setSelectedProjectIds([]);
     } else {
-      const prevSelectedIds = selectedProjectIds.filter(
-        (id) => !(Object.values(typeFilters) as string[]).includes(id), //TODO omit cast
-      );
-      setSelectedProjectIds([...prevSelectedIds, projectId]);
-      setAnnotationTypes("Task");
+      setSelectedTypes(typeFilters.ONLY_TASKS_KEY);
+      setSelectedProjectIds([...selectedProjectIds, selectedValue]);
     }
   };
 
   const onDeselect = (removedKey: string) => {
     if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
-      setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
+      setSelectedProjectOrTypeFilters([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
     } else {
-      setSelectedProjectIds(
+      setSelectedProjectOrTypeFilters(
         selectedProjectOrTypeFilters.filter((projectId) => projectId !== removedKey),
       );
     }
@@ -267,6 +254,7 @@ function TimeTrackingOverview() {
               params.append("user", user.id);
               params.append("start", startDate.valueOf().toString());
               params.append("end", endDate.valueOf().toString());
+              params.append("projectsOrType", selectedProjectOrTypeFilters.join());
               return <Link to={`/reports/timetracking?${params}`}>Details</Link>;
             }}
           />

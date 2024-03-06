@@ -124,10 +124,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
     } else if (hasStart && hasEnd) {
       dateRange = [dayjs(+params.start), dayjs(+params.end)];
     }
+    const hasProjectOrTypeFilters = _.has(params, "projectsOrType");
     this.setState(
       {
         initialUserId: _.has(params, "user") ? params.user : null,
         dateRange,
+        selectedProjectIds: hasProjectOrTypeFilters ? params.projectsOrType.split(",") : [],
       },
       () => this.handleDateChange(dateRange),
     );

@@ -325,6 +325,7 @@ function serializeTransform(state: OxalisState): string[] {
       serializeTag("transform", {
         type: "affine",
         matrix: `[${transform.affineMatrix.join(",")}]`,
+        positionsAreTransformed: true,
       }),
     ];
   } else {

@@ -134,7 +134,7 @@ export function SegmentStatisticsModal({
       const maybeVolumeTracing =
         tracingId != null ? getVolumeTracingById(tracing, tracingId) : null;
       const maybeGetMappingName = () => {
-        if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing?.mappingName;
+        if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing.mappingName;
         const mappingInfo = getMappingInfo(
           temporaryConfiguration.activeMappingByLayer,
           visibleSegmentationLayer?.name,

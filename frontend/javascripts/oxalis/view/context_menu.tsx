@@ -1201,6 +1201,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
     getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
   );
+  const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
+    if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
+    const mappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    );
+    return mappingInfo.mappingName;
+  });
   const isLoadingMessage = "loading";
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
   const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
@@ -1221,14 +1229,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
           layersFinestResolution,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
-          volumeTracing?.mappingName,
+          mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           requestUrl,
           layersFinestResolution,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
-          volumeTracing?.mappingName,
+          mappingName,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(
           boundingBoxInRequestedMag,

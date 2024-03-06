@@ -969,9 +969,11 @@ export function getSegmentVolumes(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
+  let mappingNameNoEmptyString = mappingName;
+  if (mappingName != null && mappingName.length < 1) mappingNameNoEmptyString = null;
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName: mappingNameNoEmptyString },
       method: "POST",
     }),
   );
@@ -984,9 +986,11 @@ export function getSegmentBoundingBoxes(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  let mappingNameNoEmptyString = mappingName;
+  if (mappingName != null && mappingName.length < 1) mappingNameNoEmptyString = null;
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName: mappingNameNoEmptyString },
       method: "POST",
     }),
   );

@@ -4,7 +4,7 @@ import type {
   NodeWithTreeId,
   UpdateActionNode,
 } from "oxalis/model/sagas/update_actions";
-import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";
+import type { TreeMap, SkeletonTracing, OxalisState, StoreType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import {
@@ -115,7 +115,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
 
 // Do not create nodes if they are set outside of segments.
 async function createNodeOverwrite(
-  state: OxalisState,
+  store: StoreType,
   call: (action: Action) => void,
   action: CreateNodeAction,
   mergerModeState: MergerModeState,
@@ -128,7 +128,7 @@ async function createNodeOverwrite(
   const { position: untransformedPosition, additionalCoordinates } = action;
 
   const segmentId = await getSegmentId(
-    state,
+    store.getState(),
     segmentationLayerName,
     untransformedPosition,
     additionalCoordinates,
@@ -465,7 +465,7 @@ export async function enableMergerMode(
   );
   // Register for single CREATE_NODE actions to avoid setting nodes outside of segments
   unsubscribeFunctions.push(
-    api.utils.registerOverwrite<OxalisState, Action>("CREATE_NODE", (store, next, originalAction) =>
+    api.utils.registerOverwrite<StoreType, Action>("CREATE_NODE", (store, next, originalAction) =>
       createNodeOverwrite(store, next, originalAction as CreateNodeAction, mergerModeState),
     ),
   );

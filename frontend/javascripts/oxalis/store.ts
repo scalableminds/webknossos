@@ -621,4 +621,6 @@ export function startSagas(rootSaga: Saga<any[]>) {
   sagaMiddleware.run(rootSaga);
 }
 
+export type StoreType = typeof store;
+
 export default store;

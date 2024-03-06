@@ -11,6 +11,7 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import { ViewMode, ViewModeValues } from "oxalis/constants";
 import constants from "oxalis/constants";
+import { EmptyObject } from "types/globals";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -29,7 +30,7 @@ const VIEW_MODE_TO_ICON = {
   ),
 };
 
-class ViewModesView extends PureComponent<Props, {}> {
+class ViewModesView extends PureComponent<Props, EmptyObject> {
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,

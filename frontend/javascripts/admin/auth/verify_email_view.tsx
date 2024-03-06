@@ -62,6 +62,7 @@ export default function VerifyEmailView({ token }: { token: string }) {
     Toast.close(VERIFICATION_ERROR_TOAST_KEY);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: history.push is not needed as a dependency.
   useEffect(() => {
     if (result) {
       Toast.success("Successfully verified your email.");

@@ -3,7 +3,7 @@ import * as React from "react";
 import _ from "lodash";
 
 type InputComponentState = {
-  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | BigInt;
+  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | bigint;
 };
 
 /*
@@ -30,7 +30,10 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
     currentValue: this.props.value,
   };
 
-  getSnapshotBeforeUpdate(_prevProps: InputProps, _prevState: {}): [number | null, number | null] {
+  getSnapshotBeforeUpdate(
+    _prevProps: InputProps,
+    _prevState: InputComponentState,
+  ): [number | null, number | null] {
     // Remember the selection within the input before updating it.
     try {
       return [
@@ -46,7 +49,7 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
 
   componentDidUpdate(
     prevProps: InputProps,
-    _prevState: {},
+    _prevState: InputComponentState,
     snapshot: [number | null, number | null],
   ) {
     if (prevProps.value !== this.props.value) {

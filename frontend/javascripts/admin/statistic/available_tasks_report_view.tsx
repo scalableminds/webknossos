@@ -6,6 +6,7 @@ import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TeamSelectionForm from "./team_selection_form";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { EmptyObject } from "types/globals";
 
 const { Column } = Table;
 const typeHint: APIAvailableTasksReport[] = [];
@@ -19,7 +20,7 @@ type State = {
  * emphasize that tasks are still available for individual users.
  * From the project viewpoint they are tasks with pending instances.
  */
-class AvailableTasksReportView extends React.PureComponent<{}, State> {
+class AvailableTasksReportView extends React.PureComponent<EmptyObject, State> {
   state: State = {
     data: [],
     isLoading: false,

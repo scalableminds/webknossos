@@ -16,7 +16,7 @@ export const setDatasetAction = (dataset: APIDataset) =>
   ({
     type: "SET_DATASET",
     dataset,
-  } as const);
+  }) as const;
 
 export const setLayerMappingsAction = (
   layerName: string,
@@ -28,7 +28,7 @@ export const setLayerMappingsAction = (
     layerName,
     mappingNames,
     agglomerateNames,
-  } as const);
+  }) as const;
 
 export const setLayerTransformsAction = (
   layerName: string,
@@ -38,10 +38,10 @@ export const setLayerTransformsAction = (
     type: "SET_LAYER_TRANSFORMS",
     layerName,
     coordinateTransformations,
-  } as const);
+  }) as const;
 
 export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>
   ({
     type: "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     layerName,
-  } as const);
+  }) as const;

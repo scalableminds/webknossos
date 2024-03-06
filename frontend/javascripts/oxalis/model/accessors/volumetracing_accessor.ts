@@ -372,7 +372,7 @@ export function getVisibleSegments(state: OxalisState): {
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
-export function getSelectedIds(state: OxalisState): [
+function _getSelectedIds(state: OxalisState): [
   {
     segments: number[];
     group: number | null;
@@ -420,6 +420,8 @@ export function getSelectedIds(state: OxalisState): [
   }
   return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
 }
+
+export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
@@ -690,7 +692,7 @@ export function hasConnectomeFile(state: OxalisState) {
   return CONNECTOME_STATES.YES;
 }
 
-export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = getVisibleSegmentationLayer(state);

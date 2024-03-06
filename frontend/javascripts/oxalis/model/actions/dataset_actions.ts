@@ -19,7 +19,7 @@ export const setDatasetAction = (dataset: APIDataset) =>
   ({
     type: "SET_DATASET",
     dataset,
-  } as const);
+  }) as const;
 
 export const setLayerMappingsAction = (
   layerName: string,
@@ -31,7 +31,7 @@ export const setLayerMappingsAction = (
     layerName,
     mappingNames,
     agglomerateNames,
-  } as const);
+  }) as const;
 
 export const setLayerTransformsAction = (
   layerName: string,
@@ -41,22 +41,22 @@ export const setLayerTransformsAction = (
     type: "SET_LAYER_TRANSFORMS",
     layerName,
     coordinateTransformations,
-  } as const);
+  }) as const;
 
 export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>
   ({
     type: "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     layerName,
-  } as const);
+  }) as const;
 
 export const setLayerHasSegmentIndexAction = (layerName: string, hasSegmentIndex: boolean) =>
   ({
     type: "SET_LAYER_HAS_SEGMENT_INDEX",
     layerName,
     hasSegmentIndex,
-  } as const);
+  }) as const;
 
 export const ensureSegmentIndexIsLoadedAction = () =>
   ({
     type: "ENSURE_SEGMENT_INDEX_IS_LOADED",
-  } as const);
+  }) as const;

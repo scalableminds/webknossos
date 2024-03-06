@@ -60,72 +60,72 @@ export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DROPZONE_MODAL_VISIBILITY",
     visible,
-  } as const);
+  }) as const;
 export const setVersionRestoreVisibilityAction = (active: boolean) =>
   ({
     type: "SET_VERSION_RESTORE_VISIBILITY",
     active,
-  } as const);
+  }) as const;
 export const setStoredLayoutsAction = (storedLayouts: Record<string, any>) =>
   ({
     type: "SET_STORED_LAYOUTS",
     storedLayouts,
-  } as const);
+  }) as const;
 export const setBorderOpenStatusAction = (borderOpenStatus: BorderOpenStatus) =>
   ({
     type: "SET_BORDER_OPEN_STATUS",
     borderOpenStatus,
-  } as const);
+  }) as const;
 export const setImportingMeshStateAction = (isImporting: boolean) =>
   ({
     type: "SET_IMPORTING_MESH_STATE",
     isImporting,
-  } as const);
+  }) as const;
 export const setIsInAnnotationViewAction = (value: boolean) =>
   ({
     type: "SET_IS_IN_ANNOTATION_VIEW",
     value,
-  } as const);
+  }) as const;
 export const setHasOrganizationsAction = (value: boolean) =>
   ({
     type: "SET_HAS_ORGANIZATIONS",
     value,
-  } as const);
+  }) as const;
 export const setToolAction = (tool: AnnotationTool) =>
   ({
     type: "SET_TOOL",
     tool,
-  } as const);
+  }) as const;
 export const cycleToolAction = (backwards: boolean = false) =>
   ({
     type: "CYCLE_TOOL",
     backwards,
-  } as const);
+  }) as const;
 export const setThemeAction = (value: Theme) =>
   ({
     type: "SET_THEME",
     value,
-  } as const);
+  }) as const;
 export const setDownloadModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DOWNLOAD_MODAL_VISIBILITY",
     visible,
-  } as const);
+  }) as const;
 export const setShareModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_SHARE_MODAL_VISIBILITY",
     visible,
-  } as const);
+  }) as const;
 export const setAIJobModalStateAction = (state: StartAIJobModalState) =>
   ({
     type: "SET_AI_JOB_MODAL_STATE",
     state,
-  } as const);
+  }) as const;
 export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_CREATE_ANIMATION_MODAL_VISIBILITY",
     visible,
-  } as const);
+  }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
   ({
     type: "SET_BUSY_BLOCKING_INFO_ACTION",
@@ -133,48 +133,48 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       isBusy,
       reason,
     },
-  } as const);
+  }) as const;
 export const setPythonClientModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_PYTHON_MODAL_VISIBILITY",
     visible,
-  } as const);
+  }) as const;
 export const enterAction = () =>
   ({
     type: "ENTER",
-  } as const);
+  }) as const;
 export const escapeAction = () =>
   ({
     type: "ESCAPE",
-  } as const);
+  }) as const;
 export const setQuickSelectStateAction = (
   state: OxalisState["uiInformation"]["quickSelectState"],
 ) =>
   ({
     type: "SET_QUICK_SELECT_STATE",
     state,
-  } as const);
+  }) as const;
 export const showQuickSelectSettingsAction = (isOpen: boolean) =>
   ({
     type: "SET_ARE_QUICK_SELECT_SETTINGS_OPEN",
     isOpen,
-  } as const);
+  }) as const;
 export const hideMeasurementTooltipAction = () =>
   ({
     type: "HIDE_MEASUREMENT_TOOLTIP",
-  } as const);
+  }) as const;
 export const setLastMeasuredPositionAction = (position: Vector3) =>
   ({
     type: "SET_LAST_MEASURED_POSITION",
     position,
-  } as const);
+  }) as const;
 export const setIsMeasuringAction = (isMeasuring: boolean) =>
   ({
     type: "SET_IS_MEASURING",
     isMeasuring,
-  } as const);
+  }) as const;
 export const setNavbarHeightAction = (navbarHeight: number) =>
   ({
     type: "SET_NAVBAR_HEIGHT",
     navbarHeight,
-  } as const);
+  }) as const;

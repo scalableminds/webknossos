@@ -102,6 +102,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update token once dataset or user changes.
   useEffect(() => {
     getAndSetToken();
   }, [dataset, activeUser]);
@@ -197,6 +198,7 @@ function _ShareModalView(props: Props) {
     setSharedTeams(fetchedSharedTeams);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
   useEffect(() => {
     fetchAndSetSharedTeams();
   }, [annotationType, annotationId, activeUser]);

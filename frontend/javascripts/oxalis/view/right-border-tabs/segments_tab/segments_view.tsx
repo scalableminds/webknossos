@@ -34,7 +34,6 @@ import {
   Tooltip,
   Tree,
 } from "antd";
-import features from "features";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
@@ -120,7 +119,7 @@ import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 
@@ -414,7 +413,11 @@ class SegmentsView extends React.Component<Props, State> {
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
     );
 
-    if (features().jobsEnabled) {
+    if (
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
       this.pollJobData();
     }
 
@@ -691,13 +694,17 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
 
-    if (!features().jobsEnabled) {
-      title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";
+    if (
+      !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
+      title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
-    } else if (!this.props.dataset.jobsEnabled) {
+    } else if (!this.props.dataset.dataStore.jobsEnabled) {
       title =
-        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
+        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to webknossos.org to use this feature.";
     } else if (this.props.hasVolumeTracing) {
       title = this.props.visibleSegmentationLayer?.fallbackLayer
         ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
@@ -1248,7 +1255,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let areGroupOrSelectedSegmentMeshesVisible: boolean =
+    const areGroupOrSelectedSegmentMeshesVisible: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
@@ -1359,7 +1366,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
-    let segmentsWithoutPosition: number[] = relevantSegments
+    const segmentsWithoutPosition: number[] = relevantSegments
       .filter((segment) => segment.somePosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
@@ -1382,7 +1389,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
-    let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {

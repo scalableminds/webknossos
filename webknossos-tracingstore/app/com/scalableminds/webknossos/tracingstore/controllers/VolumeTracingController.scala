@@ -22,7 +22,8 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateActionGroup,
-  MinCutParameters
+  MinCutParameters,
+  NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
@@ -373,6 +374,22 @@ class VolumeTracingController @Inject()(
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
+        }
+      }
+    }
+
+  def agglomerateGraphNeighbors(token: Option[String], tracingId: String): Action[NeighborsParameters] =
+    Action.async(validateJson[NeighborsParameters]) { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(request.body,
+                                                                                   remoteFallbackLayer,
+                                                                                   token)
+          } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
         }
       }
     }

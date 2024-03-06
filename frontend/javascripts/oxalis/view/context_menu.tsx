@@ -12,7 +12,6 @@ import type {
 import type {
   ActiveMappingInfo,
   MutableNode,
-  MutableTreeMap,
   OxalisState,
   SegmentMap,
   SkeletonTracing,
@@ -60,7 +59,10 @@ import {
   hasConnectomeFile,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
@@ -98,6 +100,7 @@ import Store from "oxalis/store";
 import {
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
+  cutAgglomerateFromNeighborsAction,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -134,7 +137,6 @@ type OwnProps = {
   hideContextMenu: () => void;
 };
 
-type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   datasetScale: Vector3;
@@ -150,7 +152,7 @@ type StateProps = {
   allowUpdate: boolean;
   segments: SegmentMap | null | undefined;
 };
-type Props = OwnProps & StateProps & DispatchProps;
+type Props = OwnProps & StateProps;
 
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
@@ -311,7 +313,6 @@ function getMaybeMinCutItem(
   clickedTree: Tree,
   volumeTracing: VolumeTracing | null | undefined,
   userBoundingBoxes: Array<UserBoundingBox>,
-  performMinCut: (treeId: number, boundingBoxId?: number | undefined) => void,
   isVolumeModificationAllowed: boolean,
 ): SubMenuType | null {
   const seeds = Array.from(clickedTree.nodes.values());
@@ -336,7 +337,7 @@ function getMaybeMinCutItem(
         children: [
           {
             key: "create-new",
-            onClick: () => performMinCut(clickedTree.treeId),
+            onClick: () => Store.dispatch(performMinCutAction(clickedTree.treeId)),
             label: "Use default bounding box",
           },
           ...userBoundingBoxes
@@ -344,7 +345,7 @@ function getMaybeMinCutItem(
             .map((bbox) => {
               return {
                 key: bbox.id.toString(),
-                onClick: () => performMinCut(clickedTree.treeId, bbox.id),
+                onClick: () => Store.dispatch(performMinCutAction(clickedTree.treeId, bbox.id)),
                 label: bbox.name || "Unnamed bounding box",
               };
             }),
@@ -359,10 +360,6 @@ function getMeshItems(
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   datasetScale: Vector3,
-  removeMesh: (segmentationLayerName: string, meshId: number) => void,
-  hideMesh: (segmentationLayerName: string, meshId: number) => void,
-  setPosition: (position: Vector3) => void,
-  refreshMesh: (segmentationLayerName: string, meshId: number) => void,
 ): MenuItemType[] {
   if (
     maybeClickedMeshId == null ||
@@ -375,25 +372,28 @@ function getMeshItems(
   return [
     {
       key: "hide-mesh",
-      onClick: () => hideMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      onClick: () =>
+        Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
       label: "Hide Mesh",
     },
     {
       key: "reload-mesh",
-      onClick: () => refreshMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      onClick: () =>
+        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
       label: "Reload Mesh",
     },
     {
       key: "jump-to-mesh",
       onClick: () => {
         const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
-        setPosition(unscaledPosition);
+        Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
     },
     {
       key: "remove-mesh",
-      onClick: () => removeMesh(visibleSegmentationLayer.name, maybeClickedMeshId),
+      onClick: () =>
+        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
       label: "Remove Mesh",
     },
   ];
@@ -406,19 +406,6 @@ function getNodeContextMenuOptions({
   maybeMeshIntersectionPosition,
   visibleSegmentationLayer,
   datasetScale,
-  deleteEdge,
-  mergeTrees,
-  minCutAgglomerate,
-  deleteNode,
-  createBranchPoint,
-  deleteBranchpointById,
-  setActiveNode,
-  hideTree,
-  performMinCut,
-  removeMesh,
-  hideMesh,
-  setPosition,
-  refreshMesh,
   useLegacyBindings,
   volumeTracing,
   infoRows,
@@ -435,10 +422,13 @@ function getNodeContextMenuOptions({
   }
 
   const { userBoundingBoxes } = skeletonTracing;
-  const { activeTreeId, trees, activeNodeId } = skeletonTracing;
-  const clickedTree = findTreeByNodeId(trees, clickedNodeId);
+  const { activeTreeId, activeNodeId } = skeletonTracing;
+  const { node: clickedNode, tree: clickedTree } = getNodeAndTreeOrNull(
+    skeletonTracing,
+    clickedNodeId,
+  );
 
-  if (clickedTree == null) {
+  if (clickedTree == null || clickedNode == null) {
     return [{ key: "disabled-error", disabled: true, label: "Error: Could not find clicked node" }];
   }
 
@@ -459,32 +449,25 @@ function getNodeContextMenuOptions({
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
     datasetScale,
-    removeMesh,
-    hideMesh,
-    setPosition,
-    refreshMesh,
   );
 
   const menuItems: ItemType[] = [
     {
       key: "set-node-active",
       disabled: isTheSameNode,
-      onClick: () => setActiveNode(clickedNodeId),
+      onClick: () => Store.dispatch(setActiveNodeAction(clickedNodeId)),
       label: "Select this Node",
     },
-    getMaybeMinCutItem(
-      clickedTree,
-      volumeTracing,
-      userBoundingBoxes,
-      performMinCut,
-      isVolumeModificationAllowed,
-    ),
+    getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
     ...(allowUpdate
       ? [
           {
             key: "merge-trees",
             disabled: areInSameTree,
-            onClick: () => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null),
+            onClick: () =>
+              activeNodeId != null
+                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
+                : null,
             label: (
               <>
                 Create Edge & Merge with this Tree{" "}
@@ -497,14 +480,42 @@ function getNodeContextMenuOptions({
                 key: "min-cut-node",
                 disabled: !areInSameTree || isTheSameNode,
                 onClick: () =>
-                  activeNodeId != null ? minCutAgglomerate(clickedNodeId, activeNodeId) : null,
+                  activeNodeId != null
+                    ? Store.dispatch(minCutAgglomerateAction(clickedNodeId, activeNodeId))
+                    : null,
                 label: "Perform Min-Cut between these Nodes",
               }
             : null,
+
+          isProofreadingActive
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () =>
+                  Store.dispatch(
+                    cutAgglomerateFromNeighborsAction(clickedNode.position, clickedTree),
+                  ),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
+                  </Tooltip>
+                ),
+              }
+            : null,
+
           {
             key: "delete-edge",
             disabled: !areNodesConnected,
-            onClick: () => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null),
+            onClick: () =>
+              activeNodeId != null
+                ? Store.dispatch(deleteEdgeAction(activeNodeId, clickedNodeId))
+                : null,
             label: (
               <>
                 Delete Edge to this Node{" "}
@@ -514,7 +525,7 @@ function getNodeContextMenuOptions({
           },
           {
             key: "delete-node",
-            onClick: () => deleteNode(clickedNodeId, clickedTree.treeId),
+            onClick: () => Actions.deleteNode(Store.dispatch, clickedNodeId, clickedTree.treeId),
             label: (
               <>
                 Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
@@ -527,7 +538,7 @@ function getNodeContextMenuOptions({
                 className: "node-context-menu-item",
                 onClick: () =>
                   activeNodeId != null
-                    ? deleteBranchpointById(clickedNodeId, clickedTree.treeId)
+                    ? Store.dispatch(deleteBranchpointByIdAction(clickedNodeId, clickedTree.treeId))
                     : null,
                 label: "Unmark as Branchpoint",
               }
@@ -536,7 +547,7 @@ function getNodeContextMenuOptions({
                 className: "node-context-menu-item",
                 onClick: () =>
                   activeNodeId != null
-                    ? createBranchPoint(clickedNodeId, clickedTree.treeId)
+                    ? Store.dispatch(createBranchPointAction(clickedNodeId, clickedTree.treeId))
                     : null,
                 label: (
                   <>
@@ -576,7 +587,11 @@ function getNodeContextMenuOptions({
       label: "Path Length of this Tree",
     },
     allowUpdate
-      ? { key: "hide-tree", onClick: () => hideTree(clickedTree.treeId), label: "Hide this Tree" }
+      ? {
+          key: "hide-tree",
+          onClick: () => Store.dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
+          label: "Hide this Tree",
+        }
       : null,
     ...infoRows,
   ];
@@ -585,16 +600,11 @@ function getNodeContextMenuOptions({
 }
 
 function getBoundingBoxMenuOptions({
-  addNewBoundingBox,
   globalPosition,
   activeTool,
   clickedBoundingBoxId,
   userBoundingBoxes,
-  setBoundingBoxName,
   hideContextMenu,
-  setBoundingBoxColor,
-  hideBoundingBox,
-  deleteBoundingBox,
   allowUpdate,
 }: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
@@ -603,7 +613,7 @@ function getBoundingBoxMenuOptions({
   const newBoundingBoxMenuItem: ItemType = {
     key: "add-new-bounding-box",
     onClick: () => {
-      addNewBoundingBox(globalPosition);
+      Store.dispatch(addUserBoundingBoxAction(null, globalPosition));
     },
     label: (
       <>
@@ -617,7 +627,7 @@ function getBoundingBoxMenuOptions({
     const hideBoundingBoxMenuItem: MenuItemType = {
       key: "hide-bounding-box",
       onClick: () => {
-        hideBoundingBox(clickedBoundingBoxId);
+        Actions.hideBoundingBox(Store.dispatch, clickedBoundingBoxId);
       },
       label: "Hide Bounding Box",
     };
@@ -640,7 +650,8 @@ function getBoundingBoxMenuOptions({
 
   const setBBoxName = (evt: React.SyntheticEvent) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-    setBoundingBoxName(clickedBoundingBoxId, evt.target.value);
+    const value = evt.target.value;
+    Actions.setBoundingBoxName(Store.dispatch, clickedBoundingBoxId, value);
   };
 
   const preventContextMenuFromClosing = (evt: MouseEvent) => {
@@ -711,7 +722,7 @@ function getBoundingBoxMenuOptions({
             onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
               let color = hexToRgb(evt.target.value);
               color = color.map((colorPart) => colorPart / 255) as any as Vector3;
-              setBoundingBoxColor(clickedBoundingBoxId, color);
+              Actions.setBoundingBoxColor(Store.dispatch, clickedBoundingBoxId, color);
             }}
             value={rgbToHex(upscaledBBoxColor)}
           />
@@ -721,14 +732,14 @@ function getBoundingBoxMenuOptions({
     {
       key: "hide-bounding-box",
       onClick: () => {
-        hideBoundingBox(clickedBoundingBoxId);
+        Actions.hideBoundingBox(Store.dispatch, clickedBoundingBoxId);
       },
       label: "Hide Bounding Box",
     },
     {
       key: "delete-bounding-box",
       onClick: () => {
-        deleteBoundingBox(clickedBoundingBoxId);
+        Actions.deleteBoundingBox(Store.dispatch, clickedBoundingBoxId);
       },
       label: "Delete Bounding Box",
     },
@@ -751,12 +762,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     datasetScale,
     currentMeshFile,
     currentConnectomeFile,
-    createTree,
-    setActiveCell,
-    removeMesh,
-    hideMesh,
-    setPosition,
-    refreshMesh,
     mappingInfo,
     infoRows,
     allowUpdate,
@@ -855,7 +860,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           {
             key: "create-node-with-tree",
             onClick: () => {
-              createTree();
+              Store.dispatch(createTreeAction());
               setWaypoint(globalPosition, viewport, false);
             },
             label: (
@@ -934,6 +939,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
+                  </Tooltip>
+                ),
+              }
+            : null,
         ]
       : [];
   const segmentationLayerName =
@@ -1006,7 +1029,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "select-cell",
                 onClick: () => {
-                  setActiveCell(segmentIdAtPosition, globalPosition, additionalCoordinates);
+                  Store.dispatch(
+                    setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
+                  );
                 },
                 label: (
                   <>
@@ -1043,10 +1068,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
     datasetScale,
-    removeMesh,
-    hideMesh,
-    setPosition,
-    refreshMesh,
   );
 
   if (isSkeletonToolActive) {
@@ -1091,6 +1112,7 @@ export function GenericContextMenuContainer(props: {
    * to deal with.
    */
   const inputRef: React.MutableRefObject<HTMLElement | null> = React.useRef(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Always focus newest input ref
   React.useEffect(() => {
     if (inputRef.current != null) {
       inputRef.current.focus();
@@ -1488,48 +1510,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 }
 
-const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  deleteEdge(firstNodeId: number, secondNodeId: number) {
-    dispatch(deleteEdgeAction(firstNodeId, secondNodeId));
-  },
-
-  mergeTrees(sourceNodeId: number, targetNodeId: number) {
-    dispatch(mergeTreesAction(sourceNodeId, targetNodeId));
-  },
-
-  minCutAgglomerate(sourceNodeId: number, targetNodeId: number) {
-    dispatch(minCutAgglomerateAction(sourceNodeId, targetNodeId));
-  },
-
-  deleteNode(nodeId: number, treeId: number) {
+const Actions = {
+  deleteNode(dispatch: Dispatch<any>, nodeId: number, treeId: number) {
     dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
   },
 
-  createBranchPoint(nodeId: number, treeId: number) {
-    dispatch(createBranchPointAction(nodeId, treeId));
-  },
-
-  addTreesAndGroups(treeMap: MutableTreeMap) {
-    dispatch(addTreesAndGroupsAction(treeMap, null));
-  },
-
-  deleteBranchpointById(nodeId: number, treeId: number) {
-    dispatch(deleteBranchpointByIdAction(nodeId, treeId));
-  },
-
-  setActiveNode(nodeId: number) {
-    dispatch(setActiveNodeAction(nodeId));
-  },
-
-  hideTree(treeId: number) {
-    dispatch(setTreeVisibilityAction(treeId, false));
-  },
-
-  createTree() {
-    dispatch(createTreeAction());
-  },
-
   setActiveCell(
+    dispatch: Dispatch<any>,
     segmentId: number,
     somePosition?: Vector3,
     someAdditionalCoordinates?: AdditionalCoordinate[],
@@ -1537,11 +1524,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
   },
 
-  addNewBoundingBox(center: Vector3) {
-    dispatch(addUserBoundingBoxAction(null, center));
-  },
-
-  setBoundingBoxName(id: number, name: string) {
+  setBoundingBoxName(dispatch: Dispatch<any>, id: number, name: string) {
     dispatch(
       changeUserBoundingBoxAction(id, {
         name,
@@ -1549,7 +1532,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     );
   },
 
-  setBoundingBoxColor(id: number, color: Vector3) {
+  setBoundingBoxColor(dispatch: Dispatch<any>, id: number, color: Vector3) {
     dispatch(
       changeUserBoundingBoxAction(id, {
         color,
@@ -1557,24 +1540,21 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     );
   },
 
-  deleteBoundingBox(id: number) {
+  deleteBoundingBox(dispatch: Dispatch<any>, id: number) {
     dispatch(deleteUserBoundingBoxAction(id));
   },
 
-  hideBoundingBox(id: number) {
+  hideBoundingBox(dispatch: Dispatch<any>, id: number) {
     dispatch(
       changeUserBoundingBoxAction(id, {
         isVisible: false,
       }),
     );
   },
-  performMinCut(treeId: number, boundingBoxId: number | undefined) {
-    dispatch(performMinCutAction(treeId, boundingBoxId));
-  },
-  removeMesh(layerName: string, meshId: number) {
+  removeMesh(dispatch: Dispatch<any>, layerName: string, meshId: number) {
     dispatch(removeMeshAction(layerName, meshId));
   },
-  hideMesh(layerName: string, meshId: number) {
+  hideMesh(dispatch: Dispatch<any>, layerName: string, meshId: number) {
     dispatch(
       updateMeshVisibilityAction(
         layerName,
@@ -1584,13 +1564,13 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
       ),
     );
   },
-  setPosition(position: Vector3) {
+  setPosition(dispatch: Dispatch<any>, position: Vector3) {
     dispatch(setPositionAction(position));
   },
-  refreshMesh(layerName: string, segmentId: number) {
+  refreshMesh(dispatch: Dispatch<any>, layerName: string, segmentId: number) {
     dispatch(refreshMeshAction(layerName, segmentId));
   },
-});
+};
 
 function mapStateToProps(state: OxalisState): StateProps {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
@@ -1626,5 +1606,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-const connector = connect(mapStateToProps, mapDispatchToProps);
+const connector = connect(mapStateToProps);
 export default connector(ContextMenuContainer);

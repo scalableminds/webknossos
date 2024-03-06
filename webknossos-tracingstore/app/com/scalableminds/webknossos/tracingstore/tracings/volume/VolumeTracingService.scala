@@ -336,7 +336,7 @@ class VolumeTracingService @Inject()(
       withZipsFromMultiZip(initialData) { (_, dataZip) =>
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
-        Fox.successful()
+        Fox.successful(())
       }
       // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
       if (resolutionSets.isEmpty)

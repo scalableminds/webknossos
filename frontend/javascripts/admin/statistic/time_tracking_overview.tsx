@@ -87,7 +87,7 @@ function TimeTrackingOverview() {
     [],
   );
 
-  const [selectedProjectIds, setSelectedProjectIds] = useState([
+  const [selectedProjectOrTypeFilters, setSelectedProjectIds] = useState([
     typeFilters.TASKS_AND_ANNOTATIONS_KEY as string,
   ]);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
@@ -97,12 +97,12 @@ function TimeTrackingOverview() {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       const noProjectFilterNeeded =
-        selectedProjectIds.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY) ||
-        selectedProjectIds.includes(typeFilters.ONLY_ANNOTATIONS_KEY);
-      let filteredProjects = selectedProjectIds;
+        selectedProjectOrTypeFilters.includes(typeFilters.TASKS_AND_ANNOTATIONS_KEY) ||
+        selectedProjectOrTypeFilters.includes(typeFilters.ONLY_ANNOTATIONS_KEY);
+      let filteredProjects = selectedProjectOrTypeFilters;
       if (
-        selectedProjectIds.length === 0 ||
-        selectedProjectIds.includes(typeFilters.ONLY_TASKS_KEY)
+        selectedProjectOrTypeFilters.length === 0 ||
+        selectedProjectOrTypeFilters.includes(typeFilters.ONLY_TASKS_KEY)
       ) {
         filteredProjects = allProjects.map((project) => project.id);
       } else if (noProjectFilterNeeded) filteredProjects = [];
@@ -118,7 +118,7 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, selectedProjectIds, startDate, endDate, allTimeEntries],
+    [selectedTeams, selectedProjectOrTypeFilters, startDate, endDate, allTimeEntries],
   );
   const filterStyle = { marginInline: 10 };
   const selectWidth = 200;
@@ -174,7 +174,9 @@ function TimeTrackingOverview() {
     if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
       setSelectedProjectIds([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
     } else {
-      setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
+      setSelectedProjectIds(
+        selectedProjectOrTypeFilters.filter((projectId) => projectId !== removedKey),
+      );
     }
   };
 
@@ -198,9 +200,11 @@ function TimeTrackingOverview() {
         placeholder="Filter type or projects"
         style={{ width: selectWidth, ...filterStyle }}
         options={getTaskFilterOptions(allProjects)}
-        value={selectedProjectIds}
+        value={selectedProjectOrTypeFilters} //make two datastructures and merge with useEffect
         onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
-        onSelect={(projectId: string) => setSelectedProjects(selectedProjectIds, projectId)}
+        onSelect={(projectId: string) =>
+          setSelectedProjects(selectedProjectOrTypeFilters, projectId)
+        }
       />
       <Select
         mode="multiple"

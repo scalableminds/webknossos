@@ -1,12 +1,9 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw.util
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
 import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Box.tryo
 
-import scala.concurrent.ExecutionContext
 import scala.util.Using.Releasable
 import scala.util.{Success, Using, Failure => TryFailure}
 
@@ -26,5 +23,4 @@ object ResourceBox {
           result
       }
     } yield result
-
 }

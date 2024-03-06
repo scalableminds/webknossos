@@ -5,7 +5,6 @@ import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{BoxImplicits, Fox}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import net.jpountz.lz4.LZ4Factory
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo

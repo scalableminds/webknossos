@@ -145,7 +145,7 @@ function DatasetActionView(props: Props) {
       content: (
         <>
           <Typography.Title level={4} type="danger">
-            Deleting a dataset on disk cannot be undone. Are you certain to delete dataset{" "}
+            Deleting a dataset from disk cannot be undone. Are you certain to delete dataset{" "}
             {dataset.name}?
           </Typography.Title>
           <Typography.Paragraph>
@@ -153,7 +153,7 @@ function DatasetActionView(props: Props) {
           </Typography.Paragraph>
         </>
       ),
-      okText: "Yes, Delete Dataset on Disk now",
+      okText: "Yes, delete dataset from disk",
       okType: "danger",
     });
 
@@ -225,13 +225,15 @@ function DatasetActionView(props: Props) {
           })
         }
       >
-        <WarningOutlined />
+        <WarningOutlined className="icon-margin-right" />
         Show Error
       </a>
-      <a onClick={() => onDeleteDataset()}>
-        <DeleteOutlined />
-        Delete Dataset
-      </a>
+      {dataset.status !== "Deleted by user." ? (
+        <a onClick={() => onDeleteDataset()}>
+          <DeleteOutlined className="icon-margin-right" />
+          Delete Dataset
+        </a>
+      ) : null}
     </div>
   );
   return (

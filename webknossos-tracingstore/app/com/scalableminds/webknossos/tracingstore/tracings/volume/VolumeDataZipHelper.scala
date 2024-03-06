@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{BoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -22,6 +23,7 @@ import org.apache.commons.io.IOUtils
 
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 
 trait VolumeDataZipHelper
     extends WKWDataFormatHelper
@@ -29,9 +31,10 @@ trait VolumeDataZipHelper
     with BoxImplicits
     with LazyLogging {
 
-  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      format <- detectVolumeDataZipFormat(zipFile)
+      format <- Fox.successful(VolumeDataZipFormat.wkw) // detectVolumeDataZipFormat(zipFile).toFox
       _ <- if (format == VolumeDataZipFormat.wkw)
         withBucketsFromWkwZip(zipFile)(block)
       else withBucketsFromZarr3Zip(zipFile)(block)
@@ -46,40 +49,57 @@ trait VolumeDataZipHelper
       } else VolumeDataZipFormat.wkw
     }
 
-  private def withBucketsFromWkwZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
-    tryo(ZipIO.withUnziped(zipFile) {
-      case (fileName, is) =>
-        WKWFile.read(is) {
-          case (header, buckets) =>
-            if (header.numChunksPerShard == 1) {
-              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                if (buckets.hasNext) {
-                  val data = buckets.next()
-                  if (!isRevertedBucket(data)) {
-                    block(bucketPosition, data)
-                  }
-                }
-              }
-            }
-        }
-    })
-
-  private def withBucketsFromZarr3Zip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] =
+  private def withBucketsFromWkwZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      firstHeaderFilePath <- option2Box(
-        ZipIO.entries(new ZipFile(zipFile)).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)))
-      firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath)
-      firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString)
-      _ <- firstHeader.assertValid
-      _ <- ZipIO.withUnziped(zipFile) {
+      _ <- ZipIO.withUnzipedAsync(zipFile) {
+        case (fileName, is) if fileName.toString.endsWith(".wkw") && !fileName.toString.endsWith("header.wkw") =>
+          logger.info(s"reading wkw file at $fileName")
+          WKWFile
+            .read(is) {
+              case (header, buckets) =>
+                if (header.numChunksPerShard == 1) {
+                  logger.info("parsing file path...")
+                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                    logger.info(f"parsed file path to $bucketPosition")
+                    if (buckets.hasNext) {
+                      logger.info("calling buckets.next()")
+                      val data = try { buckets.next() } catch {
+                        case e: Exception => logger.info(f"exception in next(): $e"); Array[Byte](0)
+                      }
+                      if (!isRevertedBucket(data)) {
+                        logger.info("block!!")
+                        block(bucketPosition, data)
+                      } else Fox.successful(logger.info("wasRevertedBlock"))
+                    } else Fox.successful(logger.info("buckets.hasNext was false"))
+                  }.getOrElse(Fox.successful(()))
+                } else Fox.successful(())
+              case _ => Fox.successful(())
+            }
+            .toFox
+        case _ => Fox.successful(())
+      }
+    } yield logger.info("successfully withBucketsFromWkwZipped")
+
+  private def withBucketsFromZarr3Zip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      firstHeaderFilePath <- ZipIO
+        .entries(new ZipFile(zipFile))
+        .find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON))
+        .toFox
+      firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath).toFox
+      firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString).toFox
+      _ <- firstHeader.assertValid.toFox
+      _ <- ZipIO.withUnzipedAsync(zipFile) {
         case (filename, inputStream) =>
-          if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) ()
+          if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) Fox.successful(())
           else {
             parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
               val dataCompressed = IOUtils.toByteArray(inputStream)
               val data = compressor.decompress(dataCompressed)
               block(bucketPosition, data)
-            }
+            }.getOrElse(Fox.successful(()))
           }
       }
     } yield ()
@@ -140,12 +160,14 @@ trait VolumeDataZipHelper
     }
   }
 
-  protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => T): Box[Unit] = {
+  protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => Fox[T])(
+      implicit ec: ExecutionContext): Fox[Unit] = {
     var index: Int = 0
-    val unzipResult = ZipIO.withUnziped(multiZip) {
+    val unzipResult = ZipIO.withUnzipedAsync(multiZip) {
       case (_, is) =>
         block(index, inputStreamToTempfile(is))
         index += 1
+        Fox.successful(())
     }
     for {
       _ <- unzipResult

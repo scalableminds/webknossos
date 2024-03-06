@@ -35,13 +35,13 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
   var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
 
-  def addLabelSetFromDataZip(zipFile: File): Box[Unit] = {
+  def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
     val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     val unzipResult = withBucketsFromZip(zipFile) { (_, bytes) =>
       val dataTyped =
         UnsignedIntegerArray.fromByteArray(bytes, elementClass)
       val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-      importLabelSet ++= nonZeroData
+      Fox.successful(importLabelSet ++= nonZeroData)
     }
     for {
       _ <- unzipResult
@@ -95,9 +95,9 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
         }
     }
 
-  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File): Box[Unit] =
+  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
     withBucketsFromZip(zipFile) { (bucketPosition, bytes) =>
-      add(sourceVolumeIndex, bucketPosition, bytes)
+      Fox.successful(add(sourceVolumeIndex, bucketPosition, bytes))
     }
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {

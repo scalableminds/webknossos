@@ -456,126 +456,129 @@ function getNodeContextMenuOptions({
     getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
     ...(allowUpdate
       ? [
-        {
-          key: "merge-trees",
-          disabled: areInSameTree,
-          onClick: () =>
-            activeNodeId != null
-              ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
-              : null,
-          label: (
-            <>
-              Create Edge & Merge with this Tree{" "}
-              {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
-            </>
-          ),
-        },
-        isProofreadingActive
-          ? {
-            key: "min-cut-node",
-            disabled: !areInSameTree || isTheSameNode,
+          {
+            key: "merge-trees",
+            disabled: areInSameTree,
             onClick: () =>
               activeNodeId != null
-                ? Store.dispatch(minCutAgglomerateAction(clickedNodeId, activeNodeId))
-                : null,
-            label: "Perform Min-Cut between these Nodes",
-          }
-          : null,
-
-        isProofreadingActive
-          ? {
-            key: "cut-agglomerate-from-neighbors",
-            disabled: !isProofreadingActive,
-            onClick: () =>
-              Store.dispatch(
-                cutAgglomerateFromNeighborsAction(clickedNode.untransformedPosition, clickedTree),
-              ),
-            label: (
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot cut because the proofreading tool is not active."
-                }
-              >
-                Split from all neighboring segments
-              </Tooltip>
-            ),
-          }
-          : null,
-
-        {
-          key: "delete-edge",
-          disabled: !areNodesConnected,
-          onClick: () =>
-            activeNodeId != null
-              ? Store.dispatch(deleteEdgeAction(activeNodeId, clickedNodeId))
-              : null,
-          label: (
-            <>
-              Delete Edge to this Node{" "}
-              {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
-            </>
-          ),
-        },
-        {
-          key: "delete-node",
-          onClick: () => Actions.deleteNode(Store.dispatch, clickedNodeId, clickedTree.treeId),
-          label: (
-            <>
-              Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
-            </>
-          ),
-        },
-        isBranchpoint
-          ? {
-            key: "branchpoint-node",
-            className: "node-context-menu-item",
-            onClick: () =>
-              activeNodeId != null
-                ? Store.dispatch(deleteBranchpointByIdAction(clickedNodeId, clickedTree.treeId))
-                : null,
-            label: "Unmark as Branchpoint",
-          }
-          : {
-            key: "branchpoint-node",
-            className: "node-context-menu-item",
-            onClick: () =>
-              activeNodeId != null
-                ? Store.dispatch(createBranchPointAction(clickedNodeId, clickedTree.treeId))
+                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
                 : null,
             label: (
               <>
-                Mark as Branchpoint{" "}
-                {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+                Create Edge & Merge with this Tree{" "}
+                {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
               </>
             ),
           },
-        isTheSameNode
-          ? null
-          : {
-            key: "extract-shortest-path",
-            disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
+          isProofreadingActive
+            ? {
+                key: "min-cut-node",
+                disabled: !areInSameTree || isTheSameNode,
+                onClick: () =>
+                  activeNodeId != null
+                    ? Store.dispatch(minCutAgglomerateAction(clickedNodeId, activeNodeId))
+                    : null,
+                label: "Perform Min-Cut between these Nodes",
+              }
+            : null,
+
+          isProofreadingActive
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () =>
+                  Store.dispatch(
+                    cutAgglomerateFromNeighborsAction(
+                      clickedNode.untransformedPosition,
+                      clickedTree,
+                    ),
+                  ),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
+                  </Tooltip>
+                ),
+              }
+            : null,
+
+          {
+            key: "delete-edge",
+            disabled: !areNodesConnected,
             onClick: () =>
               activeNodeId != null
-                ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                ? Store.dispatch(deleteEdgeAction(activeNodeId, clickedNodeId))
                 : null,
-            label: "Extract shortest Path to this Node",
+            label: (
+              <>
+                Delete Edge to this Node{" "}
+                {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
+              </>
+            ),
           },
-      ]
+          {
+            key: "delete-node",
+            onClick: () => Actions.deleteNode(Store.dispatch, clickedNodeId, clickedTree.treeId),
+            label: (
+              <>
+                Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
+              </>
+            ),
+          },
+          isBranchpoint
+            ? {
+                key: "branchpoint-node",
+                className: "node-context-menu-item",
+                onClick: () =>
+                  activeNodeId != null
+                    ? Store.dispatch(deleteBranchpointByIdAction(clickedNodeId, clickedTree.treeId))
+                    : null,
+                label: "Unmark as Branchpoint",
+              }
+            : {
+                key: "branchpoint-node",
+                className: "node-context-menu-item",
+                onClick: () =>
+                  activeNodeId != null
+                    ? Store.dispatch(createBranchPointAction(clickedNodeId, clickedTree.treeId))
+                    : null,
+                label: (
+                  <>
+                    Mark as Branchpoint{" "}
+                    {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+                  </>
+                ),
+              },
+          isTheSameNode
+            ? null
+            : {
+                key: "extract-shortest-path",
+                disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
+                onClick: () =>
+                  activeNodeId != null
+                    ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                    : null,
+                label: "Extract shortest Path to this Node",
+              },
+        ]
       : []),
     ...meshItems,
     isTheSameNode
       ? null
       : {
-        key: "measure-node-path-length",
-        disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
-        onClick: () =>
-          activeNodeId != null
-            ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
-            : null,
-        label: "Path Length to this Node",
-      },
+          key: "measure-node-path-length",
+          disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
+          onClick: () =>
+            activeNodeId != null
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              : null,
+          label: "Path Length to this Node",
+        },
     {
       key: "measure-whole-tree-length",
       onClick: () => measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name),
@@ -583,10 +586,10 @@ function getNodeContextMenuOptions({
     },
     allowUpdate
       ? {
-        key: "hide-tree",
-        onClick: () => Store.dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
-        label: "Hide this Tree",
-      }
+          key: "hide-tree",
+          onClick: () => Store.dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
+          label: "Hide this Tree",
+        }
       : null,
     ...infoRows,
   ];
@@ -847,112 +850,112 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const skeletonActions: ItemType[] =
     skeletonTracing != null && globalPosition != null && allowUpdate
       ? [
-        {
-          key: "create-node",
-          onClick: () => setWaypoint(globalPosition, viewport, false),
-          label: "Create Node here",
-        },
-        {
-          key: "create-node-with-tree",
-          onClick: () => {
-            Store.dispatch(createTreeAction());
-            setWaypoint(globalPosition, viewport, false);
+          {
+            key: "create-node",
+            onClick: () => setWaypoint(globalPosition, viewport, false),
+            label: "Create Node here",
           },
-          label: (
-            <>
-              Create new Tree here{" "}
-              {!isVolumeBasedToolActive && !isBoundingBoxToolActive
-                ? shortcutBuilder(["C"])
-                : null}
-            </>
-          ),
-        },
-        {
-          key: "load-agglomerate-skeleton",
-          // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
-          onClick: () =>
-            isAgglomerateMappingEnabled.value
-              ? loadAgglomerateSkeletonAtPosition(globalPosition)
-              : showAutomatedSegmentationServicesModal(
-                isAgglomerateMappingEnabled.reason,
-                "Agglomerate files",
-              ),
-          label: (
-            <Tooltip
-              title={
-                isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+          {
+            key: "create-node-with-tree",
+            onClick: () => {
+              Store.dispatch(createTreeAction());
+              setWaypoint(globalPosition, viewport, false);
+            },
+            label: (
+              <>
+                Create new Tree here{" "}
+                {!isVolumeBasedToolActive && !isBoundingBoxToolActive
+                  ? shortcutBuilder(["C"])
+                  : null}
+              </>
+            ),
+          },
+          {
+            key: "load-agglomerate-skeleton",
+            // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
+            onClick: () =>
+              isAgglomerateMappingEnabled.value
+                ? loadAgglomerateSkeletonAtPosition(globalPosition)
+                : showAutomatedSegmentationServicesModal(
+                    isAgglomerateMappingEnabled.reason,
+                    "Agglomerate files",
+                  ),
+            label: (
+              <Tooltip
+                title={
+                  isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
+                }
+                onOpenChange={(open: boolean) => {
+                  if (open) {
+                    Store.dispatch(ensureLayerMappingsAreLoadedAction());
+                  }
+                }}
+              >
+                <span>
+                  Import Agglomerate Skeleton{" "}
+                  {!isAgglomerateMappingEnabled.value ? (
+                    <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
+                  ) : null}{" "}
+                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                </span>
+              </Tooltip>
+            ),
+          },
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "merge-agglomerate-skeleton",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot merge because the proofreading tool is not active."
+                    }
+                  >
+                    <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+                  </Tooltip>
+                ),
               }
-              onOpenChange={(open: boolean) => {
-                if (open) {
-                  Store.dispatch(ensureLayerMappingsAreLoadedAction());
-                }
-              }}
-            >
-              <span>
-                Import Agglomerate Skeleton{" "}
-                {!isAgglomerateMappingEnabled.value ? (
-                  <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
-                ) : null}{" "}
-                {shortcutBuilder(["SHIFT", "middleMouse"])}
-              </span>
-            </Tooltip>
-          ),
-        },
-        isAgglomerateMappingEnabled.value
-          ? {
-            key: "merge-agglomerate-skeleton",
-            disabled: !isProofreadingActive,
-            onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
-            label: (
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot merge because the proofreading tool is not active."
-                }
-              >
-                <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
-              </Tooltip>
-            ),
-          }
-          : null,
-        isAgglomerateMappingEnabled.value
-          ? {
-            key: "min-cut-agglomerate-at-position",
-            disabled: !isProofreadingActive,
-            onClick: () => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
-            label: (
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot merge because the proofreading tool is not active."
-                }
-              >
-                <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
-              </Tooltip>
-            ),
-          }
-          : null,
-        isAgglomerateMappingEnabled.value
-          ? {
-            key: "cut-agglomerate-from-neighbors",
-            disabled: !isProofreadingActive,
-            onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
-            label: (
-              <Tooltip
-                title={
-                  isProofreadingActive
-                    ? undefined
-                    : "Cannot cut because the proofreading tool is not active."
-                }
-              >
-                Split from all neighboring segments
-              </Tooltip>
-            ),
-          }
-          : null,
-      ]
+            : null,
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "min-cut-agglomerate-at-position",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot merge because the proofreading tool is not active."
+                    }
+                  >
+                    <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                  </Tooltip>
+                ),
+              }
+            : null,
+          isAgglomerateMappingEnabled.value
+            ? {
+                key: "cut-agglomerate-from-neighbors",
+                disabled: !isProofreadingActive,
+                onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
+                label: (
+                  <Tooltip
+                    title={
+                      isProofreadingActive
+                        ? undefined
+                        : "Cannot cut because the proofreading tool is not active."
+                    }
+                  >
+                    Split from all neighboring segments
+                  </Tooltip>
+                ),
+              }
+            : null,
+        ]
       : [];
   const segmentationLayerName =
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
@@ -966,17 +969,17 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       // Do not disable menu entry, but show modal advertising automated segmentation services if no connectome file is activated
       onClick: isConnectomeMappingEnabled.value
         ? withMappingActivationConfirmation(
-          () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
-          connectomeFileMappingName,
-          "connectome file",
-          segmentationLayerName,
-          mappingInfo,
-        )
+            () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
+            connectomeFileMappingName,
+            "connectome file",
+            segmentationLayerName,
+            mappingInfo,
+          )
         : () =>
-          showAutomatedSegmentationServicesModal(
-            isConnectomeMappingEnabled.reason,
-            "Connectome files",
-          ),
+            showAutomatedSegmentationServicesModal(
+              isConnectomeMappingEnabled.reason,
+              "Connectome files",
+            ),
       label: isConnectomeMappingEnabled.value ? (
         "Import Synapses"
       ) : (
@@ -1018,35 +1021,35 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const nonSkeletonActions: ItemType[] =
     volumeTracing != null && globalPosition != null
       ? [
-        // Segment 0 cannot/shouldn't be made active (as this
-        // would be an eraser effectively).
-        segmentIdAtPosition > 0
-          ? {
-            key: "select-cell",
-            onClick: () => {
-              Store.dispatch(
-                setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
-              );
-            },
-            label: (
-              <>
-                Activate Segment ({segmentIdAtPosition}){" "}
-                {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
-              </>
-            ),
-          }
-          : null,
-        focusInSegmentListItem,
-        loadPrecomputedMeshItem,
-        computeMeshAdHocItem,
-        allowUpdate
-          ? {
-            key: "fill-cell",
-            onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
-            label: "Fill Segment (flood-fill region)",
-          }
-          : null,
-      ]
+          // Segment 0 cannot/shouldn't be made active (as this
+          // would be an eraser effectively).
+          segmentIdAtPosition > 0
+            ? {
+                key: "select-cell",
+                onClick: () => {
+                  Store.dispatch(
+                    setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
+                  );
+                },
+                label: (
+                  <>
+                    Activate Segment ({segmentIdAtPosition}){" "}
+                    {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
+                  </>
+                ),
+              }
+            : null,
+          focusInSegmentListItem,
+          loadPrecomputedMeshItem,
+          computeMeshAdHocItem,
+          allowUpdate
+            ? {
+                key: "fill-cell",
+                onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
+                label: "Fill Segment (flood-fill region)",
+              }
+            : null,
+        ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
   if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
@@ -1300,11 +1303,11 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
-        formatNumberToLength(
-          V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
-        ),
-        formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
-      ]
+          formatNumberToLength(
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
+          ),
+          formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
+        ]
       : null;
   const nodePositionAsString =
     nodeContextMenuNode != null && clickedNodesPosition != null
@@ -1463,17 +1466,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
     items:
       maybeClickedNodeId != null
         ? getNodeContextMenuOptions({
-          clickedNodeId: maybeClickedNodeId,
-          infoRows,
-          viewport: maybeViewport,
-          ...props,
-        })
+            clickedNodeId: maybeClickedNodeId,
+            infoRows,
+            viewport: maybeViewport,
+            ...props,
+          })
         : getNoNodeContextMenuOptions({
-          segmentIdAtPosition,
-          infoRows,
-          viewport: maybeViewport,
-          ...props,
-        }),
+            segmentIdAtPosition,
+            infoRows,
+            viewport: maybeViewport,
+            ...props,
+          }),
   };
 
   if (inputRef == null || inputRef.current == null) return null;
@@ -1580,7 +1583,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     currentConnectomeFile:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
-          .currentConnectomeFile
+            .currentConnectomeFile
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
     userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],

@@ -34,7 +34,7 @@ trait VolumeDataZipHelper
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      format <- Fox.successful(VolumeDataZipFormat.wkw) // detectVolumeDataZipFormat(zipFile).toFox
+      format <- detectVolumeDataZipFormat(zipFile).toFox
       _ <- if (format == VolumeDataZipFormat.wkw)
         withBucketsFromWkwZip(zipFile)(block)
       else withBucketsFromZarr3Zip(zipFile)(block)
@@ -54,24 +54,17 @@ trait VolumeDataZipHelper
     for {
       _ <- ZipIO.withUnzipedAsync(zipFile) {
         case (fileName, is) if fileName.toString.endsWith(".wkw") && !fileName.toString.endsWith("header.wkw") =>
-          logger.info(s"reading wkw file at $fileName")
           WKWFile
             .read(is) {
               case (header, buckets) =>
                 if (header.numChunksPerShard == 1) {
-                  logger.info("parsing file path...")
                   parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                    logger.info(f"parsed file path to $bucketPosition")
                     if (buckets.hasNext) {
-                      logger.info("calling buckets.next()")
-                      val data = try { buckets.next() } catch {
-                        case e: Exception => logger.info(f"exception in next(): $e"); Array[Byte](0)
-                      }
+                      val data = buckets.next()
                       if (!isRevertedBucket(data)) {
-                        logger.info("block!!")
                         block(bucketPosition, data)
-                      } else Fox.successful(logger.info("wasRevertedBlock"))
-                    } else Fox.successful(logger.info("buckets.hasNext was false"))
+                      } else Fox.successful(())
+                    } else Fox.successful(())
                   }.getOrElse(Fox.successful(()))
                 } else Fox.successful(())
               case _ => Fox.successful(())
@@ -79,7 +72,7 @@ trait VolumeDataZipHelper
             .toFox
         case _ => Fox.successful(())
       }
-    } yield logger.info("successfully withBucketsFromWkwZipped")
+    } yield ()
 
   private def withBucketsFromZarr3Zip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -165,9 +158,10 @@ trait VolumeDataZipHelper
     var index: Int = 0
     val unzipResult = ZipIO.withUnzipedAsync(multiZip) {
       case (_, is) =>
-        block(index, inputStreamToTempfile(is))
-        index += 1
-        Fox.successful(())
+        block(index, inputStreamToTempfile(is)).map { res =>
+          index += 1
+          res
+        }
     }
     for {
       _ <- unzipResult

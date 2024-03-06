@@ -200,24 +200,26 @@ object ZipIO extends LazyLogging {
           val path = commonPrefix.relativize(Paths.get(entry.getName))
           val innerResultFox: Fox[List[A]] = f(path, input).futureBox.map {
             case Full(result) =>
+              input.close()
               Full(rs :+ result)
             case Empty =>
+              input.close()
               Empty
             case f: Failure =>
+              input.close()
               f
           }
-          for {
-            innerResult <- innerResultFox
-            _ = input.close()
-          } yield innerResult
+          innerResultFox
         case e =>
           e.toFox
       }.toFox.flatten
     }
+
     for {
-      result <- resultFox
-      _ = logger.info("closing outer zip file.")
-      _ = zip.close()
+      result <- resultFox.futureBox.map { resultBox =>
+        zip.close() // close even if result is not success
+        resultBox
+      }
     } yield result
   }
 

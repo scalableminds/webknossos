@@ -405,12 +405,10 @@ class VolumeTracingService @Inject()(
           AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
           userToken
         )
-        _ = logger.info("calling withBucketsFromZip")
         _ <- withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
           if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
             Fox.successful(())
           } else {
-            logger.info(s"Adding bucket $bucketPosition")
             savedResolutions.add(bucketPosition.mag)
             for {
               _ <- saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
@@ -423,9 +421,7 @@ class VolumeTracingService @Inject()(
                                    tracing.mappingName))
             } yield ()
           }
-        } ?~> "could not import buckets"
-        _ = logger.info(
-          s"withBucketsFromZip succeded. flushing segment index buffer. savedResolutions: ${savedResolutions.toSet}")
+        } ?~> "failed not import volume data from zipfile"
         _ <- segmentIndexBuffer.flush()
       } yield {
         if (savedResolutions.isEmpty) {

@@ -4,7 +4,7 @@ import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
 import {
@@ -107,7 +107,7 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const { dataset, tracing } = useSelector((state: OxalisState) => state);
+  const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
   const dataSetScale = dataset.dataSource.scale;
@@ -133,20 +133,28 @@ export function SegmentStatisticsModal({
       if (requestUrl == null) return;
       const maybeVolumeTracing =
         tracingId != null ? getVolumeTracingById(tracing, tracingId) : null;
+      const maybeGetMappingName = () => {
+        if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing?.mappingName;
+        const mappingInfo = getMappingInfo(
+          temporaryConfiguration.activeMappingByLayer,
+          visibleSegmentationLayer?.name,
+        );
+        return mappingInfo.mappingName;
+      };
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
-          maybeVolumeTracing?.mappingName,
+          maybeGetMappingName(),
         ),
         getSegmentBoundingBoxes(
           requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
-          maybeVolumeTracing?.mappingName,
+          maybeGetMappingName(),
         ),
       ]).then(
         (response) => {

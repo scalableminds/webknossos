@@ -2613,11 +2613,7 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (
-      store: S,
-      next: (action: A) => void,
-      originalAction: A,
-    ) => void | Promise<void>,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => A | Promise<A>,
   ) {
     return overwriteAction(actionName, overwriteFunction);
   }

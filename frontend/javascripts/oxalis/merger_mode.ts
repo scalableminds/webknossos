@@ -119,11 +119,11 @@ async function createNodeOverwrite(
   call: (action: Action) => void,
   action: CreateNodeAction,
   mergerModeState: MergerModeState,
-) {
+): Promise<Action> {
   const { segmentationLayerName } = mergerModeState;
 
   if (!segmentationLayerName) {
-    return;
+    return action;
   }
   const { position: untransformedPosition, additionalCoordinates } = action;
 
@@ -146,6 +146,7 @@ async function createNodeOverwrite(
       api.tracing.centerActiveNode();
     }
   }
+  return action;
 }
 
 /* React to added nodes. Look up the segment id at the node position and

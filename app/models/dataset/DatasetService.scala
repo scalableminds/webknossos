@@ -17,6 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.job.JobService
 import models.organization.{Organization, OrganizationDAO}
+import models.storage.UsedStorageService
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
@@ -33,7 +34,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                teamDAO: TeamDAO,
-                               jobService: JobService,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
@@ -333,6 +333,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
+      usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
+        organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {
       Json.obj(
         "name" -> dataset.name,
@@ -355,7 +357,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
-        "publication" -> None
+        "publication" -> None,
+        "usedStorageBytes" -> usedStorageBytes
       )
     }
 }

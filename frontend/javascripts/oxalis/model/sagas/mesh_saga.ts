@@ -124,7 +124,7 @@ function getOrAddMapForSegment(
   segmentId: number,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
-  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.

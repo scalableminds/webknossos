@@ -27,7 +27,7 @@ export function getThemeFromUser(activeUser: APIUser | null | undefined): Theme 
 
 export function getAntdTheme(userTheme: Theme) {
   let algorithm = theme.defaultAlgorithm;
-  let components: OverrideToken = {
+  const components: OverrideToken = {
     Layout: {
       headerBg: ColorWKDarkGrey,
       footerBg: ColorWKDarkGrey,
@@ -43,7 +43,7 @@ export function getAntdTheme(userTheme: Theme) {
   };
 
   // Ant Design Customizations
-  let globalDesignToken: Partial<AliasToken> = {
+  const globalDesignToken: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
     colorLink: ColorWKBlue,
     colorLinkHover: ColorWKLinkHover,

@@ -38,6 +38,7 @@ import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import { AdditionalCoordinate } from "types/api_flow_types";
+import { EmptyObject } from "types/globals";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -526,7 +527,7 @@ function SegmentAndMousePosition() {
   );
 }
 
-class Statusbar extends React.PureComponent<{}, {}> {
+class Statusbar extends React.PureComponent<EmptyObject, EmptyObject> {
   render() {
     return (
       <span className="statusbar">

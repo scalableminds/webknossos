@@ -494,7 +494,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
+      subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (

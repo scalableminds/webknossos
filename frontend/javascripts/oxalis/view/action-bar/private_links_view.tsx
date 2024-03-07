@@ -310,7 +310,9 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.endOf("day").to(expirationDate.endOf("day"));
+        now
+          .endOf("day")
+          .to(expirationDate.endOf("day"));
   return (
     <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
   );

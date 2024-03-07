@@ -42,7 +42,6 @@ function LogContent({ logText }: { logText: Array<string> }) {
   return (
     <div className="log-content">
       {logText.map((_line, index) => (
-        // rome-ignore lint/suspicious/noArrayIndexKey: log lines are indexed uniquely
         <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={index}>
           <div className="log-line-number">{index + 1}</div>
           <Ansi linkify>{logText[index]}</Ansi>

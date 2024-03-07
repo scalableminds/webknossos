@@ -32,14 +32,13 @@ import {
   getUnifiedAdditionalCoordinates,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton } from "components/async_clickables";
+import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import features from "features";
 import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
@@ -218,13 +217,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   renderStartTracingButton(): React.ReactNode {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
-    const ButtonWithAuthentication = withAuthentication(AsyncButton);
+    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+      AsyncButton,
+    );
     return (
       <ButtonWithAuthentication
         activeUser={this.props.activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; activeUser: APIUser | nu... Remove this comment to see the full error message
         style={{
           marginLeft: 12,
         }}
@@ -250,11 +249,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
     const isAIAnalysisEnabled = () => {
-      const activeUser = this.props.activeUser;
-      const jobsEnabled = features().jobsEnabled;
-      if (isViewMode) {
-        return jobsEnabled && activeUser != null && activeUser.isSuperUser;
-      }
+      const jobsEnabled =
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI);
       return jobsEnabled;
     };
 

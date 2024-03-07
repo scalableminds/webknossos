@@ -333,8 +333,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
-      jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
-      jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
     } yield {
       Json.obj(
         "name" -> dataset.name,
@@ -354,8 +352,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "sortingKey" -> dataset.sortingKey,
         "details" -> dataset.details,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
-        "jobsEnabled" -> jobsEnabled,
-        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented

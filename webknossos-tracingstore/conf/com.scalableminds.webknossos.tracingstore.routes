@@ -25,6 +25,7 @@ GET         /volume/:tracingId/findData                         @com.scalablemin
 GET         /volume/:tracingId/agglomerateSkeleton/:agglomerateId     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateSkeleton(token: Option[String], tracingId: String, agglomerateId: Long)
 POST        /volume/:tracingId/makeMappingEditable              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.makeMappingEditable(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/agglomerateGraphMinCut           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateGraphMinCut(token: Option[String], tracingId: String)
+POST        /volume/:tracingId/agglomerateGraphNeighbors        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateGraphNeighbors(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/volume         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/boundingBox    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(token: Option[String], tracingId: String)
 POST        /volume/getMultiple                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple(token: Option[String])

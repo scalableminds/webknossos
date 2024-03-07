@@ -49,7 +49,7 @@ object DataLayerId {
 }
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               remoteWebKnossosClient: DSRemoteWebknossosClient,
+                               remoteWebknossosClient: DSRemoteWebknossosClient,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
@@ -70,7 +70,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
       dataSource <- createDatasource(composeRequest, composeRequest.organizationName)

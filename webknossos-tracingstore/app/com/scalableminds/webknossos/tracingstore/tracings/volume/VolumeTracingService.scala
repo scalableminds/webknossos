@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.Editab
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreRedisStore
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -45,7 +45,7 @@ import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
+    val tracingStoreWkRpcClient: TSRemoteWebknossosClient,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
@@ -55,7 +55,7 @@ class VolumeTracingService @Inject()(
     editableMappingService: EditableMappingService,
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val remoteWebknossosClient: TSRemoteWebknossosClient,
     val temporaryFileCreator: TemporaryFileCreator,
     val tracingMigrationService: VolumeTracingMigrationService,
     volumeSegmentIndexService: VolumeSegmentIndexService

@@ -35,7 +35,7 @@ object FullMeshRequest {
 class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   meshFileService: MeshFileService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
-                                  val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
+                                  val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
                                   mappingService: MappingService,
                                   config: DataStoreConfig,
@@ -78,11 +78,9 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                              fullMeshRequest,
                                              VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
                                              adHocChunkSize)
-      _ = Instant.logSince(before, "adHocMeshing")
-      beforeEncoding = Instant.now
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
-      _ = Instant.logSince(beforeEncoding, "transCoding")
+      _ = logMeshingDuration(before, "ad-hoc meshing", array.length)
     } yield array
 
   private def getAllAdHocChunks(
@@ -124,13 +122,20 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
       before = Instant.now
-      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(organizationName,
-                                                       datasetName,
-                                                       layerName,
-                                                       fullMeshRequest.mappingName,
-                                                       fullMeshRequest.editableMappingTracingId,
-                                                       fullMeshRequest.segmentId,
-                                                       token)
+      mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationName,
+                                                                      datasetName,
+                                                                      layerName,
+                                                                      meshFileName)
+      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+        organizationName,
+        datasetName,
+        layerName,
+        fullMeshRequest.mappingName,
+        fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.segmentId,
+        mappingNameForMeshFile,
+        token
+      )
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
                                                                                        datasetName,
                                                                                        layerName,
@@ -141,7 +146,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         readMeshChunkAsStl(organizationName, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
-      _ = logger.info(s"output size: ${stlOutput.length}. took ${Instant.since(before)}")
+      _ = logMeshingDuration(before, "meshfile", stlOutput.length)
     } yield stlOutput
 
   private def readMeshChunkAsStl(organizationName: String,

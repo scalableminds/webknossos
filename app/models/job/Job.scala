@@ -80,16 +80,16 @@ case class Job(
       }
     }
 
-  def resultLinkPublic(organizationName: String, webKnossosPublicUrl: String): Option[String] =
+  def resultLinkPublic(organizationName: String, webknossosPublicUrl: String): Option[String] =
     for {
       resultLink <- resultLink(organizationName)
-      resultLinkPublic = if (resultLink.startsWith("/")) s"$webKnossosPublicUrl$resultLink"
+      resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
       else s"$resultLink"
     } yield resultLinkPublic
 
-  def resultLinkSlackFormatted(organizationName: String, webKnossosPublicUrl: String): Option[String] =
+  def resultLinkSlackFormatted(organizationName: String, webknossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLinkPublic(organizationName, webKnossosPublicUrl)
+      resultLink <- resultLinkPublic(organizationName, webknossosPublicUrl)
       resultLinkFormatted = s" <$resultLink|Result>"
     } yield resultLinkFormatted
 }

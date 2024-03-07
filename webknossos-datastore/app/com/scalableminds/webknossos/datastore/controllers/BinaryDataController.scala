@@ -47,12 +47,12 @@ class BinaryDataController @Inject()(
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  def requestViaWebKnossos(
+  def requestViaWebknossos(
       token: Option[String],
       organizationName: String,
       datasetName: String,
       dataLayerName: String
-  ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+  ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       logTime(slackNotificationService.noticeSlowRequest) {

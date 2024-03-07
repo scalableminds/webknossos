@@ -235,6 +235,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } ?~> "mesh.file.readEncoding.failed"
   }
 
+  // Same as above but this variant constructs the meshFilePath itself and converts null to None
   def mappingNameForMeshFile(organizationName: String,
                              datasetName: String,
                              dataLayerName: String,
@@ -248,7 +249,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(s"${meshFileName}.$meshFileExtension")
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       cachedMeshFile.reader.string().getAttr("/", "mapping_name")
-    }.toOption
+    }.toOption.flatMap { value =>
+      Option(value) // catch null
+    }
   }
 
   private def versionForMeshFile(meshFilePath: Path): Long =

@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{
   AdditionalCoordinate,
-  WebKnossosDataRequest,
+  WebknossosDataRequest,
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -42,7 +42,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
@@ -73,7 +73,7 @@ class VolumeTracingController @Inject()(
     val accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val remoteWebknossosClient: TSRemoteWebknossosClient,
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     fullMeshService: TSFullMeshService,
@@ -168,8 +168,8 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(token: Option[String], tracingId: String): Action[List[WebKnossosDataRequest]] =
-    Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+  def data(token: Option[String], tracingId: String): Action[List[WebknossosDataRequest]] =
+    Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {

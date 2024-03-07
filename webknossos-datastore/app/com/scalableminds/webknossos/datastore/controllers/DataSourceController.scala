@@ -34,7 +34,7 @@ import scala.concurrent.duration._
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
-    remoteWebKnossosClient: DSRemoteWebknossosClient,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -85,7 +85,7 @@ class DataSourceController @Inject()(
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebKnossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
+            (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok
@@ -153,7 +153,7 @@ class DataSourceController @Inject()(
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(
+              _ <- remoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
                 request.body.needsConversion.getOrElse(false),
@@ -175,7 +175,7 @@ class DataSourceController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
                                           urlOrHeaderToken(token, request)) {
           for {
-            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
+            _ <- remoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -353,7 +353,7 @@ class DataSourceController @Inject()(
         for {
           _ <- bool2Fox(dataSourceRepository.find(DataSourceId(datasetName, organizationName)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent")
-          _ <- remoteWebKnossosClient.reserveDataSourceUpload(
+          _ <- remoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "",
               name = datasetName,
@@ -367,7 +367,7 @@ class DataSourceController @Inject()(
           ) ?~> "dataset.upload.validation.failed"
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(datasetName, organizationName)),
                                                   expectExisting = false)
-          _ <- remoteWebKnossosClient.reportUpload(
+          _ <- remoteWebknossosClient.reportUpload(
             DataSourceId(datasetName, organizationName),
             0L,
             needsConversion = false,

@@ -12,112 +12,18 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class DSMeshController @Inject()(
-    accessTokenService: DataStoreAccessTokenService,
-    meshFileService: MeshFileService,
-    fullMeshService: DSFullMeshService,
-    val dsRemoteWebKnossosClient: DSRemoteWebknossosClient,
-    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
-    val binaryDataServiceHolder: BinaryDataServiceHolder
+                                  accessTokenService: DataStoreAccessTokenService,
+                                  meshFileService: MeshFileService,
+                                  fullMeshService: DSFullMeshService,
+                                  val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
+                                  val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
+                                  val binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
     with MeshMappingHelper
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
-
-  def testAdHocStl: Action[AnyContent] = Action.async { implicit request =>
-    val organizationName = "sample_organization"
-    val datasetName = "l4_sample_zarr3_sharded"
-    val layerName = "segmentation"
-    val segmentId = 1997
-    val seedPosition = Vec3Int(3455, 3455, 1023)
-
-    val stlRequest = FullMeshRequest(
-      None,
-      None,
-      segmentId,
-      None,
-      None,
-      None,
-      Some(Vec3Int(4, 4, 1)),
-      Some(seedPosition),
-      None
-    )
-    for {
-      data: Array[Byte] <- fullMeshService
-        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
-    } yield Ok(data)
-  }
-
-  def testAdHocMappedStl: Action[AnyContent] = Action.async { implicit request =>
-    val organizationName = "sample_organization"
-    val datasetName = "test-agglomerate-file"
-    val layerName = "segmentation"
-    val segmentId = 1
-    val seedPosition = Vec3Int(100, 100, 75)
-
-    val stlRequest = FullMeshRequest(
-      None,
-      None,
-      segmentId,
-      mappingName = Some("agglomerate_view_70"),
-      mappingType = Some("HDF5"),
-      None,
-      Some(Vec3Int(1, 1, 1)),
-      Some(seedPosition),
-      None
-    )
-    for {
-      data: Array[Byte] <- fullMeshService
-        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
-    } yield Ok(data)
-  }
-
-  def testStl: Action[AnyContent] = Action.async { implicit request =>
-    val organizationName = "sample_organization"
-    val datasetName = "l4dense_mesh_test"
-    val layerName = "segmentation"
-    val meshfileName = "meshfile_4-4-2"
-
-    val stlRequest = FullMeshRequest(
-      Some(meshfileName),
-      None,
-      55834,
-      None,
-      None,
-      None,
-      None,
-      None,
-      None
-    )
-    for {
-      data: Array[Byte] <- fullMeshService
-        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
-    } yield Ok(data)
-  }
-
-  def testMappedStl: Action[AnyContent] = Action.async { implicit request =>
-    val organizationName = "sample_organization"
-    val datasetName = "test-agglomerate-file"
-    val layerName = "segmentation"
-    val meshfileName = "meshfile_1-1-1"
-
-    val stlRequest = FullMeshRequest(
-      Some(meshfileName),
-      None,
-      1,
-      Some("agglomerate_view_70"),
-      None,
-      None,
-      None,
-      None,
-      None
-    )
-    for {
-      data: Array[Byte] <- fullMeshService
-        .loadFor(None, organizationName, datasetName, layerName, stlRequest) ?~> "mesh.file.loadChunk.failed"
-    } yield Ok(data)
-  }
 
   def listMeshFiles(token: Option[String],
                     organizationName: String,
@@ -170,13 +76,21 @@ class DSMeshController @Inject()(
           positions <- formatVersion match {
             case 3 =>
               for {
-                segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(organizationName,
-                                                                             datasetName,
-                                                                             dataLayerName,
-                                                                             targetMappingName,
-                                                                             editableMappingTracingId,
-                                                                             request.body.segmentId,
-                                                                             urlOrHeaderToken(token, request))
+                _ <- Fox.successful(())
+                mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationName,
+                                                                                datasetName,
+                                                                                dataLayerName,
+                                                                                request.body.meshFile)
+                segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
+                  organizationName,
+                  datasetName,
+                  dataLayerName,
+                  targetMappingName,
+                  editableMappingTracingId,
+                  request.body.segmentId,
+                  mappingNameForMeshFile,
+                  urlOrHeaderToken(token, request)
+                )
                 chunkInfos <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
                                                                           datasetName,
                                                                           dataLayerName,

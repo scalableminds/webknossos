@@ -25,7 +25,7 @@ object JobExportProperties {
   implicit val jsonFormat: OFormat[JobExportProperties] = Json.format[JobExportProperties]
 }
 
-class ExportsController @Inject()(webKnossosClient: DSRemoteWebknossosClient,
+class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
                                   accessTokenService: DataStoreAccessTokenService,
                                   config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends Controller
@@ -38,7 +38,7 @@ class ExportsController @Inject()(webKnossosClient: DSRemoteWebknossosClient,
   def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.downloadJobExport(jobId), urlOrHeaderToken(token, request)) {
       for {
-        exportProperties <- webKnossosClient.getJobExportProperties(jobId)
+        exportProperties <- webknossosClient.getJobExportProperties(jobId)
         fullPath = exportProperties.fullPathIn(dataBaseDir)
         _ <- bool2Fox(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
       } yield Ok.sendPath(fullPath, inline = false)

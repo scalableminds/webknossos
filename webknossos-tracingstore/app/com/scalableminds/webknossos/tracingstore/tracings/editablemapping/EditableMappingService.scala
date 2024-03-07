@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
@@ -45,7 +45,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
-    dataRequests: List[WebKnossosDataRequest],
+    dataRequests: List[WebknossosDataRequest],
     userToken: Option[String]
 )
 
@@ -91,7 +91,7 @@ class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper

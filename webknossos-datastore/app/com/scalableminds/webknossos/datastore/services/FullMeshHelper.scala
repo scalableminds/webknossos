@@ -1,12 +1,14 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.{ByteBuffer, ByteOrder}
 
-trait FullMeshHelper {
+trait FullMeshHelper extends LazyLogging {
   protected lazy val dracoToStlConverter = new NativeDracoToStlConverter()
 
   protected lazy val adHocChunkSize: Vec3Int = Vec3Int(100, 100, 100)
@@ -54,14 +56,7 @@ trait FullMeshHelper {
       }
       output.put(unused)
     }
-    byteBufferToArray(output, outputNumBytes)
-  }
-
-  private def byteBufferToArray(buf: ByteBuffer, numBytes: Int): Array[Byte] = {
-    val arr = new Array[Byte](numBytes)
-    buf.rewind()
-    buf.get(arr)
-    arr
+    output.array()
   }
 
   protected def combineEncodedChunksToStl(stlEncodedChunks: Seq[Array[Byte]]): Array[Byte] = {
@@ -72,7 +67,10 @@ trait FullMeshHelper {
     output.put(constantStlHeader)
     output.putInt(numFaces)
     stlEncodedChunks.foreach(output.put)
-    byteBufferToArray(output, outputNumBytes)
+    output.array()
   }
+
+  protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
+    logger.info(s"Served $lengthBytes-byte STL mesh via $label, took ${Instant.since(before)}")
 
 }

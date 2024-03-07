@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -11,7 +12,8 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosit
 import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
+import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -20,10 +22,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                   editableMappingService: EditableMappingService,
                                   volumeSegmentIndexService: VolumeSegmentIndexService,
                                   val remoteDatastoreClient: TSRemoteDatastoreClient,
-                                  val remoteWebKnossosClient: TSRemoteWebKnossosClient)
+                                  val remoteWebknossosClient: TSRemoteWebknossosClient)
     extends FallbackDataHelper
     with ProtoGeometryImplicits
-    with FullMeshHelper {
+    with FullMeshHelper
+    with LazyLogging {
 
   def loadFor(token: Option[String], tracingId: String, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
@@ -55,7 +58,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                     fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
+      _ <- bool2Fox(tracing.resolutions.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      before = Instant.now
       voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId, token) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(token, tracing, tracingId, mag, voxelSize, fullMeshRequest)
@@ -66,10 +70,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                            mag,
                                            voxelSize,
                                            fullMeshRequest,
-                                           VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
+                                           fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
                                            adHocChunkSize)
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
+      _ = logMeshingDuration(before, "ad-hoc meshing (tracingstore)", array.length)
     } yield array
 
   private def getAllAdHocChunksWithSegmentIndex(
@@ -115,23 +120,24 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                                  mag: Vec3Int,
                                                  voxelSize: Vec3Double,
                                                  fullMeshRequest: FullMeshRequest,
-                                                 topLeft: VoxelPosition,
+                                                 topLeftOpt: Option[VoxelPosition],
                                                  chunkSize: Vec3Int,
                                                  visited: collection.mutable.Set[VoxelPosition] =
                                                    collection.mutable.Set[VoxelPosition]())(
-      implicit ec: ExecutionContext): Fox[List[Array[Float]]] = {
-    val adHocMeshRequest = WebknossosAdHocMeshRequest(
-      position = Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
-      mag = mag,
-      cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-      fullMeshRequest.segmentId,
-      voxelSize,
-      fullMeshRequest.mappingName,
-      fullMeshRequest.mappingType,
-      fullMeshRequest.additionalCoordinates
-    )
-    visited += topLeft
+      implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
     for {
+      topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
+      adHocMeshRequest = WebknossosAdHocMeshRequest(
+        position = Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
+        mag = mag,
+        cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
+        fullMeshRequest.segmentId,
+        voxelSize,
+        fullMeshRequest.mappingName,
+        fullMeshRequest.mappingType,
+        fullMeshRequest.additionalCoordinates
+      )
+      _ = visited += topLeft
       (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(token, tracing, adHocMeshRequest, tracingId)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
@@ -142,13 +148,12 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                            mag,
                                            voxelSize,
                                            fullMeshRequest,
-                                           position,
+                                           Some(position),
                                            chunkSize,
                                            visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices
-  }
 
   private def loadMeshChunkFromAdHoc(token: Option[String],
                                      tracing: VolumeTracing,

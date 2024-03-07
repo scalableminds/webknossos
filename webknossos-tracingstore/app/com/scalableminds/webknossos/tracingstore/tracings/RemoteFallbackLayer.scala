@@ -31,9 +31,9 @@ trait FallbackDataHelper {
     } yield RemoteFallbackLayer(dataSetId.team, dataSetId.name, layerName, tracing.elementClass)
 
   def getFallbackDataFromDatastore(
-                                    remoteFallbackLayer: RemoteFallbackLayer,
-                                    dataRequests: List[WebknossosDataRequest],
-                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[(Array[Byte], List[Int])] =
+      remoteFallbackLayer: RemoteFallbackLayer,
+      dataRequests: List[WebknossosDataRequest],
+      userToken: Option[String])(implicit ec: ExecutionContext): Fox[(Array[Byte], List[Int])] =
     fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, userToken),
                                 k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
 }

@@ -225,7 +225,7 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
-        icon: <PlusOutlined className="icon-margin-right"/>,
+        icon: <PlusOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             {newFolderText}
@@ -236,7 +236,7 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
-        icon: <EditOutlined className="icon-margin-right"/>,
+        icon: <EditOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             Edit Folder
@@ -247,7 +247,7 @@ export function generateSettingsForFolder(
         key: "delete",
         onClick: deleteFolder,
         disabled: !isEditable,
-        icon: <DeleteOutlined className="icon-margin-right"/>,
+        icon: <DeleteOutlined className="icon-margin-right" />,
         label: <span>Delete Folder</span>,
       },
     ],

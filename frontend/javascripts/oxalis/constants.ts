@@ -265,6 +265,12 @@ export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
+
+// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
+// viewport.
+export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+
 export const ensureSmallerEdge = false;
 export const Unicode = {
   ThinSpace: "\u202f",

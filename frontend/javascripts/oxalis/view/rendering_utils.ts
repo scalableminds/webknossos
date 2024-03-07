@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import { OrthoView } from "oxalis/constants";
+import { ARBITRARY_CAM_DISTANCE, OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -12,7 +12,6 @@ import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
-import { CAM_DISTANCE } from "./arbitrary_view";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -69,7 +68,7 @@ export function renderToTexture(
       camera = camera.clone();
       if (isArbitraryMode) {
         // camera.far = state.userConfiguration.clippingDistanceArbitrary;
-        camera.near = CAM_DISTANCE - state.userConfiguration.clippingDistanceArbitrary;
+        camera.near = ARBITRARY_CAM_DISTANCE - state.userConfiguration.clippingDistanceArbitrary;
       } else {
         camera.far = state.userConfiguration.clippingDistance;
       }

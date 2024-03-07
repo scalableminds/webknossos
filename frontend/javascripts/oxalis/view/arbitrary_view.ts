@@ -10,7 +10,7 @@ import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import type { OrthoViewMap, Viewport } from "oxalis/constants";
-import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -21,11 +21,6 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 type GeometryLike = {
   addToScene: (obj: THREE.Object3D) => void;
 };
-
-// CAM_DISTANCE has to be calculated such that with cam
-// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
-// viewport.
-export const CAM_DISTANCE = Constants.VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
 class ArbitraryView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -70,7 +65,7 @@ class ArbitraryView {
       PLANE_YZ: dummyCamera,
       PLANE_XZ: dummyCamera,
     };
-    this.cameraPosition = [0, 0, CAM_DISTANCE];
+    this.cameraPosition = [0, 0, ARBITRARY_CAM_DISTANCE];
     this.needsRerender = true;
   }
 
@@ -275,7 +270,7 @@ class ArbitraryView {
   resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = CAM_DISTANCE - value;
+    this.camera.near = ARBITRARY_CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 

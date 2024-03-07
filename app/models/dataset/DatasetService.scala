@@ -15,9 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
-import models.job.JobService
 import models.organization.{Organization, OrganizationDAO}
-import models.storage.UsedStorageService
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}

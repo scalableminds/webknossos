@@ -6,7 +6,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import {
@@ -172,6 +172,15 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
+
+        {
+          fullDataset && fullDataset.usedStorageBytes && (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Used Storage</div>
+              <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
+          </div>
+          )
+        }
       </Spin>
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>

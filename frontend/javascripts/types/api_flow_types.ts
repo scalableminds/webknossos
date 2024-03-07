@@ -181,6 +181,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
+  usedStorageBytes: number | null | undefined;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {

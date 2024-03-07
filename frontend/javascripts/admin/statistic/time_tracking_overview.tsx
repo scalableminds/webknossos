@@ -90,21 +90,28 @@ function TimeTrackingOverview() {
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
   const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
+  // the next prop is a of selectedProjectIds and selectedTypes.
+  // It contains the values that should be selected in the select field.
   const [selectedProjectOrTypeFilters, setSelectedProjectOrTypeFilters] = useState(Array<string>);
-  useEffect(
-    () => setSelectedProjectOrTypeFilters([...selectedProjectIds, selectedTypes]),
-    [selectedProjectIds, selectedTypes],
-  );
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
+  useEffect(() => {
+    if (selectedProjectIds.length === allProjects.length) {
+      setSelectedProjectOrTypeFilters(selectedProjectIds);
+      setSelectedTypes(typeFilters.ONLY_TASKS_KEY);
+    } else {
+      setSelectedProjectOrTypeFilters([...selectedProjectIds, selectedTypes]);
+    }
+  }, [selectedProjectIds, selectedTypes, allProjects]);
   const filteredTimeEntries = useFetch(
     async () => {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
+      if (filteredTeams.length === 0) return;
       const projectFilterNeeded = selectedTypes === typeFilters.ONLY_TASKS_KEY;
       let filteredProjects = selectedProjectIds;
       if (projectFilterNeeded && selectedProjectIds.length === 0)
+        // if timespans for all tasks should be shown, all project ids need to be passed in the request.
         filteredProjects = allProjects.map((project) => project.id);
-      //TODO make sure its working for project id list length 0
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
         endDate.valueOf(),
@@ -121,7 +128,7 @@ function TimeTrackingOverview() {
   const selectWidth = 200;
 
   const exportToCSV = () => {
-    if (filteredTimeEntries.length === 0) {
+    if (filteredTimeEntries == null || filteredTimeEntries.length === 0) {
       return;
     }
     const timeEntriesAsString = filteredTimeEntries
@@ -159,15 +166,12 @@ function TimeTrackingOverview() {
 
   const onDeselect = (removedKey: string) => {
     if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
-      setSelectedProjectOrTypeFilters([typeFilters.TASKS_AND_ANNOTATIONS_KEY]);
+      setSelectedTypes(typeFilters.TASKS_AND_ANNOTATIONS_KEY);
     } else {
-      setSelectedProjectOrTypeFilters(
-        selectedProjectOrTypeFilters.filter((projectId) => projectId !== removedKey),
-      );
+      setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
     }
   };
 
-  // TODO fix range preselects
   const rangePresets: TimeRangePickerProps["presets"] = [
     { label: "Last 7 Days", value: [dayjs().subtract(7, "d"), dayjs()] },
     { label: "Last 30 Days", value: [dayjs().subtract(30, "d"), dayjs()] },
@@ -187,10 +191,10 @@ function TimeTrackingOverview() {
         placeholder="Filter type or projects"
         style={{ width: selectWidth, ...filterStyle }}
         options={getTaskFilterOptions(allProjects)}
-        value={selectedProjectOrTypeFilters} //make two datastructures and merge with useEffect
+        value={selectedProjectOrTypeFilters}
         onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
-        onSelect={(projectId: string) =>
-          setSelectedProjects(selectedProjectOrTypeFilters, projectId)
+        onSelect={(newSelection: string) =>
+          setSelectedProjects(selectedProjectOrTypeFilters, newSelection)
         }
       />
       <Select

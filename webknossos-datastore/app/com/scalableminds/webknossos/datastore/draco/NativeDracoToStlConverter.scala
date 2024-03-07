@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore
+package com.scalableminds.webknossos.datastore.draco
 
 import com.github.sbt.jni.nativeLoader
 

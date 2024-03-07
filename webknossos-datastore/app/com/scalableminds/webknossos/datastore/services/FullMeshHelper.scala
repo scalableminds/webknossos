@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.webknossos.datastore.NativeDracoToStlConverter
+import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
 

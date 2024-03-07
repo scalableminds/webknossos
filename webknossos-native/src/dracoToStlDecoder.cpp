@@ -1,4 +1,4 @@
-#include "com_scalableminds_webknossos_datastore_NativeDracoToStlConverter.h"
+#include "com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter.h"
 #include <draco/compression/encode.h>
 #include <draco/compression/decode.h>
 
@@ -15,7 +15,7 @@ void throwRuntimeException(JNIEnv* env, const std::string msg) {
 // Takes a byte array containing a DRACO-Encoded mesh, adds offsetX, offsetY, offsetZ to each vertex
 // And encodes the results as STL faces (50 bytes per face)
 // No STL Header is included, as this will be called on chunks. The caller must add an stl header.
-JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_NativeDracoToStlConverter_dracoToStl
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter_dracoToStl
   (JNIEnv* env, jobject instance, jbyteArray inputJavaArray, jfloat offsetX, jfloat offsetY, jfloat offsetZ, jdouble scaleX, jdouble scaleY, jdouble scaleZ)
 {
   jsize inputLength = env->GetArrayLength(inputJavaArray);

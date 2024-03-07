@@ -17,6 +17,8 @@ This subproject provides cpp functions for use in webknossos, using JNI
  - this should generate a header file in `webknossos-native/src/include/`
  - Implement the function defined in the header file in a cpp file also in `webknossos-native/src`
  - compile with `sbt compile`
+ - Note that moving the scala definition to a different package also requires this step, as the full name changes.
+ - On trouble, `./clean` may help
 
 
 ## Adding native dependencies

@@ -172,20 +172,21 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
-
-        {
-          fullDataset && fullDataset.usedStorageBytes && (
-          <div style={{ marginBottom: 4 }}>
-            <div className="sidebar-label">Used Storage</div>
-              <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
-          </div>
-          )
-        }
       </Spin>
+
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+        </div>
+      ) : null}
+
+      {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Used Storage</div>
+          <Tooltip title={`${fullDataset.usedStorageBytes} Bytes`} placement="left">
+            <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
+          </Tooltip>
         </div>
       ) : null}
     </>

@@ -161,19 +161,8 @@ function ShortcutsInfo() {
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
-    adaptedTool,
-    useLegacyBindings,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+
   const moreShortcutsLink = (
     <a
       target="_blank"
@@ -188,21 +177,38 @@ function ShortcutsInfo() {
   );
 
   if (!isPlaneMode) {
+    let actionDescriptor = null;
+    if (hasSkeleton && isShiftPressed) {
+      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
+        "SKELETON",
+        useLegacyBindings,
+        isShiftPressed,
+        isControlPressed,
+        isAltPressed,
+      );
+    }
+    console.log("actionDescriptor", actionDescriptor);
+
     return (
       <React.Fragment>
-        <span
-          style={{
-            marginRight: "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
-          />
-          Move
-        </span>
+        {actionDescriptor != null ? (
+          <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        ) : (
+          <span
+            className="shortcut-info-element"
+            style={{
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+            />
+            Move
+          </span>
+        )}
+
         <span className="shortcut-info-element">
           <span
             key="space-forward-i"
@@ -306,6 +312,20 @@ function ShortcutsInfo() {
       </React.Fragment>
     );
   }
+
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlPressed,
+    isAltPressed,
+  );
+  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+    adaptedTool,
+    useLegacyBindings,
+    isShiftPressed,
+    isControlPressed,
+    isAltPressed,
+  );
 
   return (
     <React.Fragment>

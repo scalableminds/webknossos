@@ -68,7 +68,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
     ) =>
       activeTool === AnnotationToolEnum.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLegacyLeftClick(
+        : SkeletonTool.onLeftClick(
             planeView,
             pos,
             event.shiftKey,

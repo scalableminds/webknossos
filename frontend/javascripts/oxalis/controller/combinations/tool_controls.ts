@@ -185,12 +185,16 @@ export class MoveTool {
     useLegacyBindings: boolean,
     shiftKey: boolean,
     _ctrlKey: boolean,
-    _altKey: boolean,
+    altKey: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
-    // left click as it would be equal to left drag
+    // left click as it would be equal to left drag.
+    // We also don't show a hint when the alt key was pressed,
+    // as this mostly happens when the user presses alt in another tool
+    // to move around while moving the mouse. In that case, clicking won't
+    // select anything.
     const leftClickInfo =
-      useLegacyBindings && !shiftKey
+      (useLegacyBindings && !shiftKey) || altKey
         ? {}
         : {
             leftClick: "Select Node",
@@ -273,26 +277,15 @@ export class SkeletonTool {
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings } = Store.getState().userConfiguration;
-
-        if (useLegacyBindings) {
-          this.onLegacyLeftClick(
-            planeView,
-            pos,
-            event.shiftKey,
-            event.altKey,
-            event.ctrlKey,
-            plane,
-            isTouch,
-          );
-          return;
-        }
-
-        const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-
-        if (!didSelectNode) {
-          SkeletonHandlers.handleCreateNode(planeView, pos, event.ctrlKey);
-        }
+        this.onLeftClick(
+          planeView,
+          pos,
+          event.shiftKey,
+          event.altKey,
+          event.ctrlKey,
+          plane,
+          isTouch,
+        );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -314,7 +307,7 @@ export class SkeletonTool {
     };
   }
 
-  static onLegacyLeftClick(
+  static onLeftClick(
     planeView: PlaneView,
     position: Point2,
     shiftPressed: boolean,
@@ -329,10 +322,20 @@ export class SkeletonTool {
     // (At least, in the XY/XZ/YZ viewports).
     if (shiftPressed && altPressed) {
       SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
+      return;
     } else if (shiftPressed && ctrlPressed) {
       SkeletonHandlers.handleDeleteEdge(planeView, position, plane, isTouch);
-    } else if (shiftPressed || !useLegacyBindings) {
-      SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
+      return;
+    }
+
+    let didSelectNode;
+    if (shiftPressed || !useLegacyBindings) {
+      didSelectNode = SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
+    }
+
+    if (!didSelectNode && !useLegacyBindings && !shiftPressed) {
+      // Will only have an effect, when not in 3D viewport
+      SkeletonHandlers.handleCreateNode(planeView, position, ctrlPressed);
     }
   }
 
@@ -340,16 +343,34 @@ export class SkeletonTool {
     _activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     shiftKey: boolean,
-    _ctrlKey: boolean,
-    _altKey: boolean,
+    ctrlKey: boolean,
+    altKey: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
-    const leftClickInfo = useLegacyBindings
-      ? {}
-      : {
-          leftClick: "Place/Select Node",
-        };
+    let leftClickInfo = {};
+    if (shiftKey && altKey) {
+      leftClickInfo = {
+        leftClick: "Create edge between nodes",
+      };
+    } else if (shiftKey && ctrlKey) {
+      leftClickInfo = {
+        leftClick: "Delete edge between nodes",
+      };
+    } else if (shiftKey) {
+      leftClickInfo = {
+        leftClick: "Select node",
+      };
+    } else if (!useLegacyBindings && ctrlKey && !shiftKey && !altKey) {
+      leftClickInfo = {
+        leftClick: "Place Node without Activating",
+      };
+    } else if (!useLegacyBindings && !ctrlKey && !shiftKey && !altKey) {
+      leftClickInfo = {
+        leftClick: "Place/Select Node",
+      };
+    }
+
     return {
       ...leftClickInfo,
       leftDrag: "Move",

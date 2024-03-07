@@ -4,7 +4,10 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.{VoxelPosition, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition, WebknossosAdHocMeshRequest}
 import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -15,9 +18,11 @@ import scala.concurrent.ExecutionContext
 
 class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                   editableMappingService: EditableMappingService,
+                                  volumeSegmentIndexService: VolumeSegmentIndexService,
                                   val remoteDatastoreClient: TSRemoteDatastoreClient,
                                   val remoteWebKnossosClient: TSRemoteWebKnossosClient)
     extends FallbackDataHelper
+    with ProtoGeometryImplicits
     with FullMeshHelper {
 
   def loadFor(token: Option[String], tracingId: String, fullMeshRequest: FullMeshRequest)(
@@ -52,14 +57,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
       voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId, token) ?~> "voxelSize.failedToFetch"
-      verticesForChunks <- if (false) // (tracing.hasSegmentIndex.getOrElse(false))
-        getAllAdHocChunksWithSegmentIndex(token,
-                                          tracing,
-                                          tracingId,
-                                          mag,
-                                          voxelSize,
-                                          fullMeshRequest,
-                                          VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag))
+      verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
+        getAllAdHocChunksWithSegmentIndex(token, tracing, tracingId, mag, voxelSize, fullMeshRequest)
       else
         getAllAdHocChunksWithNeighborLogic(token,
                                            tracing,
@@ -79,9 +78,36 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracingId: String,
       mag: Vec3Int,
       voxelSize: Vec3Double,
-      fullMeshRequest: FullMeshRequest,
-      topLeft: VoxelPosition)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
-    Fox.failure("getAllAdHocChunksWithSegmentIndex not implemented")
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
+    for {
+      bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId,
+                                                               fullMeshRequest.segmentId,
+                                                               mag,
+                                                               fullMeshRequest.additionalCoordinates,
+                                                               AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
+      bucketPositions = bucketPositionsRaw.values
+        .map(vec3IntFromProto)
+        .map(_ * mag * DataLayer.bucketLength)
+        .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
+        .toList
+      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(bucketPositions) {
+        bucketPosition =>
+          val adHocMeshRequest = WebknossosAdHocMeshRequest(
+            position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
+            mag = mag,
+            cubeSize = Vec3Int.full(DataLayer.bucketLength + 1),
+            fullMeshRequest.segmentId,
+            voxelSize,
+            fullMeshRequest.mappingName,
+            fullMeshRequest.mappingType,
+            fullMeshRequest.additionalCoordinates,
+            findNeighbors = false
+          )
+          loadMeshChunkFromAdHoc(token, tracing, adHocMeshRequest, tracingId)
+      }
+      allVertices = vertexChunksWithNeighbors.map(_._1)
+    } yield allVertices
 
   private def getAllAdHocChunksWithNeighborLogic(token: Option[String],
                                                  tracing: VolumeTracing,

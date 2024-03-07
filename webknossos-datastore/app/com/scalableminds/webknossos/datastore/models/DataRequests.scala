@@ -48,7 +48,7 @@ object WebKnossosDataRequest {
 case class WebknossosAdHocMeshRequest(
     position: Vec3Int,
     mag: Vec3Int,
-    cubeSize: Vec3Int,
+    cubeSize: Vec3Int, // In target mag
     segmentId: Long,
     scale: Vec3Double,
     mapping: Option[String] = None,

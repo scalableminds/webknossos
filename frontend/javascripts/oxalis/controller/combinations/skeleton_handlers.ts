@@ -5,6 +5,7 @@ import type {
   Point2,
   Vector3,
   ShowContextMenuFunction,
+  Viewport,
 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -49,6 +50,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -314,9 +316,9 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 export function maybeGetNodeIdFromPosition(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): number | null | undefined {
   const SceneController = getSceneController();
@@ -337,9 +339,10 @@ export function maybeGetNodeIdFromPosition(
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
-  const pickingScene = new THREE.Scene();
+  let pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
-  const camera = planeView.getCameras()[plane];
+  const camera = planeView.getCameraForPlane(plane);
+
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);

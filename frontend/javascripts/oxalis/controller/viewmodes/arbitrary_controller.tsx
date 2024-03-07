@@ -7,6 +7,7 @@ import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontrac
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   setActiveNodeAction,
   deleteNodeAsUserAction,
@@ -85,34 +86,53 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForElementWithId(arbitraryViewportId).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportId, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+      this.input.mouseController = new InputMouse(
+        arbitraryViewportId,
+        {
+          leftClick: (pos: Point2, plane: string, event: MouseEvent, isTouch: boolean) => {
+            const nodeId = SkeletonHandlers.maybeGetNodeIdFromPosition(
+              this.arbitraryView,
+              pos,
+              "arbitraryViewport",
+              isTouch,
             );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-            const fx = Store.getState().flycam.zoomStep / scaleX;
-            const fy = Store.getState().flycam.zoomStep / scaleY;
-            Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-          }
+            console.log("nodeId", nodeId);
+            if (nodeId != null) {
+              Store.dispatch(setActiveNodeAction(nodeId));
+            }
+          },
+          leftDownMove: (delta: Point2) => {
+            if (this.props.viewMode === constants.MODE_ARBITRARY) {
+              Store.dispatch(
+                yawFlycamAction(
+                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+              Store.dispatch(
+                pitchFlycamAction(
+                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
+              const fx = Store.getState().flycam.zoomStep / scaleX;
+              const fy = Store.getState().flycam.zoomStep / scaleY;
+              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
+            }
+          },
+          scroll: this.scroll,
+          pinch: (delta: number) => {
+            if (delta < 0) {
+              Store.dispatch(zoomOutAction());
+            } else {
+              Store.dispatch(zoomInAction());
+            }
+          },
         },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+        arbitraryViewportId,
+      );
     });
   }
 

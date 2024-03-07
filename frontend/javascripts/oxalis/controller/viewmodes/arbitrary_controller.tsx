@@ -7,7 +7,6 @@ import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontrac
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   setActiveNodeAction,
   deleteNodeAsUserAction,
@@ -36,11 +35,12 @@ import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import type { ViewMode, Point2, Vector3 } from "oxalis/constants";
+import type { ViewMode, Point2, Vector3, Viewport } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { SkeletonTool } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
@@ -90,16 +90,16 @@ class ArbitraryController extends React.PureComponent<Props> {
         arbitraryViewportId,
         {
           leftClick: (pos: Point2, plane: string, event: MouseEvent, isTouch: boolean) => {
-            const nodeId = SkeletonHandlers.maybeGetNodeIdFromPosition(
+            SkeletonTool.onLeftClick(
               this.arbitraryView,
               pos,
-              "arbitraryViewport",
+              event.shiftKey,
+              event.altKey,
+              event.ctrlKey,
+              plane as Viewport,
               isTouch,
+              false,
             );
-            console.log("nodeId", nodeId);
-            if (nodeId != null) {
-              Store.dispatch(setActiveNodeAction(nodeId));
-            }
           },
           leftDownMove: (delta: Point2) => {
             if (this.props.viewMode === constants.MODE_ARBITRARY) {
@@ -131,7 +131,7 @@ class ArbitraryController extends React.PureComponent<Props> {
             }
           },
         },
-        arbitraryViewportId,
+        "arbitraryViewport",
       );
     });
   }

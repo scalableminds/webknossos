@@ -58,9 +58,9 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.TDView]: 3,
 };
 export function handleMergeTrees(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
@@ -74,9 +74,9 @@ export function handleMergeTrees(
   }
 }
 export function handleDeleteEdge(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
@@ -90,9 +90,9 @@ export function handleDeleteEdge(
   }
 }
 export function handleSelectNode(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): boolean {
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
@@ -105,7 +105,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(_planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
+export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {

@@ -6,6 +6,7 @@ import type {
   ShowContextMenuFunction,
   AnnotationTool,
   Vector3,
+  Viewport,
 } from "oxalis/constants";
 import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
@@ -57,6 +58,7 @@ import {
   setLastMeasuredPositionAction,
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -228,7 +230,7 @@ export class SkeletonTool {
           showNodeContextMenuAt,
         );
       } else {
-        SkeletonHandlers.handleCreateNode(planeView, position, event.ctrlKey);
+        SkeletonHandlers.handleCreateNode(position, event.ctrlKey);
       }
     };
 
@@ -308,13 +310,14 @@ export class SkeletonTool {
   }
 
   static onLeftClick(
-    planeView: PlaneView,
+    planeView: PlaneView | ArbitraryView,
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
     ctrlPressed: boolean,
-    plane: OrthoView,
+    plane: Viewport,
     isTouch: boolean,
+    allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings } = Store.getState().userConfiguration;
 
@@ -333,9 +336,9 @@ export class SkeletonTool {
       didSelectNode = SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
     }
 
-    if (!didSelectNode && !useLegacyBindings && !shiftPressed) {
+    if (allowNodeCreation && !didSelectNode && !useLegacyBindings && !shiftPressed) {
       // Will only have an effect, when not in 3D viewport
-      SkeletonHandlers.handleCreateNode(planeView, position, ctrlPressed);
+      SkeletonHandlers.handleCreateNode(position, ctrlPressed);
     }
   }
 

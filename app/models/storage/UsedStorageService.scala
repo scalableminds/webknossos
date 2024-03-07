@@ -105,9 +105,4 @@ class UsedStorageService @Inject()(val system: ActorSystem,
       _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
     } yield ()
 
-  def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
-    for {
-      usedStorage <- organizationDAO.getUsedStorageForDataset(datasetId)
-    } yield usedStorage
-
 }

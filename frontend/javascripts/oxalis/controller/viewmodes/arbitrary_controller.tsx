@@ -15,6 +15,7 @@ import {
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setFlightmodeRecordingAction,
@@ -210,6 +211,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       "2": () => {
         Store.dispatch(toggleInactiveTreesAction());
+      },
+      // Delete active node
+      delete: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      backspace: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      c: () => {
+        Store.dispatch(createTreeAction());
       },
       // Branches
       b: () => this.pushBranch(),

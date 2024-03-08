@@ -434,11 +434,11 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
     ),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
-      { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
       {
         key: "/dashboard/annotations",
         label: <Link to="/dashboard/annotations">Annotations</Link>,
       },
+      { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
     ],
   };
 }

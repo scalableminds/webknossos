@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Webknossos can now open ND Zarr datasets with arbitrary axis orders (not limited to `**xyz` anymore). [#7592](https://github.com/scalableminds/webknossos/pull/7592)
 - Added a new "Split from all neighboring segments" feature for the proofreading mode. [#7611](https://github.com/scalableminds/webknossos/pull/7611)
 - If storage scan is enabled, the measured used storage is now displayed in the dashboard’s dataset detail view. [#7677](https://github.com/scalableminds/webknossos/pull/7677)
+- Creating and deleting edges is now possible with ctrl+(alt/shift)+leftclick in orthogonal, flight and oblique mode. Also, the flight and oblique modes allow selecting nodes with leftclick, creating new trees with 'c' and deleting the active node with 'del'. [#7678](https://github.com/scalableminds/webknossos/pull/7678)
 
 ### Changed
 - Datasets stored in WKW format are no longer loaded with memory mapping, reducing memory demands. [#7528](https://github.com/scalableminds/webknossos/pull/7528)

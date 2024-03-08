@@ -135,7 +135,7 @@ function InputCatcher({
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
 
   const adaptedTool = adaptActiveToolToShortcuts(

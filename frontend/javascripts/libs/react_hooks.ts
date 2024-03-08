@@ -25,11 +25,11 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   // @ts-ignore
   Alt: event.altKey,
   // @ts-ignore
-  Control: event.ctrlKey,
+  ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
 // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
+export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 

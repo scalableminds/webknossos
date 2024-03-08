@@ -128,7 +128,7 @@ export class InputKeyboardNoLoop {
   };
 
   preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
-    if (evt.ctrlKey && evt.key === "k") {
+    if ((evt.ctrlKey || evt.metaKey) && evt.key === "k") {
       evt.preventDefault();
       evt.stopPropagation();
     }
@@ -638,7 +638,7 @@ export class InputMouse {
       modifier = "shift";
     } else if (event.altKey) {
       modifier = "alt";
-    } else if (event.ctrlKey) {
+    } else if (event.ctrlKey || event.metaKey) {
       modifier = "ctrl";
     }
 

@@ -68,7 +68,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
   // alt + scroll won't result in the correct zoomToMouse behavior.
   setMousePosition(position);
 
-  if (event.altKey && !event.shiftKey && !event.ctrlKey) {
+  if (event.altKey && !event.shiftKey && !(event.ctrlKey || event.metaKey)) {
     handleMovePlane(delta);
   }
 }

@@ -159,7 +159,7 @@ function ShortcutsInfo() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
 
@@ -183,7 +183,7 @@ function ShortcutsInfo() {
         "SKELETON",
         useLegacyBindings,
         isShiftPressed,
-        isControlPressed,
+        isControlOrMetaPressed,
         isAltPressed,
       );
     }
@@ -316,14 +316,14 @@ function ShortcutsInfo() {
   const adaptedTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
-    isControlPressed,
+    isControlOrMetaPressed,
     isAltPressed,
   );
   const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
     adaptedTool,
     useLegacyBindings,
     isShiftPressed,
-    isControlPressed,
+    isControlOrMetaPressed,
     isAltPressed,
   );
 
@@ -337,7 +337,7 @@ function ShortcutsInfo() {
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
         />
-        {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
         <img

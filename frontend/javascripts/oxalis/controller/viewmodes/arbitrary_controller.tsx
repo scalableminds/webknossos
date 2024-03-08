@@ -96,7 +96,7 @@ class ArbitraryController extends React.PureComponent<Props> {
               pos,
               event.shiftKey,
               event.altKey,
-              event.ctrlKey,
+              event.ctrlKey || event.metaKey,
               plane as Viewport,
               isTouch,
               false,

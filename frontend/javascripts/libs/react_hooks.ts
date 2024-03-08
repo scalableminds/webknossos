@@ -23,7 +23,7 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   // @ts-ignore
   Shift: event.shiftKey,
   // @ts-ignore
-  Alt: event.altKey,
+  Alt: event.altKey, // This is the option key ⌥ on MacOS
   // @ts-ignore
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });

@@ -25,6 +25,7 @@ import {
   OrthoView,
   AnnotationToolEnum,
   VolumeTools,
+  AltOrOptionKey,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -465,7 +466,7 @@ function getNodeContextMenuOptions({
             label: (
               <>
                 Create Edge & Merge with this Tree{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", AltOrOptionKey, "leftMouse"]) : null}
               </>
             ),
           },

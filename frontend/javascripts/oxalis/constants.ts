@@ -384,3 +384,19 @@ export enum BLEND_MODES {
 export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 export const IdentityTransform = { type: "affine", affineMatrix: Identity4x4 } as const;
 export const EMPTY_OBJECT = {} as const;
+
+const isMac = (() => {
+  try {
+    // Even though navigator.platform¹ is deprecated, this still
+    // seems to be the best mechanism to find out whether the machine is
+    // a Mac. At some point, NavigatorUAData² might be a feasible alternative.
+    //
+    // ¹ https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform
+    // ² https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/platform
+    return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  } catch {
+    return false;
+  }
+})();
+
+export const AltOrOptionKey = isMac ? "⌥" : "Alt";

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, OrthoViews } from "oxalis/constants";
 import {
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
@@ -76,7 +76,7 @@ function ZoomShortcut() {
             top: -2,
           }}
         >
-          Alt
+          {AltOrOptionKey}
         </span>
       </span>{" "}
       +

@@ -205,9 +205,9 @@ object ZipIO extends LazyLogging {
             case Empty =>
               input.close()
               Empty
-            case f: Failure =>
+            case failure: Failure =>
               input.close()
-              f
+              failure
           }
           innerResultFox
         case e =>

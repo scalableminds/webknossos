@@ -131,10 +131,9 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
 
   def withMergedBuckets(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.combined(mergedVolume.map {
-        case (bucketPosition, bucketData) =>
-          block(bucketPosition, UnsignedIntegerArray.toByteArray(bucketData, elementClass))
-      }.toList)
+      _ <- Fox.serialCombined(mergedVolume.keysIterator) { bucketPosition =>
+        block(bucketPosition, UnsignedIntegerArray.toByteArray(mergedVolume(bucketPosition), elementClass))
+      }
     } yield ()
 
   def presentResolutions: Set[Vec3Int] =

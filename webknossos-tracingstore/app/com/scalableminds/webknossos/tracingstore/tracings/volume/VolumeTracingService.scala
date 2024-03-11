@@ -329,55 +329,61 @@ class VolumeTracingService @Inject()(
       Failure("Tracing has already been edited.")
     else {
       val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
-      withZipsFromMultiZip(initialData) { (_, dataZip) =>
-        val resolutionSet = resolutionSetFromZipfile(dataZip)
-        if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
-        Fox.successful(())
-      }
-      // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
-      if (resolutionSets.isEmpty)
-        Fox.successful(tracing.resolutions.map(vec3IntFromProto).toSet)
-      else {
-        val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
-          resolutionSets.forall(_ == head)
-        }
-        if (!resolutionsDoMatch)
-          Fox.failure("annotation.volume.resolutionsDoNotMatch")
-        else {
-          val mergedVolume = new MergedVolume(tracing.elementClass)
+      for {
+        _ <- withZipsFromMultiZipAsync(initialData) { (_, dataZip) =>
           for {
-            _ <- withZipsFromMultiZip(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
-            _ <- withZipsFromMultiZip(initialData)((index, dataZip) => mergedVolume.addFromDataZip(index, dataZip))
-            _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
-              mergedVolume.largestSegmentId.toLong,
-              tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
-            destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-            fallbackLayer <- getFallbackLayer(tracingId)
-            segmentIndexBuffer = new VolumeSegmentIndexBuffer(
-              tracingId,
-              volumeSegmentIndexClient,
-              tracing.version,
-              remoteDatastoreClient,
-              fallbackLayer,
-              AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-              userToken
-            )
-            _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
-              for {
-                _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
-                _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-                  updateSegmentIndex(segmentIndexBuffer,
-                                     bucketPosition,
-                                     bytes,
-                                     Empty,
-                                     tracing.elementClass,
-                                     tracing.mappingName))
-              } yield ()
-            }
-            _ <- segmentIndexBuffer.flush()
-          } yield mergedVolume.presentResolutions
+            _ <- Fox.successful(())
+            resolutionSet = resolutionSetFromZipfile(dataZip)
+            _ = if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
+          } yield ()
         }
-      }
+        resolutions <-
+        // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
+        if (resolutionSets.isEmpty)
+          Fox.successful(tracing.resolutions.map(vec3IntFromProto).toSet)
+        else {
+          val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
+            resolutionSets.forall(_ == head)
+          }
+          if (!resolutionsDoMatch)
+            Fox.failure("annotation.volume.resolutionsDoNotMatch")
+          else {
+            val mergedVolume = new MergedVolume(tracing.elementClass)
+            for {
+              _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
+              _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
+                mergedVolume.addFromDataZip(index, dataZip))
+              _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+                mergedVolume.largestSegmentId.toLong,
+                tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
+              destinationDataLayer = volumeTracingLayer(tracingId, tracing)
+              fallbackLayer <- getFallbackLayer(tracingId)
+              segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+                tracingId,
+                volumeSegmentIndexClient,
+                tracing.version,
+                remoteDatastoreClient,
+                fallbackLayer,
+                AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+                userToken
+              )
+              _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
+                for {
+                  _ <- saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
+                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                    updateSegmentIndex(segmentIndexBuffer,
+                                       bucketPosition,
+                                       bytes,
+                                       Empty,
+                                       tracing.elementClass,
+                                       tracing.mappingName))
+                } yield ()
+              }
+              _ <- segmentIndexBuffer.flush()
+            } yield mergedVolume.presentResolutions
+          }
+        }
+      } yield resolutions
     }
 
   def initializeWithData(tracingId: String,

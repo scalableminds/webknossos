@@ -153,15 +153,16 @@ trait VolumeDataZipHelper
     }
   }
 
-  protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => Fox[T])(
+  protected def withZipsFromMultiZipAsync[T](multiZip: File)(block: (Int, File) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] = {
     var index: Int = 0
     val unzipResult = ZipIO.withUnzipedAsync(multiZip) {
       case (_, is) =>
-        block(index, inputStreamToTempfile(is)).map { res =>
-          index += 1
-          res
-        }
+        for {
+          res <- block(index, inputStreamToTempfile(is))
+          _ = index += 1
+        } yield res
+      case _ => Fox.successful(())
     }
     for {
       _ <- unzipResult

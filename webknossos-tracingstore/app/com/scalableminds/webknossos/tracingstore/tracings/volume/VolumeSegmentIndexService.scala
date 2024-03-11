@@ -144,7 +144,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     } yield bucketList
 
   def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-      layer: Option[RemoteFallbackLayer],
+      fallbackLayer: Option[RemoteFallbackLayer],
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
@@ -154,7 +154,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       additionalAxes: Option[Seq[AdditionalAxis]],
       userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      bucketListBox <- getSegmentToBucketIndex(layer,
+      bucketListBox <- getSegmentToBucketIndex(fallbackLayer,
                                                tracingId,
                                                segmentId,
                                                mag,
@@ -175,7 +175,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     }
 
   private def getSegmentToBucketIndex(
-      layer: Option[RemoteFallbackLayer],
+      fallbackLayerOpt: Option[RemoteFallbackLayer],
       tracingId: String,
       segmentId: Long,
       mag: Vec3Int,
@@ -191,7 +191,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                               version,
                                                               additionalCoordinates,
                                                               additionalAxes).fillEmpty(ListOfVec3IntProto.of(Seq()))
-      fromFileIndex <- layer match { // isEmpty is not the same as length == 0 here :(
+      fromFileIndex <- fallbackLayerOpt match { // isEmpty is not the same as length == 0 here :(
         case Some(fallbackLayer) if fromMutableIndex.length == 0 =>
           getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, mappingName, userToken) // additional coordinates not supported, see #7556
         case _ => Fox.successful(Seq.empty)

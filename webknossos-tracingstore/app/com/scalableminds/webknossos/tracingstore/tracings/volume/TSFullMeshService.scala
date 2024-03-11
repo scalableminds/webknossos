@@ -85,12 +85,19 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       voxelSize: Vec3Double,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
     for {
+      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
       bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId,
-                                                               fullMeshRequest.segmentId,
-                                                               mag,
-                                                               fullMeshRequest.additionalCoordinates,
-                                                               AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes))
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+          fallbackLayer,
+          tracingId,
+          fullMeshRequest.segmentId,
+          mag,
+          version = None,
+          mappingName = tracing.mappingName,
+          fullMeshRequest.additionalCoordinates,
+          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+          token
+        )
       bucketPositions = bucketPositionsRaw.values
         .map(vec3IntFromProto)
         .map(_ * mag * DataLayer.bucketLength)

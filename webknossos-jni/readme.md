@@ -1,10 +1,10 @@
 # Native Functions for WEBKNOSSOS
 
-This subproject provides cpp functions for use in webknossos, using JNI
+This subproject provides C++ functions for use in webknossos, using JNI
 
 ## Changing Code for Existing Functions
 
- - If the function/class signatures doe not change, compiling the changed cpp code should work with `sbt compile` (Auto-recompile on F5 after line changes does not seem to work)
+ - If the function/class signatures do not change, compiling the changed cpp code should work with `sbt compile` (Auto-recompile on F5 after line changes does not seem to work)
 
 ## Changing Function Signatures and Adding New Functions
 

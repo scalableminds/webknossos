@@ -2,31 +2,35 @@ package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
+import com.scalableminds.webknossos.datastore.services.FullMeshRequest
+import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 class TSRemoteDatastoreClient @Inject()(
     rpc: RPC,
-    remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    remoteWebknossosClient: TSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
+  private lazy val voxelSizeCache: AlfuCache[String, Vec3Double] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
-    AlfuCache()
+    AlfuCache(timeToLive = 10 minutes)
 
   def getAgglomerateSkeleton(userToken: Option[String],
                              remoteFallbackLayer: RemoteFallbackLayer,
@@ -40,7 +44,7 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer,
-              dataRequests: List[WebKnossosDataRequest],
+              dataRequests: List[WebknossosDataRequest],
               userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
@@ -111,6 +115,29 @@ class TSRemoteDatastoreClient @Inject()(
     )
   }
 
+  def loadFullMeshStl(token: Option[String],
+                      remoteFallbackLayer: RemoteFallbackLayer,
+                      fullMeshRequest: FullMeshRequest): Fox[Array[Byte]] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      result <- rpc(s"$remoteLayerUri/meshes/fullMesh.stl")
+        .addQueryStringOptional("token", token)
+        .postJsonWithBytesResponse(fullMeshRequest)
+    } yield result
+
+  def voxelSizeForTracingWithCache(tracingId: String, token: Option[String]): Fox[Vec3Double] =
+    voxelSizeCache.getOrLoad(tracingId, tId => voxelSizeForTracing(tId, token))
+
+  private def voxelSizeForTracing(tracingId: String, token: Option[String]): Fox[Vec3Double] =
+    for {
+      dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
+      dataStoreUri <- dataStoreUriWithCache(dataSourceId.team, dataSourceId.name)
+      result <- rpc(s"$dataStoreUri/data/datasets/${dataSourceId.team}/${dataSourceId.name}/readInboxDataSource")
+        .addQueryStringOptional("token", token)
+        .getWithJsonResponse[InboxDataSource]
+      scale <- result.scaleOpt ?~> "could not determine voxel size of dataset"
+    } yield scale
+
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
       datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
@@ -120,6 +147,6 @@ class TSRemoteDatastoreClient @Inject()(
   private def dataStoreUriWithCache(organizationName: String, datasetName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(
       (organizationName, datasetName),
-      keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
+      keyTuple => remoteWebknossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
 
 }

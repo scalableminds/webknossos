@@ -816,17 +816,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
           </div>
         </div>
-        <div className="flex-container">
-          <div className="flex-item">
-            <Dropdown
-              menu={{ items }}
-              trigger={["click", "contextMenu", "hover"]}
-              placement="bottomRight"
-            >
+        <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
+          <div className="flex-container" style={{ cursor: "pointer" }}>
+            <div className="flex-item">
               <EllipsisOutlined />
-            </Dropdown>
+            </div>
           </div>
-        </div>
+        </Dropdown>
       </div>
     );
   };

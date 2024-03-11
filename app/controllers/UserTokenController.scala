@@ -30,7 +30,7 @@ import scala.concurrent.ExecutionContext
 object RpcTokenHolder {
   /*
    * This token is used to tell the datastore or tracing store “I am WEBKNOSSOS”.
-   * The respective module asks the remote webKnossos to validate that.
+   * The respective module asks the remote WEBKNOSSOS to validate that.
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
@@ -81,7 +81,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
 
   /* token may be
-       - the global webKnossosToken (allow everything)
+       - the global webknossosToken (allow everything)
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */

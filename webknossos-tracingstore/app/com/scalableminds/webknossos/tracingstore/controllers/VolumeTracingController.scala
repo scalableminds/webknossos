@@ -357,11 +357,13 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+            _ <- assertMappingIsNotLocked(tracing)
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(
               baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),
+                                                   isLocked = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))
             _ <- tracingService.handleUpdateGroup(
               tracingId,
@@ -385,6 +387,9 @@ class VolumeTracingController @Inject()(
         }
       }
     }
+
+  private def assertMappingIsNotLocked(volumeTracing: VolumeTracing): Fox[Unit] =
+    bool2Fox(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> "annotation.mappingIsLocked"
 
   def agglomerateGraphMinCut(token: Option[String], tracingId: String): Action[MinCutParameters] =
     Action.async(validateJson[MinCutParameters]) { implicit request =>

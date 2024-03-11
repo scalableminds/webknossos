@@ -533,10 +533,10 @@ export type APITimeTracking = {
   timestamp: number;
   annotation: string;
   _id: string;
-  task_id: string;
-  project_name: string;
-  tasktype_id: string;
-  tasktype_summary: string;
+  task_id: string | null | undefined;
+  project_name: string | null | undefined;
+  tasktype_id: string | null | undefined;
+  tasktype_summary: string | null | undefined;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;
@@ -634,15 +634,15 @@ export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | 
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
-  "CONVERT_TO_WKW" = "convert_to_wkw",
-  "EXPORT_TIFF" = "export_tiff",
-  "RENDER_ANIMATION" = "render_animation",
-  "COMPUTE_MESH_FILE" = "compute_mesh_file",
-  "COMPUTE_SEGMENT_INDEX_FILE" = "compute_segment_index_file",
-  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
-  "INFER_NUCLEI" = "infer_nuclei",
-  "INFER_NEURONS" = "infer_neurons",
-  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+  CONVERT_TO_WKW = "convert_to_wkw",
+  EXPORT_TIFF = "export_tiff",
+  RENDER_ANIMATION = "render_animation",
+  COMPUTE_MESH_FILE = "compute_mesh_file",
+  COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
+  FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
+  INFER_NUCLEI = "infer_nuclei",
+  INFER_NEURONS = "infer_neurons",
+  MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
 }
 
 export type APIJob = {

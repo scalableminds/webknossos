@@ -53,7 +53,8 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  annotationTypes: AnnotationType;
+  annotationType: AnnotationType;
+  selectedProjectsOrType: Array<string | AnnotationType>;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -105,7 +106,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    annotationTypes: "Task,Explorational",
+    annotationType: "Task,Explorational",
+    selectedProjectsOrType: [],
   };
 
   parseQueryParams() {
@@ -124,15 +126,36 @@ class TimeLineView extends React.PureComponent<Props, State> {
     } else if (hasStart && hasEnd) {
       dateRange = [dayjs(+params.start), dayjs(+params.end)];
     }
-    const hasProjectOrTypeFilters = _.has(params, "projectsOrType");
+    let selectedProjectIds: Array<string> = [];
+    let annotationType = TypeFilters.TASKS_AND_ANNOTATIONS_KEY;
+    if (_.has(params, "projectsOrType")) {
+      const projectsOrTypeParam = params.projectsOrType;
+      if (Object.values<string>(TypeFilters).includes(projectsOrTypeParam)) {
+        annotationType = projectsOrTypeParam as TypeFilters;
+      } else {
+        selectedProjectIds = params.projectsOrType.split(",");
+      }
+    }
+    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
     this.setState(
       {
         initialUserId: _.has(params, "user") ? params.user : null,
         dateRange,
-        selectedProjectIds: hasProjectOrTypeFilters ? params.projectsOrType.split(",") : [],
+        annotationType,
+        selectedProjectIds,
+        selectedProjectsOrType,
       },
-      () => this.handleDateChange(dateRange),
+      () => {
+        this.handleDateChange(dateRange);
+      },
     );
+  }
+
+  getProjectOrTypeFilter(selectedProjectIds: string[], annotationType: TypeFilters) {
+    if (selectedProjectIds.length > 0) {
+      return selectedProjectIds;
+    }
+    return [annotationType];
   }
 
   async componentDidMount() {
@@ -140,6 +163,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.parseQueryParams();
     if (isAdminOrTeamManger) {
       await this.fetchData();
+      await this.fetchTimeTrackingData();
     } else {
       this.fetchDataFromLoggedInUser();
     }
@@ -174,7 +198,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.selectedProjectIds.filter(
             (id) => !(Object.values(TypeFilters) as string[]).includes(id),
           ),
-          this.state.annotationTypes,
+          this.state.annotationType,
         ),
       );
       this.setState(
@@ -249,39 +273,41 @@ class TimeLineView extends React.PureComponent<Props, State> {
     );
   };
 
-  handleSelectedProjectsChange = async (projectId: string) => {
+  handleSelectedProjectsChange = async (selectedValue: string) => {
     let selectedProjectIds: string[] = [];
-    let annotationTypes: AnnotationType = "Task";
-    if (projectId === TypeFilters.TASKS_AND_ANNOTATIONS_KEY) {
-      selectedProjectIds = [TypeFilters.TASKS_AND_ANNOTATIONS_KEY];
-      annotationTypes = "Task,Explorational";
-    } else if (projectId === TypeFilters.ONLY_TASKS_KEY) {
-      selectedProjectIds = [TypeFilters.ONLY_TASKS_KEY];
-      annotationTypes = "Task";
-    } else if (projectId === TypeFilters.ONLY_ANNOTATIONS_KEY) {
-      selectedProjectIds = [TypeFilters.ONLY_ANNOTATIONS_KEY];
-      annotationTypes = "Explorational";
+    let annotationType: TypeFilters = TypeFilters.ONLY_TASKS_KEY;
+    if (Object.values<string>(TypeFilters).includes(selectedValue)) {
+      annotationType = selectedValue as TypeFilters;
     } else {
-      const prevSelectedProjectIds = this.state.selectedProjectIds;
-      const prevSelectedIds = prevSelectedProjectIds.filter(
-        (id) => !(Object.values(TypeFilters) as string[]).includes(id),
-      );
-      selectedProjectIds = [...prevSelectedIds, projectId];
+      annotationType = TypeFilters.ONLY_TASKS_KEY;
+      selectedProjectIds = [...this.state.selectedProjectIds, selectedValue];
     }
-    this.setState({ selectedProjectIds, annotationTypes }, this.fetchTimeTrackingData); // state may not be updated immediately
+    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
+    this.setState(
+      { selectedProjectIds, annotationType, selectedProjectsOrType },
+      this.fetchTimeTrackingData,
+    ); // state may not be updated immediately
   };
 
   onDeselect = (removedKey: string) => {
     let selectedProjectIds: string[] = [];
+    let annotationType: TypeFilters = TypeFilters.ONLY_TASKS_KEY;
     if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
-      selectedProjectIds = [TypeFilters.TASKS_AND_ANNOTATIONS_KEY];
+      selectedProjectIds = [];
+      annotationType = TypeFilters.TASKS_AND_ANNOTATIONS_KEY;
     } else {
-      selectedProjectIds = selectedProjectIds.filter((projectId) => projectId !== removedKey);
+      selectedProjectIds = this.state.selectedProjectIds.filter(
+        (projectId) => projectId !== removedKey,
+      );
     }
-    this.setState({ selectedProjectIds }, this.fetchTimeTrackingData);
+    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
+    this.setState(
+      { selectedProjectIds, selectedProjectsOrType, annotationType },
+      this.fetchTimeTrackingData,
+    );
   };
 
-  getTooltipForEntry(taskId: string, start: Date, end: Date) {
+  getTooltipForEntry(annotationOrTaskLabel: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end.getTime() - start.getTime();
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
@@ -289,7 +315,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const tooltip = (
       <div>
         <div className="highlighted">
-          Task ID: {taskId}
+          {annotationOrTaskLabel}
           <div className="striped-border" />
         </div>
 
@@ -359,15 +385,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeTrackingRowTotal: Array<RowContent> = []; // show all times spans in a single row
 
     const totalSumColumnLabel = "Sum Tracking Time";
-    this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
+    for (const datum of this.state.timeTrackingData) {
       const duration = dayjs.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
-      const individualTooltipAsString = this.getTooltipForEntry(datum.task_id, start, end);
+      const tooltipTitle =
+        datum.task_id != null ? `Task: ${datum.task_id}` : `Annotation: ${datum.annotation}`;
+      const individualTooltipAsString = this.getTooltipForEntry(tooltipTitle, start, end);
       const totalTooltipAsString = this.getTooltipForEntry(totalSumColumnLabel, start, end);
-      timeTrackingRowGrouped.push([datum.task_id, "", individualTooltipAsString, start, end]);
+      timeTrackingRowGrouped.push([tooltipTitle, "", individualTooltipAsString, start, end]);
       timeTrackingRowTotal.push([totalSumColumnLabel, "", totalTooltipAsString, start, end]);
-    });
+    }
     const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
     const formItemLayout = {
       labelCol: {
@@ -461,10 +489,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   placeholder="Filter type or projects"
                   defaultValue={[]}
                   options={getTaskFilterOptions(this.state.allProjects)}
-                  value={this.state.selectedProjectIds}
-                  onDeselect={() => console.log("TODO") /*TODO*/}
-                  onSelect={async (projectId: string) =>
-                    this.handleSelectedProjectsChange(projectId)
+                  value={this.state.selectedProjectsOrType}
+                  onDeselect={this.onDeselect}
+                  onSelect={async (projectOrTypeId: string) =>
+                    this.handleSelectedProjectsChange(projectOrTypeId)
                   }
                 />
               </FormItem>
@@ -486,8 +514,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   </ul>
                 </Col>
               </Row>
-              The time tracking information displayed here only includes data acquired when working
-              on &quot;tasks&quot; and not explorative annotations. OH WAIT, WE CHANGED THAT!
             </Col>
           </Row>
         </Card>

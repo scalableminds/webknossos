@@ -22,7 +22,6 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
@@ -309,11 +308,6 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/statistics"
-                component={StatisticView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

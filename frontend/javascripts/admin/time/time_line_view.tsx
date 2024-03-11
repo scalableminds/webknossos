@@ -22,7 +22,7 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { typeFilters, getTaskFilterOptions } from "admin/statistic/time_tracking_overview";
+import { TypeFilters, getTaskFilterOptions } from "admin/statistic/time_tracking_overview";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -172,7 +172,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.dateRange[0],
           this.state.dateRange[1],
           this.state.selectedProjectIds.filter(
-            (id) => !(Object.values(typeFilters) as string[]).includes(id),
+            (id) => !(Object.values(TypeFilters) as string[]).includes(id),
           ),
           this.state.annotationTypes,
         ),
@@ -252,19 +252,19 @@ class TimeLineView extends React.PureComponent<Props, State> {
   handleSelectedProjectsChange = async (projectId: string) => {
     let selectedProjectIds: string[] = [];
     let annotationTypes: AnnotationType = "Task";
-    if (projectId === typeFilters.TASKS_AND_ANNOTATIONS_KEY) {
-      selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
+    if (projectId === TypeFilters.TASKS_AND_ANNOTATIONS_KEY) {
+      selectedProjectIds = [TypeFilters.TASKS_AND_ANNOTATIONS_KEY];
       annotationTypes = "Task,Explorational";
-    } else if (projectId === typeFilters.ONLY_TASKS_KEY) {
-      selectedProjectIds = [typeFilters.ONLY_TASKS_KEY];
+    } else if (projectId === TypeFilters.ONLY_TASKS_KEY) {
+      selectedProjectIds = [TypeFilters.ONLY_TASKS_KEY];
       annotationTypes = "Task";
-    } else if (projectId === typeFilters.ONLY_ANNOTATIONS_KEY) {
-      selectedProjectIds = [typeFilters.ONLY_ANNOTATIONS_KEY];
+    } else if (projectId === TypeFilters.ONLY_ANNOTATIONS_KEY) {
+      selectedProjectIds = [TypeFilters.ONLY_ANNOTATIONS_KEY];
       annotationTypes = "Explorational";
     } else {
       const prevSelectedProjectIds = this.state.selectedProjectIds;
       const prevSelectedIds = prevSelectedProjectIds.filter(
-        (id) => !(Object.values(typeFilters) as string[]).includes(id),
+        (id) => !(Object.values(TypeFilters) as string[]).includes(id),
       );
       selectedProjectIds = [...prevSelectedIds, projectId];
     }
@@ -273,8 +273,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
   onDeselect = (removedKey: string) => {
     let selectedProjectIds: string[] = [];
-    if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
-      selectedProjectIds = [typeFilters.TASKS_AND_ANNOTATIONS_KEY];
+    if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
+      selectedProjectIds = [TypeFilters.TASKS_AND_ANNOTATIONS_KEY];
     } else {
       selectedProjectIds = selectedProjectIds.filter((projectId) => projectId !== removedKey);
     }

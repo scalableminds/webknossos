@@ -16,12 +16,11 @@ const { Column } = Table;
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export enum typeFilters {
+export enum TypeFilters {
   ONLY_ANNOTATIONS_KEY = "Explorational",
   ONLY_TASKS_KEY = "Task",
   TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
 }
-type TypeFilters = "Explorational" | "Task" | "Task,Explorational";
 
 type TimeEntry = {
   user: {
@@ -37,9 +36,9 @@ export const getTaskFilterOptions = (allProjects: APIProject[]) => {
   const additionalProjectFilters = {
     label: "Filter types",
     options: [
-      { label: "Tasks & Annotations", value: typeFilters.TASKS_AND_ANNOTATIONS_KEY },
-      { label: "Annotations", value: typeFilters.ONLY_ANNOTATIONS_KEY },
-      { label: "Tasks", value: typeFilters.ONLY_TASKS_KEY },
+      { label: "Tasks & Annotations", value: TypeFilters.TASKS_AND_ANNOTATIONS_KEY },
+      { label: "Annotations", value: TypeFilters.ONLY_ANNOTATIONS_KEY },
+      { label: "Tasks", value: TypeFilters.ONLY_TASKS_KEY },
     ],
   };
   const mappedProjects = allProjects.map((project) => {
@@ -61,7 +60,7 @@ function TimeTrackingOverview() {
     teamIds: string[],
     projectIds: string[],
   ) => {
-    // omit project parameter in request if annotation data is requested
+    // Omit project parameter in request if annotation data is requested
     const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
     return `api/time/summed/userList?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
       ",",
@@ -71,9 +70,10 @@ function TimeTrackingOverview() {
   const currentTime = dayjs();
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
-  // TODO make sure this is resolved
+  const [isFetching, setIsFetching] = useState(false);
   const [allTeams, allProjects, allTimeEntries] = useFetch(
     async () => {
+      setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
@@ -82,6 +82,7 @@ function TimeTrackingOverview() {
         allProjects.map((projects) => projects.id),
       );
       const allTimeEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
+      setIsFetching(false);
       return [allTeams, allProjects, allTimeEntries];
     },
     [[], [], []],
@@ -90,27 +91,27 @@ function TimeTrackingOverview() {
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
   const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
-  // the next prop is a of selectedProjectIds and selectedTypes.
+  // The next prop is an incomplete union of selectedProjectIds and selectedTypes.
   // It contains the values that should be selected in the select field.
   const [selectedProjectOrTypeFilters, setSelectedProjectOrTypeFilters] = useState(Array<string>);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   useEffect(() => {
-    if (selectedProjectIds.length === allProjects.length) {
+    if (selectedProjectIds.length > 0) {
       setSelectedProjectOrTypeFilters(selectedProjectIds);
-      setSelectedTypes(typeFilters.ONLY_TASKS_KEY);
     } else {
-      setSelectedProjectOrTypeFilters([...selectedProjectIds, selectedTypes]);
+      setSelectedProjectOrTypeFilters([selectedTypes]);
     }
-  }, [selectedProjectIds, selectedTypes, allProjects]);
+  }, [selectedProjectIds, selectedTypes]);
   const filteredTimeEntries = useFetch(
     async () => {
+      setIsFetching(true);
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       if (filteredTeams.length === 0) return;
-      const projectFilterNeeded = selectedTypes === typeFilters.ONLY_TASKS_KEY;
+      const projectFilterNeeded = selectedTypes === TypeFilters.ONLY_TASKS_KEY;
       let filteredProjects = selectedProjectIds;
       if (projectFilterNeeded && selectedProjectIds.length === 0)
-        // if timespans for all tasks should be shown, all project ids need to be passed in the request.
+        // If timespans for all tasks should be shown, all project ids need to be passed in the request.
         filteredProjects = allProjects.map((project) => project.id);
       const timeEntriesURL = getTimeEntryUrl(
         startDate.valueOf(),
@@ -119,6 +120,7 @@ function TimeTrackingOverview() {
         filteredProjects,
       );
       const filteredEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
+      setIsFetching(false);
       return filteredEntries;
     },
     allTimeEntries,
@@ -153,28 +155,27 @@ function TimeTrackingOverview() {
     saveAs(blob, filename);
   };
 
-  //TODO make new after proper request for annotations only
   const setSelectedProjects = (_prevSelection: string[], selectedValue: string) => {
-    if (Object.values<string>(typeFilters).includes(selectedValue)) {
+    if (Object.values<string>(TypeFilters).includes(selectedValue)) {
       setSelectedTypes(selectedValue);
       setSelectedProjectIds([]);
     } else {
-      setSelectedTypes(typeFilters.ONLY_TASKS_KEY);
+      setSelectedTypes(TypeFilters.ONLY_TASKS_KEY);
       setSelectedProjectIds([...selectedProjectIds, selectedValue]);
     }
   };
 
   const onDeselect = (removedKey: string) => {
-    if ((Object.values(typeFilters) as string[]).includes(removedKey)) {
-      setSelectedTypes(typeFilters.TASKS_AND_ANNOTATIONS_KEY);
+    if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
+      setSelectedTypes(TypeFilters.TASKS_AND_ANNOTATIONS_KEY);
     } else {
       setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
     }
   };
 
   const rangePresets: TimeRangePickerProps["presets"] = [
-    { label: "Last 7 Days", value: [dayjs().subtract(7, "d"), dayjs()] },
-    { label: "Last 30 Days", value: [dayjs().subtract(30, "d"), dayjs()] },
+    { label: "Last 7 Days", value: [dayjs().subtract(7, "d").startOf("day"), dayjs()] },
+    { label: "Last 30 Days", value: [dayjs().subtract(30, "d").startOf("day"), dayjs()] },
   ];
 
   return (
@@ -221,12 +222,11 @@ function TimeTrackingOverview() {
         // TODO fix type error. see time_line_view: type error is commented out.
         onChange={(dates: null | (Dayjs | null)[]) => {
           if (dates == null) return;
-          dates[0] != null && setStartDate(dates[0]);
-          dates[1] != null && setEndeDate(dates[1]);
+          dates[0] != null && setStartDate(dates[0].startOf("day"));
+          dates[1] != null && setEndeDate(dates[1].endOf("day"));
         }}
       />
-      <Spin spinning={false} size="large">
-        {/* fix me */}
+      <Spin spinning={isFetching} size="large">
         <Table
           dataSource={filteredTimeEntries}
           rowKey={(entry) => entry.user.id}

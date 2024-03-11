@@ -598,10 +598,10 @@ class DataSourceController @Inject()(
                                                                                       dataLayerName,
                                                                                       segmentId.toLong,
                                                                                       request.body.mappingName)
-          topLeftsAndFileMags: Seq[(Array[Vec3Int], Vec3Int)] <- Fox.serialCombined(segmentIds)(sId =>
+          fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
+          topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
             segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
-          fileMag <- topLeftsAndFileMags.headOption.map(_._2)
-          topLefts: Array[Vec3Int] = topLeftsAndFileMags.map(_._1).toArray.flatten
+          topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
           bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
                                                                                       request.body.mag,
                                                                                       fileMag)
@@ -637,10 +637,10 @@ class DataSourceController @Inject()(
                                                                                           dataLayerName,
                                                                                           segmentOrAgglomerateId,
                                                                                           request.body.mappingName)
-              topLeftsAndFileMags: Seq[(Array[Vec3Int], Vec3Int)] <- Fox.serialCombined(segmentIds)(segmentId =>
-                segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId))
-              fileMag <- topLeftsAndFileMags.headOption.map(_._2)
-              topLefts: Array[Vec3Int] = topLeftsAndFileMags.map(_._1).toArray.flatten
+              fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
+              topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
+                segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
+              topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
               bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
                                                                                           request.body.mag,
                                                                                           fileMag)

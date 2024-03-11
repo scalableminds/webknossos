@@ -64,13 +64,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   def readSegmentIndex(organizationName: String,
                        datasetName: String,
                        dataLayerName: String,
-                       segmentId: Long): Fox[(Array[Vec3Int], Vec3Int)] =
+                       segmentId: Long): Fox[Array[Vec3Int]] =
     for {
       segmentIndexPath <- getSegmentIndexFile(organizationName, datasetName, dataLayerName).toFox
       segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
       nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
-      mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
 
       bucketIndex = hashFunction(segmentId) % nBuckets
       bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
@@ -82,9 +81,16 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       topLefts = topLeftsOpt.flatten
     } yield
       topLefts match {
-        case Some(topLefts) => (topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt))), mag)
-        case None           => (Array.empty, mag)
+        case Some(topLefts) => topLefts.flatMap(topLeft => Vec3Int.fromArray(topLeft.map(_.toInt)))
+        case None           => Array.empty
       }
+
+  def readFileMag(organizationName: String, datasetName: String, dataLayerName: String): Fox[Vec3Int] =
+    for {
+      segmentIndexPath <- getSegmentIndexFile(organizationName, datasetName, dataLayerName).toFox
+      segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
+      mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
+    } yield mag
 
   private def readTopLefts(segmentIndex: CachedHdf5File,
                            bucketStart: Long,
@@ -187,7 +193,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                  segmentId: Long,
                                  mag: Vec3Int): Fox[Array[Vec3Int]] =
     for {
-      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+      fileMag <- readFileMag(organizationName, datasetName, dataLayerName)
+      bucketPositionsInFileMag <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
       bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
     } yield bucketPositions
 
@@ -206,10 +213,16 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
             dataLayerName,
             mappingName
           )
-          segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-            agglomerateFileKey,
-            segmentOrAgglomerateId
-          )
+          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+          segmentIds <- if (segmentOrAgglomerateId <= largestAgglomerateId) {
+            agglomerateService
+              .segmentIdsForAgglomerateId(
+                agglomerateFileKey,
+                segmentOrAgglomerateId
+              )
+              .toFox
+          } else
+            Fox.successful(List.empty) // agglomerate id is outside of file range, was likely created during brushing
         } yield segmentIds
       case None => Fox.successful(List(segmentOrAgglomerateId))
     }

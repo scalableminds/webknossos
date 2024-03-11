@@ -491,11 +491,12 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId)
+          mappingName <- tracingService.baseMappingName(tracing)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentVolume(tracingId,
                                                             segmentId,
                                                             request.body.mag,
-                                                            tracing.mappingName,
+                                                            mappingName,
                                                             request.body.additionalCoordinates,
                                                             urlOrHeaderToken(token, request))
           }
@@ -508,11 +509,12 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId)
+          mappingName <- tracingService.baseMappingName(tracing)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
                                                                  segmentId,
                                                                  request.body.mag,
-                                                                 tracing.mappingName,
+                                                                 mappingName,
                                                                  request.body.additionalCoordinates,
                                                                  urlOrHeaderToken(token, request))
           }
@@ -526,6 +528,7 @@ class VolumeTracingController @Inject()(
         for {
           fallbackLayer <- tracingService.getFallbackLayer(tracingId)
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          mappingName <- tracingService.baseMappingName(tracing)
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
               fallbackLayer,
@@ -534,7 +537,7 @@ class VolumeTracingController @Inject()(
               request.body.mag,
               additionalCoordinates = request.body.additionalCoordinates,
               additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-              mappingName = tracing.mappingName,
+              mappingName = mappingName,
               editableMappingTracingId = tracingService.editableMappingTracingId(tracing, tracingId),
               userToken = urlOrHeaderToken(token, request)
             )

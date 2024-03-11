@@ -86,6 +86,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
+      mappingName <- volumeTracingService.baseMappingName(tracing)
       bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
           fallbackLayer,
@@ -93,7 +94,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
           fullMeshRequest.segmentId,
           mag,
           version = None,
-          mappingName = tracing.mappingName,
+          mappingName = mappingName,
           editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
           fullMeshRequest.additionalCoordinates,
           AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),

@@ -46,6 +46,13 @@ export function useFolderQuery(folderId: string | null) {
     {
       refetchOnWindowFocus: false,
       enabled: folderId != null,
+      // Avoid default retry delay with exponential back-off
+      // to shorten the delay after which webKnossos will switch
+      // to the root folder.
+      // This is relevant for the case where the current folder
+      // does not exist, anymore (e.g., was deleted by somebody
+      // else).
+      retryDelay: 500,
     },
   );
 }

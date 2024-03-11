@@ -184,7 +184,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             })
           }
         >
-          <WarningOutlined />
+          <WarningOutlined className="icon-margin-right" />
           Show Error
         </a>
       </div>

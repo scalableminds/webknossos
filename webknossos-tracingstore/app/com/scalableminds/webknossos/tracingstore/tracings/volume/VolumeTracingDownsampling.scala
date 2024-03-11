@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
+import com.scalableminds.webknossos.tracingstore.TSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
@@ -55,7 +55,7 @@ trait VolumeTracingDownsampling
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
-  val tracingStoreWkRpcClient: TSRemoteWebKnossosClient
+  val tracingStoreWkRpcClient: TSRemoteWebknossosClient
   protected def saveBucket(dataLayer: VolumeTracingLayer,
                            bucket: BucketPosition,
                            data: Array[Byte],

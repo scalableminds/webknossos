@@ -259,7 +259,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
   /*
    * Guesses the voxel size from all transforms of an ngff multiscale object.
    * Note: the returned voxel size is in axis units and should later be combined with those units
-   *   to get a webKnossos-typical voxel size in nanometers.
+   *   to get a webknossos-typical voxel size in nanometers.
    * Note: allCoordinateTransforms is nested: the inner list has all transforms of one ngff “dataset” (mag in our terminology),
    *   the outer list gathers these for all such “datasets” (mags) of one “multiscale object” (layer)
    */

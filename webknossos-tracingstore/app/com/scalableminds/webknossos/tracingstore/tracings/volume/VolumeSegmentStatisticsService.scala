@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatistics}
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -95,7 +95,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                         userToken: Option[String]): Fox[Array[Byte]] = {
 
     val dataRequests = bucketPositions.map { position =>
-      WebKnossosDataRequest(
+      WebknossosDataRequest(
         position = position * mag * DataLayer.bucketLength,
         mag = mag,
         cubeSize = DataLayer.bucketLength,

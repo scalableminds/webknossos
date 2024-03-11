@@ -86,7 +86,7 @@ export default function DatasetCollectionContextProvider({
   const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
-  const { data: folder } = useFolderQuery(activeFolderId);
+  const { data: folder, isError: didFolderLoadingError } = useFolderQuery(activeFolderId);
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
@@ -110,12 +110,16 @@ export default function DatasetCollectionContextProvider({
   useEffect(() => {
     // Persist last active folder to localStorage. We
     // check folder against null to avoid that invalid ids are persisted.
-    if (activeFolderId != null && folder != null) {
+    if (activeFolderId != null && folder != null && !didFolderLoadingError) {
       UserLocalStorage.setItem(ACTIVE_FOLDER_ID_STORAGE_KEY, activeFolderId);
     } else {
       UserLocalStorage.removeItem(ACTIVE_FOLDER_ID_STORAGE_KEY);
     }
-  }, [folder, activeFolderId]);
+
+    if (didFolderLoadingError) {
+      setActiveFolderId(null);
+    }
+  }, [folder, activeFolderId, didFolderLoadingError]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(

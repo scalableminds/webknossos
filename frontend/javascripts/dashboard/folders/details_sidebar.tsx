@@ -6,7 +6,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import {
@@ -173,10 +173,20 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           )}
         </div>
       </Spin>
+
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+        </div>
+      ) : null}
+
+      {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Used Storage</div>
+          <Tooltip title="Note that linked and remote layers aren’t measured." placement="left">
+            <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
+          </Tooltip>
         </div>
       ) : null}
     </>

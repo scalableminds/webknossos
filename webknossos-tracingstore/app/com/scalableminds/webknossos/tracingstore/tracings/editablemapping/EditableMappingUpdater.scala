@@ -9,7 +9,11 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  RemoteFallbackLayer,
+  TracingDataStore
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.common.Box.tryo

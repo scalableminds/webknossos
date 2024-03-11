@@ -36,7 +36,6 @@ export type DatasetCollectionContextValue = {
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
-  supportsFolders: true;
   selectedDatasets: APIDatasetCompact[];
   selectedFolder: FolderItem | null;
   setSelectedFolder: (arg0: FolderItem | null) => void;

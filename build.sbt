@@ -57,17 +57,17 @@ lazy val util = (project in file("util")).settings(
   dependencyOverrides ++= Dependencies.dependencyOverrides
 )
 
-lazy val webknossosNative = (project in file("webknossos-native")) // native code and build script
+lazy val webknossosJni = (project in file("webknossos-jni"))
   .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
   .enablePlugins(JniNative)
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
-  .dependsOn(webknossosNative)
+  .dependsOn(webknossosJni)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(javah / target := (webknossosNative / nativeCompile / sourceDirectory).value / "include")
+  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,

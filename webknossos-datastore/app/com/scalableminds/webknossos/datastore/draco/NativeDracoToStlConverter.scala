@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.draco
 
 import com.github.sbt.jni.nativeLoader
 
-@nativeLoader("webknossosNative0")
+@nativeLoader("webknossosJni0")
 class NativeDracoToStlConverter() {
   @native def dracoToStl(a: Array[Byte],
                          offsetX: Float,

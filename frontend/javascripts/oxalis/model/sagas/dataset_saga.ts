@@ -7,10 +7,10 @@ import Toast from "libs/toast";
 import messages from "messages";
 import {
   getEnabledLayers,
+  getLayerByName,
   getMaybeSegmentIndexAvailability,
   getResolutionInfo,
   getTransformsForLayer,
-  getVisibleSegmentationLayer,
   invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
@@ -19,7 +19,10 @@ import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { Identity4x4 } from "oxalis/constants";
 import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { setLayerHasSegmentIndexAction } from "../actions/dataset_actions";
+import {
+  EnsureSegmentIndexIsLoadedAction,
+  setLayerHasSegmentIndexAction,
+} from "../actions/dataset_actions";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -154,22 +157,27 @@ export function* watchZ1Downsampling(): Saga<void> {
 }
 
 export function* ensureSegmentIndexIsLoaded(): Saga<void> {
-  function* maybeFetchHasSegmentIndex(): Saga<void> {
-    const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
-    const maybeIsSegmentIndexAvailable = yield* select((state) =>
-      getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  function* maybeFetchHasSegmentIndex(action: EnsureSegmentIndexIsLoadedAction): Saga<void> {
+    const { layerName } = action;
+    const dataset = yield* select((state) => state.dataset);
+    if (layerName == null) return;
+    const concernedSegmentationLayer = yield* call(getLayerByName, dataset, layerName);
+    const maybeIsSegmentIndexAvailable = yield* call(
+      getMaybeSegmentIndexAvailability,
+      dataset,
+      layerName,
     );
-    if (maybeIsSegmentIndexAvailable == null && visibleSegmentationLayer != null) {
-      const { dataset, tracing } = yield* select((state) => state);
+    if (maybeIsSegmentIndexAvailable == null && concernedSegmentationLayer != null) {
+      const tracing = yield* select((state) => state.tracing);
       const updatedIsSegmentIndexAvailable = yield* call(
         hasSegmentIndex,
-        visibleSegmentationLayer,
+        concernedSegmentationLayer,
         dataset,
         tracing,
       );
       yield* put(
         setLayerHasSegmentIndexAction(
-          visibleSegmentationLayer.name,
+          concernedSegmentationLayer.name,
           updatedIsSegmentIndexAvailable,
         ),
       );

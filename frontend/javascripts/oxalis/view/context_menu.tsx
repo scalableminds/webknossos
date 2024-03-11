@@ -1218,8 +1218,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
 
   const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
   useEffect(() => {
-    Store.dispatch(ensureSegmentIndexIsLoadedAction());
-  }, []);
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
+  }, [visibleSegmentationLayer]);
   const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
     getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
   );

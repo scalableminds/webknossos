@@ -833,7 +833,7 @@ export function getEffectiveIntensityRange(
 // sure this info is fetched.
 export function getMaybeSegmentIndexAvailability(
   dataset: APIDataset,
-  layerName: string | undefined,
+  layerName: string | null | undefined,
 ) {
   if (layerName == null) {
     return false;

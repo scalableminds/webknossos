@@ -421,7 +421,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.pollJobData();
     }
 
-    Store.dispatch(ensureSegmentIndexIsLoadedAction());
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
   }
 
   componentDidUpdate(prevProps: Props) {

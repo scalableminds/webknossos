@@ -28,7 +28,7 @@ class ZarrStreamingController @Inject()(
     dataSourceRepository: DataSourceRepository,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
     remoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit ec: ExecutionContext)
     extends Controller {
@@ -66,7 +66,7 @@ class ZarrStreamingController @Inject()(
                                       dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
@@ -134,7 +134,7 @@ class ZarrStreamingController @Inject()(
   def dataSourceWithAnnotationPrivateLink(token: Option[String], accessToken: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
@@ -174,7 +174,7 @@ class ZarrStreamingController @Inject()(
                              cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
         layer = annotationSource.getAnnotationLayer(dataLayerName)
@@ -253,7 +253,7 @@ class ZarrStreamingController @Inject()(
                         dataLayerName: String,
                         mag: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      annotationSource <- remoteWebKnossosClient
+      annotationSource <- remoteWebknossosClient
         .getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
       relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken) else urlOrHeaderToken(token, request)
       layer = annotationSource.getAnnotationLayer(dataLayerName)
@@ -302,7 +302,7 @@ class ZarrStreamingController @Inject()(
                                             mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
         layer = annotationSource.getAnnotationLayer(dataLayerName)
@@ -359,7 +359,7 @@ class ZarrStreamingController @Inject()(
                                          dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
@@ -404,7 +404,7 @@ class ZarrStreamingController @Inject()(
   def dataSourceFolderContentsPrivateLink(token: Option[String], accessToken: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
           .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
@@ -438,7 +438,7 @@ class ZarrStreamingController @Inject()(
   def zGroupPrivateLink(token: Option[String], accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)

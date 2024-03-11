@@ -71,7 +71,6 @@ import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
-import { DateRange } from "admin/time/time_line_chart_view";
 
 export type MutableCommentType = {
   content: string;

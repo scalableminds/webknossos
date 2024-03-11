@@ -12,21 +12,27 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{
   AdditionalCoordinate,
-  WebKnossosDataRequest,
+  WebknossosDataRequest,
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  EditableMappingSegmentListResult,
+  FullMeshRequest,
+  UserAccessRequest
+}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateActionGroup,
-  MinCutParameters
+  MinCutParameters,
+  NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
   SegmentStatisticsParameters,
+  TSFullMeshService,
   UpdateMappingNameAction,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,
@@ -36,7 +42,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
@@ -67,9 +73,10 @@ class VolumeTracingController @Inject()(
     val accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val remoteWebknossosClient: TSRemoteWebknossosClient,
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
+    fullMeshService: TSFullMeshService,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings]
     with ProtoGeometryImplicits
@@ -161,8 +168,8 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(token: Option[String], tracingId: String): Action[List[WebKnossosDataRequest]] =
-    Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+  def data(token: Option[String], tracingId: String): Action[List[WebknossosDataRequest]] =
+    Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
@@ -301,6 +308,15 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def loadFullMeshStl(token: Option[String], tracingId: String): Action[FullMeshRequest] =
+    Action.async(validateJson[FullMeshRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          data: Array[Byte] <- fullMeshService.loadFor(token: Option[String], tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
+        } yield Ok(data)
+      }
+    }
+
   private def getNeighborIndices(neighbors: List[Int]) =
     List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
 
@@ -385,6 +401,22 @@ class VolumeTracingController @Inject()(
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
+        }
+      }
+    }
+
+  def agglomerateGraphNeighbors(token: Option[String], tracingId: String): Action[NeighborsParameters] =
+    Action.async(validateJson[NeighborsParameters]) { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(request.body,
+                                                                                   remoteFallbackLayer,
+                                                                                   token)
+          } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
         }
       }
     }

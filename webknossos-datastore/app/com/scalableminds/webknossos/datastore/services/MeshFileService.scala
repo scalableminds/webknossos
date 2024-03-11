@@ -208,7 +208,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     val meshFileVersions = meshFileNames.map { fileName =>
       val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
-      mappingVersionForMeshFile(meshFilePath)
+      versionForMeshFile(meshFilePath)
     }
 
     val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
@@ -235,7 +235,26 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } ?~> "mesh.file.readEncoding.failed"
   }
 
-  private def mappingVersionForMeshFile(meshFilePath: Path): Long =
+  // Same as above but this variant constructs the meshFilePath itself and converts null to None
+  def mappingNameForMeshFile(organizationName: String,
+                             datasetName: String,
+                             dataLayerName: String,
+                             meshFileName: String): Option[String] = {
+    val meshFilePath =
+      dataBaseDir
+        .resolve(organizationName)
+        .resolve(datasetName)
+        .resolve(dataLayerName)
+        .resolve(meshesDir)
+        .resolve(s"${meshFileName}.$meshFileExtension")
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+      cachedMeshFile.reader.string().getAttr("/", "mapping_name")
+    }.toOption.flatMap { value =>
+      Option(value) // catch null
+    }
+  }
+
+  private def versionForMeshFile(meshFilePath: Path): Long =
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       cachedMeshFile.reader.int64().getAttr("/", "artifact_schema_version")
     }.toOption.getOrElse(0)
@@ -262,20 +281,34 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     }.toFox.flatten ?~> "mesh.file.open.failed"
   }
 
-  def listMeshChunksForSegmentV3(organizationName: String,
-                                 datasetName: String,
-                                 dataLayerName: String,
-                                 listMeshChunksRequest: ListMeshChunksRequest): Box[WebknossosSegmentInfo] = {
+  def listMeshChunksForSegmentsV3(organizationName: String,
+                                  datasetName: String,
+                                  dataLayerName: String,
+                                  meshFileName: String,
+                                  segmentIds: Seq[Long]): Fox[WebknossosSegmentInfo] = {
+    val meshChunksForUnmappedSegments = segmentIds.map(segmentId =>
+      listMeshChunksForSegmentV3(organizationName, datasetName, dataLayerName, meshFileName, segmentId).toOption)
+    val meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
+    for {
+      _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
+      chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
+    } yield chunkInfos
+  }
+
+  private def listMeshChunksForSegmentV3(organizationName: String,
+                                         datasetName: String,
+                                         dataLayerName: String,
+                                         meshFileName: String,
+                                         segmentId: Long): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+        .resolve(s"${meshFileName}.$meshFileExtension")
 
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      val segmentId = listMeshChunksRequest.segmentId
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val lodScaleMultiplier = cachedMeshFile.reader.float64().getAttr("/", "lod_scale_multiplier")
       val transform = cachedMeshFile.reader.float64().getMatrixAttr("/", "transform")

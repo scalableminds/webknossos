@@ -8,13 +8,12 @@ import { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
 import { call, put, takeEvery } from "typed-redux-saga";
 import Toast from "libs/toast";
 import { Store } from "oxalis/singletons";
-// @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
-import type { Pattern } from "redux-saga";
+import { ActionPattern } from "@redux-saga/types";
 import { setMappingIsLockedAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 
-export function* takeEveryUnlessBusy(
-  actionDescriptor: Pattern,
+export function* takeEveryUnlessBusy<P extends ActionPattern>(
+  actionDescriptor: P,
   saga: (arg0: Action) => Saga<void>,
   reason: string,
 ): Saga<void> {

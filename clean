@@ -11,6 +11,7 @@ rm -rf webknossos-datastore/project/project/target
 rm -rf webknossos-tracingstore/target
 rm -rf webknossos-tracingstore/project/target
 rm -rf webknossos-tracingstore/project/project/target
+rm -rf webknossos-jni/target
 rm -rf node_modules
 rm -rf .eslintcache
 mkdir target

@@ -134,6 +134,7 @@ class TSRemoteDatastoreClient @Inject()(
                         segmentId: Long,
                         mag: Vec3Int,
                         mappingName: Option[String],
+                        editableMappingTracingId: Option[String],
                         userToken: Option[String]): Fox[Seq[Vec3Int]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
@@ -144,7 +145,8 @@ class TSRemoteDatastoreClient @Inject()(
           mag,
           cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here (since we want to calculate indices later anyway)
           additionalCoordinates = None,
-          mappingName = mappingName
+          mappingName = mappingName,
+          editableMappingTracingId = editableMappingTracingId
         ))
 
       indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
@@ -154,6 +156,7 @@ class TSRemoteDatastoreClient @Inject()(
                                            segmentIds: Seq[Long],
                                            mag: Vec3Int,
                                            mappingName: Option[String],
+                                           editableMappingTracingId: Option[String],
                                            userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
@@ -164,7 +167,8 @@ class TSRemoteDatastoreClient @Inject()(
           GetMultipleSegmentIndexParameters(segmentIds.toList,
                                             mag,
                                             additionalCoordinates = None,
-                                            mappingName = mappingName))
+                                            mappingName = mappingName,
+                                            editableMappingTracingId = editableMappingTracingId))
 
     } yield result.map(data => (data.segmentId, data.positions))
 

@@ -103,13 +103,15 @@ class VolumeTracingService @Inject()(
                                             bucketBytes: Array[Byte],
                                             previousBucketBytesBox: Box[Array[Byte]],
                                             elementClass: ElementClassProto,
-                                            mappingName: Option[String]): Fox[Unit] =
+                                            mappingName: Option[String],
+                                            editableMappingTracingId: Option[String]): Fox[Unit] =
     volumeSegmentIndexService.updateFromBucket(segmentIndexBuffer,
                                                bucketPosition,
                                                bucketBytes,
                                                previousBucketBytesBox,
                                                elementClass,
-                                               mappingName) ?~> "volumeSegmentIndex.update.failed"
+                                               mappingName,
+                                               editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],
@@ -193,15 +195,21 @@ class VolumeTracingService @Inject()(
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
           previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
-          _ <- updateSegmentIndex(segmentIndexBuffer,
-                                  bucketPosition,
-                                  action.data,
-                                  previousBucketBytes,
-                                  volumeTracing.elementClass,
-                                  volumeTracing.mappingName) ?~> "failed to update segment index"
+          _ <- updateSegmentIndex(
+            segmentIndexBuffer,
+            bucketPosition,
+            action.data,
+            previousBucketBytes,
+            volumeTracing.elementClass,
+            volumeTracing.mappingName,
+            editableMappingTracingId(volumeTracing, tracingId)
+          ) ?~> "failed to update segment index"
         } yield ()
       }
     } yield volumeTracing
+
+  override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
+    if (tracing.mappingIsEditable.getOrElse(false)) Some(tracingId) else None
 
   private def deleteSegmentData(tracingId: String,
                                 volumeTracing: VolumeTracing,
@@ -230,9 +238,11 @@ class VolumeTracingService @Inject()(
               mag,
               None,
               volumeTracing.mappingName,
+              editableMappingTracingId(volumeTracing, tracingId),
               additionalCoordinates,
               dataLayer.additionalAxes,
-              userToken)
+              userToken
+            )
             bucketPositions = bucketPositionsRaw.values
               .map(vec3IntFromProto)
               .map(_ * mag * DataLayer.bucketLength)
@@ -247,12 +257,15 @@ class VolumeTracingService @Inject()(
                     if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
                   filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
                   _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
-                  _ <- updateSegmentIndex(segmentIndexBuffer,
-                                          bucketPosition,
-                                          filteredBytes,
-                                          Some(data),
-                                          volumeTracing.elementClass,
-                                          volumeTracing.mappingName)
+                  _ <- updateSegmentIndex(
+                    segmentIndexBuffer,
+                    bucketPosition,
+                    filteredBytes,
+                    Some(data),
+                    volumeTracing.elementClass,
+                    volumeTracing.mappingName,
+                    editableMappingTracingId(volumeTracing, tracingId)
+                  )
                 } yield ()
             }
           } yield ()
@@ -294,24 +307,30 @@ class VolumeTracingService @Inject()(
                 for {
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
                   _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-                    updateSegmentIndex(segmentIndexBuffer,
-                                       bucketPosition,
-                                       dataAfterRevert,
-                                       Full(dataBeforeRevert),
-                                       sourceTracing.elementClass,
-                                       sourceTracing.mappingName))
+                    updateSegmentIndex(
+                      segmentIndexBuffer,
+                      bucketPosition,
+                      dataAfterRevert,
+                      Full(dataBeforeRevert),
+                      sourceTracing.elementClass,
+                      sourceTracing.mappingName,
+                      editableMappingTracingId(sourceTracing, tracingId)
+                    ))
                 } yield ()
               case Empty =>
                 for {
                   dataAfterRevert <- Fox.successful(Array[Byte](0))
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
                   _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-                    updateSegmentIndex(segmentIndexBuffer,
-                                       bucketPosition,
-                                       dataAfterRevert,
-                                       Full(dataBeforeRevert),
-                                       sourceTracing.elementClass,
-                                       sourceTracing.mappingName))
+                    updateSegmentIndex(
+                      segmentIndexBuffer,
+                      bucketPosition,
+                      dataAfterRevert,
+                      Full(dataBeforeRevert),
+                      sourceTracing.elementClass,
+                      sourceTracing.mappingName,
+                      editableMappingTracingId(sourceTracing, tracingId)
+                    ))
                 } yield ()
               case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
             }
@@ -376,7 +395,8 @@ class VolumeTracingService @Inject()(
                                        bytes,
                                        Empty,
                                        tracing.elementClass,
-                                       tracing.mappingName))
+                                       tracing.mappingName,
+                                       editableMappingTracingId(tracing, tracingId)))
                 } yield ()
               }
               _ <- segmentIndexBuffer.flush()
@@ -420,7 +440,8 @@ class VolumeTracingService @Inject()(
                                    bytes,
                                    Empty,
                                    tracing.elementClass,
-                                   tracing.mappingName))
+                                   tracing.mappingName,
+                                   editableMappingTracingId(tracing, tracingId)))
             } yield ()
           }
         } ?~> "failed not import volume data from zipfile"
@@ -561,12 +582,15 @@ class VolumeTracingService @Inject()(
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
               _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
-                updateSegmentIndex(segmentIndexBuffer,
-                                   bucketPosition,
-                                   bucketData,
-                                   Empty,
-                                   sourceTracing.elementClass,
-                                   sourceTracing.mappingName))
+                updateSegmentIndex(
+                  segmentIndexBuffer,
+                  bucketPosition,
+                  bucketData,
+                  Empty,
+                  sourceTracing.elementClass,
+                  sourceTracing.mappingName,
+                  editableMappingTracingId(sourceTracing, sourceId)
+                ))
             } yield ()
           } else Fox.successful(())
       }
@@ -821,7 +845,8 @@ class VolumeTracingService @Inject()(
                                  bucketBytes,
                                  Empty,
                                  elementClass,
-                                 tracings.headOption.flatMap(_.mappingName)))
+                                 tracings.headOption.flatMap(_.mappingName),
+                                 None))
           } yield ()
         }
         _ <- segmentIndexBuffer.flush()
@@ -855,7 +880,8 @@ class VolumeTracingService @Inject()(
                              bucketData,
                              Empty,
                              tracing.elementClass,
-                             tracing.mappingName)
+                             tracing.mappingName,
+                             editableMappingTracingId(tracing, tracingId))
       }
       _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
       updateGroup = UpdateActionGroup[VolumeTracing](
@@ -926,12 +952,15 @@ class VolumeTracingService @Inject()(
               _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex) {
                 for {
                   previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(tracing.version)).futureBox
-                  _ <- updateSegmentIndex(segmentIndexBuffer,
-                                          bucketPosition,
-                                          bucketBytes,
-                                          previousBucketBytes,
-                                          tracing.elementClass,
-                                          tracing.mappingName) ?~> "failed to update segment index"
+                  _ <- updateSegmentIndex(
+                    segmentIndexBuffer,
+                    bucketPosition,
+                    bucketBytes,
+                    previousBucketBytes,
+                    tracing.elementClass,
+                    tracing.mappingName,
+                    editableMappingTracingId(tracing, tracingId)
+                  ) ?~> "failed to update segment index"
                 } yield ()
               }
             } yield ()

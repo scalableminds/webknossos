@@ -203,6 +203,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                             dataLayerName: String,
                                             segmentOrAgglomerateId: Long,
                                             mappingNameOpt: Option[String]): Fox[List[Long]] =
+    // Editable mappings cannot happen here since those requests go to the tracingstore
     mappingNameOpt match {
       case Some(mappingName) =>
         for {

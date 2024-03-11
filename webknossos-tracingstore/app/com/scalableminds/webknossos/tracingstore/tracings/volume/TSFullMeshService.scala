@@ -94,6 +94,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
           mag,
           version = None,
           mappingName = tracing.mappingName,
+          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
           fullMeshRequest.additionalCoordinates,
           AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
           token

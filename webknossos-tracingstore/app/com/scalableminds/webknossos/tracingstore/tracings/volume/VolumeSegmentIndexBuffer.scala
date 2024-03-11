@@ -56,12 +56,13 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   def getWithFallback(segmentId: Long,
                       mag: Vec3Int,
                       mappingName: Option[String],
+                      editableMappingTracingId: Option[String],
                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
     val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     segmentIndexBuffer.get(key) match {
       case Some(positions) => Fox.successful(positions)
-      case None            => getFallback(segmentId, mag, mappingName, additionalCoordinates)
+      case None            => getFallback(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
     }
   }
 
@@ -75,6 +76,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   private def getFallback(segmentId: Long,
                           mag: Vec3Int,
                           mappingName: Option[String],
+                          editableMappingTracingId: Option[String],
                           additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext) = {
     val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     for {
@@ -84,7 +86,12 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         .fillEmpty(ListOfVec3IntProto.of(Seq()))
       data <- fallbackLayer match {
         case Some(layer) if fossilDbData.length == 0 =>
-          remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, userToken)
+          remoteDatastoreClient.querySegmentIndex(layer,
+                                                  segmentId,
+                                                  mag,
+                                                  mappingName,
+                                                  editableMappingTracingId,
+                                                  userToken)
         case _ => Fox.successful(fossilDbData.values.map(vec3IntFromProto))
       }
     } yield ListOfVec3IntProto(data.map(vec3IntToProto))
@@ -145,6 +152,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   def getSegmentToBucketIndexMap(segmentIds: List[Long],
                                  mag: Vec3Int,
                                  mappingName: Option[String],
+                                 editableMappingTracingId: Option[String],
                                  additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
     for {
@@ -161,8 +169,12 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         case Some(layer) =>
           for {
             fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(
-              remoteDatastoreClient
-                .querySegmentIndexForMultipleSegments(layer, missesSoFar, mag, mappingName, userToken))
+              remoteDatastoreClient.querySegmentIndexForMultipleSegments(layer,
+                                                                         missesSoFar,
+                                                                         mag,
+                                                                         mappingName,
+                                                                         editableMappingTracingId,
+                                                                         userToken))
             fileBucketPositions = fileBucketPositionsOpt.getOrElse(Seq())
             _ = fileBucketPositions.map {
               case (segmentId, positions) =>

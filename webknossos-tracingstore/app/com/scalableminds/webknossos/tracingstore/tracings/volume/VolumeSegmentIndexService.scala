@@ -56,7 +56,8 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        bucketBytes: Array[Byte],
                        previousBucketBytesBox: Box[Array[Byte]],
                        elementClass: ElementClassProto,
-                       mappingName: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+                       mappingName: Option[String],
+                       editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       bucketBytesDecompressed <- tryo(
         decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
@@ -69,13 +70,18 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       _ <- Fox.serialCombined(removals.toList)(
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, mappingName)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
+          removeBucketFromSegmentIndex(segmentIndexBuffer,
+                                       segmentId,
+                                       bucketPosition,
+                                       mappingName,
+                                       editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-      _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
-        segmentIndexBuffer,
-        additions.toList,
-        bucketPosition,
-        mappingName)) ?~> "volumeSegmentIndex.update.addBucket.failed"
+      _ <- Fox.runIf(additions.nonEmpty)(
+        addBucketToSegmentIndex(segmentIndexBuffer,
+                                additions.toList,
+                                bucketPosition,
+                                mappingName,
+                                editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
@@ -86,30 +92,36 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       case f: Failure  => f.toFox
     }
 
-  private def removeBucketFromSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                                           segmentId: Long,
-                                           bucketPosition: BucketPosition,
-                                           mappingName: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+  private def removeBucketFromSegmentIndex(
+      segmentIndexBuffer: VolumeSegmentIndexBuffer,
+      segmentId: Long,
+      bucketPosition: BucketPosition,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       previousBucketList: ListOfVec3IntProto <- getSegmentToBucketIndexWithEmptyFallback(
         segmentIndexBuffer,
         segmentId,
         bucketPosition.mag,
         mappingName,
+        editableMappingTracingId,
         bucketPosition.additionalCoordinates)
       bucketPositionProto = bucketPosition.toVec3IntProto
       newBucketList = ListOfVec3IntProto(previousBucketList.values.filterNot(_ == bucketPositionProto))
       _ = segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
     } yield ()
 
-  private def addBucketToSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                                      segmentIds: List[Long],
-                                      bucketPosition: BucketPosition,
-                                      mappingName: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+  private def addBucketToSegmentIndex(
+      segmentIndexBuffer: VolumeSegmentIndexBuffer,
+      segmentIds: List[Long],
+      bucketPosition: BucketPosition,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       previousBuckets <- segmentIndexBuffer.getSegmentToBucketIndexMap(segmentIds,
                                                                        bucketPosition.mag,
                                                                        mappingName,
+                                                                       editableMappingTracingId,
                                                                        bucketPosition.additionalCoordinates)
       _ <- Fox.serialCombined(previousBuckets) {
         case (segmentId, previousBucketList) =>
@@ -136,10 +148,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                        segmentId: Long,
                                                        mag: Vec3Int,
                                                        mappingName: Option[String],
+                                                       editableMappingTracingId: Option[String],
                                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
     for {
-      bucketListBox <- segmentIndexBuffer.getWithFallback(segmentId, mag, mappingName, additionalCoordinates).futureBox
+      bucketListBox <- segmentIndexBuffer
+        .getWithFallback(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
+        .futureBox
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
@@ -150,6 +165,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       mag: Vec3Int,
       version: Option[Long] = None,
       mappingName: Option[String],
+      editableMappingTracingId: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       additionalAxes: Option[Seq[AdditionalAxis]],
       userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
@@ -160,6 +176,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                mag,
                                                version,
                                                mappingName,
+                                               editableMappingTracingId,
                                                additionalCoordinates,
                                                additionalAxes,
                                                userToken).futureBox
@@ -181,6 +198,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       mag: Vec3Int,
       version: Option[Long],
       mappingName: Option[String],
+      editableMappingTracingId: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       additionalAxes: Option[Seq[AdditionalAxis]],
       userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
@@ -193,7 +211,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                               additionalAxes).fillEmpty(ListOfVec3IntProto.of(Seq()))
       fromFileIndex <- fallbackLayerOpt match { // isEmpty is not the same as length == 0 here :(
         case Some(fallbackLayer) if fromMutableIndex.length == 0 =>
-          getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, mappingName, userToken) // additional coordinates not supported, see #7556
+          getSegmentToBucketIndexFromFile(fallbackLayer,
+                                          segmentId,
+                                          mag,
+                                          mappingName,
+                                          editableMappingTracingId,
+                                          userToken) // additional coordinates not supported, see #7556
         case _ => Fox.successful(Seq.empty)
       }
       combined = fromMutableIndex.values.map(vec3IntFromProto) ++ fromFileIndex
@@ -214,7 +237,8 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                               segmentId: Long,
                                               mag: Vec3Int,
                                               mappingName: Option[String],
+                                              editableMappingTracingId: Option[String],
                                               userToken: Option[String]) =
-    remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, userToken)
+    remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, editableMappingTracingId, userToken)
 
 }

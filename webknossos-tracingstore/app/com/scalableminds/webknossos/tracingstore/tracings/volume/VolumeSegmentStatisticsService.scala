@@ -76,15 +76,18 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer,
-                                                               tracingId,
-                                                               segmentId,
-                                                               mag,
-                                                               None,
-                                                               mappingName,
-                                                               additionalCoordinates,
-                                                               additionalAxes,
-                                                               userToken)
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+          fallbackLayer,
+          tracingId,
+          segmentId,
+          mag,
+          None,
+          mappingName,
+          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+          additionalCoordinates,
+          additionalAxes,
+          userToken
+        )
     } yield allBucketPositions
 
   private def getVolumeDataForPositions(tracing: VolumeTracing,

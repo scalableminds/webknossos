@@ -8,7 +8,8 @@ case class GetSegmentIndexParameters(
     mag: Vec3Int,
     cubeSize: Vec3Int, // Use the cubeSize parameter to map the found bucket indices to different size of cubes (e.g. reducing granularity with higher cubeSize)
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-    mappingName: Option[String] // Specify the mapping when querying the datastore
+    mappingName: Option[String], // Specify the mapping when querying the datastore
+    editableMappingTracingId: Option[String]
 )
 
 object GetSegmentIndexParameters {
@@ -19,7 +20,8 @@ case class GetMultipleSegmentIndexParameters(
     segmentIds: List[Long],
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-    mappingName: Option[String]
+    mappingName: Option[String],
+    editableMappingTracingId: Option[String],
 )
 
 object GetMultipleSegmentIndexParameters {

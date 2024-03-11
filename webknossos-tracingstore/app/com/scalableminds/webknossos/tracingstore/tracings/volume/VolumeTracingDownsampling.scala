@@ -67,7 +67,10 @@ trait VolumeTracingDownsampling
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
                                    elementClass: ElementClassProto,
-                                   mappingName: Option[String]): Fox[Unit]
+                                   mappingName: Option[String],
+                                   editableMappingTracingId: Option[String]): Fox[Unit]
+
+  protected def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String]
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
@@ -112,12 +115,15 @@ trait VolumeTracingDownsampling
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
           _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-            updateSegmentIndex(segmentIndexBuffer,
-                               bucketPosition,
-                               bucketDataMapMutable(bucketPosition),
-                               Empty,
-                               tracing.elementClass,
-                               tracing.mappingName))
+            updateSegmentIndex(
+              segmentIndexBuffer,
+              bucketPosition,
+              bucketDataMapMutable(bucketPosition),
+              Empty,
+              tracing.elementClass,
+              tracing.mappingName,
+              editableMappingTracingId(tracing, tracingId)
+            ))
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()

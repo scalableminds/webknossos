@@ -43,15 +43,18 @@ class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
+    val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
     uploadService: UploadService,
-    composeService: ComposeService
+    composeService: ComposeService,
+    val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
+    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
+    with MeshMappingHelper
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
@@ -577,11 +580,6 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for a single segment
-    * @param token
-    * @param organizationName
-    * @param datasetName
-    * @param dataLayerName
-    * @param segmentId
     * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
     */
   def getSegmentIndex(token: Option[String],
@@ -593,11 +591,16 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          segmentIds <- segmentIndexFileService.getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
-                                                                                      datasetName,
-                                                                                      dataLayerName,
-                                                                                      segmentId.toLong,
-                                                                                      request.body.mappingName)
+          segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+            organizationName,
+            datasetName,
+            dataLayerName,
+            request.body.mappingName,
+            request.body.editableMappingTracingId,
+            segmentId.toLong,
+            mappingNameForMeshFile = None,
+            urlOrHeaderToken(token, request)
+          )
           fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
           topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
             segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
@@ -616,10 +619,6 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for multiple segments
-    * @param token
-    * @param organizationName
-    * @param datasetName
-    * @param dataLayerName
     * @return List of bucketPositions as indices of 32³ buckets
     */
   def querySegmentIndex(token: Option[String],
@@ -632,11 +631,16 @@ class DataSourceController @Inject()(
         for {
           segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
             for {
-              segmentIds <- segmentIndexFileService.getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
-                                                                                          datasetName,
-                                                                                          dataLayerName,
-                                                                                          segmentOrAgglomerateId,
-                                                                                          request.body.mappingName)
+              segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+                organizationName,
+                datasetName,
+                dataLayerName,
+                request.body.mappingName,
+                request.body.editableMappingTracingId,
+                segmentOrAgglomerateId,
+                mappingNameForMeshFile = None,
+                urlOrHeaderToken(token, request)
+              )
               fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
               topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
                 segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))

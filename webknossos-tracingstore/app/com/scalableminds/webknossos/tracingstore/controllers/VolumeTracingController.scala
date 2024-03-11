@@ -535,6 +535,7 @@ class VolumeTracingController @Inject()(
               additionalCoordinates = request.body.additionalCoordinates,
               additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
               mappingName = tracing.mappingName,
+              editableMappingTracingId = tracingService.editableMappingTracingId(tracing, tracingId),
               userToken = urlOrHeaderToken(token, request)
             )
           bucketPositionsForCubeSize = bucketPositionsRaw.values

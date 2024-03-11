@@ -49,7 +49,7 @@ trait AbstractRequestLogging extends LazyLogging {
 }
 
 trait RequestLogging extends AbstractRequestLogging {
-  // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
+  // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
                                                                              ec: ExecutionContext): Future[Result] =

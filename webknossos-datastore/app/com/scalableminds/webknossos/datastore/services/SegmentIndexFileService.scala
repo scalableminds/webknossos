@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.{
   VoxelPosition,
   datasource
 }
-import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
 
@@ -168,9 +168,38 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                  dataLayerName: String,
                                  mappingName: Option[String])(segmentId: Long, mag: Vec3Int) =
     for {
+      segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
+                                                          datasetName,
+                                                          dataLayerName,
+                                                          segmentId,
+                                                          mappingName)
+      // TODO use segmentIds, concat bucket positions (distinct)
       (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
       bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag)).distinct.toSeq
     } yield ListOfVec3IntProto.of(bucketPositions.map(vec3IntToProto))
+
+  private def getSegmentIdsForAgglomerateIdIfNeeded(organizationName: String,
+                                                    datasetName: String,
+                                                    dataLayerName: String,
+                                                    segmentOrAgglomerateId: Long,
+                                                    mappingNameOpt: Option[String]): Fox[List[Long]] =
+    mappingNameOpt match {
+      case Some(mappingName) =>
+        for {
+          agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+          agglomerateFileKey = AgglomerateFileKey(
+            organizationName,
+            datasetName,
+            dataLayerName,
+            mappingName
+          )
+          segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+            agglomerateFileKey,
+            segmentOrAgglomerateId
+          )
+        } yield segmentIds
+      case None => Fox.successful(List(segmentOrAgglomerateId))
+    }
 
   private def getDataForBucketPositions(dataSource: datasource.DataSource,
                                         dataLayer: DataLayer,

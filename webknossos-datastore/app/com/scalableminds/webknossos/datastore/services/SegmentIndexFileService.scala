@@ -106,7 +106,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       } yield topLefts)
     } yield topLeftOpts
 
-  def topLeftsToBucketPositions(topLefts: Array[Vec3Int], targetMag: Vec3Int, fileMag: Vec3Int): Array[Vec3Int] =
+  def topLeftsToDistinctBucketPositions(topLefts: Array[Vec3Int],
+                                        targetMag: Vec3Int,
+                                        fileMag: Vec3Int): Array[Vec3Int] =
     topLefts
       .map(_.scale(DataLayer.bucketLength)) // map indices to positions
       .map(_ / (targetMag / fileMag))
@@ -163,26 +165,37 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
     } yield dataTyped
 
-  private def getBucketPositions(organizationName: String,
-                                 datasetName: String,
-                                 dataLayerName: String,
-                                 mappingName: Option[String])(segmentId: Long, mag: Vec3Int) =
+  private def getBucketPositions(
+      organizationName: String,
+      datasetName: String,
+      dataLayerName: String,
+      mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[ListOfVec3IntProto] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
                                                           datasetName,
                                                           dataLayerName,
-                                                          segmentId,
+                                                          segmentOrAgglomerateId,
                                                           mappingName)
-      // TODO use segmentIds, concat bucket positions (distinct)
-      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
-      bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag)).distinct.toSeq
-    } yield ListOfVec3IntProto.of(bucketPositions.map(vec3IntToProto))
+      positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
+        getBucketPositions(organizationName, datasetName, dataLayerName, segmentId, mag))
+      positionsCollected = positionsPerSegment.flatten.distinct
+    } yield ListOfVec3IntProto.of(positionsCollected.map(vec3IntToProto))
 
-  private def getSegmentIdsForAgglomerateIdIfNeeded(organizationName: String,
-                                                    datasetName: String,
-                                                    dataLayerName: String,
-                                                    segmentOrAgglomerateId: Long,
-                                                    mappingNameOpt: Option[String]): Fox[List[Long]] =
+  private def getBucketPositions(organizationName: String,
+                                 datasetName: String,
+                                 dataLayerName: String,
+                                 segmentId: Long,
+                                 mag: Vec3Int): Fox[Array[Vec3Int]] =
+    for {
+      (bucketPositionsInFileMag, fileMag) <- readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId)
+      bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
+    } yield bucketPositions
+
+  def getSegmentIdsForAgglomerateIdIfNeeded(organizationName: String,
+                                            datasetName: String,
+                                            dataLayerName: String,
+                                            segmentOrAgglomerateId: Long,
+                                            mappingNameOpt: Option[String]): Fox[List[Long]] =
     mappingNameOpt match {
       case Some(mappingName) =>
         for {

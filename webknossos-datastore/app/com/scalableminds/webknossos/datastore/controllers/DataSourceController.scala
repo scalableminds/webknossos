@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -592,11 +593,18 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
-                                                                          datasetName,
-                                                                          dataLayerName,
-                                                                          segmentId.toLong)
-          bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, request.body.mag, fileMag)
+          segmentIds <- segmentIndexFileService.getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
+                                                                                      datasetName,
+                                                                                      dataLayerName,
+                                                                                      segmentId.toLong,
+                                                                                      request.body.mappingName)
+          topLeftsAndFileMags: Seq[(Array[Vec3Int], Vec3Int)] <- Fox.serialCombined(segmentIds)(sId =>
+            segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
+          fileMag <- topLeftsAndFileMags.headOption.map(_._2)
+          topLefts: Array[Vec3Int] = topLeftsAndFileMags.map(_._1).toArray.flatten
+          bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
+                                                                                      request.body.mag,
+                                                                                      fileMag)
           bucketPositionsForCubeSize = bucketPositions
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / request.body.cubeSize)
@@ -622,14 +630,21 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+          segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
             for {
-              (topLefts, fileMag) <- segmentIndexFileService.readSegmentIndex(organizationName,
-                                                                              datasetName,
-                                                                              dataLayerName,
-                                                                              segmentId)
-              bucketPositions = segmentIndexFileService.topLeftsToBucketPositions(topLefts, request.body.mag, fileMag)
-            } yield SegmentIndexData(segmentId, bucketPositions.toSeq)
+              segmentIds <- segmentIndexFileService.getSegmentIdsForAgglomerateIdIfNeeded(organizationName,
+                                                                                          datasetName,
+                                                                                          dataLayerName,
+                                                                                          segmentOrAgglomerateId,
+                                                                                          request.body.mappingName)
+              topLeftsAndFileMags: Seq[(Array[Vec3Int], Vec3Int)] <- Fox.serialCombined(segmentIds)(segmentId =>
+                segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, segmentId))
+              fileMag <- topLeftsAndFileMags.headOption.map(_._2)
+              topLefts: Array[Vec3Int] = topLeftsAndFileMags.map(_._1).toArray.flatten
+              bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
+                                                                                          request.body.mag,
+                                                                                          fileMag)
+            } yield SegmentIndexData(segmentOrAgglomerateId, bucketPositions.toSeq)
           }
         } yield Ok(Json.toJson(segmentIdsAndBucketPositions))
       }

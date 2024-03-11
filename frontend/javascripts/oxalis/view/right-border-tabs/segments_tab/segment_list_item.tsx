@@ -593,7 +593,8 @@ function _SegmentListItem({
           (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
             ? multiSelectMenu
             : createSegmentContextMenu()
-        } // The overlay is generated lazily. By default, this would make the overlay
+        }
+        // The overlay is generated lazily. By default, this would make the overlay
         // re-render on each parent's render() after it was shown for the first time.
         // The reason for this is that it's not destroyed after closing.
         // Therefore, autoDestroy is passed.
@@ -607,78 +608,83 @@ function _SegmentListItem({
           if (info.source === "trigger") handleSegmentDropdownMenuVisibility(isVisible, segment.id);
         }}
         trigger={["contextMenu"]}
+        // Remove this again once https://github.com/react-component/trigger/pull/447 has bubbled
+        // through to antd.
+        alignPoint={false}
       >
-        <div style={{ display: "inline-flex", alignItems: "center" }}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-          <EditableTextLabel
-            value={getSegmentName(segment)}
-            label="Segment Name"
-            onClick={() => onSelectSegment(segment)}
-            onRenameStart={onRenameStart}
-            onRenameEnd={onRenameEnd}
-            onChange={(name) => {
-              if (visibleSegmentationLayer != null) {
-                updateSegment(
-                  segment.id,
-                  {
-                    name,
-                  },
-                  visibleSegmentationLayer.name,
-                  true,
-                );
-              }
-            }}
-            margin="0 5px"
-            disableEditing={!allowUpdate}
-          />
-          <Tooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
+        <div>
+          <div style={{ display: "inline-flex", alignItems: "center" }}>
+            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+            <EditableTextLabel
+              value={getSegmentName(segment)}
+              label="Segment Name"
+              onClick={() => onSelectSegment(segment)}
+              onRenameStart={onRenameStart}
+              onRenameEnd={onRenameEnd}
+              onChange={(name) => {
+                if (visibleSegmentationLayer != null) {
+                  updateSegment(
+                    segment.id,
+                    {
+                      name,
+                    },
+                    visibleSegmentationLayer.name,
+                    true,
+                  );
+                }
+              }}
+              margin="0 5px"
+              disableEditing={!allowUpdate}
             />
-          </Tooltip>
-          {/* Show Default Segment Name if another one is already defined*/}
-          {getSegmentIdDetails()}
-          {segment.id === centeredSegmentId ? (
-            <Tooltip title="This segment is currently centered in the data viewports.">
-              <i
-                className="fas fa-crosshairs deemphasized"
-                style={{
-                  marginLeft: 4,
-                }}
+            <Tooltip title="Open context menu (also available via right-click)">
+              <EllipsisOutlined
+                onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
               />
             </Tooltip>
-          ) : null}
-          {segment.id === activeCellId ? (
-            <Tooltip title="The currently active segment id belongs to this segment.">
-              <i
-                className="fas fa-paint-brush deemphasized"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
-            </Tooltip>
-          ) : null}
+            {/* Show Default Segment Name if another one is already defined*/}
+            {getSegmentIdDetails()}
+            {segment.id === centeredSegmentId ? (
+              <Tooltip title="This segment is currently centered in the data viewports.">
+                <i
+                  className="fas fa-crosshairs deemphasized"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            {segment.id === activeCellId ? (
+              <Tooltip title="The currently active segment id belongs to this segment.">
+                <i
+                  className="fas fa-paint-brush deemphasized"
+                  style={{
+                    marginLeft: 4,
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              marginLeft: 16,
+            }}
+          >
+            <MeshInfoItem
+              segment={segment}
+              isSelectedInList={
+                selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+              }
+              isHovered={isHoveredSegmentId}
+              mesh={mesh}
+              handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
+              visibleSegmentationLayer={visibleSegmentationLayer}
+              setPosition={setPosition}
+              setAdditionalCoordinates={setAdditionalCoordinates}
+            />
+          </div>
         </div>
       </Dropdown>
-
-      <div
-        style={{
-          marginLeft: 16,
-        }}
-      >
-        <MeshInfoItem
-          segment={segment}
-          isSelectedInList={
-            selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
-          }
-          isHovered={isHoveredSegmentId}
-          mesh={mesh}
-          handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
-          visibleSegmentationLayer={visibleSegmentationLayer}
-          setPosition={setPosition}
-          setAdditionalCoordinates={setAdditionalCoordinates}
-        />
-      </div>
     </List.Item>
   );
 }

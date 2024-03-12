@@ -1,4 +1,4 @@
-import { getProjects, getTeams } from "admin/admin_rest_api";
+import { getActiveUser, getProjects, getTeams } from "admin/admin_rest_api";
 import { Card, Select, Spin, Table, Button, DatePicker, TimeRangePickerProps } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
@@ -11,6 +11,7 @@ import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
 import ProjectAndAnnotationTypeDropdown from "./project_and_type_dropdown";
+import { isUserAdminOrTeamManager } from "libs/utils";
 
 const { Column } = Table;
 const { RangePicker } = DatePicker;
@@ -50,8 +51,13 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
+  const isFeatureAllowed = useFetch(async () => {
+    const activeUser = await getActiveUser();
+    return isUserAdminOrTeamManager(activeUser);
+  }, false, []);
   const [allTeams, allProjects, allTimeEntries] = useFetch(
     async () => {
+      if (!isFeatureAllowed) return [[], [], []];
       setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
       const timeEntriesURL = getTimeEntryUrl(
@@ -65,7 +71,7 @@ function TimeTrackingOverview() {
       return [allTeams, allProjects, allTimeEntries];
     },
     [[], [], []],
-    [],
+    [isFeatureAllowed],
   );
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
@@ -82,6 +88,7 @@ function TimeTrackingOverview() {
   }, [selectedProjectIds, selectedTypes]);
   const filteredTimeEntries = useFetch(
     async () => {
+      if (!isFeatureAllowed) return []; // TODO i dont know whether there is a nicer way to deal with this, other components seem to handle it similarly
       setIsFetching(true);
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
@@ -102,10 +109,9 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTimeEntries],
+    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTimeEntries, isFeatureAllowed],
   );
   const filterStyle = { marginInline: 10 };
-  const selectWidth = 200;
 
   const exportToCSV = () => {
     if (filteredTimeEntries == null || filteredTimeEntries.length === 0) {
@@ -158,7 +164,7 @@ function TimeTrackingOverview() {
         mode="multiple"
         placeholder="Filter teams"
         defaultValue={[]}
-        style={{ width: selectWidth, ...filterStyle }}
+        style={{ width: 200, ...filterStyle }}
         options={allTeams.map((team) => {
           return {
             label: team.name,
@@ -225,6 +231,7 @@ function TimeTrackingOverview() {
         icon={<DownloadOutlined />}
         style={{ float: "right" }}
         onClick={() => exportToCSV()}
+        disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
       >
         Export to CSV
       </Button>

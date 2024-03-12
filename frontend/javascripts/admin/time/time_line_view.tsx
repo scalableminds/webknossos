@@ -191,7 +191,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: true,
     });
-    console.log("fetchdata", this.state.selectedProjectIds, this.state.annotationType)
 
     if (this.state.user != null) {
       const timeTrackingData = compressTimeLogs(

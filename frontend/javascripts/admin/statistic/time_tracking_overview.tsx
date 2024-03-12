@@ -10,13 +10,13 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import ProjectAndTypeDropdown from "./project_and_type_dropdown";
+import ProjectAndAnnotationTypeDropdown from "./project_and_type_dropdown";
 
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export enum TypeFilters {
+export enum AnnotationTypeFilters {
   ONLY_ANNOTATIONS_KEY = "Explorational",
   ONLY_TASKS_KEY = "Task",
   TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
@@ -69,14 +69,16 @@ function TimeTrackingOverview() {
   );
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
-  const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
+  const [selectedTypes, setSelectedTypes] = useState(AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
-  useEffect(()=>{
-    if(selectedProjectIds.length > 0 && selectedProjectIds.length < allProjects.length){
+  useEffect(() => {
+    if (selectedProjectIds.length > 0 && selectedProjectIds.length < allProjects.length) {
       setProjectOrTypeQueryParam(selectedProjectIds.join(","));
     }
-    setProjectOrTypeQueryParam(selectedTypes);
+    else {
+      setProjectOrTypeQueryParam(selectedTypes);
+    }
   }, [selectedProjectIds, selectedTypes]);
   const filteredTimeEntries = useFetch(
     async () => {
@@ -84,7 +86,7 @@ function TimeTrackingOverview() {
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       if (filteredTeams.length === 0) return;
-      const projectFilterNeeded = selectedTypes === TypeFilters.ONLY_TASKS_KEY;
+      const projectFilterNeeded = selectedTypes === AnnotationTypeFilters.ONLY_TASKS_KEY;
       let filteredProjects = selectedProjectIds;
       if (projectFilterNeeded && selectedProjectIds.length === 0)
         // If timespans for all tasks should be shown, all project ids need to be passed in the request.
@@ -145,7 +147,7 @@ function TimeTrackingOverview() {
       }}
     >
       <FilterOutlined />
-      <ProjectAndTypeDropdown
+      <ProjectAndAnnotationTypeDropdown
         allProjects={allProjects}
         setSelectedProjectIdsInParent={setSelectedProjectIds}
         selectedProjectIds={selectedProjectIds}

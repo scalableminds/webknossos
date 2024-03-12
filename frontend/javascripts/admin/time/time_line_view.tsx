@@ -22,8 +22,8 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { TypeFilters } from "admin/statistic/time_tracking_overview";
-import ProjectAndTypeDropdown from "admin/statistic/project_and_type_dropdown";
+import { AnnotationTypeFilters } from "admin/statistic/time_tracking_overview";
+import ProjectAndAnnotationTypeDropdown from "admin/statistic/project_and_type_dropdown";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -54,7 +54,7 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  annotationType: TypeFilters;
+  annotationType: AnnotationTypeFilters;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -106,7 +106,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    annotationType: TypeFilters.TASKS_AND_ANNOTATIONS_KEY
+    annotationType: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY
   };
 
   parseQueryParams() {
@@ -126,11 +126,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
       dateRange = [dayjs(+params.start), dayjs(+params.end)];
     }
     let selectedProjectIds: Array<string> = [];
-    let annotationType = TypeFilters.TASKS_AND_ANNOTATIONS_KEY;
+    let annotationType = AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY;
     if (_.has(params, "projectsOrType")) {
       const projectsOrTypeParam = params.projectsOrType;
-      if (Object.values<string>(TypeFilters).includes(projectsOrTypeParam)) {
-        annotationType = projectsOrTypeParam as TypeFilters;
+      if (Object.values<string>(AnnotationTypeFilters).includes(projectsOrTypeParam)) {
+        annotationType = projectsOrTypeParam as AnnotationTypeFilters;
       } else {
         selectedProjectIds = params.projectsOrType.split(",");
       }
@@ -148,7 +148,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     );
   }
 
-  getProjectOrTypeFilter(selectedProjectIds: string[], annotationType: TypeFilters) {
+  getProjectOrTypeFilter(selectedProjectIds: string[], annotationType: AnnotationTypeFilters) {
     if (selectedProjectIds.length > 0) {
       return selectedProjectIds;
     }
@@ -193,7 +193,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.dateRange[0],
           this.state.dateRange[1],
           this.state.selectedProjectIds.filter(
-            (id) => !(Object.values(TypeFilters) as string[]).includes(id),
+            (id) => !(Object.values(AnnotationTypeFilters) as string[]).includes(id),
           ),
           this.state.annotationType,
         ),
@@ -447,11 +447,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 />
               </FormItem>
               <FormItem {...formItemLayout} label="Type / Project">
-                <ProjectAndTypeDropdown 
+                <ProjectAndAnnotationTypeDropdown 
                 allProjects={this.state.allProjects} 
                 selectedProjectIds={this.state.selectedProjectIds} 
                 setSelectedProjectIdsInParent={(selectedProjectIds: string[])=>this.setState({selectedProjectIds}, this.fetchTimeTrackingData)} 
-                setSelectedAnnotationTypeInParent={(annotationType: TypeFilters)=>this.setState({annotationType}, this.fetchTimeTrackingData) } 
+                setSelectedAnnotationTypeInParent={(annotationType: AnnotationTypeFilters)=>this.setState({annotationType}, this.fetchTimeTrackingData) } 
                 selectedAnnotationType={this.state.annotationType}
                 style={{width: 200}}
                 />

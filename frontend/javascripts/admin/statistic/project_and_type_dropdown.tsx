@@ -1,15 +1,15 @@
 import { Select } from "antd";
 import React, { useEffect, useState } from "react";
-import { TypeFilters } from "./time_tracking_overview";
+import { AnnotationTypeFilters } from "./time_tracking_overview";
 import { APIProject } from "types/api_flow_types";
 
 export const getTaskFilterOptions = (allProjects: APIProject[]) => {
   const additionalProjectFilters = {
     label: "Filter types",
     options: [
-      { label: "Tasks & Annotations", value: TypeFilters.TASKS_AND_ANNOTATIONS_KEY },
-      { label: "Annotations", value: TypeFilters.ONLY_ANNOTATIONS_KEY },
-      { label: "Tasks", value: TypeFilters.ONLY_TASKS_KEY },
+      { label: "Tasks & Annotations", value: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY },
+      { label: "Annotations", value: AnnotationTypeFilters.ONLY_ANNOTATIONS_KEY },
+      { label: "Tasks", value: AnnotationTypeFilters.ONLY_TASKS_KEY },
     ],
   };
   const mappedProjects = allProjects.map((project) => {
@@ -28,12 +28,12 @@ type ProjectAndTypeDropdownProps = {
   allProjects: APIProject[],
   selectedProjectIds: string[],
   setSelectedProjectIdsInParent: (projectIds: string[])=>void,
-  selectedAnnotationType: TypeFilters,
-  setSelectedAnnotationTypeInParent : (type: TypeFilters)=>void,
+  selectedAnnotationType: AnnotationTypeFilters,
+  setSelectedAnnotationTypeInParent : (type: AnnotationTypeFilters)=>void,
   style: {}
 }
 
-function ProjectAndTypeDropdown({
+function ProjectAndAnnotationTypeDropdown({
   allProjects,
   selectedProjectIds,
   setSelectedProjectIdsInParent,
@@ -50,18 +50,18 @@ function ProjectAndTypeDropdown({
     }
   }, [selectedProjectIds, selectedAnnotationType]);
   const setSelectedProjects = (_prevSelection: string[], selectedValue: string) => {
-    if (Object.values<string>(TypeFilters).includes(selectedValue)) {
-      setSelectedAnnotationTypeInParent(selectedValue as TypeFilters);
+    if (Object.values<string>(AnnotationTypeFilters).includes(selectedValue)) {
+      setSelectedAnnotationTypeInParent(selectedValue as AnnotationTypeFilters);
       setSelectedProjectIdsInParent([]);
     } else {
-      setSelectedAnnotationTypeInParent(TypeFilters.ONLY_TASKS_KEY);
+      setSelectedAnnotationTypeInParent(AnnotationTypeFilters.ONLY_TASKS_KEY);
       setSelectedProjectIdsInParent([...selectedProjectIds, selectedValue]);
     }
   };
 
   const onDeselect = (removedKey: string) => {
-    if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
-      setSelectedAnnotationTypeInParent(TypeFilters.TASKS_AND_ANNOTATIONS_KEY);
+    if ((Object.values(AnnotationTypeFilters) as string[]).includes(removedKey)) {
+      setSelectedAnnotationTypeInParent(AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY);
     } else {
       setSelectedProjectIdsInParent(
         selectedProjectIds.filter((projectId) => projectId !== removedKey),
@@ -84,4 +84,4 @@ function ProjectAndTypeDropdown({
   );
 }
 
-export default ProjectAndTypeDropdown;
+export default ProjectAndAnnotationTypeDropdown;

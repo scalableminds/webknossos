@@ -80,6 +80,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   def queryLogsBatched(runName: String,
                        organizationId: String,
+                       oldOrganizationId: ObjectId,
                        taskName: Option[String],
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
@@ -93,6 +94,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       for {
         headBatch <- queryLogs(runName,
                                organizationId,
+                               oldOrganizationId,
                                taskName,
                                minLevel,
                                currentStartTime,
@@ -107,6 +109,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               tailBatch <- queryLogsBatched(
                 runName,
                 organizationId,
+                oldOrganizationId,
                 taskName,
                 minLevel,
                 startTime,
@@ -122,6 +125,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             tailBatch <- queryLogsBatched(
               runName,
               organizationId,
+              oldOrganizationId,
               taskName,
               minLevel,
               startTime,
@@ -138,6 +142,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   private def queryLogs(runName: String,
                         organizationId: String,
+                        oldOrganizationId: ObjectId,
                         taskName: Option[String],
                         minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
@@ -151,7 +156,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         Some(s"""level=~"(${levels.mkString("|")})"""")
       ).flatten.mkString(" | ")
       val logQL =
-        s"""{vx_run_name="$runName",wk_org="${organizationId.id}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+        s"""{vx_run_name="$runName",wk_org=~"${oldOrganizationId.id}|${organiztionId}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
 
       val queryString =
         List("query" -> logQL,
@@ -242,7 +247,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                   "vx_run_name" -> keyValueTuple._1._2,
                   "pid" -> keyValueTuple._1._3,
                   "wk_url" -> wkConf.Http.uri,
-                  "wk_org" -> organizationId.id
+                  "" -> organizationId
                 ),
                 "values" -> JsArray(values)
             ))

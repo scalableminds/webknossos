@@ -148,12 +148,11 @@ function TimeTrackingOverview() {
     >
       <FilterOutlined />
       <ProjectAndAnnotationTypeDropdown
-        allProjects={allProjects}
         setSelectedProjectIdsInParent={setSelectedProjectIds}
         selectedProjectIds={selectedProjectIds}
         setSelectedAnnotationTypeInParent={setSelectedTypes}
         selectedAnnotationType={selectedTypes}
-        style={{ width: selectWidth, ...filterStyle }}
+        style={{ ...filterStyle }}
       />
       <Select
         mode="multiple"

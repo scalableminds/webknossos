@@ -279,6 +279,11 @@ PATCH         /jobs/:id/cancel                                                  
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
 GET           /jobs/:id/export                                                                  controllers.JobsController.redirectToExport(id: String)
 
+# AI Models
+
+GET           /aiModels/:id                                                                     controllers.AiModelController.readModelInfo(id: String)
+POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
+
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()
 GET           /publications/:id                                                                 controllers.PublicationController.read(id: String)

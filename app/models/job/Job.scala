@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.dataset.{DatasetDAO, DataStoreDAO}
+import models.dataset.DatasetDAO
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import models.organization.OrganizationDAO
@@ -36,6 +36,7 @@ case class Job(
     state: JobState = JobState.PENDING,
     manualState: Option[JobState] = None,
     _worker: Option[ObjectId] = None,
+    _voxelyticsWorkflowHash: Option[String] = None,
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
     started: Option[Long] = None,
@@ -116,6 +117,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         state,
         manualStateOpt,
         r._Worker.map(ObjectId(_)),
+        r._VoxelyticsworkflowHash,
         r.latestrunid,
         r.returnvalue,
         r.started.map(_.getTime),
@@ -294,7 +296,6 @@ class JobService @Inject()(wkConf: WkConf,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
                            workerDAO: WorkerDAO,
-                           dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            datasetDAO: DatasetDAO,
                            defaultMails: DefaultMails,

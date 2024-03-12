@@ -465,7 +465,7 @@ CREATE TABLE webknossos.jobs(
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
   manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
-  _voxelytics_run CHAR(24), -- TODO: Add foreign key
+  _voxelyticsWorkflow_hash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
   started TIMESTAMPTZ,

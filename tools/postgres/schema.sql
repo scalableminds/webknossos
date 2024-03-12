@@ -539,6 +539,22 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.aiModels(
+   -- todo foreign keys
+  _id CHAR(24) PRIMARY KEY,
+  _organization CHAR(24) NOT NULL,
+  _user CHAR(24) NOT NULL,
+  _training_voxelytics_run CHAR(24),
+  _training_job CHAR(24),
+  name VARCHAR(1024) NOT NULL,
+  comment VARCHAR(1024) NOT NULL,
+  workflow_yaml VARCHAR(16384),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  UNIQUE (_organization, name)
+);
+
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
 CREATE TABLE webknossos.voxelytics_artifacts(
@@ -649,6 +665,7 @@ CREATE TABLE webknossos.analyticsEvents(
   webknossosUri VARCHAR(512) NOT NULL,
   CONSTRAINT eventProperties CHECK(jsonb_typeof(eventProperties) = 'object')
 );
+
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;

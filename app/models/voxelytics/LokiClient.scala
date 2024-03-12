@@ -195,7 +195,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               entry =>
                 ((entry \ "vx" \ "workflow_hash").as[String],
                  (entry \ "vx" \ "run_name").as[String],
-                 (entry \ "pid").as[Long])
+                 (entry \ "pid").as[Long].toString)
             )
             .toList).toFox
         streams <- Fox.serialCombined(logEntryGroups)(
@@ -212,7 +212,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                     Json.stringify(
                       Json.obj(
                         "level" -> (entry \ "level").as[String],
-                        "pid" -> (entry \ "pid").as[Long],
+                        "pid" -> (entry \ "pid").as[Long].toString,
                         "logger_name" -> (entry \ "vx" \ "logger_name").as[String],
                         "vx_workflow_hash" -> (entry \ "vx" \ "workflow_hash").as[String],
                         "vx_run_name" -> (entry \ "vx" \ "run_name").as[String],
@@ -221,13 +221,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                         "host" -> (entry \ "host").as[String],
                         "program" -> (entry \ "program").as[String],
                         "func_name" -> (entry \ "vx" \ "func_name").as[String],
-                        "line" -> (entry \ "vx" \ "line").as[Long],
+                        "line" -> (entry \ "vx" \ "line").as[Long].toString,
                         "path" -> (entry \ "vx" \ "path").as[String],
                         "process_name" -> (entry \ "vx" \ "process_name").as[String],
                         "thread_name" -> (entry \ "vx" \ "thread_name").as[String],
                         "vx_version" -> (entry \ "vx" \ "version").as[String],
                         "user" -> (entry \ "vx" \ "user").as[String],
-                        "pgid" -> (entry \ "vx" \ "process_group_id").as[Long]
+                        "pgid" -> (entry \ "vx" \ "process_group_id").as[Long].toString
                       ))
                   ).toFox
                 } yield

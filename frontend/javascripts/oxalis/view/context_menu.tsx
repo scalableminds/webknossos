@@ -63,6 +63,7 @@ import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
   getNodePosition,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
@@ -854,6 +855,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node",
             onClick: () => setWaypoint(globalPosition, viewport, false),
             label: "Create Node here",
+            disabled: isSkeletonLayerTransformed(state),
           },
           {
             key: "create-node-with-tree",

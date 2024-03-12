@@ -465,6 +465,7 @@ CREATE TABLE webknossos.jobs(
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
   manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
+  _voxelytics_run CHAR(24), -- TODO: Add foreign key
   latestRunId VARCHAR(1024),
   returnValue Text,
   started TIMESTAMPTZ,
@@ -543,16 +544,31 @@ CREATE TABLE webknossos.aiModels(
    -- todo foreign keys
   _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
   _user CHAR(24) NOT NULL,
-  _training_voxelytics_run CHAR(24),
-  _training_job CHAR(24),
+  _trainingJob CHAR(24),
   name VARCHAR(1024) NOT NULL,
   comment VARCHAR(1024) NOT NULL,
-  workflow_yaml VARCHAR(16384),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
+);
+
+CREATE TABLE webknossos.aiModel_trainingAnnotations(
+  _aiModel CHAR(24) NOT NULL,
+  _annotation CHAR(24) NOT NULL,
+  PRIMARY KEY(_aiModel,_annotation)
+);
+
+CREATE TABLE webknossos.aiModelInferences(
+  _id CHAR(24) PRIMARY KEY,
+  _aiModel CHAR(24) NOT NULL,
+  _dataset CHAR(24),
+  _annotation CHAR(24) NOT NULL,
+  _inferenceJob CHAR(24) NOT NULL,
+  newSegmentationLayerName VARCHAR(256) NOT NULL,
+  maskAnnotationLayerName VARCHAR(256) NOT NULL
 );
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');

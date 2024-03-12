@@ -6,15 +6,18 @@ import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
 import models.job._
+import models.voxelytics.VoxelyticsDAO
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService, workerDAO: WorkerDAO)(
-    implicit ec: ExecutionContext,
-    bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject()(
+    jobDAO: JobDAO,
+    jobService: JobService,
+    workerDAO: WorkerDAO,
+    voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
@@ -72,6 +75,17 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
         jobAfterChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange)
+      } yield Ok
+  }
+
+  def attachVoxelyticsWorkflow(key: String, id: String): Action[String] = Action.async(validateJson[String]) {
+    implicit request =>
+      for {
+        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        jobIdParsed <- ObjectId.fromString(id)
+        organizationId <- jobDAO.organizationIdForJobId(jobIdParsed)
+        _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, request.body)
+        _ <- jobDAO.updateVoxelyticsWorkflow(jobIdParsed, request.body)
       } yield Ok
   }
 

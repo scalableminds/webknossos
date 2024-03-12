@@ -277,6 +277,7 @@ POST          /jobs/run/renderAnimation/:organizationName/:datasetName          
 GET           /jobs/:id                                                                         controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                                  controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
+POST          /jobs/:id/attachVoxelyticsWorkflow                                                controllers.WKRemoteWorkerController.attachVoxelyticsWorkflow(key: String, id: String)
 GET           /jobs/:id/export                                                                  controllers.JobsController.redirectToExport(id: String)
 
 # AI Models

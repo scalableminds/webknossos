@@ -465,7 +465,7 @@ CREATE TABLE webknossos.jobs(
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
   manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
-  _voxelyticsWorkflow_hash VARCHAR(512),
+  _voxelytics_workflowHash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
   started TIMESTAMPTZ,
@@ -568,7 +568,10 @@ CREATE TABLE webknossos.aiModelInferences(
   _annotation CHAR(24) NOT NULL,
   _inferenceJob CHAR(24) NOT NULL,
   newSegmentationLayerName VARCHAR(256) NOT NULL,
-  maskAnnotationLayerName VARCHAR(256) NOT NULL
+  maskAnnotationLayerName VARCHAR(256) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
@@ -707,6 +710,8 @@ CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.anno
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiModelInferences_ as SELECT * FROM webknossos.aiModelInferences WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

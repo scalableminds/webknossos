@@ -3,7 +3,6 @@ package models.user.time
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.AnnotationType
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}
 import slick.lifted.Rep

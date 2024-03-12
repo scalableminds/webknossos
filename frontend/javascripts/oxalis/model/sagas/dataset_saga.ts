@@ -161,23 +161,23 @@ export function* ensureSegmentIndexIsLoaded(): Saga<void> {
     const { layerName } = action;
     const dataset = yield* select((state) => state.dataset);
     if (layerName == null) return;
-    const concernedSegmentationLayer = yield* call(getLayerByName, dataset, layerName);
+    const segmentationLayer = yield* call(getLayerByName, dataset, layerName);
     const maybeIsSegmentIndexAvailable = yield* call(
       getMaybeSegmentIndexAvailability,
       dataset,
       layerName,
     );
-    if (maybeIsSegmentIndexAvailable == null && concernedSegmentationLayer != null) {
+    if (maybeIsSegmentIndexAvailable == null && segmentationLayer != null) {
       const tracing = yield* select((state) => state.tracing);
       const updatedIsSegmentIndexAvailable = yield* call(
         hasSegmentIndex,
-        concernedSegmentationLayer,
+        segmentationLayer,
         dataset,
         tracing,
       );
       yield* put(
         setLayerHasSegmentIndexAction(
-          concernedSegmentationLayer.name,
+          segmentationLayer.name,
           updatedIsSegmentIndexAvailable,
         ),
       );

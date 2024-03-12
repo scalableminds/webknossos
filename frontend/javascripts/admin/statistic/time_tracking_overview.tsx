@@ -3,7 +3,7 @@ import { Card, Select, Spin, Table, Button, DatePicker, TimeRangePickerProps } f
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
@@ -71,6 +71,13 @@ function TimeTrackingOverview() {
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
   const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
+  const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
+  useEffect(()=>{
+    if(selectedProjectIds.length > 0 && selectedProjectIds.length < allProjects.length){
+      setProjectOrTypeQueryParam(selectedProjectIds.join(","));
+    }
+    setProjectOrTypeQueryParam(selectedTypes);
+  }, [selectedProjectIds, selectedTypes]);
   const filteredTimeEntries = useFetch(
     async () => {
       setIsFetching(true);
@@ -93,7 +100,7 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, startDate, endDate, allTimeEntries],
+    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTimeEntries],
   );
   const filterStyle = { marginInline: 10 };
   const selectWidth = 200;
@@ -138,21 +145,12 @@ function TimeTrackingOverview() {
       }}
     >
       <FilterOutlined />
-      {/*       <Select
-        mode="multiple"
-        placeholder="Filter type or projects"
-        style={{ width: selectWidth, ...filterStyle }}
-        options={getTaskFilterOptions(allProjects)}
-        value={selectedProjectOrTypeFilters}
-        onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
-        onSelect={(newSelection: string) =>
-          setSelectedProjects(selectedProjectOrTypeFilters, newSelection)
-        }
-      /> */}
       <ProjectAndTypeDropdown
         allProjects={allProjects}
         setSelectedProjectIdsInParent={setSelectedProjectIds}
-        setAnnotationTypeInParent={setSelectedTypes}
+        selectedProjectIds={selectedProjectIds}
+        setSelectedAnnotationTypeInParent={setSelectedTypes}
+        selectedAnnotationType={selectedTypes}
         style={{ width: selectWidth, ...filterStyle }}
       />
       <Select
@@ -215,7 +213,7 @@ function TimeTrackingOverview() {
               params.append("user", user.id);
               params.append("start", startDate.valueOf().toString());
               params.append("end", endDate.valueOf().toString());
-              params.append("projectsOrType", selectedProjectIds.join()); // TODO fixme: use joined project ids and types
+              params.append("projectsOrType", projectOrTypeQueryParam);
               return <Link to={`/reports/timetracking?${params}`}>Details</Link>;
             }}
           />

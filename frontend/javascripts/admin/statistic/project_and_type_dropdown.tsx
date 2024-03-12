@@ -24,45 +24,49 @@ export const getTaskFilterOptions = (allProjects: APIProject[]) => {
   ];
 };
 
+type ProjectAndTypeDropdownProps = {
+  allProjects: APIProject[],
+  selectedProjectIds: string[],
+  setSelectedProjectIdsInParent: (projectIds: string[])=>void,
+  selectedAnnotationType: TypeFilters,
+  setSelectedAnnotationTypeInParent : (type: TypeFilters)=>void,
+  style: {}
+}
+
 function ProjectAndTypeDropdown({
   allProjects,
+  selectedProjectIds,
   setSelectedProjectIdsInParent,
-  setAnnotationTypeInParent,
+  selectedAnnotationType,
+  setSelectedAnnotationTypeInParent,
   style,
-}) {
+}: ProjectAndTypeDropdownProps) {
   const [selectedProjectOrTypeFilters, setSelectedProjectOrTypeFilters] = useState(Array<string>);
-  const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
-  const [selectedTypes, setSelectedTypes] = useState("Task,Explorational");
   useEffect(() => {
     if (selectedProjectIds.length > 0) {
       setSelectedProjectOrTypeFilters(selectedProjectIds);
     } else {
-      setSelectedProjectOrTypeFilters([selectedTypes]);
+      setSelectedProjectOrTypeFilters([selectedAnnotationType]);
     }
-  }, [selectedProjectIds, selectedTypes]);
+  }, [selectedProjectIds, selectedAnnotationType]);
   const setSelectedProjects = (_prevSelection: string[], selectedValue: string) => {
     if (Object.values<string>(TypeFilters).includes(selectedValue)) {
-      setAnnotationTypeInParent(selectedValue);
-      setSelectedTypes(selectedValue);
+      setSelectedAnnotationTypeInParent(selectedValue as TypeFilters);
       setSelectedProjectIdsInParent([]);
-      setSelectedProjectIds([]);
     } else {
-      setAnnotationTypeInParent(TypeFilters.ONLY_TASKS_KEY);
-      setSelectedTypes(TypeFilters.ONLY_TASKS_KEY);
+      setSelectedAnnotationTypeInParent(TypeFilters.ONLY_TASKS_KEY);
       setSelectedProjectIdsInParent([...selectedProjectIds, selectedValue]);
-      setSelectedProjectIds([...selectedProjectIds, selectedValue]);
     }
   };
 
   const onDeselect = (removedKey: string) => {
     if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
-      setSelectedTypes(TypeFilters.TASKS_AND_ANNOTATIONS_KEY);
-      setAnnotationTypeInParent(TypeFilters.TASKS_AND_ANNOTATIONS_KEY);
+      setSelectedAnnotationTypeInParent(TypeFilters.TASKS_AND_ANNOTATIONS_KEY);
     } else {
       setSelectedProjectIdsInParent(
         selectedProjectIds.filter((projectId) => projectId !== removedKey),
       );
-      setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
+      setSelectedProjectIdsInParent(selectedProjectIds.filter((projectId) => projectId !== removedKey));
     }
   };
   return (

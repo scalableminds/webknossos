@@ -22,7 +22,8 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { TypeFilters, getTaskFilterOptions } from "admin/statistic/time_tracking_overview";
+import { TypeFilters } from "admin/statistic/time_tracking_overview";
+import ProjectAndTypeDropdown from "admin/statistic/project_and_type_dropdown";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -53,8 +54,7 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  annotationType: AnnotationType;
-  selectedProjectsOrType: Array<string | AnnotationType>;
+  annotationType: TypeFilters;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -106,8 +106,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    annotationType: "Task,Explorational",
-    selectedProjectsOrType: [],
+    annotationType: TypeFilters.TASKS_AND_ANNOTATIONS_KEY
   };
 
   parseQueryParams() {
@@ -136,14 +135,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
         selectedProjectIds = params.projectsOrType.split(",");
       }
     }
-    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
     this.setState(
       {
         initialUserId: _.has(params, "user") ? params.user : null,
         dateRange,
         annotationType,
         selectedProjectIds,
-        selectedProjectsOrType,
       },
       () => {
         this.handleDateChange(dateRange);
@@ -269,40 +266,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
       {
         dateRange,
       },
-      this.fetchTimeTrackingData,
-    );
-  };
-
-  handleSelectedProjectsChange = async (selectedValue: string) => {
-    let selectedProjectIds: string[] = [];
-    let annotationType: TypeFilters = TypeFilters.ONLY_TASKS_KEY;
-    if (Object.values<string>(TypeFilters).includes(selectedValue)) {
-      annotationType = selectedValue as TypeFilters;
-    } else {
-      annotationType = TypeFilters.ONLY_TASKS_KEY;
-      selectedProjectIds = [...this.state.selectedProjectIds, selectedValue];
-    }
-    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
-    this.setState(
-      { selectedProjectIds, annotationType, selectedProjectsOrType },
-      this.fetchTimeTrackingData,
-    ); // state may not be updated immediately
-  };
-
-  onDeselect = (removedKey: string) => {
-    let selectedProjectIds: string[] = [];
-    let annotationType: TypeFilters = TypeFilters.ONLY_TASKS_KEY;
-    if ((Object.values(TypeFilters) as string[]).includes(removedKey)) {
-      selectedProjectIds = [];
-      annotationType = TypeFilters.TASKS_AND_ANNOTATIONS_KEY;
-    } else {
-      selectedProjectIds = this.state.selectedProjectIds.filter(
-        (projectId) => projectId !== removedKey,
-      );
-    }
-    const selectedProjectsOrType = this.getProjectOrTypeFilter(selectedProjectIds, annotationType);
-    this.setState(
-      { selectedProjectIds, selectedProjectsOrType, annotationType },
       this.fetchTimeTrackingData,
     );
   };
@@ -484,16 +447,13 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 />
               </FormItem>
               <FormItem {...formItemLayout} label="Type / Project">
-                <Select
-                  mode="multiple"
-                  placeholder="Filter type or projects"
-                  defaultValue={[]}
-                  options={getTaskFilterOptions(this.state.allProjects)}
-                  value={this.state.selectedProjectsOrType}
-                  onDeselect={this.onDeselect}
-                  onSelect={async (projectOrTypeId: string) =>
-                    this.handleSelectedProjectsChange(projectOrTypeId)
-                  }
+                <ProjectAndTypeDropdown 
+                allProjects={this.state.allProjects} 
+                selectedProjectIds={this.state.selectedProjectIds} 
+                setSelectedProjectIdsInParent={(selectedProjectIds: string[])=>this.setState({selectedProjectIds}, this.fetchTimeTrackingData)} 
+                setSelectedAnnotationTypeInParent={(annotationType: TypeFilters)=>this.setState({annotationType}, this.fetchTimeTrackingData) } 
+                selectedAnnotationType={this.state.annotationType}
+                style={{width: 200}}
                 />
               </FormItem>
             </Col>

@@ -9,7 +9,12 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, Category, ElementClass, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  Category,
+  ElementClass,
+  LayerViewConfiguration
+}
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext

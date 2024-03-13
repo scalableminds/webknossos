@@ -20,7 +20,7 @@ import { V3 } from "libs/mjs";
 import { Identity4x4 } from "oxalis/constants";
 import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
-  EnsureSegmentIndexIsLoadedAction,
+  type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "../actions/dataset_actions";
 
@@ -176,10 +176,7 @@ export function* ensureSegmentIndexIsLoaded(): Saga<void> {
         tracing,
       );
       yield* put(
-        setLayerHasSegmentIndexAction(
-          segmentationLayer.name,
-          updatedIsSegmentIndexAvailable,
-        ),
+        setLayerHasSegmentIndexAction(segmentationLayer.name, updatedIsSegmentIndexAvailable),
       );
     }
   }

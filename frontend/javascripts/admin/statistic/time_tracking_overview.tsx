@@ -1,5 +1,5 @@
 import { getActiveUser, getProjects, getTeams } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, Button, DatePicker, TimeRangePickerProps } from "antd";
+import { Card, Select, Spin, Table, Button, DatePicker, type TimeRangePickerProps } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -92,7 +92,7 @@ function TimeTrackingOverview() {
     } else {
       setProjectOrTypeQueryParam(selectedTypes);
     }
-  }, [selectedProjectIds, selectedTypes]);
+  }, [selectedProjectIds, selectedTypes, allProjects.length]);
   const filteredTimeEntries = useFetch(
     async () => {
       if (!isFeatureAllowed) return []; // TODO i dont know whether there is a nicer way to deal with this, other components seem to handle it similarly

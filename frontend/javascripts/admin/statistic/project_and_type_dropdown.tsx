@@ -1,7 +1,7 @@
 import { Select } from "antd";
 import React, { useEffect, useState } from "react";
 import { AnnotationTypeFilters } from "./time_tracking_overview";
-import { APIProject } from "types/api_flow_types";
+import type { APIProject } from "types/api_flow_types";
 import { getActiveUser, getProjects } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
@@ -11,7 +11,7 @@ type ProjectAndTypeDropdownProps = {
   setSelectedProjectIdsInParent: (projectIds: string[]) => void;
   selectedAnnotationType: AnnotationTypeFilters;
   setSelectedAnnotationTypeInParent: (type: AnnotationTypeFilters) => void;
-  style?: {};
+  style?: React.CSSProperties;
 };
 
 function ProjectAndAnnotationTypeDropdown({

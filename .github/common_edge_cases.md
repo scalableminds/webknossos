@@ -10,5 +10,6 @@ Will this also work if
  - User uses dark mode / light mode
  - There is no local datastore/tracingstore module (Compare [instructions to test this locally](https://github.com/scalableminds/webknossos/wiki/Set-up-a-standalone-datastore-locally))
  - SQL pitfalls:
-   - `WHERE x IN ()` with empty array literal (catch empty array in scala before the query)
+   - `WHERE x IN ()` with empty array literal (catch empty array in scala before the query): Check that SQL `IN` statements are never called with empty list
    - `ARRAY_AGG(x)` with nullable values (use `ARRAY_REMOVE(ARRAY_AGG(x), null)` instead)
+   - check that complex SQL queries have no fan out effect due to multiple left joins

@@ -1,6 +1,7 @@
 package com.scalableminds.util.time
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -42,7 +43,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
-object Instant extends FoxImplicits {
+object Instant extends FoxImplicits with LazyLogging {
   def now: Instant = Instant(System.currentTimeMillis())
 
   def max: Instant = Instant(253370761200000L)
@@ -67,6 +68,8 @@ object Instant extends FoxImplicits {
     Instant(nanosecondsString.substring(0, nanosecondsString.length - 6).toLong)
 
   def since(before: Instant): FiniteDuration = now - before
+
+  def logSince(before: Instant, label: String): Unit = logger.info(f"$label took ${Instant.since(before)}")
 
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))

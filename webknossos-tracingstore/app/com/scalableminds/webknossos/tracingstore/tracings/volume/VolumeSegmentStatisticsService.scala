@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.{
   AdditionalCoordinate,
   UnsignedInteger,
   UnsignedIntegerArray,
-  WebKnossosDataRequest
+  WebknossosDataRequest
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -180,7 +180,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                         additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                         userToken: Option[String]): Fox[Array[Byte]] = {
     val dataRequests = bucketPositions.map { position =>
-      WebKnossosDataRequest(
+      WebknossosDataRequest(
         position = position * mag * DataLayer.bucketLength,
         mag = mag,
         cubeSize = DataLayer.bucketLength,

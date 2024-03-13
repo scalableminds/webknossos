@@ -494,7 +494,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
+      subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
@@ -592,7 +592,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row gutter={50}>
         <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=iw2C7XB6wP4">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
@@ -624,12 +624,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
-          <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
+          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="/assets/docs/frontend-api/index.html">WEBKNOSSOS API</a> to create{" "}
-          <a href="/scripts">scriptable workflows</a>.{" "}
-          <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
+          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a>{" "}
+          to create automated workflows.
+          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
           <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}

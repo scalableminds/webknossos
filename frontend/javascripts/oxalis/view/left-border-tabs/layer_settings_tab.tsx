@@ -25,6 +25,7 @@ import {
   APIAnnotationTypeEnum,
   APIDataLayer,
   APIDataset,
+  APIJobType,
   EditableLayerProperties,
 } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
@@ -626,10 +627,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       hasHistogram && !isDisabled
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
-      {
-        label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
-        key: "computeSegmentIndexFileButton",
-      },
+      this.props.dataset.dataStore.jobsEnabled &&
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+      )
+        ? {
+            label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
+            key: "computeSegmentIndexFileButton",
+          }
+        : null,
     ];
     const items = possibleItems.filter((el) => el);
     return (
@@ -797,17 +803,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
           </div>
         </div>
-        <div className="flex-container">
-          <div className="flex-item">
-            <Dropdown
-              menu={{ items }}
-              trigger={["click", "contextMenu", "hover"]}
-              placement="bottomRight"
-            >
+        <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
+          <div className="flex-container" style={{ cursor: "pointer" }}>
+            <div className="flex-item">
               <EllipsisOutlined />
-            </Dropdown>
+            </div>
           </div>
-        </div>
+        </Dropdown>
       </div>
     );
   };

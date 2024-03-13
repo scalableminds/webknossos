@@ -56,9 +56,8 @@ export class OxalisModel {
       }
     } catch (error) {
       try {
-        const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
-          initialCommandType,
-        );
+        const maybeOrganizationToSwitchTo =
+          await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
           // @ts-ignore

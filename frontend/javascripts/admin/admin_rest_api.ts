@@ -97,6 +97,7 @@ import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { ArbitraryObject } from "types/globals";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -118,7 +119,10 @@ function assertResponseLimit(collection: unknown[]) {
 
 // ### Do with userToken
 
-export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
+export function sendAnalyticsEvent(
+  eventType: string,
+  eventProperties: Record<string, any> = {},
+): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
   // since failing analytics events should not have an impact on the application logic.
   Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
@@ -130,7 +134,7 @@ export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}):
 export function sendFailedRequestAnalyticsEvent(
   requestType: string,
   error: Record<string, any>,
-  requestProperties: {},
+  requestProperties: ArbitraryObject,
 ): void {
   const eventProperties = {
     request_type: requestType,
@@ -1493,7 +1497,7 @@ export function getDatasetDefaultConfiguration(
 export function updateDatasetDefaultConfiguration(
   datasetId: APIDatasetId,
   datasetConfiguration: DatasetConfiguration,
-): Promise<{}> {
+): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
     {
@@ -1576,7 +1580,10 @@ export function reserveDatasetUpload(
   );
 }
 
-export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {
+export function finishDatasetUpload(
+  datastoreHost: string,
+  uploadInformation: ArbitraryObject,
+): Promise<void> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -2188,7 +2195,6 @@ type MeshRequest = {
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
-  subsamplingStrides: Vector3;
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
@@ -2209,7 +2215,6 @@ export function computeAdHocMesh(
     additionalCoordinates,
     cubeSize,
     mappingName,
-    subsamplingStrides,
 
     ...rest
   } = meshRequest;
@@ -2225,13 +2230,11 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          position: V3.toArray(V3.sub(position, [1, 1, 1])),
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
-          subsamplingStrides,
           ...rest,
         },
       },
@@ -2449,13 +2452,44 @@ type MinCutTargetEdge = {
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentsInfo: Object,
+  segmentsInfo: {
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
+    mag: Vector3;
+    agglomerateId: number;
+    editableMappingId: string;
+  },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: segmentsInfo,
+      },
+    ),
+  );
+}
+
+export type NeighborInfo = {
+  segmentId: number;
+  neighbors: Array<{ segmentId: number; position: Vector3 }>;
+};
+
+export async function getNeighborsForAgglomerateNode(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentInfo: {
+    segmentPosition: Vector3;
+    mag: Vector3;
+    agglomerateId: number;
+    editableMappingId: string;
+  },
+): Promise<NeighborInfo> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      {
+        data: segmentInfo,
       },
     ),
   );

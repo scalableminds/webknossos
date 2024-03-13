@@ -68,7 +68,7 @@ test.skip("High volume calls", async () => {
   // For 1000 invocations, _.debounce is roughly 10x faster.
   // However, this probably not a bottleneck right now.
 
-  const lodashDebounced = _.debounce((_obj: Object) => {});
+  const lodashDebounced = _.debounce((_obj: { id: number }) => {});
 
   const { abortableFn } = createAbortableFnWithProtocol();
   const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);

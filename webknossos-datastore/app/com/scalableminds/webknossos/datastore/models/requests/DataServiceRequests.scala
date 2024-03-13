@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, CubePosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
@@ -20,8 +19,7 @@ case class DataServiceDataRequest(
     dataLayer: DataLayer,
     dataLayerMapping: Option[String],
     cuboid: Cuboid,
-    settings: DataServiceRequestSettings,
-    subsamplingStrides: Vec3Int = Vec3Int.ones // if > 1, skip voxels when loading (used for adhoc mesh generation)
+    settings: DataServiceRequestSettings
 )
 
 case class DataReadInstruction(

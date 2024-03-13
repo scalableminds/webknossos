@@ -188,6 +188,13 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       firstRow <- rows.headOption
     } yield firstRow
 
+  def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
+    for {
+      rows <- run(
+        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long])
+      firstRow <- rows.headOption
+    } yield firstRow
+
   def findNotRecentlyScanned(rescanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =
     for {
       rows <- run(q"""

@@ -12,12 +12,12 @@ import {
   updateProject,
 } from "admin/admin_rest_api";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+
 const FormItem = Form.Item;
 type OwnProps = {
   projectId?: string | null | undefined;
 };
-type StateProps = {};
-type Props = OwnProps & StateProps;
+type Props = OwnProps;
 type PropsWithRouter = Props;
 
 function ProjectCreateView({ projectId }: PropsWithRouter) {

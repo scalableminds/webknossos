@@ -173,7 +173,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const users = await getEditableUsers();
     const currentUser =
       this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
-        ? await getUser(this.state.initialUserId)
+        ? await getUser(this.state.initialUserId).catch((err) => {
+          Toast.error("User not found.");
+          console.error(err.messages[0].error); // TODO is there a more stable way?
+          return null;
+        })
         : this.props.activeUser;
     const allProjects = await getProjects();
     this.setState({

@@ -14,6 +14,7 @@ import type {
   TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
+import { ArbitraryObject } from "types/globals";
 
 export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
 export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
@@ -83,7 +84,7 @@ export function iterateThroughBounds(
 }
 
 function swap<T>(arr: Array<T>, a: number, b: number) {
-  let tmp;
+  let tmp: T;
 
   if (arr[a] > arr[b]) {
     tmp = arr[b];
@@ -94,11 +95,11 @@ function swap<T>(arr: Array<T>, a: number, b: number) {
 
 naturalSort.insensitive = true;
 
-function getRecursiveValues(obj: {} | Array<any> | string): Array<any> {
+function getRecursiveValues(obj: ArbitraryObject | Array<any> | string): Array<any> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
-function getRecursiveValuesUnflat(obj: {} | Array<any> | string): Array<any> {
+function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
@@ -234,9 +235,9 @@ export function hexToRgb(hex: string): Vector3 {
  */
 export function hslaToRgba(hsla: Vector4): Vector4 {
   const [h, s, l, a] = hsla;
-  let r;
-  let g;
-  let b;
+  let r: number;
+  let g: number;
+  let b: number;
 
   if (s === 0) {
     // eslint-disable-next-line no-multi-assign
@@ -566,7 +567,7 @@ export function isFileExtensionEqualTo(
 // otherwise.
 export function busyWaitDevHelper(time: number) {
   const start = new Date();
-  let now;
+  let now: Date;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -579,7 +580,7 @@ export function busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(maxTimeout?: number): Promise<number | void> {
+export function animationFrame(maxTimeout?: number): Promise<number | undefined> {
   const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
     (resolve) => {
       window.requestAnimationFrame(resolve);
@@ -590,7 +591,7 @@ export function animationFrame(maxTimeout?: number): Promise<number | void> {
     return rafPromise;
   }
 
-  const timeoutPromise = sleep(maxTimeout);
+  const timeoutPromise = sleep(maxTimeout) as Promise<undefined>;
   return Promise.race([rafPromise, timeoutPromise]);
 }
 
@@ -649,7 +650,7 @@ export function filterWithSearchQueryOR<
   P extends keyof T,
 >(
   collection: Array<T>,
-  properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
+  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -685,7 +686,7 @@ export function filterWithSearchQueryAND<
   P extends keyof T,
 >(
   collection: Array<T>,
-  properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
+  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -881,8 +882,8 @@ export function convertDecToBase256(num: number): Vector4 {
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
   let tmp = num;
-  // eslint-disable-next-line one-var
-  let r, g, b, a;
+
+  let r: number, g: number, b: number, a: number;
   [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
 
   [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
@@ -900,7 +901,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
 }
 
 export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
-  if (num == null || isNaN(num)) {
+  if (num == null || Number.isNaN(num)) {
     return [
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -1006,9 +1007,9 @@ export function convertBufferToImage(
   buffer: Uint8Array,
   width: number,
   height: number,
-  flipHorizontally: boolean = false,
   canvasToMerge: HTMLCanvasElement | null | undefined,
   drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
+  flipHorizontally: boolean = false,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);

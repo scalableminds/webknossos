@@ -10,6 +10,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import TeamSelectionForm from "./team_selection_form";
+import { EmptyObject } from "types/globals";
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
@@ -22,7 +23,7 @@ type State = {
   updatedAt: number | null | undefined;
 };
 
-class ProjectProgressReportView extends React.PureComponent<{}, State> {
+class ProjectProgressReportView extends React.PureComponent<EmptyObject, State> {
   state: State = {
     areSettingsVisible: true,
     data: [],

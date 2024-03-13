@@ -3,6 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import models.job.JobService
 
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
@@ -11,7 +12,7 @@ import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -56,18 +57,24 @@ object DataStore {
     fromForm(name, url, publicUrl, "", isScratch, allowsUpload)
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits
     with Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
-    Fox.successful(
+    for {
+      jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
+      jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
+    } yield
       Json.obj(
         "name" -> dataStore.name,
         "url" -> dataStore.publicUrl,
         "isScratch" -> dataStore.isScratch,
-        "allowsUpload" -> dataStore.allowsUpload
-      ))
+        "allowsUpload" -> dataStore.allowsUpload,
+        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
+        "jobsEnabled" -> jobsEnabled
+      )
 
   def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =

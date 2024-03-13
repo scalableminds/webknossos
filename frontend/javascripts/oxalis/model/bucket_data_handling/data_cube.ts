@@ -423,7 +423,7 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
-    let voxelInCube = this.boundingBox.containsPoint(voxel);
+    const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);

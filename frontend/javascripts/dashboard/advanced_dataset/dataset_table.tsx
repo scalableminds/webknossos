@@ -34,6 +34,7 @@ import { Unicode } from "oxalis/constants";
 import { DatasetUpdater } from "admin/admin_rest_api";
 import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
 import classNames from "classnames";
+import { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -401,7 +402,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   currentPageData: RowRenderer[] = [];
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
-    const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
+    const maybeSortedInfo: { sortedInfo: SorterResult<string> } | EmptyObject = // Clear the sorting exactly when the search box is initially filled
       // (searchQuery changes from empty string to non-empty string)
       nextProps.searchQuery !== "" && prevState.prevSearchQuery === ""
         ? {

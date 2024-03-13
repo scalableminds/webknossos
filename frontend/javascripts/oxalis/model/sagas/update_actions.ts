@@ -80,7 +80,9 @@ export type UpdateAction =
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
-  value: {};
+  value: {
+    actionTimestamp: number;
+  };
 };
 // This update action is only created by the backend
 type ImportVolumeTracingUpdateAction = {
@@ -91,7 +93,9 @@ type ImportVolumeTracingUpdateAction = {
 }; // This update action is only created by the backend
 type AddSegmentIndexUpdateAction = {
   name: "addSegmentIndex";
-  value: {};
+  value: {
+    actionTimestamp: number;
+  };
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
@@ -412,11 +416,12 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
-  isEditable: boolean | undefined,
+  isEditable: boolean | null | undefined,
+  isLocked: boolean | undefined,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable },
+    value: { mappingName, isEditable, isLocked },
   } as const;
 }
 export function splitAgglomerate(

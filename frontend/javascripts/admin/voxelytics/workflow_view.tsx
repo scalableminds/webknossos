@@ -129,7 +129,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
         beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
         endTime: t.endTime != null ? new Date(t.endTime) : null,
         state: t.state,
-      } as VoxelyticsTaskInfo),
+      }) as VoxelyticsTaskInfo,
   );
   const dag = parseDag(report.config.tasks, tasks);
   return {
@@ -145,7 +145,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
           ...run,
           beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
           endTime: run.endTime != null ? new Date(run.endTime) : null,
-        } as VoxelyticsRunInfo),
+        }) as VoxelyticsRunInfo,
     ),
     tasks,
   };

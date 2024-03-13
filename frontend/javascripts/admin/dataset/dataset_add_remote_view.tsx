@@ -38,6 +38,7 @@ import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
+import { ArbitraryObject } from "types/globals";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -103,7 +104,9 @@ function mergeNewLayers(
   };
 }
 
-export const parseCredentials = async (file: RcFile | undefined): Promise<Object | null> => {
+export const parseCredentials = async (
+  file: RcFile | undefined,
+): Promise<ArbitraryObject | null> => {
   if (!file) {
     return null;
   }

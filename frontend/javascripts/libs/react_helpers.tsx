@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+import { ArbitraryFunction } from "types/globals";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
-  callback: Function,
+  callback: ArbitraryFunction,
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<Function>();
+  const savedCallback = useRef<ArbitraryFunction>();
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;
@@ -39,6 +40,7 @@ export function useFetch<T>(
     setValue(fetchedValue);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   useEffect(() => {
     fetchValue();
   }, dependencies);
@@ -74,6 +76,7 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
   return function LazyModalWrapper(props: T) {
     const [hasBeenInitialized, setHasBeenInitialized] = useState(false);
     const isOpen = props.isOpen;
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Only initialize once open state changes.
     useEffect(() => {
       setHasBeenInitialized(hasBeenInitialized || isOpen);
     }, [isOpen]);

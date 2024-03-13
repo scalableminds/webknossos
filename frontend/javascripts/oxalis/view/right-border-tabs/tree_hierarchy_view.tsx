@@ -662,7 +662,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const maybeProofreadingIcon =
         tree.type === TreeTypeEnum.AGGLOMERATE ? (
           <Tooltip title="Agglomerate Skeleton">
-            <i className="fas fa-clipboard-check" />
+            <i className="fas fa-clipboard-check icon-margin-right" />
           </Tooltip>
         ) : null;
 

@@ -4,7 +4,8 @@ import Markdown from "react-remarkable";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
-type Props = {};
+import { EmptyObject } from "types/globals";
+type Props = EmptyObject;
 type State = {
   operatorData: string;
   defaultOrganization: APIOrganization | null | undefined;

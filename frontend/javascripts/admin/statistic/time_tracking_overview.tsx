@@ -12,6 +12,8 @@ import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
 import ProjectAndAnnotationTypeDropdown from "./project_and_type_dropdown";
 import { isUserAdminOrTeamManager } from "libs/utils";
+import messages from "messages";
+import Toast from "libs/toast";
 
 const { Column } = Table;
 const { RangePicker } = DatePicker;
@@ -183,9 +185,13 @@ function TimeTrackingOverview() {
         presets={rangePresets}
         // TODO fix type error. see time_line_view: type error is commented out.
         onChange={(dates: null | (Dayjs | null)[]) => {
-          if (dates == null) return;
-          dates[0] != null && setStartDate(dates[0].startOf("day"));
-          dates[1] != null && setEndeDate(dates[1].endOf("day"));
+          if (dates == null || dates[0] == null || dates[1] == null) return;
+          if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
+            Toast.error(messages["timetracking.date_range_too_long"]);
+            return;
+          }
+          setStartDate(dates[0].startOf("day"));
+          setEndeDate(dates[1].endOf("day"));
         }}
       />
       <Spin spinning={isFetching} size="large">

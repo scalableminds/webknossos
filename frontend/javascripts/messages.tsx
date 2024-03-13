@@ -9,9 +9,9 @@ import {
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-    DatasetConfiguration & {
-      segmentationOpacity: number;
-    }
+  DatasetConfiguration & {
+    segmentationOpacity: number;
+  }
 >;
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
@@ -163,8 +163,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
-    `This link includes the ${
-      sharingActiveNode ? "active tree node," : ""
+    `This link includes the ${sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
   "tracing.sharing_modal_zarr_information": (
     <span>
@@ -205,10 +204,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
   "tracing.volume_layer_name_includes_invalid_characters": (disallowedCharacters: string) =>
-    `This layer name includes the disallowed character${
-      disallowedCharacters.length > 1 ? "s" : ""
-    } "${disallowedCharacters}". Please remove ${
-      disallowedCharacters.length > 1 ? "them" : "it"
+    `This layer name includes the disallowed character${disallowedCharacters.length > 1 ? "s" : ""
+    } "${disallowedCharacters}". Please remove ${disallowedCharacters.length > 1 ? "them" : "it"
     } to set the layer name.`,
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
@@ -413,7 +410,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
-  "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
+  "timetracking.date_range_too_long": "Please specify a date range of three months or less.",
   "nml.node_outside_tree":
     "NML contains <node ...> tag that is not enclosed by a <thing ...> tag: Node with id",
   "nml.edge_outside_tree":

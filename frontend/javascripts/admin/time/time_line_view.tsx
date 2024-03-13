@@ -256,8 +256,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
   };
 
   handleDateChange = async (dates: DateRange) => {
-    // to ease the load on the server restrict date range selection to a month
-    if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
+    // to ease the load on the server restrict date range selection to three month
+    if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }

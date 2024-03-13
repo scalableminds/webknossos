@@ -22,8 +22,8 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { AnnotationTypeFilters } from "admin/statistic/time_tracking_overview";
-import ProjectAndAnnotationTypeDropdown from "admin/statistic/project_and_type_dropdown";
+import { AnnotationTypeFilterEnum } from "admin/statistic/time_tracking_overview";
+import ProjectAndAnnotationTypeDropdown from "admin/statistic/project_and_annotation_type_dropdown";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -31,8 +31,6 @@ const { RangePicker } = DatePicker;
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 const hourFormatPrecise = "HH:mm:ss";
-
-export type AnnotationType = "Explorational" | "Task" | "Task,Explorational";
 
 type TimeTrackingStats = {
   totalTime: number;
@@ -54,7 +52,7 @@ type State = {
   initialUserId: string | null;
   selectedProjectIds: string[];
   allProjects: APIProject[];
-  annotationType: AnnotationTypeFilters;
+  annotationType: AnnotationTypeFilterEnum;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -106,7 +104,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    annotationType: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY,
+    annotationType: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   };
 
   parseQueryParams() {
@@ -126,11 +124,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
       dateRange = [dayjs(+params.start), dayjs(+params.end)];
     }
     let selectedProjectIds: Array<string> = [];
-    let annotationType = AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY;
+    let annotationType = AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY;
     if (_.has(params, "projectsOrType")) {
       const projectsOrTypeParam = params.projectsOrType;
-      if (Object.values<string>(AnnotationTypeFilters).includes(projectsOrTypeParam)) {
-        annotationType = projectsOrTypeParam as AnnotationTypeFilters;
+      if (Object.values<string>(AnnotationTypeFilterEnum).includes(projectsOrTypeParam)) {
+        annotationType = projectsOrTypeParam as AnnotationTypeFilterEnum;
       } else {
         selectedProjectIds = params.projectsOrType.split(",");
       }
@@ -146,13 +144,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
         this.handleDateChange(dateRange);
       },
     );
-  }
-
-  getProjectOrTypeFilter(selectedProjectIds: string[], annotationType: AnnotationTypeFilters) {
-    if (selectedProjectIds.length > 0) {
-      return selectedProjectIds;
-    }
-    return [annotationType];
   }
 
   async componentDidMount() {
@@ -180,12 +171,15 @@ class TimeLineView extends React.PureComponent<Props, State> {
       isFetchingUsers: true,
     });
     const users = await getEditableUsers();
-    const user = this.state.initialUserId != null ? await getUser(this.state.initialUserId) : null;
-    const projects = await getProjects();
+    const currentUser =
+      this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
+        ? await getUser(this.state.initialUserId)
+        : this.props.activeUser;
+    const allProjects = await getProjects();
     this.setState({
-      user,
+      user: currentUser,
       users,
-      allProjects: projects,
+      allProjects: allProjects,
       isFetchingUsers: false,
     });
   }
@@ -456,10 +450,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
               <FormItem {...formItemLayout} label="Type / Project">
                 <ProjectAndAnnotationTypeDropdown
                   selectedProjectIds={this.state.selectedProjectIds}
-                  setSelectedProjectIdsInParent={(selectedProjectIds: string[]) =>
+                  setSelectedProjectIds={(selectedProjectIds: string[]) =>
                     this.setState({ selectedProjectIds })
                   }
-                  setSelectedAnnotationTypeInParent={(annotationType: AnnotationTypeFilters) =>
+                  setSelectedAnnotationType={(annotationType: AnnotationTypeFilterEnum) =>
                     this.setState({ annotationType })
                   }
                   selectedAnnotationType={this.state.annotationType}

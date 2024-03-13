@@ -10,20 +10,20 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import ProjectAndAnnotationTypeDropdown from "./project_and_type_dropdown";
+import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
 
-const { Column } = Table;
-const { RangePicker } = DatePicker;
-
-const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-export enum AnnotationTypeFilters {
+export enum AnnotationTypeFilterEnum {
   ONLY_ANNOTATIONS_KEY = "Explorational",
   ONLY_TASKS_KEY = "Task",
   TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
 }
+const { Column } = Table;
+const { RangePicker } = DatePicker;
+
+const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 
 type TimeEntry = {
   user: {
@@ -53,7 +53,7 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const isFeatureAllowed = useFetch(
+  const mayUserAccessView = useFetch(
     async () => {
       const activeUser = await getActiveUser();
       return isUserAdminOrTeamManager(activeUser);
@@ -63,7 +63,7 @@ function TimeTrackingOverview() {
   );
   const [allTeams, allProjects, allTimeEntries] = useFetch(
     async () => {
-      if (!isFeatureAllowed) return [[], [], []];
+      if (!mayUserAccessView) return [[], [], []];
       setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
       const timeEntriesURL = getTimeEntryUrl(
@@ -77,12 +77,12 @@ function TimeTrackingOverview() {
       return [allTeams, allProjects, allTimeEntries];
     },
     [[], [], []],
-    [isFeatureAllowed],
+    [mayUserAccessView],
   );
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
   const [selectedTypes, setSelectedTypes] = useState(
-    AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY,
+    AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   );
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
@@ -95,12 +95,12 @@ function TimeTrackingOverview() {
   }, [selectedProjectIds, selectedTypes, allProjects.length]);
   const filteredTimeEntries = useFetch(
     async () => {
-      if (!isFeatureAllowed) return []; // TODO i dont know whether there is a nicer way to deal with this, other components seem to handle it similarly
+      if (!mayUserAccessView) return []; // TODO i dont know whether there is a nicer way to deal with this, other components seem to handle it similarly
       setIsFetching(true);
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
       if (filteredTeams.length === 0) return;
-      const projectFilterNeeded = selectedTypes === AnnotationTypeFilters.ONLY_TASKS_KEY;
+      const projectFilterNeeded = selectedTypes === AnnotationTypeFilterEnum.ONLY_TASKS_KEY;
       let filteredProjects = selectedProjectIds;
       if (projectFilterNeeded && selectedProjectIds.length === 0)
         // If timespans for all tasks should be shown, all project ids need to be passed in the request.
@@ -123,7 +123,7 @@ function TimeTrackingOverview() {
       startDate,
       endDate,
       allTimeEntries,
-      isFeatureAllowed,
+      mayUserAccessView,
     ],
   );
   const filterStyle = { marginInline: 10 };
@@ -155,8 +155,8 @@ function TimeTrackingOverview() {
   };
 
   const rangePresets: TimeRangePickerProps["presets"] = [
-    { label: "Last 7 Days", value: [dayjs().subtract(7, "d").startOf("day"), dayjs()] },
-    { label: "Last 30 Days", value: [dayjs().subtract(30, "d").startOf("day"), dayjs()] },
+    { label: "Last 7 Days", value: [dayjs().subtract(7, "d").startOf("day"), currentTime] },
+    { label: "Last 30 Days", value: [dayjs().subtract(30, "d").startOf("day"), currentTime] },
   ];
 
   return (
@@ -169,9 +169,9 @@ function TimeTrackingOverview() {
     >
       <FilterOutlined />
       <ProjectAndAnnotationTypeDropdown
-        setSelectedProjectIdsInParent={setSelectedProjectIds}
+        setSelectedProjectIds={setSelectedProjectIds}
         selectedProjectIds={selectedProjectIds}
-        setSelectedAnnotationTypeInParent={setSelectedTypes}
+        setSelectedAnnotationType={setSelectedTypes}
         selectedAnnotationType={selectedTypes}
         style={{ ...filterStyle }}
       />

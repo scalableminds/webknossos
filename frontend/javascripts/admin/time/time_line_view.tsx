@@ -70,7 +70,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-      1000 &&
+        1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -174,10 +174,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const currentUser =
       this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
         ? await getUser(this.state.initialUserId).catch((err) => {
-          Toast.error("User not found.");
-          console.error(err.messages[0].error); // TODO is there a more stable way?
-          return null;
-        })
+            Toast.error("User not found.");
+            console.error(err.messages[0].error); // TODO is there a more stable way?
+            return null;
+          })
         : this.props.activeUser;
     const allProjects = await getProjects();
     this.setState({

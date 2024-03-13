@@ -70,7 +70,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-        1000 &&
+      1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -195,8 +195,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
-          this.state.selectedProjectIds,
           this.state.annotationType,
+          this.state.selectedProjectIds,
         ),
       );
       this.setState(

@@ -42,6 +42,7 @@ test("getTimeTrackingForUser", async (t) => {
     activeUser.id,
     dayjs("20180101", "YYYYMMDD"),
     dayjs("20181001", "YYYYMMDD"),
+    "Task",
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, {
@@ -55,6 +56,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
     idUserC,
     dayjs("20160401", "YYYYMMDD"),
     dayjs("20160420", "YYYYMMDD"),
+    "Task",
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, {

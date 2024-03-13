@@ -249,7 +249,7 @@ export async function revokeAuthToken(): Promise<void> {
 export async function getLoggedTimes(
   userID: string | null | undefined,
 ): Promise<Array<APITimeInterval>> {
-  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime";
+  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime"; //todo second case doesnt exist
   const response: APIUserLoggedTime = await Request.receiveJSON(url);
   return response.loggedTime;
 }
@@ -1951,7 +1951,6 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-
   day: dayjs.Dayjs,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
@@ -1968,8 +1967,8 @@ export async function getTimeTrackingForUser(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-  annotationTypes?: "Explorational" | "Task" | "Task,Explorational",
 ): Promise<Array<APITimeTracking>> {
   const params = new URLSearchParams();
   params.append("startDate", startDate.valueOf().toString());

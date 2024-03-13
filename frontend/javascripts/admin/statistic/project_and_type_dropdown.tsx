@@ -7,12 +7,12 @@ import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
 
 type ProjectAndTypeDropdownProps = {
-  selectedProjectIds: string[],
-  setSelectedProjectIdsInParent: (projectIds: string[]) => void,
-  selectedAnnotationType: AnnotationTypeFilters,
-  setSelectedAnnotationTypeInParent: (type: AnnotationTypeFilters) => void,
-  style?: {}
-}
+  selectedProjectIds: string[];
+  setSelectedProjectIdsInParent: (projectIds: string[]) => void;
+  selectedAnnotationType: AnnotationTypeFilters;
+  setSelectedAnnotationTypeInParent: (type: AnnotationTypeFilters) => void;
+  style?: {};
+};
 
 function ProjectAndAnnotationTypeDropdown({
   selectedProjectIds,
@@ -27,7 +27,6 @@ function ProjectAndAnnotationTypeDropdown({
       const activeUser = await getActiveUser();
       if (!isUserAdminOrTeamManager(activeUser)) return [];
       return await getProjects();
-
     },
     [],
     [],
@@ -42,7 +41,10 @@ function ProjectAndAnnotationTypeDropdown({
   }, [selectedProjectIds, selectedAnnotationType]);
 
   const getTaskFilterOptions = (allProjects: APIProject[]) => {
-    const additionalProjectFilters: { label: string, options: Array<{ label: string, value: string }> } = {
+    const additionalProjectFilters: {
+      label: string;
+      options: Array<{ label: string; value: string }>;
+    } = {
       label: "Filter types",
       options: [
         { label: "Tasks & Annotations", value: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY },
@@ -56,14 +58,12 @@ function ProjectAndAnnotationTypeDropdown({
         value: project.id,
       };
     });
-    let allOptions = [
-      additionalProjectFilters];
+    let allOptions = [additionalProjectFilters];
 
     if (mappedProjects.length > 0) {
       allOptions.push({ label: "Filter projects (only tasks)", options: mappedProjects });
     }
     return allOptions;
-
   };
 
   const setSelectedProjects = async (_prevSelection: string[], selectedValue: string) => {

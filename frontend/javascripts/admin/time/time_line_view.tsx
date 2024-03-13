@@ -72,7 +72,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-      1000 &&
+        1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -106,7 +106,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     initialUserId: null,
     selectedProjectIds: [],
     allProjects: [],
-    annotationType: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY
+    annotationType: AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY,
   };
 
   parseQueryParams() {
@@ -167,7 +167,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async componentDidUpdate(_prevProps: Props, prevState: State) {
-    if (prevState.annotationType !== this.state.annotationType || prevState.selectedProjectIds !== this.state.selectedProjectIds) {
+    if (
+      prevState.annotationType !== this.state.annotationType ||
+      prevState.selectedProjectIds !== this.state.selectedProjectIds
+    ) {
       await this.fetchTimeTrackingData();
     }
   }
@@ -213,7 +216,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState({
       isLoading: false,
     });
-  }
+  };
 
   calculateStats() {
     this.setState((prevState) => {
@@ -453,8 +456,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
               <FormItem {...formItemLayout} label="Type / Project">
                 <ProjectAndAnnotationTypeDropdown
                   selectedProjectIds={this.state.selectedProjectIds}
-                  setSelectedProjectIdsInParent={(selectedProjectIds: string[]) => this.setState({ selectedProjectIds })}
-                  setSelectedAnnotationTypeInParent={(annotationType: AnnotationTypeFilters) => this.setState({ annotationType })}
+                  setSelectedProjectIdsInParent={(selectedProjectIds: string[]) =>
+                    this.setState({ selectedProjectIds })
+                  }
+                  setSelectedAnnotationTypeInParent={(annotationType: AnnotationTypeFilters) =>
+                    this.setState({ annotationType })
+                  }
                   selectedAnnotationType={this.state.annotationType}
                 />
               </FormItem>

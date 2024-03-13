@@ -53,10 +53,14 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const isFeatureAllowed = useFetch(async () => {
-    const activeUser = await getActiveUser();
-    return isUserAdminOrTeamManager(activeUser);
-  }, false, []);
+  const isFeatureAllowed = useFetch(
+    async () => {
+      const activeUser = await getActiveUser();
+      return isUserAdminOrTeamManager(activeUser);
+    },
+    false,
+    [],
+  );
   const [allTeams, allProjects, allTimeEntries] = useFetch(
     async () => {
       if (!isFeatureAllowed) return [[], [], []];
@@ -77,14 +81,15 @@ function TimeTrackingOverview() {
   );
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
-  const [selectedTypes, setSelectedTypes] = useState(AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY);
+  const [selectedTypes, setSelectedTypes] = useState(
+    AnnotationTypeFilters.TASKS_AND_ANNOTATIONS_KEY,
+  );
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
   useEffect(() => {
     if (selectedProjectIds.length > 0 && selectedProjectIds.length < allProjects.length) {
       setProjectOrTypeQueryParam(selectedProjectIds.join(","));
-    }
-    else {
+    } else {
       setProjectOrTypeQueryParam(selectedTypes);
     }
   }, [selectedProjectIds, selectedTypes]);
@@ -111,7 +116,15 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     allTimeEntries,
-    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTimeEntries, isFeatureAllowed],
+    [
+      selectedTeams,
+      selectedTypes,
+      selectedProjectIds,
+      startDate,
+      endDate,
+      allTimeEntries,
+      isFeatureAllowed,
+    ],
   );
   const filterStyle = { marginInline: 10 };
 

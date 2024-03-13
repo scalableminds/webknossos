@@ -9,9 +9,9 @@ import {
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-  DatasetConfiguration & {
-    segmentationOpacity: number;
-  }
+    DatasetConfiguration & {
+      segmentationOpacity: number;
+    }
 >;
 
 export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
@@ -163,7 +163,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
-    `This link includes the ${sharingActiveNode ? "active tree node," : ""
+    `This link includes the ${
+      sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
   "tracing.sharing_modal_zarr_information": (
     <span>
@@ -204,8 +205,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
   "tracing.volume_layer_name_includes_invalid_characters": (disallowedCharacters: string) =>
-    `This layer name includes the disallowed character${disallowedCharacters.length > 1 ? "s" : ""
-    } "${disallowedCharacters}". Please remove ${disallowedCharacters.length > 1 ? "them" : "it"
+    `This layer name includes the disallowed character${
+      disallowedCharacters.length > 1 ? "s" : ""
+    } "${disallowedCharacters}". Please remove ${
+      disallowedCharacters.length > 1 ? "them" : "it"
     } to set the layer name.`,
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",

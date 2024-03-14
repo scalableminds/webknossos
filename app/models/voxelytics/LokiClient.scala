@@ -81,6 +81,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   def queryLogsBatched(runName: String,
                        organizationId: ObjectId,
+                       organizationName: String,
                        taskName: Option[String],
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
@@ -94,6 +95,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       for {
         headBatch <- queryLogs(runName,
                                organizationId,
+                               organizationName,
                                taskName,
                                minLevel,
                                currentStartTime,
@@ -108,6 +110,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               tailBatch <- queryLogsBatched(
                 runName,
                 organizationId,
+                organizationName,
                 taskName,
                 minLevel,
                 startTime,
@@ -123,6 +126,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             tailBatch <- queryLogsBatched(
               runName,
               organizationId,
+              organizationName,
               taskName,
               minLevel,
               startTime,
@@ -139,6 +143,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
 
   private def queryLogs(runName: String,
                         organizationId: ObjectId,
+                        organizationName: String,
                         taskName: Option[String],
                         minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
@@ -179,12 +184,12 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       } yield logEntries
     } else Fox.successful(List())
 
-  def bulkInsertBatched(logEntries: List[JsValue], organizationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+  def bulkInsertBatched(logEntries: List[JsValue], organizationName: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationId))
+      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationName))
     } yield ()
 
-  private def bulkInsert(logEntries: List[JsValue], organizationId: ObjectId)(
+  private def bulkInsert(logEntries: List[JsValue], organizationName: String)(
       implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {
@@ -243,7 +248,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                   "vx_run_name" -> keyValueTuple._1._2,
                   "pid" -> keyValueTuple._1._3,
                   "wk_url" -> wkConf.Http.uri,
-                  "wk_org" -> organizationId.id
+                  "wk_org" -> organizationName
                 ),
                 "values" -> JsArray(values)
             ))

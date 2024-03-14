@@ -84,7 +84,7 @@ test.serial("transferTask()", async (t) => {
 });
 const newTask = {
   boundingBox: null,
-  dataSet: "confocal-multi_knossos",
+  dataset: "confocal-multi_knossos",
   editPosition: [1, 2, 3],
   editRotation: [4, 5, 6],
   neededExperience: {
@@ -97,7 +97,7 @@ const newTask = {
   taskTypeId: "570b9f4c2a7c0e4c008da6ee",
 };
 test.serial("createTasks() and deleteTask()", async (t) => {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataset: string; editPo... Remove this comment to see the full error message
   const createTaskResponse = await api.createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
@@ -116,7 +116,7 @@ test.serial("createTasks() and deleteTask()", async (t) => {
   t.true(true);
 });
 test.serial("requestTask()", async (t) => {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataset: string; editPo... Remove this comment to see the full error message
   const createTaskResponse = await api.createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);

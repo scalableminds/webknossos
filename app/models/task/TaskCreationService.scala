@@ -74,7 +74,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataset <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataset, organizationId)
+      dataset <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
@@ -133,7 +133,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         .getOrElse(
           tracingStoreClient.saveSkeletonTracing(
             annotationService.createSkeletonTracingBase(
-              params.dataset,
+              params.dataSet,
               params.boundingBox,
               params.editPosition,
               params.editRotation
@@ -154,7 +154,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         .getOrElse(
           annotationService
             .createVolumeTracingBase(
-              params.dataset,
+              params.dataSet,
               organizationId,
               params.boundingBox,
               params.editPosition,
@@ -175,7 +175,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         skeletonTracingOpt = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           Some(
             annotationService.createSkeletonTracingBase(
-              params.dataset,
+              params.dataSet,
               params.boundingBox,
               params.editPosition,
               params.editRotation
@@ -195,7 +195,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
             .createVolumeTracingBase(
-              params.dataset,
+              params.dataSet,
               organizationId,
               params.boundingBox,
               params.editPosition,
@@ -318,7 +318,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               case Full(params) =>
                 val skeletonBox = Full(
                   skeleton.openOr(
-                    annotationService.createSkeletonTracingBase(params.dataset,
+                    annotationService.createSkeletonTracingBase(params.dataSet,
                                                                 params.boundingBox,
                                                                 params.editPosition,
                                                                 params.editRotation)))
@@ -327,7 +327,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                   .openOr(
                     annotationService
                       .createVolumeTracingBase(
-                        params.dataset,
+                        params.dataSet,
                         organizationId,
                         params.boundingBox,
                         params.editPosition,
@@ -385,7 +385,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } else {
       for {
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
-        firstDatasetName <- fullTasks.headOption.map(_._1.dataset).toFox
+        firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
         dataset <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
           "dataset.notFound",
@@ -454,7 +454,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         datasetName: String): Boolean =
       requestedTasksRest match {
         case List()       => true
-        case head :: tail => head._1.dataset == datasetName && allOnSameDatasetIter(tail, datasetName)
+        case head :: tail => head._1.dataSet == datasetName && allOnSameDatasetIter(tail, datasetName)
       }
 
     if (allOnSameDatasetIter(requestedTasks, firstDatasetName))

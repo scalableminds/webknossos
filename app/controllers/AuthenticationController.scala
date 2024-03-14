@@ -244,18 +244,18 @@ class AuthenticationController @Inject()(
    */
 
   def accessibleBySwitching(organizationName: Option[String],
-                            dataSetName: Option[String],
+                            datasetName: Option[String],
                             annotationId: Option[String],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperUser)
-          accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationId, workflowHash)
+          accessibleBySwitchingForSuperUser(organizationName, datasetName, annotationId, workflowHash)
         else
           accessibleBySwitchingForMultiUser(request.identity._multiUser,
                                             organizationName,
-                                            dataSetName,
+                                            datasetName,
                                             annotationId,
                                             workflowHash)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.

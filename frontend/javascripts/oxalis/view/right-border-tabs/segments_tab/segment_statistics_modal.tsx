@@ -106,7 +106,7 @@ export function SegmentStatisticsModal({
 }: Props) {
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const datasetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   const additionalCoordinates = useSelector(
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
@@ -150,7 +150,7 @@ export function SegmentStatisticsModal({
             );
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInNm3 = voxelToNm3(
-              dataSetScale,
+              datasetScale,
               layersFinestResolution,
               currentSegmentSizeInVx,
             );

@@ -1218,7 +1218,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         const tracingStoreUrl = state.tracing.tracingStore.url;
         const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
         const layersFinestResolution = magInfo.getFinestResolution();
-        const dataSetScale = state.dataset.dataSource.scale;
+        const datasetScale = state.dataset.dataSource.scale;
         const additionalCoordinates = state.flycam.additionalCoordinates;
         const [segmentSize] = await getSegmentVolumes(
           tracingStoreUrl,
@@ -1240,7 +1240,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
         return [
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,

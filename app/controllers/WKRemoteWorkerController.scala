@@ -7,6 +7,7 @@ import models.job.JobCommand.JobCommand
 import javax.inject.Inject
 import models.job._
 import models.voxelytics.VoxelyticsDAO
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
@@ -83,8 +84,14 @@ class WKRemoteWorkerController @Inject()(
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
         jobIdParsed <- ObjectId.fromString(id)
-        organizationId <- jobDAO.organizationIdForJobId(jobIdParsed)
-        _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, request.body)
+        organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
+        workflowHash = request.body
+        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox
+        _ <- existingWorkflowBox match {
+          case Full(_)    => Fox.successful(())
+          case Empty      => voxelyticsDAO.upsertWorkflow(workflowHash, "initializing worker workflow", organizationId)
+          case f: Failure => f.toFox
+        }
         _ <- jobDAO.updateVoxelyticsWorkflow(jobIdParsed, request.body)
       } yield Ok
   }

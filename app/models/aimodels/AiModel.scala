@@ -19,16 +19,16 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: ObjectId,
+                   _organization: ObjectId, // TODO drop this, is redundant to user?
                    _dataStore: String,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
                    name: String,
                    comment: String,
-                   created: Instant,
-                   modified: Instant,
-                   isDeleted: Boolean)
+                   created: Instant = Instant.now,
+                   modified: Instant = Instant.now,
+                   isDeleted: Boolean = false)
 
 class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                dataStoreService: DataStoreService,

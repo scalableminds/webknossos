@@ -18,7 +18,8 @@ import scala.concurrent.ExecutionContext
 case class RunTrainingParameters(trainingAnnotationIds: List[ObjectId],
                                  name: String,
                                  comment: String,
-                                 dataStoreName: String)
+                                 dataStoreName: String,
+                                 workflow_yaml: Option[String])
 
 object RunTrainingParameters {
   implicit val jsonFormat: OFormat[RunTrainingParameters] = Json.format[RunTrainingParameters]
@@ -53,7 +54,7 @@ class AiModelController @Inject()(
         dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
         trainingAnnotations <- Fox.serialCombined(request.body.trainingAnnotationIds)(annotationDAO.findOne)
         jobCommand = JobCommand.train_model
-        commandArgs = Json.obj()
+        commandArgs = Json.obj("training_annotations" -> trainingAnnotations.map(_._id).mkString(","))
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(

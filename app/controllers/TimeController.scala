@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType
 import models.annotation.AnnotationType.AnnotationType
 
+import scala.collection.immutable.ListMap
 import javax.inject.Inject
 import models.user._
 import models.user.time.{Day, Interval, Month, TimeSpan, TimeSpanDAO, TimeSpanService}
@@ -18,6 +19,8 @@ import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.math.Ordered.orderingToOrdered
 
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -35,11 +38,13 @@ class TimeController @Inject()(userService: UserService,
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).futureBox
-        loggedTimeAsMap = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth, timeSpansBox)
+        timesGrouped: Map[Month, Duration] = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth,
+                                                                                     timeSpansBox)
+        timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1): _*)
       } yield {
         JsonOk(
           Json.obj("loggedTime" ->
-            loggedTimeAsMap.map {
+            timesGroupedSorted.map {
               case (paymentInterval, duration) =>
                 Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
             }))

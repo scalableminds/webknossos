@@ -128,7 +128,7 @@ function CreateAnimationModal(props: Props) {
   const validateAnimationOptions = (
     colorLayer: APIDataLayer,
     selectedBoundingBox: BoundingBoxType,
-    meshSegmentIds: number[],
+    meshes: MeshInformation[],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
 
@@ -151,7 +151,7 @@ function CreateAnimationModal(props: Props) {
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
     if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
-    const isTooManyMeshes = meshSegmentIds.length > MAX_MESHES_PER_ANIMATION;
+    const isTooManyMeshes = meshes.length > MAX_MESHES_PER_ANIMATION;
     if (isTooManyMeshes)
       errorMessages.push(
         `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
@@ -172,8 +172,7 @@ function CreateAnimationModal(props: Props) {
     )!.boundingBox;
 
     // Submit currently visible pre-computed meshes
-    let meshSegmentIds: number[] = [];
-    let meshFileName: string | undefined;
+    let meshes: MeshInformation[] = [];
     let segmentationLayerName: string | undefined;
 
     const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
@@ -183,13 +182,10 @@ function CreateAnimationModal(props: Props) {
       if (availableMeshes == null) {
         throw new Error("There is no mesh data in localSegmentationData.");
       }
-      meshSegmentIds = Object.values(availableMeshes as Record<number, MeshInformation>)
-        .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
-        .map((mesh) => mesh.segmentId);
-
-      const currentMeshFile =
-        state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile;
-      meshFileName = currentMeshFile?.meshFileName;
+      const axis = "";
+      meshes = Object.values(availableMeshes[axis] as Record<number, MeshInformation>).filter(
+        (mesh) => mesh.isVisible,
+      );
 
       if (visibleSegmentationLayer.fallbackLayerInfo) {
         segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;
@@ -210,8 +206,7 @@ function CreateAnimationModal(props: Props) {
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
       segmentationLayerName,
-      meshFileName,
-      meshSegmentIds,
+      meshes,
       intensityMin,
       intensityMax,
       magForTextures,
@@ -221,7 +216,7 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, boundingBox, meshSegmentIds)) return;
+    if (!validateAnimationOptions(colorLayer, boundingBox, meshes)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 

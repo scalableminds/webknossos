@@ -164,8 +164,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           JOIN webknossos.users_ u ON ts._user = u._id
           JOIN webknossos.multiusers_ mu ON u._multiuser = mu._id
           LEFT JOIN webknossos.tasks_ t ON a._task = t._id
-          LEFT JOIN webknossos.projects_ p ON t._project = p._id
+          LEFT JOIN webknossos.projects_ p ON t._project = p._id -- no fanout effect because every annotation can have at most one task and project
           WHERE $projectQuery
+          AND u._id IN ${SqlToken.tupleFromList(users)}
           AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
           AND ts.time > 0
           AND ts.created >= $start

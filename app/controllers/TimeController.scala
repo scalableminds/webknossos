@@ -170,11 +170,12 @@ class TimeController @Inject()(userService: UserService,
           typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
         _ <- bool2Fox(teamIdsValidated.nonEmpty) ?~> "teamListEmpty"
         projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
-        users <- userDAO.findAllByTeams(teamIdsValidated)
-        notUnlistedUsers = users.filter(!_.isUnlisted)
+        usersByTeams <- userDAO.findAllByTeams(teamIdsValidated)
+        admins <- userDAO.findAdminsByOrg(request.identity._organization)
+        usersFiltered = (usersByTeams ++ admins).distinct.filter(!_.isUnlisted)
         usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
                                                          Instant(end),
-                                                         notUnlistedUsers.map(_._id),
+                                                         usersFiltered.map(_._id),
                                                          annotationTypesValidated,
                                                          projectIdsValidated)
       } yield Ok(Json.toJson(usersWithTimesJs))

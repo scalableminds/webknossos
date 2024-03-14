@@ -321,6 +321,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       compactInfos = r.toList
     } yield (users, compactInfos)
 
+  // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teamIds.isEmpty) Fox.successful(List())
     else
@@ -344,12 +345,25 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""select $columns
-                   from $existingCollectionName
+                     from $existingCollectionName
+                     where $accessQuery
+                     and (isDatasetManager or isAdmin)
+                     and not isDeactivated
+                     and _organization = $organizationId
+                     order by _id""".as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAdminsByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"""SELECT $columns
+                   FROM $existingCollectionName
                    where $accessQuery
-                   and (isDatasetManager or isAdmin)
-                   and not isDeactivated
-                   and _organization = $organizationId
-                   order by _id""".as[UsersRow])
+                   AND isAdmin
+                   AND NOT isDeactivated
+                   AND _organization = $organizationId
+                   ORDER BY _id""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

@@ -453,7 +453,7 @@ class EditableMappingService @Inject()(
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
-      datasetName = remoteFallbackLayer.dataSetName,
+      datasetName = remoteFallbackLayer.datasetName,
       trees = trees
     )
     skeleton.toByteArray

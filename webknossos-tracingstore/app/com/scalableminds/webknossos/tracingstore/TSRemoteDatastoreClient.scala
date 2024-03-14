@@ -140,9 +140,9 @@ class TSRemoteDatastoreClient @Inject()(
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.datasetName)
     } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
+      s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.datasetName}/layers/${remoteLayer.layerName}"
 
   private def dataStoreUriWithCache(organizationName: String, datasetName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(

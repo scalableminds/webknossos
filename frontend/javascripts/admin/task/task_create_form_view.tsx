@@ -55,7 +55,7 @@ const fullWidth = {
 };
 const maxDisplayedTasksCount = 50;
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,dataset,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 type Props = {
   taskId: string | null | undefined;
   history: RouteComponentProps["history"];
@@ -82,7 +82,7 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    dataSet,
+    dataset,
     type,
     neededExperience,
     editPosition,
@@ -102,7 +102,7 @@ export function taskToText(task: APITask) {
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
   const taskAsString =
-    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${id},${dataset},${type.id},${neededExperienceAsString},${editPositionAsString},` +
     `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId},${creationInfoOrEmpty}`;
   return taskAsString;
 }

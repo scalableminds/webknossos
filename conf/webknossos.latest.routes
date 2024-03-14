@@ -27,7 +27,7 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                                       controllers.AuthenticationController.deleteToken()
 GET           /auth/switch                                                                      controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                                        controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
+GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], datasetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
 POST          /auth/sendInvites                                                                 controllers.AuthenticationController.sendInvites()
 POST          /auth/startResetPassword                                                          controllers.AuthenticationController.handleStartResetPassword()
 POST          /auth/changePassword                                                              controllers.AuthenticationController.changePassword()
@@ -43,10 +43,10 @@ POST          /auth/createUserInOrganization/:organizationName                  
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()
 PUT           /user/userConfiguration                                                           controllers.ConfigurationController.update()
-POST          /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
-PUT           /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
+POST          /datasetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
+PUT           /datasetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
+GET           /datasetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
+PUT           /datasetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
 
 # Users
 POST          /user/tasks/request                                                               controllers.TaskController.request()

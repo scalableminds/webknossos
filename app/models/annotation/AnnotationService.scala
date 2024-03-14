@@ -943,7 +943,7 @@ class AnnotationService @Inject()(
       annotationSource = AnnotationSource(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
-        dataSetName = dataset.name,
+        datasetName = dataset.name,
         organizationName = organization.name,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

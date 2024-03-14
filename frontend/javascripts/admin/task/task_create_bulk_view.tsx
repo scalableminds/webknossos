@@ -14,7 +14,7 @@ const { TextArea } = Input;
 export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
-  readonly dataSet: string;
+  readonly dataset: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly neededExperience: {
@@ -68,7 +68,7 @@ function TaskCreateBulkView() {
 
     if (
       !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.dataSet) ||
+      !_.isString(task.dataset) ||
       !_.isString(task.taskTypeId) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
@@ -110,7 +110,7 @@ function TaskCreateBulkView() {
 
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
-    const dataSet = words[0];
+    const dataset = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
     const minExperience = parseInt(words[3]);
@@ -149,7 +149,7 @@ function TaskCreateBulkView() {
             depth,
           };
     return {
-      dataSet,
+      dataset,
       taskTypeId,
       scriptId,
       pendingInstances,
@@ -257,7 +257,7 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma seperated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
             depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
             baseAnnotationId]

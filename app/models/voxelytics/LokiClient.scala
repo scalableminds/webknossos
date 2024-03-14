@@ -157,7 +157,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         Some(s"""level=~"(${levels.mkString("|")})"""")
       ).flatten.mkString(" | ")
       val logQL =
-        s"""{vx_run_name="$runName",wk_org="${organizationId.id}",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+        s"""{vx_run_name="$runName",wk_org=~"${organizationId.id}|$organizationName",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
 
       val queryString =
         List("query" -> logQL,

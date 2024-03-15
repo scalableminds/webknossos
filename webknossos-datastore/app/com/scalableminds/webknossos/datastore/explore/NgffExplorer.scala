@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   LayerViewConfiguration
 }
-import play.api.libs.json.{JsArray, JsNumber}
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
@@ -79,14 +79,33 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
           (viewConfig: LayerViewConfiguration, channelName: String) = channelAttributes match {
             case Some(attributes) => {
-              val color = attributes(channelIndex).color
+              val thisChannelAttributes = attributes(channelIndex)
               val attributeName: String =
-                attributes(channelIndex).name
+                thisChannelAttributes.name
                   .map(TextUtils.normalizeStrong(_).getOrElse(name).replaceAll(" ", ""))
                   .getOrElse(name)
-              (color match {
-                case Some(c) => Seq(("color" -> JsArray(c.toArrayOfInts.map(i => JsNumber(BigDecimal(i)))))).toMap
-                case None    => LayerViewConfiguration.empty
+
+              val layerViewConfiguration = (thisChannelAttributes.color match {
+                case Some(c) => Seq("color" -> JsArray(c.toArrayOfInts.map(i => JsNumber(BigDecimal(i)))))
+                case None    => Seq()
+              }) ++ (thisChannelAttributes.window match {
+                case Some(w) =>
+                  Seq("intensityRange" -> Json.arr(JsNumber(w.start), JsNumber(w.end)),
+                      "min" -> JsNumber(w.min),
+                      "max" -> JsNumber(w.max))
+                case None => Seq()
+              }) ++ (thisChannelAttributes.inverted match {
+                case Some(i) => Seq("isInverted" -> JsBoolean(i))
+                case None    => Seq()
+              }) ++ (thisChannelAttributes.active match {
+                case Some(a) => Seq("isDisabled" -> JsBoolean(!a))
+                case None    => Seq()
+              })
+
+              (if (layerViewConfiguration.isEmpty) {
+                LayerViewConfiguration.empty
+              } else {
+                layerViewConfiguration.toMap
               }, attributeName)
             }
             case None => (LayerViewConfiguration.empty, name)
@@ -136,7 +155,11 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     } yield axes
   }
 
-  private case class ChannelAttributes(color: Option[Color], name: Option[String])
+  private case class ChannelAttributes(color: Option[Color],
+                                       name: Option[String],
+                                       window: Option[NgffChannelWindow],
+                                       inverted: Option[Boolean],
+                                       active: Option[Boolean])
 
   private def getChannelAttributes(
       ngffHeader: NgffMetadata
@@ -145,8 +168,13 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       case Some(value) =>
         Some(
           value.channels.map(omeroChannelAttributes =>
-            ChannelAttributes(omeroChannelAttributes.color.map(Color.fromHTML(_).getOrElse(Color(1, 1, 1, 0))),
-                              omeroChannelAttributes.label)))
+            ChannelAttributes(
+              omeroChannelAttributes.color.map(Color.fromHTML(_).getOrElse(Color(1, 1, 1, 0))),
+              omeroChannelAttributes.label,
+              omeroChannelAttributes.window,
+              omeroChannelAttributes.inverted,
+              omeroChannelAttributes.active
+          )))
       case None => None
     }
 
@@ -259,7 +287,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
   /*
    * Guesses the voxel size from all transforms of an ngff multiscale object.
    * Note: the returned voxel size is in axis units and should later be combined with those units
-   *   to get a webKnossos-typical voxel size in nanometers.
+   *   to get a webknossos-typical voxel size in nanometers.
    * Note: allCoordinateTransforms is nested: the inner list has all transforms of one ngff “dataset” (mag in our terminology),
    *   the outer list gathers these for all such “datasets” (mags) of one “multiscale object” (layer)
    */

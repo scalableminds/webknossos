@@ -43,6 +43,7 @@ export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
+export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
@@ -89,6 +90,7 @@ export type VolumeTracingAction =
   | SetLargestSegmentIdAction
   | SetSelectedSegmentsOrGroupAction
   | SetMappingIsEditableAction
+  | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
   | MaybePrefetchEmbeddingAction
@@ -110,6 +112,8 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
+  "SET_MAPPING_IS_EDITABLE",
+  "SET_MAPPING_IS_LOCKED",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -354,6 +358,11 @@ export const dispatchFloodfillAsync = async (
 export const setMappingIsEditableAction = () =>
   ({
     type: "SET_MAPPING_IS_EDITABLE",
+  }) as const;
+
+export const setMappingIsLockedAction = () =>
+  ({
+    type: "SET_MAPPING_IS_LOCKED",
   }) as const;
 
 export const computeQuickSelectForRectAction = (

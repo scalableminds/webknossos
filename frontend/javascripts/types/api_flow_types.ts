@@ -1085,10 +1085,10 @@ export enum MOVIE_RESOLUTIONS {
 }
 
 export type RenderAnimationOptions = {
-  layerName: string;
-  segmentationLayerName?: string;
-  meshes: MeshInformation[];
+  colorLayerName: string;
+  meshes: ({ layerName: string; isSegmentationLayer: boolean } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
+  isViewMode: boolean;
   includeWatermark: boolean;
   intensityMin: number;
   intensityMax: number;

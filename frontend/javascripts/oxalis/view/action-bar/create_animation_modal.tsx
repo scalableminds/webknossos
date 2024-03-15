@@ -31,7 +31,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, ControlModeEnum, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { Model } from "oxalis/singletons";
 import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
@@ -128,7 +128,7 @@ function CreateAnimationModal(props: Props) {
   const validateAnimationOptions = (
     colorLayer: APIDataLayer,
     selectedBoundingBox: BoundingBoxType,
-    meshes: MeshInformation[],
+    meshes: Partial<MeshInformation>[],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
 
@@ -171,28 +171,25 @@ function CreateAnimationModal(props: Props) {
       (bb) => bb.id === selectedBoundingBoxId,
     )!.boundingBox;
 
-    // Submit currently visible pre-computed meshes
-    let meshes: MeshInformation[] = [];
-    let segmentationLayerName: string | undefined;
+    // Submit currently visible pre-computed & ad-hoc meshes
+    const axis = "";
+    const layerNames = Object.keys(state.localSegmentationData);
 
-    const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
+    const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
+      const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
 
-    if (visibleSegmentationLayer) {
-      const availableMeshes = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-      if (availableMeshes == null) {
-        throw new Error("There is no mesh data in localSegmentationData.");
-      }
-      const axis = "";
-      meshes = Object.values(availableMeshes[axis] as Record<number, MeshInformation>).filter(
-        (mesh) => mesh.isVisible,
-      );
-
-      if (visibleSegmentationLayer.fallbackLayerInfo) {
-        segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;
-      } else {
-        segmentationLayerName = visibleSegmentationLayer.name;
-      }
-    }
+      return Object.values(meshInfos)
+        .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
+        .flatMap((meshInfo: MeshInformation) => {
+          const layer = Model.getLayerByName(layerName);
+          const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
+          return {
+            layerName: fullLayerName,
+            isSegmentationLayer: !!layer?.isSegmentation,
+            ...meshInfo,
+          };
+        });
+    });
 
     // Submit the configured min/max intensity info to support float datasets
     const [intensityMin, intensityMax] = getEffectiveIntensityRange(
@@ -202,14 +199,15 @@ function CreateAnimationModal(props: Props) {
     );
 
     const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
+    const isViewMode = state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const animationOptions: RenderAnimationOptions = {
-      layerName: selectedColorLayerName,
-      segmentationLayerName,
+      colorLayerName: selectedColorLayerName,
       meshes,
       intensityMin,
       intensityMax,
       magForTextures,
+      isViewMode,
       boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,

@@ -31,10 +31,10 @@ object CameraPositionSetting extends ExtendedEnumeration {
 }
 
 case class AnimationJobOptions(
-    layerName: String,
+    colorLayerName: String,
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
-    segmentationLayerName: Option[String],
+    isViewMode: Boolean,
     meshes: JsValue,
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
@@ -379,18 +379,17 @@ class JobsController @Inject()(
           _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
-          layerName = animationJobOptions.layerName
-          _ <- datasetService.assertValidLayerName(layerName)
-          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerName)
-          exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
+          colorLayerName = animationJobOptions.colorLayerName
+          _ <- datasetService.assertValidLayerName(colorLayerName)
+          exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$colorLayerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "export_file_name" -> exportFileName,
             "user_auth_token" -> userAuthToken.id,
-            "layer_name" -> animationJobOptions.layerName,
-            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
+            "is_view_mode" -> animationJobOptions.isViewMode,
+            "color_layer_name" -> animationJobOptions.colorLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,

@@ -107,7 +107,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         topLeftStart = buckets(bucketLocalOffset)(1)
         topLeftEnd = buckets(bucketLocalOffset)(2)
         _ <- Fox
-          .bool2Fox(segmentIndex.reader.string().getAttr("/", "dtype_bucket_entries") == "uint16") ~> ("dtype_bucket_entries not supported")
+          .bool2Fox(segmentIndex.reader.string().getAttr("/", "dtype_bucket_entries") == "uint16") ~> "dtype_bucket_entries not supported"
         topLefts = segmentIndex.reader
           .uint16()
           .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)

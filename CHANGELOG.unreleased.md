@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added an action to delete erronous, unimported datasets directly from the dashboard. [#7448](https://github.com/scalableminds/webknossos/pull/7448)
 - Added support for `window`, `active`, `inverted` keys from the `omero` info in the NGFF metadata. [7685](https://github.com/scalableminds/webknossos/pull/7685)
 - Added getSegment function to JavaScript API. Also, createSegmentGroup returns the id of the new group now. [#7694](https://github.com/scalableminds/webknossos/pull/7694)
+- Added support for importing N5 datasets without multiscales metadata. [#7664](https://github.com/scalableminds/webknossos/pull/7664)
 
 ### Changed
 - Datasets stored in WKW format are no longer loaded with memory mapping, reducing memory demands. [#7528](https://github.com/scalableminds/webknossos/pull/7528)

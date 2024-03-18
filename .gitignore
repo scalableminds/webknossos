@@ -76,3 +76,4 @@ coverage-ts
 .bsp
 temp-webknossos-schema**
 conf/application.conf-e
+.env

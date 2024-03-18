@@ -253,6 +253,7 @@ export type VolumeTracing = TracingBase & {
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
   readonly mappingIsEditable?: boolean;
+  readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {

@@ -1086,7 +1086,11 @@ export enum MOVIE_RESOLUTIONS {
 
 export type RenderAnimationOptions = {
   colorLayerName: string;
-  meshes: ({ layerName: string; isSegmentationLayer: boolean } & MeshInformation)[];
+  meshes: ({
+    layerName: string;
+    hasFallbackLayer: boolean;
+    adhoc_mag: Vector3;
+  } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   isViewMode: boolean;
   includeWatermark: boolean;

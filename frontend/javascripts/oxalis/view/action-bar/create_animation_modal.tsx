@@ -11,6 +11,8 @@ import {
   getColorLayers,
   getEffectiveIntensityRange,
   getLayerByName,
+  getResolutionInfo,
+  hasFallbackLayer,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -24,6 +26,7 @@ import {
   MOVIE_RESOLUTIONS,
   APIDataLayer,
   APIJobType,
+  APISegmentationLayer,
 } from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -33,7 +36,6 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { BoundingBoxType, ControlModeEnum, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { Model } from "oxalis/singletons";
 import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
 
 type Props = {
@@ -174,6 +176,7 @@ function CreateAnimationModal(props: Props) {
     // Submit currently visible pre-computed & ad-hoc meshes
     const axis = "";
     const layerNames = Object.keys(state.localSegmentationData);
+    const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
     const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
       const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
@@ -181,11 +184,19 @@ function CreateAnimationModal(props: Props) {
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
         .flatMap((meshInfo: MeshInformation) => {
-          const layer = Model.getLayerByName(layerName);
+          const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
+          const hasAFallbackLayer = hasFallbackLayer(layer);
           const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
+
+          const adhoc_mag_index = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
+            preferredQualityForMeshAdHocComputation,
+          );
+          const adhoc_mag = layer.resolutions[adhoc_mag_index];
+
           return {
             layerName: fullLayerName,
-            isSegmentationLayer: !!layer?.isSegmentation,
+            hasFallbackLayer: hasAFallbackLayer,
+            adhoc_mag,
             ...meshInfo,
           };
         });

@@ -22,7 +22,9 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import ProjectAndAnnotationTypeDropdown, { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
+import ProjectAndAnnotationTypeDropdown, {
+  AnnotationTypeFilterEnum,
+} from "admin/statistic/project_and_annotation_type_dropdown";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -69,7 +71,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-      1000 &&
+        1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -229,19 +231,15 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   fetchDataFromLoggedInUser = () => {
-    this.setState(
-      {
-        user: this.props.activeUser,
-      }
-    );
+    this.setState({
+      user: this.props.activeUser,
+    });
   };
 
   handleUserChange = (userId: string) => {
-    this.setState(
-      (prevState) => ({
-        user: prevState.users.find((u) => u.id === userId),
-      })
-    );
+    this.setState((prevState) => ({
+      user: prevState.users.find((u) => u.id === userId),
+    }));
   };
 
   handleDateChange = async (dates: DateRange) => {

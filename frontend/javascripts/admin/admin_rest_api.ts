@@ -247,9 +247,7 @@ export async function revokeAuthToken(): Promise<void> {
 }
 
 // Used only by the webknossos-libs python client, but tested here in the snapshot tests.
-export async function getLoggedTimes(
-  userID: string,
-): Promise<Array<APITimeInterval>> {
+export async function getLoggedTimes(userID: string): Promise<Array<APITimeInterval>> {
   const url = `/api/users/${userID}/loggedTime`;
   const response: APIUserLoggedTime = await Request.receiveJSON(url);
   return response.loggedTime;

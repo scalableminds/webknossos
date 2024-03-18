@@ -10,7 +10,9 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import ProjectAndAnnotationTypeDropdown, { AnnotationTypeFilterEnum } from "./project_and_annotation_type_dropdown";
+import ProjectAndAnnotationTypeDropdown, {
+  AnnotationTypeFilterEnum,
+} from "./project_and_annotation_type_dropdown";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -49,12 +51,10 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const mayUserAccessView = useSelector(
-    (state: OxalisState) => {
-      const activeUser = state.activeUser;
-      return activeUser != null && isUserAdminOrTeamManager(activeUser);
-    }
-  );
+  const mayUserAccessView = useSelector((state: OxalisState) => {
+    const activeUser = state.activeUser;
+    return activeUser != null && isUserAdminOrTeamManager(activeUser);
+  });
   const [allTeams, allProjects] = useFetch(
     async () => {
       setIsFetching(true);
@@ -101,15 +101,7 @@ function TimeTrackingOverview() {
       return filteredEntries;
     },
     [],
-    [
-      selectedTeams,
-      selectedTypes,
-      selectedProjectIds,
-      startDate,
-      endDate,
-      allTeams,
-      allProjects
-    ],
+    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTeams, allProjects],
   );
   const filterStyle = { marginInline: 10 };
 
@@ -240,7 +232,9 @@ function TimeTrackingOverview() {
         Export to CSV
       </Button>
     </Card>
-  ) : "Sorry, you are not allowed to see this view."
+  ) : (
+    "Sorry, you are not allowed to see this view."
+  );
 }
 
 export default TimeTrackingOverview;

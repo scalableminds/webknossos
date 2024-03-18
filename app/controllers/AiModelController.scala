@@ -17,12 +17,18 @@ import scala.concurrent.ExecutionContext
 
 case class RunTrainingParameters(trainingAnnotationIds: List[ObjectId],
                                  name: String,
-                                 comment: String,
+                                 comment: Option[String],
                                  dataStoreName: String,
                                  workflow_yaml: Option[String])
 
 object RunTrainingParameters {
   implicit val jsonFormat: OFormat[RunTrainingParameters] = Json.format[RunTrainingParameters]
+}
+
+case class UpdateAiModelParameters(name: String, comment: Option[String])
+
+object UpdateAiModelParameters {
+  implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
 }
 
 class AiModelController @Inject()(
@@ -36,7 +42,7 @@ class AiModelController @Inject()(
     extends Controller
     with FoxImplicits {
 
-  def readModelInfo(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readAiModelInfo(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
         _ <- userService.assertIsSuperUser(request.identity)
@@ -82,5 +88,19 @@ class AiModelController @Inject()(
         newAiModelJs <- aiModelService.publicWrites(newAiModel)
       } yield Ok(newAiModelJs)
   }
+
+  def updateAiModelInfo(aiModelId: String): Action[UpdateAiModelParameters] =
+    sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
+      {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity)
+          aiModelIdValidated <- ObjectId.fromString(aiModelId)
+          aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+          _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name, comment = request.body.comment))
+          updatedAiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+          jsResult <- aiModelService.publicWrites(updatedAiModel)
+        } yield Ok(jsResult)
+      }
+    }
 
 }

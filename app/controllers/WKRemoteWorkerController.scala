@@ -10,15 +10,15 @@ import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(
-    jobDAO: JobDAO,
-    jobService: JobService,
-    workerDAO: WorkerDAO,
-    voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
+                                         jobService: JobService,
+                                         workerDAO: WorkerDAO,
+                                         voxelyticsDAO: VoxelyticsDAO,
+                                         wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
@@ -83,6 +83,7 @@ class WKRemoteWorkerController @Inject()(
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         jobIdParsed <- ObjectId.fromString(id)
         organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
         workflowHash = request.body

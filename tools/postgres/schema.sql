@@ -548,7 +548,7 @@ CREATE TABLE webknossos.aiModels(
   _user CHAR(24) NOT NULL,
   _trainingJob CHAR(24),
   name VARCHAR(1024) NOT NULL,
-  comment VARCHAR(1024) NOT NULL,
+  comment VARCHAR(1024),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,

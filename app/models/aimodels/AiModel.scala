@@ -25,7 +25,7 @@ case class AiModel(_id: ObjectId,
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
                    name: String,
-                   comment: String,
+                   comment: Option[String],
                    created: Instant = Instant.now,
                    modified: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -126,4 +126,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _annotation FROM webknossos.aiModel_trainingAnnotations WHERE _aiModel = $aiModelId ORDER BY _annotation"
           .as[ObjectId])
     } yield rows.toList
+
+  def updateOne(a: AiModel): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET name = ${a.name}, comment = ${a.comment} WHERE _id = ${a._id}".asUpdate)
+    } yield ()
+
 }

@@ -6,7 +6,13 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  MissingBucketHeaders,
+  SegmentIndexData
+}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -114,6 +120,57 @@ class TSRemoteDatastoreClient @Inject()(
         } yield result
     )
   }
+
+  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[Boolean] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      hasIndexFile <- rpc(s"$remoteLayerUri/hasSegmentIndex")
+        .addQueryStringOptional("token", userToken)
+        .silent
+        .getWithJsonResponse[Boolean]
+    } yield hasIndexFile
+
+  def querySegmentIndex(remoteFallbackLayer: RemoteFallbackLayer,
+                        segmentId: Long,
+                        mag: Vec3Int,
+                        mappingName: Option[String],
+                        editableMappingTracingId: Option[String],
+                        userToken: Option[String]): Fox[Seq[Vec3Int]] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
+        .addQueryStringOptional("token", userToken)
+        .silent
+        .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](GetSegmentIndexParameters(
+          mag,
+          cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here (since we want to calculate indices later anyway)
+          additionalCoordinates = None,
+          mappingName = mappingName,
+          editableMappingTracingId = editableMappingTracingId
+        ))
+
+      indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
+    } yield indices
+
+  def querySegmentIndexForMultipleSegments(remoteFallbackLayer: RemoteFallbackLayer,
+                                           segmentIds: Seq[Long],
+                                           mag: Vec3Int,
+                                           mappingName: Option[String],
+                                           editableMappingTracingId: Option[String],
+                                           userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
+    for {
+      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      result <- rpc(s"$remoteLayerUri/segmentIndex")
+        .addQueryStringOptional("token", userToken)
+        .silent
+        .postJsonWithJsonResponse[GetMultipleSegmentIndexParameters, Seq[SegmentIndexData]](
+          GetMultipleSegmentIndexParameters(segmentIds.toList,
+                                            mag,
+                                            additionalCoordinates = None,
+                                            mappingName = mappingName,
+                                            editableMappingTracingId = editableMappingTracingId))
+
+    } yield result.map(data => (data.segmentId, data.positions))
 
   def loadFullMeshStl(token: Option[String],
                       remoteFallbackLayer: RemoteFallbackLayer,

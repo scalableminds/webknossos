@@ -68,6 +68,24 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_LAYER_HAS_SEGMENT_INDEX": {
+      const { layerName, hasSegmentIndex } = action;
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            hasSegmentIndex,
+          };
+        } else {
+          return layer;
+        }
+      });
+
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
     case "SET_LAYER_TRANSFORMS": {
       const { layerName, coordinateTransformations } = action;
 

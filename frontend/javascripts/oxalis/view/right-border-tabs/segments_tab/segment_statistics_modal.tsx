@@ -4,10 +4,14 @@ import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
-import { SegmentHierarchyNode, SegmentHierarchyGroup } from "./segments_view_helper";
+import {
+  SegmentHierarchyNode,
+  SegmentHierarchyGroup,
+  getVolumeRequestUrl,
+} from "./segments_view_helper";
 import { api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
@@ -18,6 +22,7 @@ import {
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
 import { pluralize } from "libs/utils";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
@@ -31,8 +36,7 @@ const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
-  tracingId: string;
-  tracingStoreUrl: string;
+  tracingId: string | undefined;
   visibleSegmentationLayer: APISegmentationLayer;
   relevantSegments: Segment[];
   parentGroup: number;
@@ -57,7 +61,7 @@ type SegmentInfo = {
 
 const exportStatisticsToCSV = (
   segmentInformation: Array<SegmentInfo>,
-  tracingId: string,
+  tracingIdOrDatasetName: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
 ) => {
@@ -87,8 +91,8 @@ const exportStatisticsToCSV = (
   const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
-      ? `segmentStatistics_tracing-${tracingId}.csv`
-      : `segmentStatistics_tracing-${tracingId}_group-${groupIdToExport}.csv`;
+      ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
+      : `segmentStatistics_${tracingIdOrDatasetName}_group-${groupIdToExport}.csv`;
   const blob = new Blob([csv], {
     type: "text/plain;charset=utf-8",
   });
@@ -98,15 +102,23 @@ const exportStatisticsToCSV = (
 export function SegmentStatisticsModal({
   onCancel,
   tracingId,
-  tracingStoreUrl,
   visibleSegmentationLayer,
   relevantSegments: segments,
   parentGroup,
   groupTree,
 }: Props) {
+  const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const dataSetScale = dataset.dataSource.scale;
+  // Omit checking that all prerequisites for segment stats (such as a segment index) are
+  // met right here because that should happen before opening the modal.
+  const requestUrl = getVolumeRequestUrl(
+    dataset,
+    tracing,
+    visibleSegmentationLayer.tracingId,
+    visibleSegmentationLayer,
+  );
   const additionalCoordinates = useSelector(
     (state: OxalisState) => state.flycam.additionalCoordinates,
   );
@@ -118,20 +130,31 @@ export function SegmentStatisticsModal({
   const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
-      const segmentStatisticsObjects: Array<SegmentInfo> | null = await Promise.all([
+      if (requestUrl == null) return;
+      const maybeVolumeTracing =
+        tracingId != null ? getVolumeTracingById(tracing, tracingId) : null;
+      const maybeGetMappingName = () => {
+        if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing.mappingName;
+        const mappingInfo = getMappingInfo(
+          temporaryConfiguration.activeMappingByLayer,
+          visibleSegmentationLayer?.name,
+        );
+        return mappingInfo.mappingName;
+      };
+      const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
+          maybeGetMappingName(),
         ),
         getSegmentBoundingBoxes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
           segments.map((segment) => segment.id),
           additionalCoordinates,
+          maybeGetMappingName(),
         ),
       ]).then(
         (response) => {
@@ -236,16 +259,15 @@ export function SegmentStatisticsModal({
       title="Segment Statistics"
       onCancel={onCancel}
       width={700}
-      onOk={() => {
-        if (!isErrorCase) {
-          exportStatisticsToCSV(
-            segmentStatisticsObjects,
-            tracingId,
-            parentGroup,
-            hasAdditionalCoords,
-          );
-        }
-      }}
+      onOk={() =>
+        !isErrorCase &&
+        exportStatisticsToCSV(
+          segmentStatisticsObjects,
+          tracingId || dataset.name,
+          parentGroup,
+          hasAdditionalCoords,
+        )
+      }
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
@@ -256,7 +278,6 @@ export function SegmentStatisticsModal({
           <>
             {hasAdditionalCoords && (
               <Alert
-                className="segments-stats-info-alert"
                 message={`These statistics only refer to the current additional ${pluralize(
                   "coordinate",
                   additionalCoordinates?.length || 0,

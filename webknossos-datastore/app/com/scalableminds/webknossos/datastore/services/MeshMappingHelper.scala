@@ -22,7 +22,6 @@ trait MeshMappingHelper {
       mappingNameForMeshFile: Option[String],
       token: Option[String])(implicit ec: ExecutionContext): Fox[List[Long]] =
     targetMappingName match {
-
       case None =>
         // No mapping selected, assume id matches meshfile
         Fox.successful(List(agglomerateId))

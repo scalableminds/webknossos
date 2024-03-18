@@ -205,10 +205,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
       _ = logger.info(s"Finishing dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id $uploadId...")
-      _ <- Fox.runIf(false)(ensureAllChunksUploaded(uploadId))
+      _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
-      // _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             dataSourceId,
                             datasetNeedsConversion,

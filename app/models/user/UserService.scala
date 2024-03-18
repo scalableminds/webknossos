@@ -154,7 +154,7 @@ class UserService @Inject()(conf: WkConf,
   def joinOrganization(originalUser: User,
                        organizationId: ObjectId,
                        autoActivate: Boolean,
-                       isAdmin: Boolean = false,
+                       isAdmin: Boolean,
                        isUnlisted: Boolean = false,
                        isOrganizationOwner: Boolean = false): Fox[User] =
     for {
@@ -232,7 +232,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
-  def getOpenIdConnectPasswordInfo: PasswordInfo =
+  private def getOpenIdConnectPasswordInfo: PasswordInfo =
     PasswordInfo("Empty", "")
 
   def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

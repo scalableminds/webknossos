@@ -55,6 +55,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed an error in the Loki integration to support Loki 2.9+. [#7684](https://github.com/scalableminds/webknossos/pull/7684)
 
 ### Removed
+- Removed the integration with BrainTracing user databases. [#7693](https://github.com/scalableminds/webknossos/pull/7693)
 
 ### Breaking Changes
 - Updated antd UI library from version 4.24.15 to 5.13.2. Drop support for nodeJs version <18. [#7522](https://github.com/scalableminds/webknossos/pull/7522)

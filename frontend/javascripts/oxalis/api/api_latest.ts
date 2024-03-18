@@ -69,6 +69,7 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
+  getSegmentsForLayer,
   getVolumeDescriptors,
   getVolumeTracingById,
   getVolumeTracingByLayerName,
@@ -585,6 +586,23 @@ class TracingApi {
   }
 
   /**
+   * Gets a segment object within the referenced volume layer. Note that this object
+   * does not support any modifications made to it.
+   *
+   * @example
+   * const segment = api.tracing.getSegment(
+   *   3,
+   *   "volume-layer-id"
+   * );
+   * console.log(segment.groupId)
+   */
+  getSegment(segmentId: number, layerName: string): Segment {
+    const segment = getSegmentsForLayer(Store.getState(), layerName).get(segmentId);
+    // Return a copy to avoid mutations by third-party code.
+    return { ...segment };
+  }
+
+  /**
    * Updates a segment. The segment parameter can contain all properties of a Segment
    * (except for the id) or less.
    *
@@ -635,7 +653,7 @@ class TracingApi {
   }
 
   /**
-   * Renames the segment group referenced by the provided id.
+   * Creates a new segment group and returns its id.
    *
    * @example
    * api.tracing.createSegmentGroup(
@@ -648,7 +666,7 @@ class TracingApi {
     name: string | null = null,
     parentGroupId: number = MISSING_GROUP_ID,
     volumeLayerName?: string,
-  ) {
+  ): number {
     if (parentGroupId == null) {
       // Guard against explicitly passed null or undefined.
       parentGroupId = MISSING_GROUP_ID;
@@ -678,6 +696,8 @@ class TracingApi {
     }
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
+
+    return newGroupId;
   }
 
   /**

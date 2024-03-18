@@ -275,7 +275,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 tracingsWithIds.map(_._1),
                                                                 newId,
                                                                 newVersion = 0L,
-                                                                toCache = !persist)
+                                                                toCache = !persist,
+                                                                token)
             newEditableMappingIdBox <- tracingService
               .mergeEditableMappings(tracingsWithIds, urlOrHeaderToken(token, request))
               .futureBox

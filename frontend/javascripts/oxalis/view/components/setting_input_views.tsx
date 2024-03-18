@@ -15,7 +15,6 @@ import * as React from "react";
 import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import features from "features";
 import messages from "messages";
 
 const ROW_GUTTER = 1;
@@ -384,6 +383,7 @@ type State = {
   text: string;
   name: string;
 };
+
 export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
@@ -489,7 +489,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const exportButtonTooltip = isExportEnabled
       ? "Export data from this bounding box."
       : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = features().jobsEnabled ? (
+    const exportColumn = isExportEnabled ? (
       <Col span={2}>
         <Tooltip title={exportButtonTooltip} placement="topRight">
           <DownloadOutlined onClick={onExport} style={exportIconStyle} />

@@ -98,8 +98,8 @@ function RegistrationViewWkOrg() {
   const history = useHistory();
   return (
     <Row justify="center" align="middle" className="login-view">
-      <Col className="login-content drawing-signup" style={{ width: 1000 }}>
-        <div>
+      <Col>
+        <Card className="login-content drawing-signup" style={{ width: 1000 }}>
           <h3>Sign Up</h3>
           <RegistrationFormWKOrg
             onRegistered={() => {
@@ -113,7 +113,7 @@ function RegistrationViewWkOrg() {
           >
             <Link to="/auth/login">Log in to existing account</Link>
           </p>
-        </div>
+        </Card>
       </Col>
     </Row>
   );

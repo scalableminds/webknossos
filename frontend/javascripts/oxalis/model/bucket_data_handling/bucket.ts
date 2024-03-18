@@ -17,7 +17,7 @@ import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
-export const enum BucketStateEnum {
+export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
   MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
@@ -58,7 +58,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type: "null" = "null";
+  type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -127,7 +127,7 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type: "data" = "data";
+  type = "data" as const;
   elementClass: ElementClass;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
@@ -156,7 +156,7 @@ export class DataBucket {
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
-  cachedValueSet: Set<number | BigInt> | null = null;
+  cachedValueSet: Set<number | bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -633,7 +633,7 @@ export class DataBucket {
     this.cachedValueSet = new Set(this.data);
   }
 
-  containsValue(value: number | BigInt): boolean {
+  containsValue(value: number | bigint): boolean {
     if (this.cachedValueSet == null) {
       this.recomputeValueSet();
     }

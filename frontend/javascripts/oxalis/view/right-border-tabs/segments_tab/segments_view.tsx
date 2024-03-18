@@ -34,7 +34,6 @@ import {
   Tooltip,
   Tree,
 } from "antd";
-import features from "features";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
 import memoizeOne from "memoize-one";
@@ -44,8 +43,8 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
+  getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
-  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -120,8 +119,9 @@ import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -141,7 +141,8 @@ type StateProps = {
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   flycam: Flycam;
-  hasVolumeTracing: boolean;
+  hasVolumeTracing: boolean | undefined;
+  isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
   selectedIds: { segments: number[]; group: number | null };
@@ -177,6 +178,11 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    state.dataset,
+    visibleSegmentationLayer?.name,
+  );
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
@@ -186,6 +192,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     mappingInfo,
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
+    isSegmentIndexAvailable,
     segments,
     segmentGroups,
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
@@ -406,9 +413,15 @@ class SegmentsView extends React.Component<Props, State> {
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
     );
 
-    if (features().jobsEnabled) {
+    if (
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
       this.pollJobData();
     }
+
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -681,13 +694,17 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
 
-    if (!features().jobsEnabled) {
-      title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";
+    if (
+      !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
+      title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
-    } else if (!this.props.dataset.jobsEnabled) {
+    } else if (!this.props.dataset.dataStore.jobsEnabled) {
       title =
-        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
+        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to webknossos.org to use this feature.";
     } else if (this.props.hasVolumeTracing) {
       title = this.props.visibleSegmentationLayer?.fallbackLayer
         ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
@@ -1104,15 +1121,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowSegmentStatistics = (id: number): ItemType => {
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (
-      visibleSegmentationLayer == null ||
-      visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex
-    ) {
-      // In this case there is a fallback layer or an ND annotation.
-      return null;
-    }
+    if (!this.props.isSegmentIndexAvailable) return null;
     return {
       key: "segmentStatistics",
       label: (
@@ -1246,7 +1255,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let areGroupOrSelectedSegmentMeshesVisible: boolean =
+    const areGroupOrSelectedSegmentMeshesVisible: boolean =
       groupId == null
         ? this.areSelectedSegmentsMeshesVisible()
         : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
@@ -1357,7 +1366,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
-    let segmentsWithoutPosition: number[] = relevantSegments
+    const segmentsWithoutPosition: number[] = relevantSegments
       .filter((segment) => segment.somePosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
@@ -1380,7 +1389,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
-    let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
       if (keyAsString.startsWith("group-")) {
@@ -1536,21 +1545,14 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentStatisticsModal = (groupId: number) => {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    const hasNoFallbackLayer =
-      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
-    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
-      const state = Store.getState();
-      const tracingId = this.props.activeVolumeTracing?.tracingId;
-      if (tracingId == null) return null;
-      const tracingStoreUrl = state.tracing.tracingStore.url;
+    if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
       return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal
           onCancel={() => {
             this.setState({ activeStatisticsModalGroupId: null });
           }}
           visibleSegmentationLayer={visibleSegmentationLayer}
-          tracingId={tracingId}
-          tracingStoreUrl={tracingStoreUrl}
+          tracingId={this.props.activeVolumeTracing?.tracingId}
           relevantSegments={segments}
           parentGroup={groupId}
           groupTree={this.state.searchableTreeItemList}

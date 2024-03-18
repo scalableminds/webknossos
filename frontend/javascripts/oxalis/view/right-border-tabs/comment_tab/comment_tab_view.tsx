@@ -41,7 +41,7 @@ import type { MenuProps } from "rc-menu";
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
-const enum SortByEnum {
+enum SortByEnum {
   NAME = "NAME",
   ID = "ID",
   NATURAL = "NATURAL",

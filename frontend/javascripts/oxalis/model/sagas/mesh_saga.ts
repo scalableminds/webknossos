@@ -124,7 +124,7 @@ function getOrAddMapForSegment(
   segmentId: number,
   additionalCoordinates?: AdditionalCoordinate[] | null,
 ): ThreeDMap<boolean> {
-  let additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
   const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
@@ -451,11 +451,6 @@ function* maybeLoadMeshChunk(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
-  // In general, it is more performant to compute meshes in a more coarse resolution instead of using subsampling strides
-  // since in the coarse resolution less data needs to be loaded. Another possibility to increase performance is
-  // window.__marchingCubeSizeInMag1 which affects the cube size the marching cube algorithm will work on. If the cube is significantly larger than the
-  // segments, computations are wasted.
-  const subsamplingStrides = (window as any).__meshSubsamplingStrides || [1, 1, 1];
   const scale = yield* select((state) => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
@@ -493,7 +488,6 @@ function* maybeLoadMeshChunk(
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
-          subsamplingStrides,
           cubeSize,
           scale,
           findNeighbors,

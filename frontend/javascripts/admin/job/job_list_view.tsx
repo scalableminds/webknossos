@@ -22,6 +22,7 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
 import { AsyncLink } from "components/async_clickables";
+import { EmptyObject } from "types/globals";
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
@@ -56,7 +57,7 @@ const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIJob[] = [];
-type Props = {};
+type Props = EmptyObject;
 type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;

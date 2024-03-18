@@ -4,7 +4,7 @@ import controllers.InitialDataService
 import files.TempFileService
 import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
-import models.annotation.{AnnotationMutexService, AnnotationStore}
+import models.annotation.{AnnotationMutexService, AnnotationStore, TracingDataSourceTemporaryStore}
 import models.dataset.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.storage.UsedStorageService
@@ -23,8 +23,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[UserService]).asEagerSingleton()
     bind(classOf[TaskService]).asEagerSingleton()
     bind(classOf[UserDAO]).asEagerSingleton()
-    bind(classOf[UserExperiencesDAO]).asEagerSingleton()
-    bind(classOf[UserDatasetConfigurationDAO]).asEagerSingleton()
     bind(classOf[AnnotationStore]).asEagerSingleton()
     bind(classOf[AnnotationMutexService]).asEagerSingleton()
     bind(classOf[DatasetService]).asEagerSingleton()
@@ -39,5 +37,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[LokiClient]).asEagerSingleton()
     bind(classOf[UsedStorageService]).asEagerSingleton()
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
+    bind(classOf[TracingDataSourceTemporaryStore]).asEagerSingleton()
   }
 }

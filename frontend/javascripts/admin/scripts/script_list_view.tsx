@@ -12,10 +12,11 @@ import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { EmptyObject } from "types/globals";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIScript[] = [];
-type Props = {};
+type Props = EmptyObject;
 type State = {
   isLoading: boolean;
   scripts: Array<APIScript>;

@@ -67,7 +67,7 @@ function NmlDropArea({
         <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
-          Drop NML or zip files here to <b>create a new tracing</b>.
+          Drop NML or zip files here to <b>create a new annotation</b>.
         </h5>
       )}
     </div>

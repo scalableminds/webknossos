@@ -152,9 +152,9 @@ export async function downloadScreenshot() {
       buffer,
       width,
       height,
-      true,
       canvas,
       drawImageIntoCanvasCallback,
+      true,
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;

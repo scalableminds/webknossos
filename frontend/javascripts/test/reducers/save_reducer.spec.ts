@@ -5,6 +5,7 @@ import dummyUser from "test/fixtures/dummy_user";
 import type { SaveState } from "oxalis/store";
 import { APIUser } from "types/api_flow_types";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import { EmptyObject } from "types/globals";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -18,13 +19,13 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
-const initialState: { save: SaveState; activeUser: APIUser; tracing: {} } = {
+const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject } = {
   activeUser: dummyUser,
   save: {
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     queue: {
       skeleton: [],

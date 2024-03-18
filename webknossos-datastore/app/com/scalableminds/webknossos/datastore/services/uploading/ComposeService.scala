@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebKnossosClient, DataSourceRepository}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -49,7 +49,7 @@ object DataLayerId {
 }
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                               remoteWebknossosClient: DSRemoteWebknossosClient,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
@@ -70,7 +70,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
       dataSource <- createDatasource(composeRequest, composeRequest.organizationName)

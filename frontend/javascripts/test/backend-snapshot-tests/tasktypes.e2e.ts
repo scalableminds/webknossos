@@ -44,7 +44,7 @@ test("createTaskType and deleteTaskType", async (t) => {
       resolutionRestrictions: {},
     },
     recommendedConfiguration: null,
-    tracingType: "skeleton" as "skeleton",
+    tracingType: "skeleton" as const,
   };
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy

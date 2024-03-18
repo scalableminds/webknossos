@@ -22,8 +22,7 @@ import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types"
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
-import { AnnotationTypeFilterEnum } from "admin/statistic/time_tracking_overview";
-import ProjectAndAnnotationTypeDropdown from "admin/statistic/project_and_annotation_type_dropdown";
+import ProjectAndAnnotationTypeDropdown, { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;

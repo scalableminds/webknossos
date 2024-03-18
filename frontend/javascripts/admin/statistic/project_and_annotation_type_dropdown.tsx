@@ -1,13 +1,17 @@
 import { Select } from "antd";
 import React from "react";
 import { useEffect, useState } from "react";
-import { AnnotationTypeFilterEnum } from "./time_tracking_overview";
 import { getProjects } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-import * as Utils from "libs/utils";
+
+export enum AnnotationTypeFilterEnum {
+  ONLY_ANNOTATIONS_KEY = "Explorational",
+  ONLY_TASKS_KEY = "Task",
+  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
+}
 
 type ProjectAndTypeDropdownProps = {
   selectedProjectIds: string[];
@@ -25,6 +29,15 @@ type NestedSelectOptions = {
   }>;
 };
 
+const ANNOTATION_TYPE_FILTERS: NestedSelectOptions = {
+  label: "Filter types",
+  options: [
+    { label: "Tasks & Annotations", value: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY },
+    { label: "Annotations", value: AnnotationTypeFilterEnum.ONLY_ANNOTATIONS_KEY },
+    { label: "Tasks", value: AnnotationTypeFilterEnum.ONLY_TASKS_KEY },
+  ],
+};
+
 function ProjectAndAnnotationTypeDropdown({
   selectedProjectIds,
   setSelectedProjectIds,
@@ -32,15 +45,6 @@ function ProjectAndAnnotationTypeDropdown({
   setSelectedAnnotationType,
   style,
 }: ProjectAndTypeDropdownProps) {
-  const ANNOTATION_TYPE_FILTERS: NestedSelectOptions = {
-    // TODO lager mich aus ins modul
-    label: "Filter types",
-    options: [
-      { label: "Tasks & Annotations", value: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY },
-      { label: "Annotations", value: AnnotationTypeFilterEnum.ONLY_ANNOTATIONS_KEY },
-      { label: "Tasks", value: AnnotationTypeFilterEnum.ONLY_TASKS_KEY },
-    ],
-  };
   // This state property is derived from selectedProjectIds and selectedAnnotationType.
   // It is mainly used to determine the selected items in the multiselect form item.
   const [selectedFilters, setSelectedFilters] = useState(Array<string>);
@@ -88,7 +92,7 @@ function ProjectAndAnnotationTypeDropdown({
   };
 
   const onDeselect = (removedKey: string) => {
-    if (Utils.values(AnnotationTypeFilterEnum).includes(removedKey)) {
+    if (Object.values<string>(AnnotationTypeFilterEnum).includes(removedKey)) {
       setSelectedAnnotationType(AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY);
     } else {
       setSelectedProjectIds(selectedProjectIds.filter((projectId) => projectId !== removedKey));
@@ -103,7 +107,7 @@ function ProjectAndAnnotationTypeDropdown({
       style={style}
       options={filterOptions}
       value={selectedFilters}
-      onDeselect={(removedProjectId: string) => onDeselect(removedProjectId)}
+      onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
     />
   );

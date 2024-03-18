@@ -10,18 +10,12 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { Link } from "react-router-dom";
-import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
+import ProjectAndAnnotationTypeDropdown, { AnnotationTypeFilterEnum } from "./project_and_annotation_type_dropdown";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-
-export enum AnnotationTypeFilterEnum {
-  ONLY_ANNOTATIONS_KEY = "Explorational",
-  ONLY_TASKS_KEY = "Task",
-  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
-}
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
@@ -63,14 +57,13 @@ function TimeTrackingOverview() {
   );
   const [allTeams, allProjects] = useFetch(
     async () => {
-      if (!mayUserAccessView) return [[], [], []];
       setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
       setIsFetching(false);
       return [allTeams, allProjects];
     },
-    [[], [], []],
-    [mayUserAccessView],
+    [[], []],
+    [],
   );
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
@@ -88,7 +81,6 @@ function TimeTrackingOverview() {
   }, [selectedProjectIds, selectedTypes, allProjects.length]);
   const filteredTimeEntries = useFetch(
     async () => {
-      if (!mayUserAccessView) return []; // TODO i dont know whether there is a nicer way to deal with this, other components seem to handle it similarly
       setIsFetching(true);
       const filteredTeams =
         selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
@@ -115,7 +107,6 @@ function TimeTrackingOverview() {
       selectedProjectIds,
       startDate,
       endDate,
-      mayUserAccessView,
       allTeams,
       allProjects
     ],
@@ -153,7 +144,7 @@ function TimeTrackingOverview() {
     { label: "Last 30 Days", value: [dayjs().subtract(30, "d").startOf("day"), currentTime] },
   ];
 
-  return (
+  return mayUserAccessView ? (
     <Card
       title={"Annotation Time per User"}
       style={{
@@ -249,7 +240,7 @@ function TimeTrackingOverview() {
         Export to CSV
       </Button>
     </Card>
-  );
+  ) : "Sorry, you are not allowed to see this view."
 }
 
 export default TimeTrackingOverview;

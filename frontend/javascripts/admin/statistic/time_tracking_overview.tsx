@@ -44,7 +44,7 @@ function TimeTrackingOverview() {
   ) => {
     // Omit project parameter in request if annotation data is requested
     const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-    return `api/time/summed/userList?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
+    return `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
       ",",
     )}${projectsParam}`;
   };

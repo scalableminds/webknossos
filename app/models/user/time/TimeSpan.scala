@@ -123,23 +123,6 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  def findAllByOrganization(start: Option[Instant],
-                            end: Option[Instant],
-                            organizationId: ObjectId): Fox[List[TimeSpan]] = {
-    val startOrZero = start.getOrElse(Instant.zero)
-    val endOrMax = end.getOrElse(Instant.max)
-    for {
-      r <- run(q"""SELECT ${columnsWithPrefix("t.")}
-                   FROM $existingCollectionName t
-                   JOIN webknossos.users u on t._user = u._id
-                   WHERE t.created >= $startOrZero
-                   AND t.created <= $endOrMax
-                   AND u._organization = $organizationId
-          """.as[TimespansRow])
-      parsed <- parseAll(r)
-    } yield parsed
-  }
-
   private def projectIdsFilterQuery(projectIdsOpt: Option[List[ObjectId]]): SqlToken =
     projectIdsOpt match {
       case None => q"TRUE" // Query did not filter by project, include all

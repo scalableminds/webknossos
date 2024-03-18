@@ -246,10 +246,11 @@ export async function revokeAuthToken(): Promise<void> {
   });
 }
 
+// Used only by the webknossos-libs python client, but tested here in the snapshot tests.
 export async function getLoggedTimes(
-  userID: string | null | undefined,
+  userID: string,
 ): Promise<Array<APITimeInterval>> {
-  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime"; //todo second case doesnt exist
+  const url = `/api/users/${userID}/loggedTime`;
   const response: APIUserLoggedTime = await Request.receiveJSON(url);
   return response.loggedTime;
 }
@@ -1953,21 +1954,6 @@ export function updateUserConfiguration(
     method: "PUT",
     data: userConfiguration,
   });
-}
-
-// ### Time Tracking
-export async function getTimeTrackingForUserByMonth(
-  userEmail: string,
-  day: dayjs.Dayjs,
-): Promise<Array<APITimeTracking>> {
-  const month = day.format("M");
-  const year = day.format("YYYY");
-  const timeTrackingData = await Request.receiveJSON(
-    `/api/time/userlist/${year}/${month}?email=${userEmail}`,
-  );
-  const { timelogs } = timeTrackingData[0];
-  assertResponseLimit(timelogs);
-  return timelogs;
 }
 
 export async function getTimeTrackingForUser(

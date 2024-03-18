@@ -23,19 +23,7 @@ test.before("Reset database and initialize values", async () => {
   firstTeam = teams[0];
 });
 
-test("getTimeTrackingForUserByMonth", async (t) => {
-  const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
-    activeUser.email,
-    dayjs("20160401", "YYYYMMDD"),
-  );
-  t.true(timeTrackingForUserByMonth.length > 0);
-  writeTypeCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTracking", {
-    isArray: true,
-  });
-  t.snapshot(timeTrackingForUserByMonth, {
-    id: "timetracking-timeTrackingForUserByMonth",
-  });
-});
+// Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
 
 test("getTimeTrackingForUser", async (t) => {
   const timeTrackingForUser = await api.getTimeTrackingForUser(

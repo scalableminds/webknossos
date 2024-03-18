@@ -248,13 +248,10 @@ GET           /termsOfService                                                   
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
-# Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.timeSpansOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+# Time Tracking
+# Note, there is also /users/:id/loggedTime
 GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, annotationTypes: String, projectIds: Option[String])
-
-GET           /time/groupedByInterval                                                           controllers.TimeController.timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long])
-GET           /time/summed/userList                                                             controllers.TimeController.timeSummedUserList(start: Long, end: Long, annotationTypes: String, teamIds: String, projectIds: Option[String])
+GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, teamIds: String, projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

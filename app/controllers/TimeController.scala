@@ -1,6 +1,5 @@
 package controllers
 
-import java.text.SimpleDateFormat
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,17 +9,15 @@ import models.annotation.AnnotationType.AnnotationType
 import scala.collection.immutable.ListMap
 import javax.inject.Inject
 import models.user._
-import models.user.time.{Day, Interval, Month, TimeSpan, TimeSpanDAO, TimeSpanService}
+import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
 import net.liftweb.common.Box
-import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.math.Ordered.orderingToOrdered
 
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -51,47 +48,6 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  // Legacy, called by braintracing
-  def timeSpansOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        users <- userDAO.findAll
-        filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
-        adaptedYear = adaptTwoDigitYear(year)
-        start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
-        end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
-        userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(filteredUsers)(user =>
-          getUserTimeSpansJs(user, start, end, List(AnnotationType.Task), projectIdsOpt = None))
-      } yield Ok(Json.toJson(userTimeSpansJsList))
-    }
-
-  // Legacy, called by braintracing
-  def timeSpansOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int],
-  ): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        users <- Fox.combined(
-          userString
-            .split(",")
-            .toList
-            .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
-        _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
-        adaptedYear = adaptTwoDigitYear(year)
-        start = startDay.map(sd => Day(sd, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).start
-        end = endDay.map(ed => Day(ed, month, adaptedYear)).getOrElse(Month(month, adaptedYear)).end
-        userTimeSpansJsList: Seq[JsObject] <- Fox.serialCombined(users)(user =>
-          getUserTimeSpansJs(user, start, end, List(AnnotationType.Task), projectIdsOpt = None))
-      } yield Ok(Json.toJson(userTimeSpansJsList))
-    }
-
-  private def adaptTwoDigitYear(possiblyTwoDigitYear: Int): Int = {
-    // Note that this works both for two-digit and four-digit year input
-    val input = new SimpleDateFormat("yy")
-    val output = new SimpleDateFormat("yyyy")
-    val date = input.parse(possiblyTwoDigitYear.toString)
-    output.format(date).toInt
-  }
-
   def timeSpansOfUser(userId: String,
                       startDate: Long,
                       endDate: Long,
@@ -105,66 +61,20 @@ class TimeController @Inject()(userService: UserService,
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- getUserTimeSpansJs(user,
-                                 Instant(startDate),
-                                 Instant(endDate),
-                                 annotationTypesValidated,
-                                 projectIdsValidated)
-      } yield Ok(js)
+        userJs <- userService.compactWrites(user)
+        timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
+                                                         Instant(startDate),
+                                                         Instant(endDate),
+                                                         annotationTypesValidated,
+                                                         projectIdsValidated)
+      } yield Ok(Json.obj("user" -> userJs, "timelogs" -> timeSpansJs))
     }
 
-  private def getUserTimeSpansJs(user: User,
-                                 start: Instant,
-                                 end: Instant,
-                                 annotationTypes: List[AnnotationType],
-                                 projectIdsOpt: Option[List[ObjectId]]): Fox[JsObject] =
-    for {
-      userJs <- userService.compactWrites(user)
-      timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id, start, end, annotationTypes, projectIdsOpt)
-    } yield Json.obj("user" -> userJs, "timelogs" -> timeSpansJs)
-
-  // Used for graph on statistics page. Always includes explorative annotations
-  def timeGroupedByInterval(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      intervalGroupingFunctions.get(interval) match {
-        case Some(intervalGroupingFunction) =>
-          for {
-            organizationId <- Fox.successful(request.identity._organization)
-            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
-            timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO
-              .findAllByOrganization(start.map(Instant(_)), end.map(Instant(_)), organizationId)
-              .futureBox
-            timesGrouped = timeSpanService.sumTimespansPerInterval(intervalGroupingFunction, timeSpansBox)
-          } yield {
-            Ok(
-              Json.obj(
-                "timeGroupedByInterval" -> timesGrouped.map {
-                  case (interval, duration) =>
-                    Json.obj(
-                      "start" -> interval.start.toString,
-                      "end" -> interval.end.toString,
-                      "tracingTime" -> duration.toMillis
-                    )
-                },
-              )
-            )
-          }
-        case _ =>
-          Fox.successful(BadRequest(Messages("statistics.interval.invalid")))
-      }
-    }
-
-  private val intervalGroupingFunctions: Map[String, TimeSpan => Interval] = Map(
-    "month" -> TimeSpan.groupByMonth,
-    "week" -> TimeSpan.groupByWeek,
-    "day" -> TimeSpan.groupByDay
-  )
-
-  def timeSummedUserList(start: Long,
-                         end: Long,
-                         annotationTypes: String,
-                         teamIds: String,
-                         projectIds: Option[String]): Action[AnyContent] =
+  def timeOverview(start: Long,
+                   end: Long,
+                   annotationTypes: String,
+                   teamIds: String,
+                   projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN

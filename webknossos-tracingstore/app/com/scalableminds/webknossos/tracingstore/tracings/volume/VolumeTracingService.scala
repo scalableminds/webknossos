@@ -455,7 +455,7 @@ class VolumeTracingService @Inject()(
                                    editableMappingTracingId(tracing, tracingId)))
             } yield ()
           }
-        } ?~> "failed not import volume data from zipfile"
+        } ?~> "failed to import volume data from zipfile"
         _ <- segmentIndexBuffer.flush()
       } yield {
         if (savedResolutions.isEmpty) {
